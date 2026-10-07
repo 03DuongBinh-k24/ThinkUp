@@ -1,0 +1,707 @@
+{
+  "roadmap": {
+    "name": "Mobile-developer",
+    "description": "Lộ trình trở thành Mobile Developer - người xây dựng ứng dụng di động trên iOS và Android. Bắt đầu từ nền tảng lập trình, phát triển kỹ năng với Flutter/React Native để xây dựng cross-platform app, đến tích hợp native features, testing và deployment lên App Store/Google Play."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng lập trình, logic và cách thức hoạt động của mobile apps.",
+      "skills": [
+        {
+          "name": "Computer Science Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Cấu trúc dữ liệu: Array, Linked List, Stack, Queue, Hash Table, Tree",
+            "Thuật toán: Linear Search, Binary Search, Bubble Sort, Quick Sort",
+            "Big O Notation: O(1), O(log n), O(n), O(n²)",
+            "Logic lập trình và tư duy giải quyết vấn đề",
+            "Recursion cơ bản",
+            "Cách máy tính hoạt động: CPU, RAM, Storage"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Mobile Development Concepts",
+            "description": "Nắm vững cách thức hoạt động của mobile apps."
+          }
+        },
+        {
+          "name": "Mobile Development Concepts",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Mobile apps là gì: native vs cross-platform vs hybrid",
+            "iOS vs Android: sự khác biệt cơ bản",
+            "Mobile app architecture: MVC, MVVM, Clean Architecture",
+            "Mobile app lifecycle: foreground, background, terminated",
+            "Responsive vs Adaptive design trên mobile",
+            "Mobile UI/UX principles: touch gestures, navigation patterns",
+            "App stores: App Store (iOS), Google Play (Android)",
+            "Development environment setup: IDE, emulators, simulators"
+          ],
+          "prerequisites": ["Computer Science Basics"],
+          "nextSkill": {
+            "name": "Programming Language (Dart)",
+            "description": "Bắt đầu học ngôn ngữ lập trình cho Flutter."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Programming Language",
+      "description": "Học ngôn ngữ lập trình Dart để phát triển với Flutter.",
+      "skills": [
+        {
+          "name": "Dart Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Programming Language",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Dart là gì: language cho Flutter, Tại sao chọn Dart",
+            "Variables và Data Types: int, double, String, bool, dynamic, var, final, const",
+            "String interpolation và multi-line strings",
+            "Operators: arithmetic, comparison, logical, assignment, null-aware",
+            "Câu điều khiển: if/else, switch/case, ternary operator",
+            "Vòng lặp: for, for-in, while, do-while",
+            "Functions: positional params, named params, optional params, arrow functions",
+            "Null Safety: nullable types, non-null assertion (!), null-aware operators (??, ?.)",
+            "Collections: List, Set, Map - methods và operations",
+            "Spread operator (...), Collection if, Collection for",
+            "Classes: properties, methods, constructors (named, factory)",
+            "Inheritance: extends, abstract classes, mixins",
+            "Enums và extensions",
+            "Error handling: try/catch, throw, finally",
+            "Async programming: Future, async/await, Stream basics",
+            "Isolates: parallel execution trong Dart"
+          ],
+          "prerequisites": ["Mobile Development Concepts"],
+          "nextSkill": {
+            "name": "Dart Advanced",
+            "description": "Nâng cao kỹ năng Dart với advanced patterns."
+          }
+        },
+        {
+          "name": "Dart Advanced",
+          "difficulty": "Trung cấp",
+          "skillType": "Programming Language",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Generics: type parameters, constraints, generic classes, generic functions",
+            "Mixins: creating và using mixins, mixin class",
+            "Extension methods: adding methods to existing classes",
+            "Pattern matching: switch expressions, destructuring",
+            "Sealed classes: exhaustive pattern matching",
+            "Records: lightweight tuples, named fields",
+            "Functional programming: first-class functions, higher-order functions",
+            "Closures và lexical scope",
+            "Iterators và Generators: sync và async generators, yield",
+            "Streams: StreamController, broadcast streams, stream transformers",
+            "Completer: manual async control",
+            "Isolates nâng cao: SendPort, ReceivePort, isolate groups",
+            "Code generation: build_runner, json_serializable, freezed",
+            "Effective Dart: naming conventions, documentation, linting"
+          ],
+          "prerequisites": ["Dart Fundamentals"],
+          "nextSkill": {
+            "name": "Flutter Basics",
+            "description": "Bắt đầu học Flutter framework để xây dựng UI."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Flutter Core",
+      "description": "Xây dựng giao diện mobile với Flutter widgets và layout system.",
+      "skills": [
+        {
+          "name": "Flutter Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Flutter Core",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Flutter là gì: UI toolkit, widget-based architecture, hot reload",
+            "Flutter project structure: lib, pubspec.yaml, android, ios",
+            "Material Design vs Cupertino widgets",
+            "App structure: MaterialApp, CupertinoApp, Scaffold",
+            "Basic widgets: Text, Image, Icon, Container, SizedBox, Padding",
+            "Layout widgets: Row, Column, Flex, Wrap, Stack, IndexedStack",
+            "Container: decoration, padding, margin, alignment, constraints",
+            "Text styling: TextStyle, TextTheme, Google Fonts",
+            "Buttons: ElevatedButton, TextButton, OutlinedButton, IconButton",
+            "Images: AssetImage, NetworkImage, FadeInImage, CachedNetworkImage",
+            "Icons: Icons class, custom icons",
+            "Flutter inspector và debugging tools",
+            "Hot reload vs Hot restart"
+          ],
+          "prerequisites": ["Dart Advanced"],
+          "nextSkill": {
+            "name": "Flutter Layouts & Responsive",
+            "description": "Học cách tạo layout responsive trên nhiều thiết bị."
+          }
+        },
+        {
+          "name": "Flutter Layouts & Responsive",
+          "difficulty": "Trung cấp",
+          "skillType": "Flutter Core",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Layout system: constraints down, sizes up",
+            "Expanded và Flexible: flex layout",
+            "AspectRatio, FractionallySizedBox",
+            "GridView: grid layouts, SliverGrid",
+            "ListView: builders, separated, custom scrolling",
+            "CustomScrollView và Slivers: SliverAppBar, SliverList, SliverGrid",
+            "Responsive design: LayoutBuilder, MediaQuery",
+            "OrientationBuilder: portrait vs landscape",
+            "Adaptive layout: different layouts for phone/tablet",
+            "SafeArea: avoiding notches, status bars",
+            "Platform-specific widgets: Platform.isAndroid, Platform.isIOS",
+            "Themeing: ThemeData, dark theme, custom themes",
+            "Responsive typography: scaling fonts"
+          ],
+          "prerequisites": ["Flutter Basics"],
+          "nextSkill": {
+            "name": "Flutter Widgets & Components",
+            "description": "Học cách tạo và tái sử dụng widgets."
+          }
+        },
+        {
+          "name": "Flutter Widgets & Components",
+          "difficulty": "Trung cấp",
+          "skillType": "Flutter Core",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "StatelessWidget vs StatefulWidget",
+            "Widget lifecycle: initState, dispose, didUpdateWidget",
+            "State management cơ bản: setState",
+            "Custom widgets: composition vs inheritance",
+            "Widget decomposition: breaking down complex UI",
+            "Keys: GlobalKey, ValueKey, ObjectKey, khi nào dùng",
+            "InheritedWidget và context",
+            "CustomPaint: drawing custom shapes",
+            "ClipRRect, ClipOval, ClipPath",
+            "DecoratedBox, BoxDecoration: gradients, borders, shadows",
+            "AnimatedContainer, AnimatedOpacity, AnimatedPositioned",
+            "Hero animations",
+            "Custom transitions và animations",
+            "Drawer, BottomNavigationBar, TabBar",
+            "Form widgets: TextFormField, DropdownButton, Checkbox, Radio",
+            "ListTile, Card, Chip, Badge"
+          ],
+          "prerequisites": ["Flutter Layouts & Responsive"],
+          "nextSkill": {
+            "name": "State Management",
+            "description": "Học cách quản lý trạng thái ứng dụng Flutter."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "State Management",
+      "description": "Quản lý trạng thái ứng dụng với các patterns và packages phổ biến.",
+      "skills": [
+        {
+          "name": "Flutter State Management",
+          "difficulty": "Trung cấp",
+          "skillType": "State Management",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "State là gì: ephemeral state vs app state",
+            "setState: khi nào dùng, limitations",
+            "Provider package: ChangeNotifier, Consumer, Selector",
+            "Provider patterns: ProxyProvider, MultiProvider",
+            "Riverpod: modern provider, type-safe, compile-time safety",
+            "Riverpod patterns: Provider, StateProvider, StateNotifierProvider",
+            "BLoC pattern: Business Logic Component",
+            "flutter_bloc package: Cubit, Bloc, BlocBuilder, BlocListener, BlocConsumer",
+            "BLoC events và states",
+            "GetX: simple state management,路由, dependency injection",
+            "MobX: observable, action, reaction",
+            "Signals (Riverpod 3.0): modern reactivity",
+            "State management comparison: when to use which",
+            "Performance considerations: unnecessary rebuilds, selective rebuilding"
+          ],
+          "prerequisites": ["Flutter Widgets & Components"],
+          "nextSkill": {
+            "name": "Navigation & Routing",
+            "description": "Học cách quản lý navigation trong Flutter."
+          }
+        },
+        {
+          "name": "Navigation & Routing",
+          "difficulty": "Trung cấp",
+          "skillType": "State Management",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Navigator 1.0: push, pop, pushReplacement, pushNamed",
+            "Named routes và route tables",
+            "Route arguments: passing data between screens",
+            "Navigator 2.0: declarative routing",
+            "GoRouter: modern declarative routing, path parameters, query parameters",
+            "GoRouter: nested routes, redirect, guards",
+            "Auto_route: code generation for routing",
+            "Deep linking: opening specific screens from URLs",
+            "Navigation patterns: tabs, stack, drawer, bottom sheets",
+            "Page transitions: custom animations",
+            "Back button handling: WillPopScope, PopScope",
+            "Bottom navigation: BottomNavigationBar, NavigationBar",
+            "Tab navigation: TabBar, TabBarView"
+          ],
+          "prerequisites": ["Flutter State Management"],
+          "nextSkill": {
+            "name": "Forms & Input Handling",
+            "description": "Học cách xử lý forms và input trên mobile."
+          }
+        },
+        {
+          "name": "Forms & Input Handling",
+          "difficulty": "Trung cấp",
+          "skillType": "State Management",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Form widget và GlobalKey<FormState>",
+            "TextFormField: controllers, validators, autovalidate",
+            "Form validation: required, email, pattern, custom validators",
+            "Form state: validate, save, reset",
+            "TextEditingController: reading và clearing input",
+            "FocusNode: managing focus, keyboard behavior",
+            "Keyboard types: TextInputType.emailAddress, phone, number",
+            "InputFormatters: filtering, formatting input",
+            "DropdownButtonFormField: dropdown selections",
+            "Checkbox, Radio, Switch: boolean inputs",
+            "Slider, DatePicker, TimePicker",
+            "File picker: selecting images, documents",
+            "Image picker: camera, gallery",
+            "Form submission: loading states, error handling"
+          ],
+          "prerequisites": ["Navigation & Routing"],
+          "nextSkill": {
+            "name": "API Integration",
+            "description": "Học cách kết nối app với backend API."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Backend Integration",
+      "description": "Tích hợp app với backend API, xác thực và quản lý dữ liệu.",
+      "skills": [
+        {
+          "name": "API Integration",
+          "difficulty": "Trung cấp",
+          "skillType": "Backend Integration",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "REST API trong mobile: considerations, timeout, retry",
+            "HTTP package: Dio, http package",
+            "Dio: interceptors, headers, error handling",
+            "GET, POST, PUT, PATCH, DELETE requests",
+            "JSON parsing: jsonDecode, json_serializable, freezed",
+            "Model classes: fromJson, toJson, serialization patterns",
+            "Pagination: infinite scroll, load more",
+            "Search: debounced search, API search",
+            "Error handling: network errors, timeout, server errors",
+            "Loading states: skeleton screens, shimmer effects",
+            "Offline support: caching strategies, local storage",
+            "API base URL management: environment configuration",
+            "Token management: storage, refresh, expiry",
+            "GraphQL trong Flutter: graphql_flutter package"
+          ],
+          "prerequisites": ["Forms & Input Handling"],
+          "nextSkill": {
+            "name": "Authentication",
+            "description": "Học cách xác thực người dùng trên mobile."
+          }
+        },
+        {
+          "name": "Authentication",
+          "difficulty": "Trung cấp",
+          "skillType": "Backend Integration",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Mobile authentication patterns",
+            "JWT authentication: access token, refresh token",
+            "Token storage: secure storage (flutter_secure_storage)",
+            "Biometric authentication: Face ID, Touch ID, fingerprint",
+            "local_auth package: implementation",
+            "Social login: Google Sign-In, Apple Sign-In, Facebook Login",
+            "Firebase Authentication: email/password, phone, anonymous",
+            "Phone number verification: SMS OTP",
+            "OAuth 2.0 flows for mobile: Authorization Code with PKCE",
+            "Deep linking for auth: redirect URLs",
+            "Session management: auto-logout, token refresh",
+            "Secure storage best practices",
+            "Biometric prompt:当用户拒绝时的处理"
+          ],
+          "prerequisites": ["API Integration"],
+          "nextSkill": {
+            "name": "Local Storage",
+            "description": "Học cách lưu trữ dữ liệu trên thiết bị."
+          }
+        },
+        {
+          "name": "Local Storage",
+          "difficulty": "Trung cấp",
+          "skillType": "Backend Integration",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Shared Preferences: key-value storage, primitive types",
+            "flutter_secure_storage: encrypted storage cho sensitive data",
+            "SQLite: relational database on mobile",
+            "sqflite package: CRUD operations, queries",
+            "Database versioning và migrations",
+            "Hive: NoSQL, fast, lightweight",
+            "Isar:高性能 NoSQL database",
+            "ObjectBox: reactive NoSQL database",
+            "File system: reading, writing files",
+            "Path provider: app directories (documents, cache, temp)",
+            "Cache management: cache size limits, cleanup",
+            "Offline-first architecture: sync strategies, conflict resolution",
+            "Data synchronization: delta sync, full sync",
+            "Backup và restore: user data, settings"
+          ],
+          "prerequisites": ["Authentication"],
+          "nextSkill": {
+            "name": "Device Features & Plugins",
+            "description": "Học cách tích hợp các tính năng của thiết bị."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Device Features & Plugins",
+      "description": "Tích hợp các tính năng phần cứng và dịch vụ của thiết bị.",
+      "skills": [
+        {
+          "name": "Camera & Media",
+          "difficulty": "Trung cấp",
+          "skillType": "Device Features",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "image_picker package: camera, gallery",
+            "Camera package: camera preview, capture photo/video",
+            "Video player: video playback, controls",
+            "Image processing: filters, cropping, compression",
+            "Photo_manager: accessing device photo library",
+            "File handling: choosing files from device",
+            "Document scanner: OCR basics",
+            "Media upload: multipart requests, progress tracking"
+          ],
+          "prerequisites": ["Local Storage"],
+          "nextSkill": {
+            "name": "Location & Maps",
+            "description": "Học cách làm việc với location và bản đồ."
+          }
+        },
+        {
+          "name": "Location & Maps",
+          "difficulty": "Trung cấp",
+          "skillType": "Device Features",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "geolocator package: current location, permissions",
+            "Location permissions: foreground, background, always",
+            "Google Maps Flutter: markers, polylines, polygons",
+            "Google Maps: camera control, map types",
+            "Geocoding: address to coordinates, coordinates to address",
+            "Distance calculations: Haversine formula",
+            "Background location tracking: geofencing basics",
+            "Maps alternatives: Apple Maps, Mapbox",
+            "Location services: when enabled/disabled handling",
+            "Battery optimization considerations"
+          ],
+          "prerequisites": ["Camera & Media"],
+          "nextSkill": {
+            "name": "Push Notifications",
+            "description": "Học cách gửi và nhận push notifications."
+          }
+        },
+        {
+          "name": "Push Notifications",
+          "difficulty": "Trung cấp",
+          "skillType": "Device Features",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Push notification overview: how it works",
+            "Firebase Cloud Messaging (FCM): setup, configuration",
+            "FCM tokens: registration, storage, server-side",
+            "Notification types: local notifications, remote notifications",
+            "flutter_local_notifications: scheduling, channels",
+            "Notification payload: data, deep linking",
+            "Notification groups và channels",
+            "Badge count management",
+            "Notification permissions: iOS, Android 13+",
+            "Background message handling",
+            "Notification best practices: frequency, content, timing",
+            "Notification analytics: open rates, engagement"
+          ],
+          "prerequisites": ["Location & Maps"],
+          "nextSkill": {
+            "name": "Platform Channels (Native Code)",
+            "description": "Học cách gọi native code từ Flutter."
+          }
+        },
+        {
+          "name": "Platform Channels (Native Code)",
+          "difficulty": "Nâng cao",
+          "skillType": "Device Features",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Platform channels là gì: Flutter ↔ native communication",
+            "MethodChannel: calling native methods",
+            "EventChannel: streaming data from native",
+            "BasicMessageChannel: messaging",
+            "Android integration: Kotlin/Java basics",
+            "iOS integration: Swift/Objective-C basics",
+            "Native plugins: khi nào cần viết native code",
+            "Existing plugins: finding và using community plugins",
+            "Writing custom plugins: project structure, registration",
+            "Platform-specific code: if (Platform.isAndroid/iOS)",
+            "Testing native code: unit tests on both platforms"
+          ],
+          "prerequisites": ["Push Notifications"],
+          "nextSkill": {
+            "name": "Animations & Gestures",
+            "description": "Học cách tạo animations và xử lý gestures."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Advanced UI & Performance",
+      "description": "Animations, gestures, custom painting và tối ưu performance.",
+      "skills": [
+        {
+          "name": "Animations & Gestures",
+          "difficulty": "Trung cấp",
+          "skillType": "Advanced UI & Performance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Implicit animations: AnimatedContainer, AnimatedOpacity, AnimatedPositioned",
+            "AnimatedBuilder và AnimationController",
+            "CurvedAnimation: easing curves, custom curves",
+            "Tween: animate between values, color Tween",
+            "Staggered animations: sequential animations",
+            "Hero transitions: between screens",
+            "Custom page transitions: PageRouteBuilder",
+            "GestureDetector: tap, double tap, long press, drag",
+            "RawGestureDetector: custom gestures",
+            "Dismissible: swipe to dismiss",
+            "Draggable và DragTarget: drag and drop",
+            "InteractiveViewer: pinch to zoom, pan",
+            "CustomPainter: drawing custom shapes, charts",
+            "ShaderMask: gradient effects on widgets"
+          ],
+          "prerequisites": ["Platform Channels (Native Code)"],
+          "nextSkill": {
+            "name": "Performance Optimization",
+            "description": "Tối ưu hiệu suất ứng dụng Flutter."
+          }
+        },
+        {
+          "name": "Performance Optimization",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced UI & Performance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Flutter DevTools:性能分析, widget inspector",
+            "Performance overlay: understanding render times",
+            "Widget rebuild optimization: const constructors",
+            "Keys: avoiding unnecessary rebuilds",
+            "RepaintBoundary: isolating repaints",
+            "ListView.builder: lazy rendering",
+            "Image optimization: cache, resolution, format",
+            "Memory management: memory leaks, disposal",
+            "App size optimization: tree shaking, dead code removal",
+            "Shader compilation jank:预热shader",
+            "Impeller vs Skia rendering engine",
+            "Profile mode testing: when to profile",
+            "Startup time optimization",
+            "Network optimization: compression, caching, batching",
+            "Database query optimization"
+          ],
+          "prerequisites": ["Animations & Gestures"],
+          "nextSkill": {
+            "name": "Accessibility (a11y)",
+            "description": "Học cách tạo app accessible cho tất cả người dùng."
+          }
+        },
+        {
+          "name": "Accessibility (a11y)",
+          "difficulty": "Trung cấp",
+          "skillType": "Advanced UI & Performance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Mobile accessibility overview: TalkBack (Android), VoiceOver (iOS)",
+            "Semantics widget: labels, roles, hints",
+            "SemanticsDebugger: debugging accessibility",
+            "Color contrast: sufficient contrast ratios",
+            "Touch target sizes: minimum 48x48 dp",
+            "Screen reader support: semantic labels, live regions",
+            "Focus management: focus traversal, focus order",
+            "Text scaling: supporting dynamic text sizes",
+            "Reduced motion: respecting user preferences",
+            "Testing accessibility: manual testing, automated checks",
+            "Accessibility best practices checklist"
+          ],
+          "prerequisites": ["Performance Optimization"],
+          "nextSkill": {
+            "name": "Testing",
+            "description": "Học cách test ứng dụng Flutter."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Testing & Quality",
+      "description": "Đảm bảo chất lượng app với testing, linting và code quality.",
+      "skills": [
+        {
+          "name": "Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Testing & Quality",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Testing pyramid: unit, widget, integration",
+            "Unit testing: test functions, classes, methods",
+            "flutter_test package: testWidgets, expect, matcher",
+            "Widget testing: rendering widgets, interaction testing",
+            "Mocking: mockito, mocktail",
+            "BLoC testing: BlocTest, mock repositories",
+            "Integration testing: full app flows",
+            "Integration_test package: driver tests",
+            "Golden testing: screenshot comparison",
+            "Code Coverage: thresholds, reporting",
+            "Test file organization: test/, integration/",
+            "Test data management: factories, fixtures",
+            "TDD workflow cho Flutter"
+          ],
+          "prerequisites": ["Accessibility (a11y)"],
+          "nextSkill": {
+            "name": "Code Quality & Linting",
+            "description": "Sử dụng công cụ để đảm bảo code quality."
+          }
+        },
+        {
+          "name": "Code Quality & Linting",
+          "difficulty": "Cơ bản",
+          "skillType": "Testing & Quality",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Dart analyzer: static analysis, lint rules",
+            "analysis_options.yaml: configuration",
+            "Lint rules: effective_dart, flutter_lints, very_good_analysis",
+            "Custom lint rules: custom_lint package",
+            "Code formatting: dart format",
+            "Code review best practices",
+            "Architecture patterns: Clean Architecture, feature-based",
+            "Dependency injection: get_it, injectable, provider",
+            "Code generation: build_runner, freezed, json_serializable",
+            "Documentation: dartdoc, code comments",
+            "Git hooks: pre-commit formatting, linting"
+          ],
+          "prerequisites": ["Testing"],
+          "nextSkill": {
+            "name": "CI/CD & Deployment",
+            "description": "Học cách triển khai app lên stores."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Deployment & DevOps",
+      "description": "Triển khai app lên App Store/Google Play và quản lý release.",
+      "skills": [
+        {
+          "name": "Build & Release",
+          "difficulty": "Trung cấp",
+          "skillType": "Deployment & DevOps",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Flutter build commands: flutter build apk, ios, appbundle",
+            "Android: APK vs App Bundle, signing, keystore",
+            "Android: release configuration, ProGuard, R8",
+            "iOS: certificates, provisioning profiles, signing",
+            "iOS: Info.plist configuration, permissions",
+            "Version management: version, build number",
+            "Code signing: Android keystore, iOS certificates",
+            "App icons và splash screens: adaptive icons",
+            "App sizes: bundle analysis, optimization",
+            "Build flavors: development, staging, production",
+            "Environment configuration: dart-define, .env files"
+          ],
+          "prerequisites": ["Code Quality & Linting"],
+          "nextSkill": {
+            "name": "App Store Deployment",
+            "description": "Triển khai app lên App Store và Google Play."
+          }
+        },
+        {
+          "name": "App Store Deployment",
+          "difficulty": "Trung cấp",
+          "skillType": "Deployment & DevOps",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Google Play Console: account setup, app listing",
+            "Google Play: store listing, screenshots, descriptions",
+            "Google Play: pricing, distribution, content rating",
+            "Google Play: internal testing, closed testing, open testing",
+            "Google Play: production release, staged rollout",
+            "App Store Connect: account setup, app listing",
+            "App Store: screenshots, app preview, descriptions",
+            "App Store: pricing, availability, age rating",
+            "App Store: TestFlight: internal, external testing",
+            "App Store: review guidelines, common rejections",
+            "App Store: release workflow, phased release",
+            "App Store optimization (ASO): keywords, screenshots, description",
+            "Post-launch: monitoring, crash reports, user reviews"
+          ],
+          "prerequisites": ["Build & Release"],
+          "nextSkill": {
+            "name": "DevOps & Analytics",
+            "description": "Học cách monitor và analyze app sau khi launch."
+          }
+        },
+        {
+          "name": "DevOps & Analytics",
+          "difficulty": "Nâng cao",
+          "skillType": "Deployment & DevOps",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "CI/CD for Flutter: Codemagic, GitHub Actions, Bitrise",
+            "Codemagic: configuration, automatic builds, signing",
+            "GitHub Actions: Flutter workflow, build và deploy",
+            "Fastlane:自动化 iOS/Android deployment",
+            "Firebase Crashlytics: crash reporting, symbolication",
+            "Firebase Analytics: events, user properties, funnels",
+            "Firebase Performance Monitoring: startup time, screen rendering",
+            "Remote Config: feature flags, A/B testing",
+            "In-app messaging: engagement, surveys",
+            "A/B testing: Firebase A/B Testing",
+            "App distribution: beta testing channels",
+            "Monitoring: uptime, performance, user engagement",
+            "Analytics best practices: event taxonomy, data governance",
+            "Privacy compliance: GDPR, CCPA, app privacy labels"
+          ],
+          "prerequisites": ["App Store Deployment"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Mobile Developer và sẵn sàng cho công việc thực tế."
+          }
+        }
+      ]
+    }
+  ]
+}

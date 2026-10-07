@@ -1,0 +1,742 @@
+{
+  "roadmap": {
+    "name": "Product-management",
+    "description": "Lộ trình trở thành Product Manager (PM) - người định hướng sản phẩm, ra quyết định dựa trên dữ liệu và người dùng, kết nối giữa business, design và engineering. Bắt đầu từ nền tảng kinh doanh và tư duy sản phẩm, phát triển kỹ năng discovery, strategy, data analysis, execution, đến growth và leadership."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng kinh doanh, tư duy sản phẩm và empathy với người dùng.",
+      "skills": [
+        {
+          "name": "Business Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Business model canvas: 9 blocks chính",
+            "Revenue models: subscription, freemium, marketplace, advertising",
+            "Unit economics: CAC, LTV, churn, ARPU",
+            "P&L basics: revenue, COGS, gross margin, operating expenses",
+            "Market sizing: TAM, SAM, SOM",
+            "Competitive analysis: Porter's Five Forces, SWOT",
+            "Go-to-market strategy basics",
+            "Organizational structures: product-led, sales-led, engineering-led"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Product Thinking",
+            "description": "Phát triển tư duy sản phẩm và cách suy nghĩ về sản phẩm."
+          }
+        },
+        {
+          "name": "Product Thinking",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Product là gì: giải pháp cho problem của user",
+            "Product vs Feature vs Enhancement: differences",
+            "Product-market fit: definition, measurement, achieving",
+            "Jobs to be Done (JTBD): understanding用户真正需要什么",
+            "Problem-first vs solution-first thinking",
+            "First principles thinking: breaking down assumptions",
+            "Product lifecycle: introduction, growth, maturity, decline",
+            "Product vision: inspiring, long-term direction",
+            "Product principles: guiding decisions",
+            "Minimum Viable Product (MVP): types, purpose, execution",
+            "Lean product development: build-measure-learn"
+          ],
+          "prerequisites": ["Business Fundamentals"],
+          "nextSkill": {
+            "name": "User Empathy & Research",
+            "description": "Học cách hiểu người dùng thông qua research."
+          }
+        },
+        {
+          "name": "User Empathy & Research",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Empathy maps: thoughts, feelings, actions, pains, gains",
+            "User personas: creating realistic user archetypes",
+            "User journey mapping: end-to-end experience",
+            "Day in the life: understanding用户日常",
+            "Contextual inquiry: observing users in their environment",
+            "Jobs to be Done interviews: uncovering underlying motivations",
+            "Pain points identification: surface vs deep pains",
+            "User segmentation: behavioral, demographic, psychographic",
+            "Voice of Customer (VoC): collecting và analyzing feedback",
+            "Customer advisory boards: structured feedback",
+            "Empathy building exercises: immersion, shadowing"
+          ],
+          "prerequisites": ["Product Thinking"],
+          "nextSkill": {
+            "name": "User Research Methods",
+            "description": "Nắm vững các phương pháp research người dùng."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Product Discovery",
+      "description": "Khám phá và validating ý tưởng sản phẩm trước khi build.",
+      "skills": [
+        {
+          "name": "User Research Methods",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Discovery",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Qualitative vs Quantitative research",
+            "User interviews: recruitment, questioning, synthesis",
+            "Usability testing: moderated vs unmoderated, testing scripts",
+            "Surveys & Questionnaires: design, distribution, analysis",
+            "A/B testing basics: hypothesis, design, analysis",
+            "Focus groups: facilitating, extracting insights",
+            "Diary studies: longitudinal research",
+            "Card sorting: information architecture validation",
+            "Tree testing: navigation validation",
+            "Concept testing: validating ideas before building",
+            "Competitive analysis: systematic comparison",
+            "Research repository: organizing, sharing findings"
+          ],
+          "prerequisites": ["User Empathy & Research"],
+          "nextSkill": {
+            "name": "Idea Validation",
+            "description": "Học cách validate ý tưởng trước khi invest resources."
+          }
+        },
+        {
+          "name": "Idea Validation",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Discovery",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Validation框架: problem, solution, market validation",
+            "Problem validation: is it a real problem?",
+            "Solution validation: does this solution work?",
+            "Market validation: is there a market?",
+            "Customer development: Steve Blank's methodology",
+            "Landing page tests: measuring interest",
+            "Concierge MVP: manually delivering value",
+            "Wizard of Oz MVP: faking the backend",
+            "Pretotyping: testing before prototyping",
+            "Fake door tests: measuring demand",
+            "Interview synthesis: affinity diagramming",
+            "Decision framework: go/no-go criteria"
+          ],
+          "prerequisites": ["User Research Methods"],
+          "nextSkill": {
+            "name": "Prototyping & Design Thinking",
+            "description": "Sử dụng prototyping và design thinking để giải quyết problem."
+          }
+        },
+        {
+          "name": "Prototyping & Design Thinking",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Discovery",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Design thinking stages: empathize, define, ideate, prototype, test",
+            "Ideation techniques: brainstorming, SCAMPER, crazy 8s, how might we",
+            "Low-fidelity prototyping: paper sketches, wireframes",
+            "High-fidelity prototyping: clickable, interactive",
+            "Prototyping tools: Figma, InVision, Balsamiq, Marvel",
+            "Prototyping for different platforms: web, mobile, voice",
+            "User testing prototypes: getting feedback",
+            "Iteration: improving based on feedback",
+            "Design systems: consistency, reusability",
+            "Information architecture: organizing content, navigation",
+            "Working with designers: PM-Designer collaboration",
+            "Design sprints: Google Ventures methodology"
+          ],
+          "prerequisites": ["Idea Validation"],
+          "nextSkill": {
+            "name": "Product Strategy",
+            "description": "Định hướng sản phẩm và tạo strategy dài hạn."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Product Strategy",
+      "description": "Xây dựng vision, strategy và roadmap cho sản phẩm.",
+      "skills": [
+        {
+          "name": "Product Vision & Strategy",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Strategy",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Product vision: inspiring, clear, long-term direction",
+            "Vision frameworks: product vision board, Lean Canvas",
+            "Product strategy: how to achieve the vision",
+            "Strategic frameworks: Porter's Generic Strategies, Blue Ocean",
+            "Product positioning: differentiation, value proposition",
+            "Positioning statement: template, crafting",
+            "Target market: segments, personas, beachhead market",
+            "Competitive landscape: direct, indirect, potential competitors",
+            "Moats: network effects, switching costs, economies of scale",
+            "Product principles: decision-making framework",
+            "North Star Metric: defining the one metric that matters",
+            "OKR framework: Objectives and Key Results"
+          ],
+          "prerequisites": ["Prototyping & Design Thinking"],
+          "nextSkill": {
+            "name": "Product Roadmapping",
+            "description": "Xây dựng và quản lý product roadmap."
+          }
+        },
+        {
+          "name": "Product Roadmapping",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Strategy",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Roadmap types: outcome-based, timeline, now-next-later",
+            "Roadmap audience: executives, team, customers",
+            "Roadmap components: themes, goals, features, initiatives",
+            "Now-Next-Later roadmap: flexibility, focus on outcomes",
+            "Timeline roadmap: when needed, trade-offs",
+            "Story mapping as roadmap input",
+            "Theme-based roadmap: organizing by strategic themes",
+            "Roadmap工具: Productboard, Aha!, Roadmunk",
+            "Communicating the roadmap: storytelling, alignment",
+            "Roadmap maintenance: regular reviews, updates",
+            "Stakeholder input: collecting, prioritizing",
+            "Roadmap anti-patterns: feature factory, HiPPO"
+          ],
+          "prerequisites": ["Product Vision & Strategy"],
+          "nextSkill": {
+            "name": "Prioritization Frameworks",
+            "description": "Học cách ưu tiên features và initiatives."
+          }
+        },
+        {
+          "name": "Prioritization Frameworks",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Strategy",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Prioritization importance: limited resources, trade-offs",
+            "RICE framework: Reach, Impact, Confidence, Effort",
+            "ICE framework: Impact, Confidence, Ease",
+            "MoSCoW method: Must, Should, Could, Won't",
+            "Kano model: basic, performance, delighters",
+            "Value vs Effort matrix: quick wins, big bets",
+            "Weighted scoring: criteria, weights, scoring",
+            "Opportunity scoring: importance vs satisfaction",
+            "Cost of delay: urgency, value over time",
+            "WSJF (Weighted Shortest Job First): SAFe prioritization",
+            "Stack ranking: comparing features directly",
+            "Prioritization ceremonies: roadmap reviews, planning"
+          ],
+          "prerequisites": ["Product Roadmapping"],
+          "nextSkill": {
+            "name": "User Stories & Requirements",
+            "description": "Viết user stories và requirements hiệu quả."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Product Execution",
+      "description": "Làm việc với engineering và design để đưa sản phẩm ra mắt.",
+      "skills": [
+        {
+          "name": "User Stories & Requirements",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Execution",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "User story format: As a... I want... So that...",
+            "Acceptance criteria: Given/When/Then (Gherkin syntax)",
+            "INVEST criteria: Independent, Negotiable, Valuable, Estimable, Small, Testable",
+            "Story splitting techniques: by workflow, by data, by platform",
+            "Epic, Feature, Story, Task hierarchy",
+            "Job stories: When... I want to... So I can...",
+            "Non-functional requirements: performance, security, scalability",
+            "Technical constraints: working within limitations",
+            "Dependencies: identifying, managing, communicating",
+            "Definition of Ready (DoR): story ready for development",
+            "Definition of Done (DoD): story complete criteria",
+            "Refining backlog: sizing, splitting, clarifying"
+          ],
+          "prerequisites": ["Prioritization Frameworks"],
+          "nextSkill": {
+            "name": "Agile Execution",
+            "description": "Làm việc hiệu quả với agile development."
+          }
+        },
+        {
+          "name": "Agile Execution",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Execution",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Agile manifesto: values, principles",
+            "Scrum framework: roles, events, artifacts",
+            "PM role trong Scrum: servant leader, product backlog owner",
+            "Sprint planning: selecting work, setting sprint goal",
+            "Daily standups: participating, updates, impediments",
+            "Sprint review: demo, feedback, adaptation",
+            "Sprint retrospective: improving process",
+            "Kanban basics: visualizing work, WIP limits",
+            "Working with engineers: translation, prioritization, trade-offs",
+            "Estimation: story points, t-shirt sizing, planning poker",
+            "Release planning: forecasting, planning iterations",
+            "Velocity: understanding, using for planning"
+          ],
+          "prerequisites": ["User Stories & Requirements"],
+          "nextSkill": {
+            "name": "Cross-functional Collaboration",
+            "description": "Họp tác hiệu quả giữa product, design, engineering."
+          }
+        },
+        {
+          "name": "Cross-functional Collaboration",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Execution",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Product trio: PM, Designer, Tech Lead",
+            "Working with designers: handoff, feedback, alignment",
+            "Working with engineers: technical trade-offs, feasibility",
+            "Working with data analysts: metrics, experiments",
+            "Working with marketing: launch, positioning, messaging",
+            "Working with sales: feedback, requirements, enablement",
+            "Working with customer success: support, churn, feedback",
+            "RACI matrix: clarifying roles, responsibilities",
+            "Communication cadence: regular syncs, updates",
+            "Conflict resolution: different priorities, disagreements",
+            "Building relationships: trust, credibility, rapport",
+            "Remote collaboration: tools, practices, culture"
+          ],
+          "prerequisites": ["Agile Execution"],
+          "nextSkill": {
+            "name": "Data Analysis & Metrics",
+            "description": "Sử dụng data để ra quyết định sản phẩm."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Data & Analytics",
+      "description": "Phân tích dữ liệu và sử dụng metrics để ra quyết định sản phẩm.",
+      "skills": [
+        {
+          "name": "Product Metrics",
+          "difficulty": "Trung cấp",
+          "skillType": "Data & Analytics",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Metrics frameworks: AARRR (Pirate Metrics), HEART, North Star",
+            "Acquisition metrics: visitors, signups, CAC",
+            "Activation metrics: time to value, aha moment",
+            "Retention metrics: DAU/MAU, churn rate, cohort retention",
+            "Revenue metrics: ARPU, LTV, conversion rate",
+            "Referral metrics: NPS, viral coefficient",
+            "Engagement metrics: session length, frequency, depth",
+            "Defining product metrics: what to measure",
+            "Metrics alignment: team, product, company metrics",
+            "Metrics pitfalls: vanity metrics, survivorship bias",
+            "Setting targets: baselines, benchmarks, goals",
+            "Metrics reporting: dashboards, reviews, storytelling"
+          ],
+          "prerequisites": ["Cross-functional Collaboration"],
+          "nextSkill": {
+            "name": "SQL & Data Querying",
+            "description": "Học SQL để truy cập và phân tích data."
+          }
+        },
+        {
+          "name": "SQL & Data Querying",
+          "difficulty": "Trung cấp",
+          "skillType": "Data & Analytics",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "SQL basics: SELECT, FROM, WHERE, ORDER BY, LIMIT",
+            "SQL joins: INNER, LEFT, RIGHT, FULL OUTER",
+            "SQL aggregation: GROUP BY, HAVING, COUNT, SUM, AVG",
+            "SQL subqueries và CTEs",
+            "SQL functions: string, date, conditional (CASE WHEN)",
+            "Cohort analysis queries",
+            "Funnel analysis queries",
+            "Retention analysis queries",
+            "Segmentation queries",
+            "A/B test analysis queries",
+            "Data quality checks",
+            "Working with data analysts: asking right questions"
+          ],
+          "prerequisites": ["Product Metrics"],
+          "nextSkill": {
+            "name": "Data Visualization & BI Tools",
+            "description": "Sử dụng BI tools để visualize data."
+          }
+        },
+        {
+          "name": "Data Visualization & BI Tools",
+          "difficulty": "Trung cấp",
+          "skillType": "Data & Analytics",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Data visualization principles: clarity, accuracy, efficiency",
+            "Choosing the right chart type",
+            "Power BI: connecting data, creating reports",
+            "Tableau: creating worksheets, dashboards",
+            "Google Analytics (GA4): events, reports, explorations",
+            "Mixpanel: user analytics, funnels, retention",
+            "Amplitude: product analytics, cohorts, behavioral analysis",
+            "Heap: auto-capture, retroactive analysis",
+            "Dashboard design: layout, interactivity",
+            "Data storytelling: narrative, insights, recommendations",
+            "Self-service analytics: empowering teams",
+            "Mobile analytics: app-specific metrics"
+          ],
+          "prerequisites": ["SQL & Data Querying"],
+          "nextSkill": {
+            "name": "Experimentation & A/B Testing",
+            "description": "Thiết kế và phân tích experiments."
+          }
+        },
+        {
+          "name": "Experimentation & A/B Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Data & Analytics",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "A/B testing process: hypothesis, design, run, analyze",
+            "Hypothesis formulation: problem, solution, expected outcome",
+            "Sample size calculation: statistical significance",
+            "Randomization: user-level, session-level",
+            "Metrics selection: primary, secondary, guardrail",
+            "Running experiments: duration, monitoring, stopping",
+            "Statistical analysis: p-value, confidence interval, effect size",
+            "Interpreting results: significant, not significant, inconclusive",
+            "Common pitfalls: peeking, novelty effect, Simpson's paradox",
+            "Multivariate testing: testing multiple variables",
+            "Feature flags: gradual rollout, kill switch",
+            "Experimentation tools: Optimizely, LaunchDarkly, Statsig",
+            "Building experimentation culture"
+          ],
+          "prerequisites": ["Data Visualization & BI Tools"],
+          "nextSkill": {
+            "name": "Growth & Monetization",
+            "description": "Học cách phát triển sản phẩm và monetize."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Growth & Monetization",
+      "description": "Phát triển sản phẩm, tối ưu conversion và monetization.",
+      "skills": [
+        {
+          "name": "Growth Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Growth & Monetization",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Growth hacking mindset: experimentation, data-driven",
+            "Growth loops: viral loops, content loops, paid loops",
+            "Acquisition channels: organic, paid, viral, partnerships",
+            "SEO basics: keywords, on-page, technical SEO",
+            "Content marketing: blog, video, social",
+            "Social media marketing: platform strategies",
+            "Paid acquisition: Google Ads, Facebook Ads, TikTok Ads",
+            "Referral programs: design, incentives, tracking",
+            "Partnerships: co-marketing, integrations, affiliates",
+            "Conversion rate optimization (CRO): funnel analysis, A/B testing",
+            "Onboarding optimization: time to value, activation",
+            "Growth metrics: acquisition, activation, retention, revenue, referral"
+          ],
+          "prerequisites": ["Experimentation & A/B Testing"],
+          "nextSkill": {
+            "name": "Pricing & Monetization",
+            "description": "Xây dựng pricing strategy và monetization models."
+          }
+        },
+        {
+          "name": "Pricing & Monetization",
+          "difficulty": "Nâng cao",
+          "skillType": "Growth & Monetization",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Pricing strategy: cost-plus, value-based, competition-based",
+            "Pricing models: subscription, freemium, tiered, usage-based, one-time",
+            "Price sensitivity: Van Westendorp, Gabor-Granger",
+            "Willingness to pay research: conjoint analysis",
+            "Freemium design: free features vs paid features",
+            "Tiered pricing: good-better-best",
+            "Enterprise pricing: annual contracts, custom pricing",
+            "Pricing experiments: testing different price points",
+            "Revenue optimization: upsell, cross-sell, expansion",
+            "Churn reduction: identifying at-risk users, intervention",
+            "Monetization metrics: ARPU, LTV, conversion rate",
+            "Pricing page design: clarity, trust, simplicity"
+          ],
+          "prerequisites": ["Growth Fundamentals"],
+          "nextSkill": {
+            "name": "Product-Led Growth",
+            "description": "Áp dụng product-led growth strategy."
+          }
+        },
+        {
+          "name": "Product-Led Growth",
+          "difficulty": "Nâng cao",
+          "skillType": "Growth & Monetization",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "PLG overview: product as the main growth driver",
+            "PLG vs sales-led vs marketing-led",
+            "Self-serve onboarding: frictionless, guided",
+            "Time to value: reducing friction, showing value quickly",
+            "Aha moment: identifying và designing for it",
+            "Viral coefficient: organic growth through sharing",
+            "Network effects: increasing value with more users",
+            "Product qualified leads (PQL): engagement-based leads",
+            "Expansion revenue: usage-based upsell",
+            "PLG metrics: activation, engagement, expansion",
+            "PLG案例: Slack, Dropbox, Zoom, Notion",
+            "PLG challenges: enterprise, complex products"
+          ],
+          "prerequisites": ["Pricing & Monetization"],
+          "nextSkill": {
+            "name": "Leadership & Communication",
+            "description": "Phát triển kỹ năng lãnh đạo và giao tiếp."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Leadership & Communication",
+      "description": "Lãnh đạo sản phẩm, giao tiếp hiệu quả và quản lý stakeholder.",
+      "skills": [
+        {
+          "name": "Stakeholder Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Communication",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Stakeholder identification: executives, team, customers, partners",
+            "Stakeholder analysis: Power/Interest Grid",
+            "RACI Matrix: roles, responsibilities",
+            "Managing up: executive communication, alignment",
+            "Managing down: team motivation, clarity",
+            "Managing sideways: cross-functional alignment",
+            "Difficult conversations: delivery, feedback",
+            "Political awareness: navigating organizations",
+            "Building influence without authority",
+            "Stakeholder communication: frequency, channel, content",
+            "Expectation management: realistic, transparent",
+            "Conflict resolution: mediation, compromise"
+          ],
+          "prerequisites": ["Product-Led Growth"],
+          "nextSkill": {
+            "name": "Presentation & Storytelling",
+            "description": "Trình bày và kể chuyện sản phẩm hiệu quả."
+          }
+        },
+        {
+          "name": "Presentation & Storytelling",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Communication",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Storytelling frameworks: hero's journey, STAR, what-so-what-now-what",
+            "Product narrative: problem, solution, impact",
+            "Pitch deck structure: problem, solution, market, traction, team",
+            "Data storytelling: turning data into insights",
+            "Executive presentations: brevity, focus on business impact",
+            "Demo presentations: showing, not telling",
+            "All-hands presentations: inspiration, alignment",
+            "Customer presentations: understanding needs, building trust",
+            "Handling Q&A: anticipating questions, staying composed",
+            "Visual storytelling: slides, design, simplicity",
+            "Presentation practice: recording, feedback, improvement",
+            "Facilitation skills: leading discussions, workshops"
+          ],
+          "prerequisites": ["Stakeholder Management"],
+          "nextSkill": {
+            "name": "Team Leadership",
+            "description": "Lãnh đạo và phát triển đội nhóm sản phẩm."
+          }
+        },
+        {
+          "name": "Team Leadership",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Communication",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Product team structure: pods, squads, tribes",
+            "Hiring product managers: criteria, process, interview",
+            "Onboarding PMs: ramp-up, mentorship",
+            "Coaching PMs: regular 1:1s, feedback, development",
+            "Building product culture: practices, rituals",
+            "Decision-making: frameworks, speed, quality",
+            "Delegation: empowering, accountability",
+            "Team motivation: recognition, growth, autonomy",
+            "Conflict resolution within team",
+            "Remote team leadership: trust, communication, culture",
+            "Performance management: goals, reviews, growth",
+            "Succession planning: developing next leaders"
+          ],
+          "prerequisites": ["Presentation & Storytelling"],
+          "nextSkill": {
+            "name": "Product Operations",
+            "description": "Xây dựng và quản lý product operations."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Product Operations & Tooling",
+      "description": "Thiết lập product operations và thành thạo các công cụ.",
+      "skills": [
+        {
+          "name": "Product Operations",
+          "difficulty": "Trung cấp",
+          "skillType": "Product Operations & Tooling",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Product operations là gì: processes, tools, enablement",
+            "Product process标准化: discovery, delivery, launch",
+            "Tool stack selection: choosing the right tools",
+            "Data infrastructure: event tracking, data warehouse",
+            "Product analytics setup: implementing tracking",
+            "User feedback collection: surveys, in-app, support tickets",
+            "Launch process: checklist, communication, rollback",
+            "Documentation: product specs, decisions, changelogs",
+            "Product culture: rituals, principles, practices",
+            "Scaling product management: frameworks, templates",
+            "Product ops metrics: efficiency, quality, satisfaction",
+            "Continuous improvement: retrospectives, process optimization"
+          ],
+          "prerequisites": ["Team Leadership"],
+          "nextSkill": {
+            "name": "Product Tools & Software",
+            "description": "Thành thạo các công cụ làm việc của PM."
+          }
+        },
+        {
+          "name": "Product Tools & Software",
+          "difficulty": "Cơ bản",
+          "skillType": "Product Operations & Tooling",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Productboard: roadmap, features, prioritization",
+            "Aha!: strategy, roadmapping, idea management",
+            "Jira: backlog management, sprint tracking",
+            "Confluence: documentation, knowledge base",
+            "Figma: design collaboration, prototyping",
+            "Miro/Mural: workshop, brainstorming",
+            "Notion: documentation, databases, wikis",
+            "Slack: team communication, integrations",
+            "Amplitude/Mixpanel: product analytics",
+            "Hotjar/FullStory: session recording, heatmaps",
+            "LaunchDarkly: feature flags, experimentation",
+            "Loom: async video communication"
+          ],
+          "prerequisites": ["Product Operations"],
+          "nextSkill": {
+            "name": "Domain Expertise",
+            "description": "Phát triển kiến thức chuyên sâu theo ngành."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Domain Expertise & Career",
+      "description": "Phát triển kiến thức chuyên ngành và sự nghiệp Product Management.",
+      "skills": [
+        {
+          "name": "B2B Product Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Domain Expertise & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "B2B vs B2C differences: sales cycle, complexity, stakeholders",
+            "Enterprise sales cycle: understanding the process",
+            "Buyer vs User: different personas, different needs",
+            "Customer segments: SMB, Mid-market, Enterprise",
+            "Self-serve vs sales-assisted vs enterprise",
+            "API products: developer experience, documentation",
+            "Platform products: ecosystem, integrations, partners",
+            "B2B pricing: contracts, tiers, custom pricing",
+            "Customer success: onboarding, adoption, expansion",
+            "Enterprise features: SSO, RBAC, audit logs, compliance",
+            "Case studies: B2B PM案例分析"
+          ],
+          "prerequisites": ["Product Tools & Software"],
+          "nextSkill": {
+            "name": "B2C Product Management",
+            "description": "Quản lý sản phẩm consumer-facing."
+          }
+        },
+        {
+          "name": "B2C Product Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Domain Expertise & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "B2B vs B2C differences: scale, behavior, metrics",
+            "Consumer psychology: motivation, habits, decision-making",
+            "Mobile-first products: app store, mobile UX",
+            "Social products: network effects, community, moderation",
+            "Marketplace products: supply/demand, liquidity, matching",
+            "E-commerce: catalog, checkout, fulfillment",
+            "Subscription products: trial, conversion, retention",
+            "Consumer metrics: DAU/MAU, session depth, retention",
+            "Growth loops: viral, content, paid",
+            "Consumer behavior analytics: funnels, cohorts, behavioral",
+            "Localization: multi-language, cultural adaptation",
+            "Case studies: B2C PM案例分析"
+          ],
+          "prerequisites": ["B2B Product Management"],
+          "nextSkill": {
+            "name": "Career Development & Certifications",
+            "description": "Phát triển sự nghiệp và chuẩn bị chứng chỉ."
+          }
+        },
+        {
+          "name": "Career Development & Certifications",
+          "difficulty": "Nâng cao",
+          "skillType": "Domain Expertise & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "PM career paths: IC track, management track",
+            "PM levels: APM, PM, Senior PM, Principal PM, VP Product, CPO",
+            "Building PM portfolio: case studies, achievements",
+            "PM resume: tips, format, highlighting impact",
+            "PM interviews: product sense, execution, strategy questions",
+            "Case study interviews: framework, practice",
+            "Product sense questions: designing products",
+            "Execution questions: metrics, prioritization, trade-offs",
+            "Behavioral questions: STAR method, leadership stories",
+            "Certifications: Pragmatic Institute, Product School, Reforge",
+            "PM communities: Product Hunt, Mind the Product, Lenny's Newsletter",
+            "Mentorship: finding mentors, being a mentor",
+            "Continuous learning: books, podcasts, conferences",
+            "Salary negotiation: research, preparation, tactics"
+          ],
+          "prerequisites": ["B2C Product Management"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Product Manager và sẵn sàng cho sự nghiệp."
+          }
+        }
+      ]
+    }
+  ]
+}

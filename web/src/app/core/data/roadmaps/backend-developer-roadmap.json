@@ -1,0 +1,749 @@
+{
+  "roadmap": {
+    "name": "Backend-developer",
+    "description": "Lộ trình trở thành Backend Developer - người xây dựng và quản lý server, database, API để frontend có thể hoạt động. Bắt đầu từ nền tảng lập trình, phát triển kỹ năng với Node.js/Express, quản lý database SQL/NoSQL, thiết kế API RESTful/GraphQL, đến microservices, caching, security và deployment."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng lập trình, logic và cách thức hoạt động của web.",
+      "skills": [
+        {
+          "name": "Computer Science Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/8",
+          "whatYouWillLearn": [
+            "Cấu trúc dữ liệu: Array, Linked List, Stack, Queue, Hash Table, Tree, Graph",
+            "Thuật toán: Linear Search, Binary Search, Bubble Sort, Quick Sort, Merge Sort",
+            "Big O Notation: O(1), O(log n), O(n), O(n log n), O(n²) - đánh giá hiệu suất",
+            "Recursion và Divide and Conquer",
+            "Bitwise operations cơ bản",
+            "Logic lập trình và tư duy giải quyết vấn đề"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Web Foundation",
+            "description": "Nắm vững cách thức hoạt động của web và internet."
+          }
+        },
+        {
+          "name": "Web Foundation",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/8",
+          "whatYouWillLearn": [
+            "Internet hoạt động như thế nào: HTTP/HTTPS, DNS, TCP/IP, UDP",
+            "Client-Server Model và Request-Response cycle chi tiết",
+            "HTTP Protocol: methods (GET, POST, PUT, PATCH, DELETE), status codes (2xx, 3xx, 4xx, 5xx)",
+            "HTTP Headers: Content-Type, Authorization, Cache-Control, Set-Cookie",
+            "Cookies vs Sessions vs Tokens",
+            "URL structure và URL encoding",
+            "REST concepts: stateless, resource-based",
+            "Web Servers: Apache, Nginx, Node.js",
+            "Browser DevTools: Network tab, Console"
+          ],
+          "prerequisites": ["Computer Science Basics"],
+          "nextSkill": {
+            "name": "Programming Language (Node.js)",
+            "description": "Bắt đầu học ngôn ngữ lập trình để xây dựng backend."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Core Backend",
+      "description": "Xây dựng nền tảng backend với Node.js, SQL và NoSQL databases.",
+      "skills": [
+        {
+          "name": "Node.js Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Backend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "Node.js là gì: runtime environment, V8 engine, non-blocking I/O",
+            "Node.js architecture: Event Loop, Libuv, Thread Pool",
+            "Cài đặt và cấu trúc project: node_modules, package.json, package-lock.json",
+            "Modules: CommonJS (require/module.exports), ES Modules (import/export)",
+            "Built-in modules: fs, path, os, http, https, url, querystring, crypto",
+            "File System operations: readFile, writeFile, appendFile, rename, unlink (sync vs async)",
+            "HTTP module: tạo server đơn giản, routing cơ bản",
+            "Process và Environment: process.env, process.argv, process.exit",
+            "Error handling: try/catch, uncaughtException, unhandledRejection",
+            "Streams: Readable, Writable, Duplex, Transform",
+            "Child Process: exec, spawn, fork",
+            "Timers: setTimeout, setInterval, setImmediate, nextTick",
+            "npm scripts: lifecycle hooks, custom scripts",
+            "Node.js debugging: node inspect, --inspect flag, Chrome DevTools"
+          ],
+          "prerequisites": ["Web Foundation"],
+          "nextSkill": {
+            "name": "SQL Databases",
+            "description": "Học cách thiết kế và quản lý database quan hệ."
+          }
+        },
+        {
+          "name": "SQL Databases",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Backend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "Database là gì: RDBMS vs NoSQL, khi nào dùng cái nào",
+            "PostgreSQL: installation, basics, psql terminal",
+            "SQL syntax: SELECT, INSERT, UPDATE, DELETE",
+            "WHERE clause và conditions: =, !=, <, >, LIKE, IN, BETWEEN, IS NULL",
+            "JOIN types: INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN, CROSS JOIN",
+            "GROUP BY và HAVING: aggregation functions (COUNT, SUM, AVG, MIN, MAX)",
+            "ORDER BY và LIMIT/OFFSET: pagination",
+            "Subqueries và CTEs (Common Table Expressions)",
+            "Indexes: B-Tree, Hash, Partial Indexes, Composite Indexes",
+            "Primary Key, Foreign Key, Unique Constraint, Not Null, Check Constraint",
+            "Database Design: 1NF, 2NF, 3NF, BCNF normalization",
+            "Entity Relationship Diagram (ERD): Crow's Foot notation",
+            "Transactions: BEGIN, COMMIT, ROLLBACK, ACID properties",
+            "Views:创建, usage, materialized views",
+            "Stored Procedures và Functions basics",
+            "PostgreSQL-specific: JSONB, Array types, Window Functions, CTEs"
+          ],
+          "prerequisites": ["Node.js Fundamentals"],
+          "nextSkill": {
+            "name": "NoSQL Databases",
+            "description": "Học cách làm việc với database không quan hệ."
+          }
+        },
+        {
+          "name": "NoSQL Databases",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Backend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "NoSQL là gì: types (Document, Key-Value, Column-Family, Graph)",
+            "MongoDB fundamentals: documents, collections, databases",
+            "MongoDB CRUD operations: insertOne, insertMany, find, updateOne, updateMany, deleteOne, deleteMany",
+            "MongoDB查询: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $regex",
+            "MongoDB update operators: $set, $unset, $inc, $push, $pull, $addToSet",
+            "MongoDB aggregation pipeline: $match, $group, $sort, $project, $lookup, $unwind",
+            "MongoDB indexing: single field, compound, multikey, text indexes",
+            "MongoDB relationships: embedding vs referencing",
+            "MongoDB schema design: subset pattern, computed pattern, bucket pattern",
+            "Mongoose ODM: Schema definition, Models, Validation, Virtuals, Methods",
+            "Mongoose middleware: pre/post hooks, save, validate, remove",
+            "Redis fundamentals: key-value store, data types (strings, hashes, lists, sets, sorted sets)",
+            "Redis use cases: caching, session store, message queue, rate limiting",
+            "Redis operations: GET, SET, DEL, EXPIRE, HSET, HGET, LPUSH, RPUSH, SADD",
+            "Redis patterns: caching, rate limiting, pub/sub, leaderboard",
+            "When to use SQL vs NoSQL: decision factors"
+          ],
+          "prerequisites": ["SQL Databases"],
+          "nextSkill": {
+            "name": "Express.js",
+            "description": "Học framework Express.js để xây dựng API nhanh chóng."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Backend Development",
+      "description": "Xây dựng API RESTful/GraphQL với Express.js và quản lý authentication.",
+      "skills": [
+        {
+          "name": "Express.js",
+          "difficulty": "Trung cấp",
+          "skillType": "Backend Development",
+          "stagePosition": "3/8",
+          "whatYouWillLearn": [
+            "Express.js là gì: minimal web framework for Node.js",
+            "Cài đặt và cấu trúc project: MVC, feature-based, layered architecture",
+            "Routing: router, route params, query params, route groups",
+            "HTTP methods: app.get, app.post, app.put, app.patch, app.delete",
+            "Request object: req.params, req.query, req.body, req.headers, req.cookies",
+            "Response object: res.json(), res.status(), res.send(), res.redirect(), res.render()",
+            "Middleware概念: application-level, router-level, error-handling middleware",
+            "Built-in middleware: express.json(), express.urlencoded(), express.static()",
+            "Third-party middleware: cors, helmet, morgan, cookie-parser, compression",
+            "Custom middleware: logging, authentication, validation, rate limiting",
+            "Error handling middleware: centralized error handling, error classes",
+            "Router组织: modular routing, route prefixing",
+            "Template engines: EJS, Pug, Handlebars (basics)",
+            "Static files serving: express.static()",
+            "File upload: multer, busboy",
+            "Body parsing: JSON, URL-encoded, raw, text",
+            "CORS configuration: cors middleware, options, credentials",
+            "Helmet: security headers middleware",
+            "Morgan: HTTP request logging middleware",
+            "Express project structure best practices"
+          ],
+          "prerequisites": ["NoSQL Databases"],
+          "nextSkill": {
+            "name": "Authentication & Authorization",
+            "description": "Học cách xác thực và phân quyền người dùng."
+          }
+        },
+        {
+          "name": "Authentication & Authorization",
+          "difficulty": "Trung cấp",
+          "skillType": "Backend Development",
+          "stagePosition": "3/8",
+          "whatYouWillLearn": [
+            "Authentication vs Authorization: sự khác biệt",
+            "Session-based authentication: session, cookie, server-side storage",
+            "JSON Web Tokens (JWT): header, payload, signature, algorithm",
+            "JWT implementation: signing, verifying, decoding tokens",
+            "Access Token + Refresh Token pattern: token rotation, refresh flow",
+            "Token storage: httpOnly cookies vs localStorage, security considerations",
+            "Password hashing: bcrypt, argon2, why never store plain text passwords",
+            "Password validation: strength requirements, reset flow",
+            "OAuth 2.0 concepts: authorization code flow, implicit flow, client credentials",
+            "OAuth 2.0 implementation: Google, GitHub, Facebook login",
+            "Passport.js: strategies, configuration, serialization/deserialization",
+            "Role-Based Access Control (RBAC): roles, permissions, middleware",
+            "Attribute-Based Access Control (ABAC): policies, attributes",
+            "API Key authentication: generation, validation, rate limiting",
+            "Two-Factor Authentication (2FA): TOTP, QR code, backup codes",
+            "Email verification flow: token generation, expiry, resend",
+            "Account lockout: failed attempts tracking, temporary lockout",
+            "Secure password reset: token generation, email sending, expiry",
+            "Rate limiting: login attempts, API calls, implementation with Redis",
+            "Security best practices: HTTPS, secure headers, CORS, CSP"
+          ],
+          "prerequisites": ["Express.js"],
+          "nextSkill": {
+            "name": "API Design (REST & GraphQL)",
+            "description": "Thiết kế API chuẩn REST và GraphQL."
+          }
+        },
+        {
+          "name": "API Design (REST & GraphQL)",
+          "difficulty": "Trung cấp",
+          "skillType": "Backend Development",
+          "stagePosition": "3/8",
+          "whatYouWillLearn": [
+            "REST API design principles: stateless, uniform interface, resource-based",
+            "RESTful URL design: nouns, plural, nesting, versioning",
+            "HTTP methods trong REST: GET (read), POST (create), PUT (full update), PATCH (partial update), DELETE",
+            "HTTP status codes: 200, 201, 204, 301, 304, 400, 401, 403, 404, 409, 422, 429, 500",
+            "REST response format: JSON, envelope pattern, pagination",
+            "Pagination: offset-based, cursor-based, page/per-page",
+            "Filtering, sorting, searching: query parameters",
+            "API versioning: URL versioning, header versioning, query param versioning",
+            "REST validation: input validation, error responses, validation libraries",
+            "REST documentation: OpenAPI/Swagger, YAML schema, interactive docs",
+            "GraphQL basics: schema, types, queries, mutations, subscriptions",
+            "GraphQL schema design: types, interfaces, unions, enums",
+            "GraphQL queries: arguments, nested queries, fragments",
+            "GraphQL mutations: input types, return types, error handling",
+            "GraphQL resolvers: query resolvers, mutation resolvers, N+1 problem",
+            "GraphQL DataLoader: batching and caching",
+            "GraphQL vs REST: comparison, when to use which",
+            "GraphQL tools: Apollo Server, Express GraphQL, Yoga GraphQL",
+            "API testing: Postman, Insomnia, curl",
+            "API monitoring: response time, error rates, throughput",
+            "API rate limiting: token bucket, sliding window, implementation"
+          ],
+          "prerequisites": ["Authentication & Authorization"],
+          "nextSkill": {
+            "name": "ORM & Database Access",
+            "description": "Học cách truy cập database thông qua ORM."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Database & ORM",
+      "description": "Làm việc chuyên sâu với database thông qua ORM và tối ưu hóa queries.",
+      "skills": [
+        {
+          "name": "ORM (Prisma/Sequelize)",
+          "difficulty": "Trung cấp",
+          "skillType": "Database & ORM",
+          "stagePosition": "4/8",
+          "whatYouWillLearn": [
+            "ORM là gì: Object-Relational Mapping, advantages và limitations",
+            "Prisma setup: installation, schema.prisma, prisma init",
+            "Prisma schema design: models, fields, relations (1-1, 1-n, m-n)",
+            "Prisma Client: generated client, CRUD operations",
+            "Prisma queries: findMany, findUnique, findFirst, create, update, delete",
+            "Prisma filtering: where clause, AND/OR/NOT, contains, startsWith, in, notIn",
+            "Prisma sorting: orderBy, multiple fields",
+            "Prisma pagination: skip, take, cursor-based pagination",
+            "Prisma relations: include, select, nested queries",
+            "Prisma transactions: interactive transactions, batch operations",
+            "Prisma middleware: custom logic, logging, performance monitoring",
+            "Prisma migrations: create, apply, reset, status",
+            "Prisma seeding: seed script, test data generation",
+            "Prisma与TypeScript: auto-generated types, input types",
+            "Sequelize basics: models, associations, CRUD, validation",
+            "TypeORM basics: entities, repositories, relations, migrations",
+            "Raw SQL queries trong ORM: khi nào cần, queryRaw, execute",
+            "Database indexing through ORM: index definition, composite indexes",
+            "Performance considerations: N+1 queries, eager loading, batch operations",
+            "Database connection pooling: why important, configuration"
+          ],
+          "prerequisites": ["API Design (REST & GraphQL)"],
+          "nextSkill": {
+            "name": "Database Design & Modeling",
+            "description": "Thiết kế database schema hiệu quả cho ứng dụng thực tế."
+          }
+        },
+        {
+          "name": "Database Design & Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "Database & ORM",
+          "stagePosition": "4/8",
+          "whatYouWillLearn": [
+            "Database design process: requirements analysis, conceptual design, logical design, physical design",
+            "ER Diagram: entities, attributes, relationships, cardinality",
+            "Normalization: 1NF, 2NF, 3NF, BCNF - purpose và trade-offs",
+            "Denormalization: khi nào cần, performance vs data integrity",
+            "Data types selection: INTEGER, BIGINT, VARCHAR, TEXT, BOOLEAN, TIMESTAMP, JSONB, UUID",
+            "Primary Keys: UUID vs Auto-increment, pros và cons",
+            "Foreign Keys: ON DELETE CASCADE, ON UPDATE CASCADE, SET NULL, RESTRICT",
+            "Indexes: B-Tree, Hash, GIN, GiST, Partial, Composite, Expression indexes",
+            "Index design: when to index, covering indexes, index-only scans",
+            "Query optimization: EXPLAIN ANALYZE, query plans, execution plans",
+            "Slow query identification: logging, pg_stat_statements",
+            "Database constraints: CHECK, UNIQUE, NOT NULL, DEFAULT, exclusion constraints",
+            "Soft delete vs Hard delete: implementation patterns",
+            "Audit trails: change tracking, audit tables, triggers",
+            "Database migrations: version control, rollback, seed data",
+            "Multi-tenancy patterns: shared database, dedicated database, schema per tenant",
+            "Data partitioning: horizontal, vertical, sharding strategies",
+            "Database replication: master-slave, master-master, read replicas",
+            "Backup strategies: full, incremental, point-in-time recovery",
+            "Database monitoring: performance metrics, connection pool stats"
+          ],
+          "prerequisites": ["ORM (Prisma/Sequelize)"],
+          "nextSkill": {
+            "name": "File Storage & Cloud Services",
+            "description": "Quản lý file upload và cloud storage."
+          }
+        },
+        {
+          "name": "File Storage & Cloud Services",
+          "difficulty": "Trung cấp",
+          "skillType": "Database & ORM",
+          "stagePosition": "4/8",
+          "whatYouWillLearn": [
+            "File upload handling: multipart/form-data, stream processing",
+            "Multer middleware: configuration, storage engines, file filtering",
+            "File storage strategies: local filesystem, cloud storage, hybrid",
+            "AWS S3: bucket, objects, presigned URLs, multipart upload",
+            "AWS S3 configuration: IAM roles, policies, CORS, versioning",
+            "CloudFront CDN: caching, invalidation, custom domains",
+            "Image processing: Sharp library, resizing, compression, format conversion",
+            "Image optimization: WebP conversion, thumbnail generation, watermarks",
+            "File validation: type checking, size limits, virus scanning",
+            "File serving: streaming, range requests, caching headers",
+            "Cloud storage alternatives: Google Cloud Storage, Azure Blob Storage, DigitalOcean Spaces",
+            "File storage patterns: direct upload, presigned URLs, server-side upload",
+            "Cost optimization: storage classes, lifecycle policies, deletion",
+            "Media management: image galleries, document management",
+            "Backup and disaster recovery for file storage",
+            "File storage security: access control, encryption at rest and in transit"
+          ],
+          "prerequisites": ["Database Design & Modeling"],
+          "nextSkill": {
+            "name": "Caching Strategies",
+            "description": "Học cách caching để tối ưu performance backend."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Advanced Backend",
+      "description": "Các kỹ năng nâng cao: caching, message queues, và microservices.",
+      "skills": [
+        {
+          "name": "Caching Strategies",
+          "difficulty": "Trung cấp",
+          "skillType": "Advanced Backend",
+          "stagePosition": "5/8",
+          "whatYouWillLearn": [
+            "Caching là gì: tại sao cần caching, caching layers",
+            "Cache strategies: Cache-Aside, Read-Through, Write-Through, Write-Behind, Write-Around",
+            "Redis caching: SET, GET, EXPIRE, TTL, pattern matching",
+            "Redis data structures for caching: Strings, Hashes, Sorted Sets",
+            "Cache invalidation: time-based, event-based, manual invalidation",
+            "Cache stampede: preventing thundering herd, probabilistic early expiration",
+            "Cache warming: pre-populating cache, background jobs",
+            "Application-level caching: in-memory caching, LRU cache",
+            "HTTP caching: Cache-Control, ETag, Last-Modified, If-None-Match",
+            "CDN caching: edge caching, cache invalidation strategies",
+            "Database query caching: query result cache, prepared statements",
+            "Session caching: Redis sessions, session store",
+            "Rate limiting with Redis: sliding window, token bucket implementation",
+            "Redis pub/sub: real-time notifications, event broadcasting",
+            "Redis Sentinel: high availability, failover",
+            "Redis Cluster: sharding, horizontal scaling",
+            "Memcached vs Redis: comparison, when to use which",
+            "Cache monitoring: hit rate, miss rate, memory usage",
+            "Caching patterns: lazy loading vs eager loading",
+            "Cache best practices: TTL strategies, cache keys naming"
+          ],
+          "prerequisites": ["File Storage & Cloud Services"],
+          "nextSkill": {
+            "name": "Message Queues & Event-Driven Architecture",
+            "description": "Học cách xử lý bất đồng bộ với message queues."
+          }
+        },
+        {
+          "name": "Message Queues & Event-Driven Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Backend",
+          "stagePosition": "5/8",
+          "whatYouWillLearn": [
+            "Message queues là gì: synchronous vs asynchronous communication",
+            "Use cases: task queue, event-driven, decoupling services, load leveling",
+            "RabbitMQ: exchange, queue, binding, routing key",
+            "RabbitMQ patterns: simple queue, work queue, pub/sub, routing, topics, RPC",
+            "RabbitMQ implementation: amqplib, connection, channel, publish, consume",
+            "Apache Kafka: topics, partitions, consumers, consumer groups",
+            "Kafka vs RabbitMQ: comparison, when to use which",
+            "Bull/BullMQ: Redis-based job queue for Node.js",
+            "Job processing: priority, delay, retry, rate limiting, concurrency",
+            "Job patterns: scheduled jobs, repeatable jobs, job chains",
+            "Event-driven architecture: events, event handlers, event sourcing",
+            "Domain Events: capturing business events, publishing, consuming",
+            "Event Sourcing: event store, replay, projections",
+            "CQRS (Command Query Responsibility Segregation): separate read/write models",
+            "Webhook implementation: sending webhooks, verifying signatures, retry logic",
+            "SSE (Server-Sent Events): one-way real-time communication",
+            "WebSocket: bidirectional real-time communication, Socket.IO",
+            "Message queue monitoring: queue depth, consumer lag, throughput",
+            "Dead Letter Queue (DLQ): handling failed messages",
+            "Message acknowledgment: at-least-once, at-most-once, exactly-once delivery",
+            "Idempotency: preventing duplicate processing"
+          ],
+          "prerequisites": ["Caching Strategies"],
+          "nextSkill": {
+            "name": "Microservices Architecture",
+            "description": "Học cách thiết kế và xây dựng microservices."
+          }
+        },
+        {
+          "name": "Microservices Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Backend",
+          "stagePosition": "5/8",
+          "whatYouWillLearn": [
+            "Monolith vs Microservices: trade-offs, khi nào chuyển đổi",
+            "Microservices principles: single responsibility,自治, decentralized",
+            "Service decomposition: bounded contexts, domain-driven design (DDD)",
+            "Service communication: synchronous (HTTP/gRPC), asynchronous (message queues)",
+            "API Gateway: routing, authentication, rate limiting, load balancing",
+            "Service discovery: DNS-based, registry-based (Consul, etcd)",
+            "Inter-service communication patterns: request-response, event-driven, saga pattern",
+            "Distributed transactions: saga pattern (choreography vs orchestration)",
+            "Data management: database per service, shared database, CQRS",
+            "Service resilience: circuit breaker, retry, fallback, timeout",
+            "Distributed tracing: OpenTelemetry, Jaeger, Zipkin",
+            "Centralized logging: ELK Stack (Elasticsearch, Logstash, Kibana), Loki",
+            "Service mesh: Istio, Linkerd (overview)",
+            "Containerization: Docker, Docker Compose",
+            "Container orchestration: Kubernetes basics, pods, services, deployments",
+            "CI/CD for microservices: independent deployment, pipeline strategies",
+            "Monitoring: Prometheus, Grafana, service health metrics",
+            "Configuration management: environment variables, config servers",
+            "API versioning in microservices: backward compatibility",
+            "Testing microservices: contract testing, integration testing"
+          ],
+          "prerequisites": ["Message Queues & Event-Driven Architecture"],
+          "nextSkill": {
+            "name": "Web Security",
+            "description": "Nắm vững các lỗ hổng bảo mật và cách phòng ngừa."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Security & Quality",
+      "description": "Bảo mật ứng dụng, testing và đảm bảo chất lượng code backend.",
+      "skills": [
+        {
+          "name": "Web Security",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Quality",
+          "stagePosition": "6/8",
+          "whatYouWillLearn": [
+            "OWASP Top 10: overview các lỗ hổng bảo mật phổ biến nhất",
+            "SQL Injection: attack vector, prevention (parameterized queries, ORM)",
+            "NoSQL Injection: MongoDB injection, prevention",
+            "Cross-Site Scripting (XSS): stored, reflected, DOM-based, prevention",
+            "Cross-Site Request Forgery (CSRF): tokens, SameSite cookies",
+            "Authentication attacks: brute force, credential stuffing, timing attacks",
+            "Authorization vulnerabilities: IDOR, privilege escalation, prevention",
+            "Server-Side Request Forgery (SSRF): attacks, prevention",
+            "Insecure Direct Object References (IDOR): detection, prevention",
+            "Directory Traversal: attacks, path sanitization",
+            "Security headers: helmet.js configuration, CSP, HSTS, X-Frame-Options",
+            "Input validation: server-side validation, sanitization libraries (Joi, Yup, Zod)",
+            "Rate limiting: implementation, sliding window, token bucket",
+            "CORS configuration: origins, methods, headers, credentials",
+            "HTTPS enforcement: TLS/SSL, certificate management, HSTS",
+            "API security: API keys, OAuth 2.0, JWT best practices",
+            "Secret management: environment variables, vault services, never hardcode",
+            "Dependency security: npm audit, Snyk, Dependabot",
+            "Logging security: what to log, what NOT to log, sensitive data masking",
+            "Security testing: OWASP ZAP, penetration testing basics"
+          ],
+          "prerequisites": ["Microservices Architecture"],
+          "nextSkill": {
+            "name": "Backend Testing",
+            "description": "Học cách test ứng dụng backend."
+          }
+        },
+        {
+          "name": "Backend Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Quality",
+          "stagePosition": "6/8",
+          "whatYouWillLearn": [
+            "Testing pyramid: unit, integration, E2E cho backend",
+            "Unit testing với Jest: testing functions, services, utilities",
+            "Testing database queries: in-memory database, test containers",
+            "Testing with real database: setup, teardown, transactions rollback",
+            "Integration testing: testing API endpoints end-to-end",
+            "Supertest: HTTP assertions cho Express.js",
+            "Testing authentication: login, token refresh, protected routes",
+            "Testing authorization: RBAC, permission checks",
+            "Mocking: jest.mock(), dependency injection, test doubles",
+            "Mocking external services: email, payment, file storage",
+            "API testing: request/response validation, status codes, headers",
+            "Testing database migrations: forward, backward, data integrity",
+            "Load testing: Artillery, k6, JMeter basics",
+            "Contract testing: Pact, consumer-driven contracts",
+            "Test data management: factories, fixtures, seed data",
+            "Test environment: Docker, test containers, CI integration",
+            "Code coverage: thresholds, reporting, CI integration",
+            "TDD workflow cho backend: red-green-refactor",
+            "Testing best practices: isolation, determinism, cleanup",
+            "Test reporting: JUnit XML, HTML reports"
+          ],
+          "prerequisites": ["Web Security"],
+          "nextSkill": {
+            "name": "Logging & Monitoring",
+            "description": "Học cách log và monitor ứng dụng backend."
+          }
+        },
+        {
+          "name": "Logging & Monitoring",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Quality",
+          "stagePosition": "6/8",
+          "whatYouWillLearn": [
+            "Logging fundamentals: levels (error, warn, info, debug, trace), structured logging",
+            "Winston: configuration, transports, formats, custom levels",
+            "Pino: high-performance logging, JSON output",
+            "Morgan: HTTP request logging middleware",
+            "Structured logging: JSON format, correlation IDs, request context",
+            "Log aggregation: ELK Stack (Elasticsearch, Logstash, Kibana)",
+            "Cloud logging: AWS CloudWatch, Google Cloud Logging, Datadog",
+            "Application Monitoring: response time, throughput, error rate",
+            "APM (Application Performance Monitoring): New Relic, Datadog, Dynatrace",
+            "Metrics collection: counters, gauges, histograms",
+            "Prometheus: metrics exposition, querying, alerting rules",
+            "Grafana: dashboards, visualization, alerting",
+            "Health checks: liveness probe, readiness probe, deep health checks",
+            "Alerting: thresholds, escalation, notification channels",
+            "Distributed tracing: OpenTelemetry, Jaeger, Zipkin",
+            "Trace context propagation: headers, correlation IDs",
+            "Error tracking: Sentry, Bugsnag, error aggregation",
+            "Audit logging: tracking user actions, compliance requirements",
+            "Log rotation và retention: policies, storage management",
+            "Security logging: intrusion detection, anomaly detection"
+          ],
+          "prerequisites": ["Backend Testing"],
+          "nextSkill": {
+            "name": "CI/CD & Deployment",
+            "description": "Học cách triển khai và tự động hóa deployment."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "DevOps & Deployment",
+      "description": "Triển khai ứng dụng với Docker, CI/CD và cloud services.",
+      "skills": [
+        {
+          "name": "Docker & Containerization",
+          "difficulty": "Trung cấp",
+          "skillType": "DevOps & Deployment",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "Docker là gì: containerization, advantages over VMs",
+            "Docker concepts: images, containers, registries, layers",
+            "Dockerfile: instructions (FROM, RUN, COPY, ADD, CMD, ENTRYPOINT, EXPOSE, WORKDIR, ENV)",
+            "Building Docker images: docker build, tags, caching layers",
+            "Running containers: docker run, ports, volumes, environment variables",
+            "Docker Compose: multi-container applications, services, networks, volumes",
+            "Docker Compose configuration: services, build, ports, volumes, env_file, depends_on",
+            "Docker volumes: named volumes, bind mounts, anonymous volumes",
+            "Docker networking: bridge, host, overlay, none",
+            "Docker security: non-root user, minimal images, secrets management",
+            "Multi-stage builds: optimize image size, build vs runtime stages",
+            "Node.js Docker best practices: .dockerignore, layer caching, alpine images",
+            "Docker for databases: PostgreSQL, MongoDB, Redis containers",
+            "Docker environments: development, testing, production",
+            "Docker debugging: logs, exec, inspect, top, stats",
+            "Docker registry: Docker Hub, private registries, AWS ECR",
+            "Container orchestration: Kubernetes basics, pods, services, deployments",
+            "Kubernetes concepts: replica sets, configmaps, secrets, ingress",
+            "Docker vs Kubernetes: when to use which"
+          ],
+          "prerequisites": ["Logging & Monitoring"],
+          "nextSkill": {
+            "name": "CI/CD Pipelines",
+            "description": "Thiết lập pipeline tự động hóa build, test, deploy."
+          }
+        },
+        {
+          "name": "CI/CD Pipelines",
+          "difficulty": "Trung cấp",
+          "skillType": "DevOps & Deployment",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "CI/CD concepts: Continuous Integration, Continuous Delivery, Continuous Deployment",
+            "GitHub Actions: workflows, jobs, steps, triggers, matrix builds",
+            "GitHub Actions examples: lint, test, build, Docker build, deploy",
+            "GitHub Actions secrets và environment variables",
+            "GitHub Actions caching: dependencies, Docker layers",
+            "GitLab CI/CD: .gitlab-ci.yml, stages, jobs, variables",
+            "Jenkins: Pipeline as Code, Jenkinsfile, plugins (overview)",
+            "CI pipeline best practices: fast feedback, parallel execution, caching",
+            "CD strategies: blue-green, canary, rolling, recreate",
+            "Deployment platforms: Vercel, Railway, Render, Heroku",
+            "AWS deployment: EC2, ECS, EKS, Lambda",
+            "Google Cloud: Cloud Run, GKE, App Engine",
+            "Azure: App Service, AKS, Functions",
+            "Infrastructure as Code: Terraform basics, HCL syntax",
+            "Terraform workflow: init, plan, apply, destroy",
+            "Configuration management: Ansible basics (overview)",
+            "Environment management: development, staging, production",
+            "Feature flags: LaunchDarkly, Vercel Flags, custom implementation",
+            "Rollback strategies: database migrations, code rollback",
+            "Deployment monitoring: health checks, smoke tests",
+            "Cost optimization: right-sizing, reserved instances, spot instances"
+          ],
+          "prerequisites": ["Docker & Containerization"],
+          "nextSkill": {
+            "name": "Cloud Services & AWS Basics",
+            "description": "Làm quen với cloud services và AWS."
+          }
+        },
+        {
+          "name": "Cloud Services & AWS Basics",
+          "difficulty": "Nâng cao",
+          "skillType": "DevOps & Deployment",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "Cloud computing concepts: IaaS, PaaS, SaaS, FaaS",
+            "AWS overview: regions, availability zones, edge locations",
+            "AWS EC2: instances, security groups, key pairs, elastic IP",
+            "AWS S3: buckets, objects, policies, lifecycle, versioning",
+            "AWS RDS: managed databases, Multi-AZ, read replicas",
+            "AWS DynamoDB: serverless NoSQL, capacity modes, indexes",
+            "AWS Lambda: serverless functions, triggers, layers, cold starts",
+            "AWS API Gateway: REST API, HTTP API, custom domains, authorizers",
+            "AWS CloudFront: CDN, caching, invalidation, origins",
+            "AWS IAM: users, groups, roles, policies, best practices",
+            "AWS VPC: subnets, security groups, NACLs, internet gateway",
+            "AWS ElastiCache: managed Redis/Memcached",
+            "AWS SES: email sending service",
+            "AWS SQS: message queuing service",
+            "AWS CloudWatch: monitoring, alarms, logs",
+            "AWS CloudFormation: infrastructure as code (overview)",
+            "Serverless architecture: patterns, trade-offs, best practices",
+            "Cost management: pricing models, cost explorer, budgets",
+            "AWS free tier: eligible services, limits",
+            "Multi-cloud strategy: considerations, vendor lock-in"
+          ],
+          "prerequisites": ["CI/CD Pipelines"],
+          "nextSkill": {
+            "name": "Performance Optimization",
+            "description": "Tối ưu hóa hiệu suất backend."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Performance & Scalability",
+      "description": "Tối ưu hiệu năng, scalability và high availability cho backend.",
+      "skills": [
+        {
+          "name": "Performance Optimization",
+          "difficulty": "Nâng cao",
+          "skillType": "Performance & Scalability",
+          "stagePosition": "8/8",
+          "whatYouWillLearn": [
+            "Performance metrics: response time, throughput, latency, P95, P99",
+            "Profiling Node.js: --prof, flame graphs, clinic.js",
+            "CPU profiling: identifying CPU bottlenecks, blocking operations",
+            "Memory profiling: heap snapshots, memory leaks detection",
+            "Event Loop monitoring: lag detection, event loop delay",
+            "Database performance: query optimization, EXPLAIN ANALYZE",
+            "Database indexing strategies: covering indexes, partial indexes, expression indexes",
+            "Connection pooling: pg-pool, why important, configuration",
+            "Query optimization: N+1 queries, eager loading, batch operations",
+            "Caching layer: Redis caching, in-memory caching, cache strategies",
+            "HTTP optimization: compression (gzip, brotli), keep-alive, HTTP/2",
+            "Response optimization: pagination, field selection, sparse fieldsets",
+            "Load testing: Artillery, k6, identifying bottlenecks",
+            "CPU-intensive tasks: worker threads, child processes, external services",
+            "Async operations: non-blocking I/O, Promise.all for parallel execution",
+            "Node.js clustering: multi-core utilization, PM2",
+            "Memory management: garbage collection, heap size limits, memory leaks",
+            "Performance budgets: setting thresholds, monitoring, alerting",
+            "Performance monitoring: APM tools, custom metrics",
+            "Performance best practices checklist"
+          ],
+          "prerequisites": ["Cloud Services & AWS Basics"],
+          "nextSkill": {
+            "name": "Scalability & High Availability",
+            "description": "Học cách thiết kế hệ thống có thể scale và highly available."
+          }
+        },
+        {
+          "name": "Scalability & High Availability",
+          "difficulty": "Nâng cao",
+          "skillType": "Performance & Scalability",
+          "stagePosition": "8/8",
+          "whatYouWillLearn": [
+            "Scalability concepts: horizontal vs vertical scaling",
+            "Horizontal scaling: load balancers, stateless services",
+            "Load balancing: round-robin, least connections, IP hash, weighted",
+            "Load balancers: AWS ALB/NLB, Nginx, HAProxy",
+            "Stateful vs Stateless services: design for statelessness",
+            "Session management in distributed systems: sticky sessions, external store",
+            "Database scaling: read replicas, sharding, partitioning",
+            "Sharding strategies: hash-based, range-based, geographic",
+            "Database replication: master-slave, master-master, multi-region",
+            "Caching at scale: distributed caching, cache invalidation",
+            "CDN for static assets: edge caching, origin shield",
+            "High availability: redundancy, failover, health checks",
+            "Disaster recovery: RPO, RTO, backup strategies, multi-region",
+            "Service resilience: circuit breaker, bulkhead, retry with backoff",
+            "Graceful degradation: fallbacks, feature flags, maintenance mode",
+            "Capacity planning: load testing, forecasting, auto-scaling",
+            "Auto-scaling: AWS Auto Scaling Groups, target tracking, scheduled scaling",
+            "Cost optimization at scale: reserved instances, spot instances, right-sizing",
+            "Monitoring at scale: distributed tracing, centralized logging, alerting",
+            "Incident management: on-call, runbooks, post-mortem"
+          ],
+          "prerequisites": ["Performance Optimization"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Backend Developer và sẵn sàng cho công việc thực tế."
+          }
+        }
+      ]
+    }
+  ]
+}

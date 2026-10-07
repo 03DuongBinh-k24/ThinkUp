@@ -1,0 +1,774 @@
+{
+  "roadmap": {
+    "name": "ERP Consulting",
+    "description": "Lộ trình trở thành Consultant ERP - từ nền tảng kinh doanh đến triển khai, tùy chỉnh và quản lý các hệ thống hoạch định tài nguyên doanh nghiệp (ERP) như SAP, Oracle, Microsoft Dynamics."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Business Foundations",
+      "description": "Nền tảng kiến thức kinh doanh và quản trị doanh nghiệp cần thiết cho tư vấn ERP.",
+      "skills": [
+        {
+          "name": "Business Process Understanding",
+          "difficulty": "Cơ bản",
+          "skillType": "Business Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Hiểu các quy trình kinh doanh cốt lõi (Order-to-Cash, Procure-to-Pay, Record-to-Report)",
+            "Mapping quy trình doanh nghiệp hiện tại (As-Is)",
+            "Thiết kế quy trình tương lai (To-Be)",
+            "Business Process Reengineering (BPR)",
+            "Value stream mapping",
+            "Continuous improvement frameworks (Lean, Six Sigma)"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Accounting & Finance Fundamentals",
+            "description": "Kiến thức kế toán và tài chính doanh nghiệp"
+          }
+        },
+        {
+          "name": "Accounting & Finance Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Business Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Double-entry bookkeeping",
+            "Financial statements (Balance Sheet, Income Statement, Cash Flow)",
+            "General Ledger và Chart of Accounts",
+            "Accounts Payable và Accounts Receivable",
+            "Cost accounting basics",
+            "Budgeting và financial planning"
+          ],
+          "prerequisites": ["Business Process Understanding"],
+          "nextSkill": {
+            "name": "Supply Chain Management",
+            "description": "Quản lý chuỗi cung ứng"
+          }
+        },
+        {
+          "name": "Supply Chain Management",
+          "difficulty": "Cơ bản",
+          "skillType": "Business Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Procurement và purchasing processes",
+            "Inventory management",
+            "Warehouse management",
+            "Demand planning và forecasting",
+            "Logistics và distribution",
+            "Supplier relationship management"
+          ],
+          "prerequisites": ["Business Process Understanding"],
+          "nextSkill": {
+            "name": "Human Resources Management",
+            "description": "Quản trị nhân sự"
+          }
+        },
+        {
+          "name": "Human Resources Management",
+          "difficulty": "Cơ bản",
+          "skillType": "Business Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Employee lifecycle management",
+            "Payroll processing",
+            "Time và attendance tracking",
+            "Performance management",
+            "Recruitment và onboarding",
+            "Training và development"
+          ],
+          "prerequisites": ["Business Process Understanding"],
+          "nextSkill": {
+            "name": "ERP Concepts & Architecture",
+            "description": "Kiến trúc và khái niệm ERP"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "ERP Core Knowledge",
+      "description": "Hiểu rõ kiến trúc ERP và các modules chính.",
+      "skills": [
+        {
+          "name": "ERP Concepts & Architecture",
+          "difficulty": "Cơ bản",
+          "skillType": "ERP Core Knowledge",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "ERP history và evolution",
+            "Monolithic vs modular architecture",
+            "Central database và data flow",
+            "Master data vs transactional data",
+            "Integration patterns trong ERP",
+            "Cloud ERP vs On-premise ERP"
+          ],
+          "prerequisites": ["Business Process Understanding"],
+          "nextSkill": {
+            "name": "ERP Financial Modules",
+            "description": "Modules tài chính trong ERP"
+          }
+        },
+        {
+          "name": "ERP Financial Modules",
+          "difficulty": "Trung cấp",
+          "skillType": "ERP Core Knowledge",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "General Ledger configuration",
+            "Accounts Payable/Receivable setup",
+            "Asset accounting",
+            "Bank reconciliation",
+            "Intercompany transactions",
+            "Financial reporting và consolidation"
+          ],
+          "prerequisites": ["Accounting & Finance Fundamentals", "ERP Concepts & Architecture"],
+          "nextSkill": {
+            "name": "ERP Supply Chain Modules",
+            "description": "Modules chuỗi cung ứng trong ERP"
+          }
+        },
+        {
+          "name": "ERP Supply Chain Modules",
+          "difficulty": "Trung cấp",
+          "skillType": "ERP Core Knowledge",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Materials management (MM)",
+            "Sales và distribution (SD)",
+            "Production planning (PP)",
+            "Warehouse management (WM/EWM)",
+            "Quality management (QM)",
+            "Plant maintenance (PM)"
+          ],
+          "prerequisites": ["Supply Chain Management", "ERP Concepts & Architecture"],
+          "nextSkill": {
+            "name": "ERP HR Modules",
+            "description": "Modules nhân sự trong ERP"
+          }
+        },
+        {
+          "name": "ERP HR Modules",
+          "difficulty": "Trung cấp",
+          "skillType": "ERP Core Knowledge",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Organizational management",
+            "Personnel administration",
+            "Payroll configuration",
+            "Time management",
+            "Benefits administration",
+            "Employee self-service portals"
+          ],
+          "prerequisites": ["Human Resources Management", "ERP Concepts & Architecture"],
+          "nextSkill": {
+            "name": "SQL & Database Management",
+            "description": "SQL và quản lý cơ sở dữ liệu"
+          }
+        },
+        {
+          "name": "SQL & Database Management",
+          "difficulty": "Cơ bản",
+          "skillType": "ERP Core Knowledge",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "SQL queries cho data extraction",
+            "Database schema understanding",
+            "Data migration techniques",
+            "Custom reports và views",
+            "Database performance basics",
+            "Data integrity và validation"
+          ],
+          "prerequisites": ["ERP Concepts & Architecture"],
+          "nextSkill": {
+            "name": "SAP S/4HANA",
+            "description": "Hệ thống ERP hàng đầu thị trường"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "ERP Platform Expertise",
+      "description": "Chuyên sâu vào nền tảng ERP cụ thể (SAP, Oracle, Microsoft Dynamics).",
+      "skills": [
+        {
+          "name": "SAP S/4HANA",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Platform Expertise",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "SAP Fiori UX và Launchpad",
+            "Universal Journal và ACDOCA",
+            "Simplified data model trong S/4HANA",
+            "Embedded analytics và CDS views",
+            "SAP Business Technology Platform (BTP)",
+            "SAP Best Practices và Activations"
+          ],
+          "prerequisites": ["ERP Financial Modules", "ERP Supply Chain Modules", "SQL & Database Management"],
+          "nextSkill": {
+            "name": "Oracle Cloud ERP",
+            "description": "Oracle's cloud ERP solution"
+          }
+        },
+        {
+          "name": "Oracle Cloud ERP",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Platform Expertise",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Oracle Fusion Cloud Architecture",
+            "Financials Cloud configuration",
+            "Procurement Cloud setup",
+            "Supply Chain Management Cloud",
+            "OTBI (Oracle Transactional Business Intelligence)",
+            "Oracle Integration Cloud (OIC)"
+          ],
+          "prerequisites": ["ERP Financial Modules", "ERP Supply Chain Modules"],
+          "nextSkill": {
+            "name": "Microsoft Dynamics 365",
+            "description": "Microsoft's ERP và CRM platform"
+          }
+        },
+        {
+          "name": "Microsoft Dynamics 365",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Platform Expertise",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Dynamics 365 Finance configuration",
+            "Dynamics 365 Supply Chain Management",
+            "Power Platform integration",
+            "Business Central vs Finance & Operations",
+            "Dataverse và data models",
+            "Azure integration services"
+          ],
+          "prerequisites": ["ERP Financial Modules", "ERP Supply Chain Modules"],
+          "nextSkill": {
+            "name": "ERP Customization & Configuration",
+            "description": "Tùy chỉnh và cấu hình ERP"
+          }
+        },
+        {
+          "name": "ERP Customization & Configuration",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Platform Expertise",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Configuration vs Customization (COD vs Custom dev)",
+            "Custom fields và extensions",
+            "Workflow configuration",
+            "Approval processes",
+            "Print forms và template design",
+            "User roles và authorization"
+          ],
+          "prerequisites": ["SAP S/4HANA", "Oracle Cloud ERP", "Microsoft Dynamics 365"],
+          "nextSkill": {
+            "name": "ERP Integration",
+            "description": "Tích hợp ERP với hệ thống khác"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Implementation Methodologies",
+      "description": "Các phương pháp triển khai ERP từ planning đến go-live.",
+      "skills": [
+        {
+          "name": "ERP Implementation Methodologies",
+          "difficulty": "Trung cấp",
+          "skillType": "Implementation Methodologies",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Waterfall methodology cho ERP",
+            "Agile approaches trong ERP implementation",
+            "SAP Activate methodology",
+            "Oracle Accelerated Implementation",
+            "Fit-to-Standard approach",
+            "Workstream-based implementation"
+          ],
+          "prerequisites": ["ERP Platform Expertise"],
+          "nextSkill": {
+            "name": "Project Management for ERP",
+            "description": "Quản lý dự án triển khai ERP"
+          }
+        },
+        {
+          "name": "Project Management for ERP",
+          "difficulty": "Trung cấp",
+          "skillType": "Implementation Methodologies",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Project scoping và estimation",
+            "Work breakdown structure (WBS)",
+            "Resource planning và allocation",
+            "Risk management",
+            "Change management",
+            "Stakeholder communication"
+          ],
+          "prerequisites": ["ERP Implementation Methodologies"],
+          "nextSkill": {
+            "name": "Business Requirements Gathering",
+            "description": "Thu thập và phân tích yêu cầu kinh doanh"
+          }
+        },
+        {
+          "name": "Business Requirements Gathering",
+          "difficulty": "Trung cấp",
+          "skillType": "Implementation Methodologies",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Workshop facilitation techniques",
+            "Requirements documentation (BRD, FSD)",
+            "Gap analysis (fit-gap analysis)",
+            "User story writing",
+            "Acceptance criteria definition",
+            "Requirements traceability matrix"
+          ],
+          "prerequisites": ["Business Process Understanding"],
+          "nextSkill": {
+            "name": "Data Migration",
+            "description": "Di chuyển dữ liệu từ hệ thống cũ sang ERP mới"
+          }
+        },
+        {
+          "name": "Data Migration",
+          "difficulty": "Nâng cao",
+          "skillType": "Implementation Methodologies",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Data assessment và profiling",
+            "Data cleansing và transformation",
+            "Migration strategy planning",
+            "ETL processes cho ERP",
+            "Data validation và reconciliation",
+            "Cutover planning và execution"
+          ],
+          "prerequisites": ["SQL & Database Management", "Business Requirements Gathering"],
+          "nextSkill": {
+            "name": "Testing & Quality Assurance",
+            "description": "Kiểm thử và đảm bảo chất lượng ERP"
+          }
+        },
+        {
+          "name": "Testing & Quality Assurance",
+          "difficulty": "Nâng cao",
+          "skillType": "Implementation Methodologies",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Test strategy và planning",
+            "Unit testing và integration testing",
+            "User Acceptance Testing (UAT)",
+            "Performance testing",
+            "Regression testing",
+            "Test automation frameworks"
+          ],
+          "prerequisites": ["ERP Platform Expertise", "Business Requirements Gathering"],
+          "nextSkill": {
+            "name": "Change Management",
+            "description": "Quản lý thay đổi tổ chức"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Change Management & Training",
+      "description": "Đưa tổ chức chuyển đổi thành công với ERP mới.",
+      "skills": [
+        {
+          "name": "Change Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Change Management & Training",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "ADKAR model",
+            "Kotter's 8-Step process",
+            "Stakeholder analysis và engagement",
+            "Communication planning",
+            "Resistance management",
+            "Organizational readiness assessment"
+          ],
+          "prerequisites": ["Testing & Quality Assurance"],
+          "nextSkill": {
+            "name": "End-User Training",
+            "description": "Đào tạo người dùng cuối"
+          }
+        },
+        {
+          "name": "End-User Training",
+          "difficulty": "Trung cấp",
+          "skillType": "Change Management & Training",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Training needs analysis",
+            "Training curriculum design",
+            "Train-the-trainer approach",
+            "Hands-on lab development",
+            "Training material creation",
+            "Training effectiveness evaluation"
+          ],
+          "prerequisites": ["Change Management", "ERP Platform Expertise"],
+          "nextSkill": {
+            "name": "ERP Integration",
+            "description": "Tích hợp ERP với hệ thống bên ngoài"
+          }
+        },
+        {
+          "name": "ERP Integration",
+          "difficulty": "Nâng cao",
+          "skillType": "Change Management & Training",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "API-based integration (REST, SOAP)",
+            "Middleware solutions (MuleSoft, Dell Boomi)",
+            "IDoc/BAPI integration trong SAP",
+            "File-based integration patterns",
+            "Real-time vs batch integration",
+            "Integration monitoring và error handling"
+          ],
+          "prerequisites": ["ERP Platform Expertise", "SQL & Database Management"],
+          "nextSkill": {
+            "name": "Reporting & Analytics",
+            "description": "Báo cáo và phân tích trong ERP"
+          }
+        },
+        {
+          "name": "Reporting & Analytics",
+          "difficulty": "Trung cấp",
+          "skillType": "Change Management & Training",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Standard reports trong ERP",
+            "Custom report development",
+            "Dashboard design",
+            "Real-time analytics",
+            "Data warehouse integration",
+            "Business intelligence tools (Power BI, SAP Analytics Cloud)"
+          ],
+          "prerequisites": ["ERP Platform Expertise", "SQL & Database Management"],
+          "nextSkill": {
+            "name": "ERP Security & Compliance",
+            "description": "Bảo mật và tuân thủ trong ERP"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "ERP Security & Compliance",
+      "description": "Đảm bảo hệ thống ERP an toàn và tuân thủ các quy định.",
+      "skills": [
+        {
+          "name": "ERP Security & Compliance",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Security & Compliance",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Role-based access control (RBAC)",
+            "Segregation of duties (SoD)",
+            "SOD conflict detection và resolution",
+            "Audit trail và logging",
+            "Internal controls design",
+            "Regulatory compliance (SOX, GDPR)"
+          ],
+          "prerequisites": ["ERP Platform Expertise"],
+          "nextSkill": {
+            "name": "Data Privacy & Protection",
+            "description": "Bảo vệ dữ liệu trong ERP"
+          }
+        },
+        {
+          "name": "Data Privacy & Protection",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Security & Compliance",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "GDPR requirements cho ERP",
+            "Data masking và anonymization",
+            "Personal data handling",
+            "Data retention policies",
+            "Consent management",
+            "Privacy impact assessments"
+          ],
+          "prerequisites": ["ERP Security & Compliance"],
+          "nextSkill": {
+            "name": "IT Governance",
+            "description": "Quản trị IT cho hệ thống ERP"
+          }
+        },
+        {
+          "name": "IT Governance",
+          "difficulty": "Nâng cao",
+          "skillType": "ERP Security & Compliance",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "ITIL framework basics",
+            "IT service management",
+            "Disaster recovery planning",
+            "Business continuity planning",
+            "IT asset management",
+            "Vendor management"
+          ],
+          "prerequisites": ["ERP Security & Compliance"],
+          "nextSkill": {
+            "name": "Post-Go-Live Support",
+            "description": "Hỗ trợ sau khi triển khai"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Post-Go-Live & Optimization",
+      "description": "Hỗ trợ sau triển khai và tối ưu hóa hệ thống ERP.",
+      "skills": [
+        {
+          "name": "Post-Go-Live Support",
+          "difficulty": "Trung cấp",
+          "skillType": "Post-Go-Live & Optimization",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Hypercare planning và execution",
+            "Issue tracking và resolution",
+            "SLA management",
+            "Incident management processes",
+            "Knowledge base development",
+            "Transition to steady-state support"
+          ],
+          "prerequisites": ["ERP Platform Expertise", "Change Management"],
+          "nextSkill": {
+            "name": "ERP Performance Optimization",
+            "description": "Tối ưu hiệu năng hệ thống ERP"
+          }
+        },
+        {
+          "name": "ERP Performance Optimization",
+          "difficulty": "Nâng cao",
+          "skillType": "Post-Go-Live & Optimization",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "System performance monitoring",
+            "Database optimization",
+            "Batch job scheduling optimization",
+            "Memory management",
+            "Network optimization",
+            "Capacity planning"
+          ],
+          "prerequisites": ["Post-Go-Live Support", "SQL & Database Management"],
+          "nextSkill": {
+            "name": "Continuous Improvement",
+            "description": "Cải tiến liên tục hệ thống ERP"
+          }
+        },
+        {
+          "name": "Continuous Improvement",
+          "difficulty": "Trung cấp",
+          "skillType": "Post-Go-Live & Optimization",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Process mining và analysis",
+            "User feedback collection",
+            "Enhancement planning",
+            "Release management",
+            "Version upgrade planning",
+            "Innovation identification"
+          ],
+          "prerequisites": ["Post-Go-Live Support"],
+          "nextSkill": {
+            "name": "ERP Upgrades & Migrations",
+            "description": "Nâng cấp và di chuyển ERP"
+          }
+        },
+        {
+          "name": "ERP Upgrades & Migrations",
+          "difficulty": "Nâng cao",
+          "skillType": "Post-Go-Live & Optimization",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Upgrade strategy planning",
+            "Custom code remediation",
+            "Data migration strategy",
+            "Regression testing",
+            "Downtime minimization",
+            "Rollback planning"
+          ],
+          "prerequisites": ["Continuous Improvement", "Data Migration"],
+          "nextSkill": {
+            "name": "Industry-Specific ERP",
+            "description": "ERP theo ngành nghề cụ thể"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Industry Solutions & Specialization",
+      "description": "Chuyên sâu vào các giải pháp ERP theo ngành nghề cụ thể.",
+      "skills": [
+        {
+          "name": "Industry-Specific ERP",
+          "difficulty": "Nâng cao",
+          "skillType": "Industry Solutions & Specialization",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Manufacturing industry ERP (discrete, process, repetitive)",
+            "Retail industry solutions",
+            "Healthcare ERP requirements",
+            "Oil & gas industry specifics",
+            "Public sector requirements",
+            "Professional services automation"
+          ],
+          "prerequisites": ["ERP Platform Expertise", "Business Process Understanding"],
+          "nextSkill": {
+            "name": "ERP Solution Architecture",
+            "description": "Kiến trúc giải pháp ERP"
+          }
+        },
+        {
+          "name": "ERP Solution Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Industry Solutions & Specialization",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Enterprise architecture frameworks (TOGAF)",
+            "Solution design documents",
+            "Technology selection",
+            "Integration architecture",
+            "Infrastructure sizing",
+            "Total cost of ownership analysis"
+          ],
+          "prerequisites": ["Industry-Specific ERP", "ERP Integration"],
+          "nextSkill": {
+            "name": "ERP Vendor Management",
+            "description": "Quản lý mối quan hệ nhà cung cấp ERP"
+          }
+        },
+        {
+          "name": "ERP Vendor Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Industry Solutions & Specialization",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Vendor selection process",
+            "RFP/RFI development",
+            "Contract negotiation",
+            "SLA definition và monitoring",
+            "Vendor relationship management",
+            "Multi-vendor coordination"
+          ],
+          "prerequisites": ["ERP Solution Architecture"],
+          "nextSkill": {
+            "name": "Digital Transformation",
+            "description": "Chuyển đổi số với ERP"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Leadership & Advisory",
+      "description": "Trở thành advisor chiến lược và lãnh đạo đội ngũ tư vấn ERP.",
+      "skills": [
+        {
+          "name": "Digital Transformation",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Advisory",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Digital transformation strategy",
+            "AI/ML integration với ERP",
+            "IoT và Industry 4.0",
+            "Cloud-first strategies",
+            "Innovation workshops",
+            "Digital maturity assessment"
+          ],
+          "prerequisites": ["ERP Solution Architecture"],
+          "nextSkill": {
+            "name": "Client Relationship Management",
+            "description": "Quản lý mối quan hệ khách hàng"
+          }
+        },
+        {
+          "name": "Client Relationship Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Advisory",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Client needs assessment",
+            "Trust building và maintenance",
+            "Expectation management",
+            "Upselling và cross-selling",
+            "Client retention strategies",
+            "Reference management"
+          ],
+          "prerequisites": ["Digital Transformation"],
+          "nextSkill": {
+            "name": "Consulting Team Leadership",
+            "description": "Lãnh đạo đội ngũ tư vấn"
+          }
+        },
+        {
+          "name": "Consulting Team Leadership",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Advisory",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Team building và recruitment",
+            "Mentoring và coaching",
+            "Performance management",
+            "Knowledge management",
+            "Practice development",
+            "Thought leadership"
+          ],
+          "prerequisites": ["Client Relationship Management"],
+          "nextSkill": {
+            "name": "Business Development",
+            "description": "Phát triển kinh doanh tư vấn ERP"
+          }
+        },
+        {
+          "name": "Business Development",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Advisory",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Proposal writing và presentation",
+            "Solution selling techniques",
+            "Market analysis",
+            "Competitive positioning",
+            "Pricing strategies",
+            "Partnership development"
+          ],
+          "prerequisites": ["Consulting Team Leadership"],
+          "nextSkill": {
+            "name": "ERP Trends & Future",
+            "description": "Xu hướng và tương lai của ERP"
+          }
+        },
+        {
+          "name": "ERP Trends & Future",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Advisory",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Intelligent ERP (iERP)",
+            "Autonomous ERP systems",
+            "Composable ERP architecture",
+            "Sustainability reporting trong ERP",
+            "Blockchain trong supply chain",
+            "Low-code/no-code ERP customization"
+          ],
+          "prerequisites": ["Business Development"],
+          "nextSkill": {
+            "name": "ERP Center of Excellence",
+            "description": "Xây dựng trung tâm xuất sắc ERP"
+          }
+        }
+      ]
+    }
+  ]
+}

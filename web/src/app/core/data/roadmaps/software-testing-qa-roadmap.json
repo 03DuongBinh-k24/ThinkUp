@@ -1,0 +1,793 @@
+{
+  "roadmap": {
+    "name": "Software Testing & QA",
+    "description": "Lộ trình trở thành Software Tester/QA Engineer - từ nền tảng kiểm thử cơ bản đến tự động hóa, performance testing và quản lý chất lượng phần mềm."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Testing Fundamentals",
+      "description": "Nền tảng kiểm thử phần mềm và nguyên tắc QA cơ bản.",
+      "skills": [
+        {
+          "name": "Software Testing Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Testing Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Software testing lifecycle",
+            "Types of testing (functional, non-functional)",
+            "Testing levels (unit, integration, system, acceptance)",
+            "Testing methodologies (waterfall, agile)",
+            "Test planning basics",
+            "Defect lifecycle"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Test Case Design",
+            "description": "Thiết kế test case"
+          }
+        },
+        {
+          "name": "Test Case Design",
+          "difficulty": "Cơ bản",
+          "skillType": "Testing Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Test case writing",
+            "Test scenarios identification",
+            "Test data preparation",
+            "Test case review",
+            "Test coverage metrics",
+            "Traceability matrix"
+          ],
+          "prerequisites": ["Software Testing Basics"],
+          "nextSkill": {
+            "name": "Defect Management",
+            "description": "Quản lý lỗi"
+          }
+        },
+        {
+          "name": "Defect Management",
+          "difficulty": "Cơ bản",
+          "skillType": "Testing Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Bug reporting best practices",
+            "Defect classification và severity",
+            "Bug tracking tools (Jira, Bugzilla)",
+            "Root cause analysis basics",
+            "Defect prevention",
+            "Defect metrics"
+          ],
+          "prerequisites": ["Test Case Design"],
+          "nextSkill": {
+            "name": "Requirements Analysis",
+            "description": "Phân tích yêu cầu"
+          }
+        },
+        {
+          "name": "Requirements Analysis",
+          "difficulty": "Cơ bản",
+          "skillType": "Testing Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Requirements review cho testing",
+            "Testability assessment",
+            "Risk-based testing",
+            "Test estimation",
+            "Requirements traceability",
+            "Acceptance criteria"
+          ],
+          "prerequisites": ["Software Testing Basics"],
+          "nextSkill": {
+            "name": "SQL & Database Testing",
+            "description": "Kiểm thử cơ sở dữ liệu"
+          }
+        },
+        {
+          "name": "SQL & Database Testing",
+          "difficulty": "Cơ bản",
+          "skillType": "Testing Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "SQL queries cho testing",
+            "Data validation",
+            "Database integrity testing",
+            "Stored procedures testing",
+            "Data migration testing",
+            "Database performance basics"
+          ],
+          "prerequisites": ["Software Testing Basics"],
+          "nextSkill": {
+            "name": "API Testing",
+            "description": "Kiểm thử API"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Functional Testing",
+      "description": "Kiểm thử chức năng toàn diện.",
+      "skills": [
+        {
+          "name": "API Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Functional Testing",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "REST API concepts",
+            "Postman/Insomnia usage",
+            "API test automation basics",
+            "Request/Response validation",
+            "API chaining",
+            "Mock services"
+          ],
+          "prerequisites": ["SQL & Database Testing"],
+          "nextSkill": {
+            "name": "Web Application Testing",
+            "description": "Kiểm thử ứng dụng web"
+          }
+        },
+        {
+          "name": "Web Application Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Functional Testing",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Browser compatibility testing",
+            "Responsive design testing",
+            "Cross-browser testing tools",
+            "HTML/CSS validation",
+            "JavaScript console testing",
+            "Web performance basics"
+          ],
+          "prerequisites": ["API Testing", "Requirements Analysis"],
+          "nextSkill": {
+            "name": "Mobile Application Testing",
+            "description": "Kiểm thử ứng dụng di động"
+          }
+        },
+        {
+          "name": "Mobile Application Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Functional Testing",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "iOS vs Android testing",
+            "Mobile testing challenges",
+            "Device fragmentation",
+            "Mobile automation tools",
+            "App store testing",
+            "Mobile performance basics"
+          ],
+          "prerequisites": ["Web Application Testing"],
+          "nextSkill": {
+            "name": "Usability Testing",
+            "description": "Kiểm thử khả năng sử dụng"
+          }
+        },
+        {
+          "name": "Usability Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Functional Testing",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Usability testing methods",
+            "Test script creation",
+            "User observation techniques",
+            "Heuristic evaluation",
+            "Accessibility testing",
+            "Usability metrics"
+          ],
+          "prerequisites": ["Web Application Testing"],
+          "nextSkill": {
+            "name": "Security Testing Basics",
+            "description": "Kiểm thử bảo mật cơ bản"
+          }
+        },
+        {
+          "name": "Security Testing Basics",
+          "difficulty": "Trung cấp",
+          "skillType": "Functional Testing",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "OWASP Top 10 awareness",
+            "Common vulnerabilities",
+            "Basic penetration testing",
+            "Security scanning tools",
+            "Authentication testing",
+            "Security test cases"
+          ],
+          "prerequisites": ["Web Application Testing", "SQL & Database Testing"],
+          "nextSkill": {
+            "name": "Test Automation Fundamentals",
+            "description": "Nền tảng tự động hóa kiểm thử"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Test Automation",
+      "description": "Tự động hóa kiểm thử với các công cụ hiện đại.",
+      "skills": [
+        {
+          "name": "Test Automation Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Test Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Automation strategy",
+            "Test automation framework concepts",
+            "When to automate vs manual",
+            "Automation ROI calculation",
+            "Test maintenance",
+            "Automation best practices"
+          ],
+          "prerequisites": ["Security Testing Basics", "Defect Management"],
+          "nextSkill": {
+            "name": "Programming for Testing",
+            "description": "Lập trình cho kiểm thử"
+          }
+        },
+        {
+          "name": "Programming for Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Test Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Python/Java for test automation",
+            "OOP concepts",
+            "Design patterns (Page Object Model)",
+            "API programming basics",
+            "File handling",
+            "Exception handling"
+          ],
+          "prerequisites": ["Test Automation Fundamentals"],
+          "nextSkill": {
+            "name": "Web UI Automation",
+            "description": "Tự động hóa giao diện web"
+          }
+        },
+        {
+          "name": "Web UI Automation",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Selenium WebDriver",
+            "Cypress basics",
+            "Playwright",
+            "Element locating strategies",
+            "Wait mechanisms",
+            "Test reporting"
+          ],
+          "prerequisites": ["Programming for Testing"],
+          "nextSkill": {
+            "name": "API Test Automation",
+            "description": "Tự động hóa kiểm thử API"
+          }
+        },
+        {
+          "name": "API Test Automation",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Rest Assured/Pytest",
+            "Automated API testing",
+            "Data-driven API testing",
+            "Contract testing",
+            "API test integration",
+            "Performance testing basics"
+          ],
+          "prerequisites": ["Web UI Automation", "API Testing"],
+          "nextSkill": {
+            "name": "Mobile Test Automation",
+            "description": "Tự động hóa kiểm thử mobile"
+          }
+        },
+        {
+          "name": "Mobile Test Automation",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Appium basics",
+            "Mobile element interaction",
+            "Cross-platform automation",
+            "Real device vs emulator testing",
+            "Mobile-specific challenges",
+            "CI integration"
+          ],
+          "prerequisites": ["Web UI Automation", "Mobile Application Testing"],
+          "nextSkill": {
+            "name": "Test Framework Design",
+            "description": "Thiết kế framework kiểm thử"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Advanced Testing",
+      "description": "Kiểm thử nâng cao và chuyên biệt.",
+      "skills": [
+        {
+          "name": "Test Framework Design",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Testing",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Framework architecture",
+            "Data-driven testing",
+            "Keyword-driven testing",
+            "Hybrid frameworks",
+            "Framework maintenance",
+            "Reporting integration"
+          ],
+          "prerequisites": ["Mobile Test Automation"],
+          "nextSkill": {
+            "name": "Performance Testing",
+            "description": "Kiểm thử hiệu năng"
+          }
+        },
+        {
+          "name": "Performance Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Testing",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Performance testing concepts",
+            "Load testing",
+            "Stress testing",
+            "JMeter/Gatling basics",
+            "Performance metrics",
+            "Performance bottleneck identification"
+          ],
+          "prerequisites": ["Test Framework Design"],
+          "nextSkill": {
+            "name": "Security Testing",
+            "description": "Kiểm thử bảo mật nâng cao"
+          }
+        },
+        {
+          "name": "Security Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Testing",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Penetration testing methodologies",
+            "OWASP ZAP/Burp Suite",
+            "Vulnerability scanning",
+            "Security test automation",
+            "Code review for security",
+            "Compliance testing"
+          ],
+          "prerequisites": ["Performance Testing", "Security Testing Basics"],
+          "nextSkill": {
+            "name": "Chaos Engineering",
+            "description": "Kỹ thuật hỗn loạn"
+          }
+        },
+        {
+          "name": "Chaos Engineering",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Testing",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Chaos engineering principles",
+            "Fault injection",
+            "Game day exercises",
+            "Resilience testing",
+            "Chaos tools (Chaos Monkey)",
+            "Monitoring và observability"
+          ],
+          "prerequisites": ["Performance Testing"],
+          "nextSkill": {
+            "name": "AI in Testing",
+            "description": "AI trong kiểm thử"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "AI & Machine Learning Testing",
+      "description": "Kiểm thử các hệ thống AI/ML.",
+      "skills": [
+        {
+          "name": "AI in Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "AI & Machine Learning Testing",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "AI-powered test generation",
+            "Visual testing với AI",
+            "Self-healing tests",
+            "AI-based test prioritization",
+            "Smart test execution",
+            "AI testing tools"
+          ],
+          "prerequisites": ["Chaos Engineering"],
+          "nextSkill": {
+            "name": "ML Model Testing",
+            "description": "Kiểm thử mô hình ML"
+          }
+        },
+        {
+          "name": "ML Model Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "AI & Machine Learning Testing",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "ML model validation",
+            "Data quality testing",
+            "Model bias detection",
+            "A/B testing cho ML",
+            "Model performance metrics",
+            "ML pipeline testing"
+          ],
+          "prerequisites": ["AI in Testing"],
+          "nextSkill": {
+            "name": "Data Quality Testing",
+            "description": "Kiểm thử chất lượng dữ liệu"
+          }
+        },
+        {
+          "name": "Data Quality Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "AI & Machine Learning Testing",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Data validation frameworks",
+            "Data profiling",
+            "Data anomaly detection",
+            "ETL testing",
+            "Data governance",
+            "Data lineage testing"
+          ],
+          "prerequisites": ["ML Model Testing", "SQL & Database Testing"],
+          "nextSkill": {
+            "name": "Test Data Management",
+            "description": "Quản lý dữ liệu kiểm thử"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Test Infrastructure",
+      "description": "Xây dựng và quản lý hạ tầng kiểm thử.",
+      "skills": [
+        {
+          "name": "Test Data Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Infrastructure",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Test data generation",
+            "Data masking",
+            "Synthetic data creation",
+            "Test data versioning",
+            "Data privacy compliance",
+            "Data management strategies"
+          ],
+          "prerequisites": ["Data Quality Testing"],
+          "nextSkill": {
+            "name": "CI/CD Integration",
+            "description": "Tích hợp CI/CD"
+          }
+        },
+        {
+          "name": "CI/CD Integration",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Infrastructure",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Test automation trong CI/CD",
+            "Jenkins/GitLab CI integration",
+            "Test execution strategies",
+            "Parallel testing",
+            "Test reporting in pipelines",
+            "Quality gates"
+          ],
+          "prerequisites": ["Test Automation Fundamentals", "Programming for Testing"],
+          "nextSkill": {
+            "name": "Cloud Testing",
+            "description": "Kiểm thử trên cloud"
+          }
+        },
+        {
+          "name": "Cloud Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Infrastructure",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Cloud-based testing platforms",
+            "Sauce Labs/BrowserStack",
+            "Cloud test labs",
+            "Scalable test infrastructure",
+            "Cost optimization",
+            "Multi-cloud testing"
+          ],
+          "prerequisites": ["CI/CD Integration"],
+          "nextSkill": {
+            "name": "Test Environment Management",
+            "description": "Quản lý môi trường kiểm thử"
+          }
+        },
+        {
+          "name": "Test Environment Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Test Infrastructure",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Environment setup automation",
+            "Docker cho testing",
+            "Virtual environments",
+            "Environment provisioning",
+            "Environment monitoring",
+            "Environment costs optimization"
+          ],
+          "prerequisites": ["Cloud Testing", "Container Security"],
+          "nextSkill": {
+            "name": "Test Metrics & Analytics",
+            "description": "Phân tích kiểm thử"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Quality Analytics",
+      "description": "Phân tích và tối ưu hóa chất lượng.",
+      "skills": [
+        {
+          "name": "Test Metrics & Analytics",
+          "difficulty": "Trung cấp",
+          "skillType": "Quality Analytics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Test metrics collection",
+            "KPIs cho testing",
+            "Test dashboards",
+            "Trend analysis",
+            "Predictive analytics",
+            "Data-driven quality decisions"
+          ],
+          "prerequisites": ["Test Environment Management"],
+          "nextSkill": {
+            "name": "Quality Engineering",
+            "description": "Kỹ thuật chất lượng"
+          }
+        },
+        {
+          "name": "Quality Engineering",
+          "difficulty": "Nâng cao",
+          "skillType": "Quality Analytics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Quality engineering principles",
+            "Shift-left testing",
+            "Continuous testing",
+            "Quality culture",
+            "Process improvement",
+            "Quality metrics evolution"
+          ],
+          "prerequisites": ["Test Metrics & Analytics"],
+          "nextSkill": {
+            "name": "Risk-Based Testing",
+            "description": "Kiểm thử dựa trên rủi ro"
+          }
+        },
+        {
+          "name": "Risk-Based Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Quality Analytics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Risk assessment",
+            "Risk prioritization",
+            "Risk mitigation strategies",
+            "Risk communication",
+            "Business risk alignment",
+            "Risk monitoring"
+          ],
+          "prerequisites": ["Quality Engineering"],
+          "nextSkill": {
+            "name": "Test Optimization",
+            "description": "Tối ưu hóa kiểm thử"
+          }
+        },
+        {
+          "name": "Test Optimization",
+          "difficulty": "Nâng cao",
+          "skillType": "Quality Analytics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Test suite optimization",
+            "Test selection algorithms",
+            "Regression test optimization",
+            "Test execution optimization",
+            "Flaky test management",
+            "Test maintenance reduction"
+          ],
+          "prerequisites": ["Risk-Based Testing", "Test Automation Fundamentals"],
+          "nextSkill": {
+            "name": "Compliance Testing",
+            "description": "Kiểm thử tuân thủ"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Compliance & Standards",
+      "description": "Kiểm thử tuân thủ và tiêu chuẩn.",
+      "skills": [
+        {
+          "name": "Compliance Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Compliance & Standards",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Regulatory compliance testing",
+            "Industry standards (ISO, IEEE)",
+            "Accessibility compliance (WCAG)",
+            "Data protection compliance",
+            "Audit preparation",
+            "Compliance documentation"
+          ],
+          "prerequisites": ["Test Optimization"],
+          "nextSkill": {
+            "name": "Standards Implementation",
+            "description": "Áp dụng tiêu chuẩn"
+          }
+        },
+        {
+          "name": "Standards Implementation",
+          "difficulty": "Nâng cao",
+          "skillType": "Compliance & Standards",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "ISO 25010 (Quality model)",
+            "ISO 29119 (Testing standards)",
+            "CMMI for testing",
+            "Test maturity models",
+            "Process certification",
+            "Standards adoption"
+          ],
+          "prerequisites": ["Compliance Testing"],
+          "nextSkill": {
+            "name": "Accessibility Testing",
+            "description": "Kiểm thử accessibility"
+          }
+        },
+        {
+          "name": "Accessibility Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Compliance & Standards",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "WCAG guidelines",
+            "Screen reader testing",
+            "Keyboard navigation testing",
+            "Accessibility tools",
+            "Automated accessibility testing",
+            "Accessibility reporting"
+          ],
+          "prerequisites": ["Standards Implementation", "Usability Testing"],
+          "nextSkill": {
+            "name": "Test Management",
+            "description": "Quản lý kiểm thử"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Leadership & Strategy",
+      "description": "Lãnh đạo và xây dựng chiến lược QA.",
+      "skills": [
+        {
+          "name": "Test Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Test strategy development",
+            "Test planning",
+            "Resource management",
+            "Budget planning",
+            "Vendor management",
+            "Test reporting to management"
+          ],
+          "prerequisites": ["Accessibility Testing"],
+          "nextSkill": {
+            "name": "QA Process Improvement",
+            "description": "Cải tiến quy trình QA"
+          }
+        },
+        {
+          "name": "QA Process Improvement",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Process assessment",
+            "Process optimization",
+            "Automation strategy",
+            "Tool evaluation",
+            "Best practices implementation",
+            "Continuous improvement"
+          ],
+          "prerequisites": ["Test Management"],
+          "nextSkill": {
+            "name": "Team Leadership",
+            "description": "Lãnh đạo đội ngũ"
+          }
+        },
+        {
+          "name": "Team Leadership",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Building QA teams",
+            "Mentoring testers",
+            "Knowledge management",
+            "Performance management",
+            "Career development",
+            "Team culture"
+          ],
+          "prerequisites": ["QA Process Improvement"],
+          "nextSkill": {
+            "name": "Strategic QA Planning",
+            "description": "Chiến lược QA"
+          }
+        },
+        {
+          "name": "Strategic QA Planning",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "QA strategy alignment",
+            "Quality goals definition",
+            "Risk management",
+            "Stakeholder communication",
+            "Quality governance",
+            "ROI of quality"
+          ],
+          "prerequisites": ["Team Leadership"],
+          "nextSkill": {
+            "name": "Industry Trends",
+            "description": "Xu hướng ngành"
+          }
+        },
+        {
+          "name": "Industry Trends",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Testing trends",
+            "Emerging technologies",
+            "AI/ML in testing",
+            "Shift-right testing",
+            "Continuous quality",
+            "Future of QA"
+          ],
+          "prerequisites": ["Strategic QA Planning"],
+          "nextSkill": {
+            "name": "Continuous Learning",
+            "description": "Học tập liên tục"
+          }
+        }
+      ]
+    }
+  ]
+}

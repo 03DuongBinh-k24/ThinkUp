@@ -1,0 +1,154 @@
+<main class="min-h-screen bg-[#F9F9FF] text-[#0F172A]">
+  <div class="mx-auto w-full max-w-[1570px] px-4 pb-[72px] pt-8 sm:px-6 xl:px-6">
+    <!-- Breadcrumb -->
+    <nav class="flex h-5 flex-wrap items-center gap-2 text-[14px] leading-5 text-[#6B7280] mb-4" aria-label="Breadcrumb">
+      <a routerLink="/main/courses" class="hover:text-[#2463EB]">Khóa học</a>
+      <span>›</span>
+      <a routerLink="/main/cart" class="hover:text-[#2463EB]">Giỏ hàng</a>
+      <span>›</span>
+      <span>Thanh toán</span>
+    </nav>
+
+    <!-- Title -->
+    <div class="mt-4 flex min-h-[59px] items-start gap-4 pb-2">
+      <h1 class="text-[34px] font-bold leading-[51px] tracking-[-0.85px] text-[#0F172A]">Thanh toán</h1>
+    </div>
+
+    @if (courses().length === 0) {
+      <div class="text-center py-20 bg-white rounded-[18px] border border-[#EEF0F3] p-8">
+        <p class="text-[16px] text-[#64748B] mb-4">Giỏ hàng của bạn không có khóa học nào để thanh toán.</p>
+        <a routerLink="/main/courses" class="inline-flex h-11 items-center px-6 rounded-full bg-[#006AB5] text-white font-semibold text-[14px]">
+          Xem khóa học
+        </a>
+      </div>
+    } @else {
+      <div class="grid items-start gap-6 pt-2 xl:grid-cols-[minmax(0,1118px)_380px]">
+        <!-- Left: Payment Methods -->
+        <div class="min-w-0 space-y-6">
+          <section class="rounded-[18px] border border-[#EEF0F3] bg-white p-[25px]">
+            <h2 class="text-[18px] font-bold text-[#111827] mb-4">Phương thức thanh toán</h2>
+
+            <!-- Category Tabs -->
+            <div class="flex gap-3 mb-5 border-b border-[#F1F5F9] pb-3">
+              <button
+                type="button"
+                (click)="selectedCategory.set('domestic')"
+                class="pb-2 text-[14px] font-semibold transition border-b-2"
+                [class]="selectedCategory() === 'domestic' ? 'border-[#0088E8] text-[#0088E8]' : 'border-transparent text-[#64748B] hover:text-[#111827]'"
+              >
+                Chuyển khoản / Ngân hàng
+              </button>
+              <button
+                type="button"
+                (click)="selectedCategory.set('wallet')"
+                class="pb-2 text-[14px] font-semibold transition border-b-2"
+                [class]="selectedCategory() === 'wallet' ? 'border-[#0088E8] text-[#0088E8]' : 'border-transparent text-[#64748B] hover:text-[#111827]'"
+              >
+                Ví điện tử
+              </button>
+            </div>
+
+            <!-- Methods list -->
+            <div class="space-y-3">
+              @if (selectedCategory() === 'domestic') {
+                @for (m of domesticMethods; track m.id) {
+                  <label
+                    class="flex items-start gap-3.5 p-4 rounded-[12px] border-2 cursor-pointer transition"
+                    [class]="selectedMethod() === m.id ? 'border-[#0088E8] bg-[#F0F7FF]' : 'border-[#E2E8F0] hover:bg-[#F8FAFC]'"
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      [checked]="selectedMethod() === m.id"
+                      (change)="selectMethod(m.id)"
+                      class="mt-1 w-4 h-4 text-[#0088E8] focus:ring-[#0088E8]"
+                    />
+                    <div class="flex-1">
+                      <div class="font-bold text-[15px] text-[#111827]">{{ m.name }}</div>
+                      <div class="text-[13px] text-[#64748B] mt-0.5">{{ m.desc }}</div>
+                    </div>
+                  </label>
+                }
+              }
+
+              @if (selectedCategory() === 'wallet') {
+                @for (m of walletMethods; track m.id) {
+                  <label
+                    class="flex items-start gap-3.5 p-4 rounded-[12px] border-2 cursor-pointer transition"
+                    [class]="selectedMethod() === m.id ? 'border-[#0088E8] bg-[#F0F7FF]' : 'border-[#E2E8F0] hover:bg-[#F8FAFC]'"
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      [checked]="selectedMethod() === m.id"
+                      (change)="selectMethod(m.id)"
+                      class="mt-1 w-4 h-4 text-[#0088E8] focus:ring-[#0088E8]"
+                    />
+                    <div class="flex-1">
+                      <div class="font-bold text-[15px] text-[#111827]">{{ m.name }}</div>
+                      <div class="text-[13px] text-[#64748B] mt-0.5">{{ m.desc }}</div>
+                    </div>
+                  </label>
+                }
+              }
+            </div>
+          </section>
+
+          <!-- Terms -->
+          <div class="rounded-[18px] border border-[#EEF0F3] bg-white p-[25px]">
+            <label class="flex items-center gap-3 cursor-pointer text-[13px] text-[#475569]">
+              <input
+                type="checkbox"
+                [checked]="acceptedTerms()"
+                (change)="acceptedTerms.set(!acceptedTerms())"
+                class="w-4 h-4 rounded border-[#CBD5E1] text-[#0088E8] focus:ring-[#0088E8]"
+              />
+              <span>Tôi đồng ý với <a href="#" class="text-[#0088E8] hover:underline">Điều khoản dịch vụ</a> và <a href="#" class="text-[#0088E8] hover:underline">Chính sách hoàn tiền</a> của ThinkUp.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Right: Order Summary -->
+        <aside class="sticky top-[102px]">
+          <div class="rounded-[18px] border border-[#EEF0F3] bg-white p-[25px]">
+            <h2 class="text-[18px] font-bold text-[#111827] pb-4 border-b border-[#EEF0F3]">
+              Đơn hàng ({{ courses().length }})
+            </h2>
+
+            <div class="divide-y divide-[#F1F5F9] max-h-[300px] overflow-y-auto my-4 pr-1">
+              @for (c of courses(); track c.id) {
+                <div class="py-3 flex justify-between gap-3 text-[13px]">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-[#111827] line-clamp-1">{{ c.displayTitle || c.title }}</p>
+                    <p class="text-[12px] text-[#64748B]">{{ c.instructor }}</p>
+                  </div>
+                  <span class="font-bold text-[#0088E8] shrink-0">{{ formatPrice(c.salePrice) }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="border-t border-[#EEF0F3] pt-4 space-y-2 text-[14px]">
+              <div class="flex justify-between text-[#64748B]">
+                <span>Tạm tính</span>
+                <span class="font-semibold text-[#111827]">{{ formatPrice(subtotal()) }}</span>
+              </div>
+              <div class="flex justify-between items-baseline pt-2 border-t border-[#F1F5F9]">
+                <span class="text-[16px] font-bold text-[#111827]">Tổng cộng</span>
+                <span class="text-[24px] font-extrabold text-[#0088E8]">{{ formatPrice(total()) }}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              (click)="confirmPayment()"
+              [disabled]="processing() || !acceptedTerms()"
+              class="w-full mt-6 h-[48px] bg-[#006AB5] hover:bg-[#00528C] disabled:bg-[#CBD5E1] disabled:cursor-not-allowed text-white font-bold text-[15px] rounded-[10px] transition shadow-sm flex items-center justify-center"
+            >
+              {{ processing() ? 'Đang xử lý giao dịch...' : 'Xác nhận thanh toán' }}
+            </button>
+          </div>
+        </aside>
+      </div>
+    }
+  </div>
+</main>

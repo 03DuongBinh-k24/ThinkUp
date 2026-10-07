@@ -1,0 +1,774 @@
+{
+  "roadmap": {
+    "name": "Security Engineering",
+    "description": "Lộ trình trở thành Security Engineer - từ nền tảng mạng và hệ thống đến thiết kế, triển khai và quản lý các giải pháp bảo mật cho tổ chức."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "IT & Security Foundations",
+      "description": "Nền tảng CNTT và khái niệm bảo mật cơ bản.",
+      "skills": [
+        {
+          "name": "Networking Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "IT & Security Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "OSI model và TCP/IP stack",
+            "Routing và switching basics",
+            "DNS, DHCP, HTTP/S protocols",
+            "Network troubleshooting",
+            "Subnetting và IP addressing",
+            "Wireless networking basics"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Operating Systems",
+            "description": "Hệ điều hành server và desktop"
+          }
+        },
+        {
+          "name": "Operating Systems",
+          "difficulty": "Cơ bản",
+          "skillType": "IT & Security Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Linux fundamentals (Ubuntu, CentOS, RHEL)",
+            "Windows Server basics",
+            "Command line proficiency",
+            "File systems và permissions",
+            "Process management",
+            "System hardening basics"
+          ],
+          "prerequisites": ["Networking Fundamentals"],
+          "nextSkill": {
+            "name": "Programming & Scripting",
+            "description": "Lập trình và scripting"
+          }
+        },
+        {
+          "name": "Programming & Scripting",
+          "difficulty": "Cơ bản",
+          "skillType": "IT & Security Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Python cho security",
+            "Bash/PowerShell scripting",
+            "Basic web technologies (HTML, JS, APIs)",
+            "SQL fundamentals",
+            "Automation scripting",
+            "Code review basics"
+          ],
+          "prerequisites": ["Operating Systems"],
+          "nextSkill": {
+            "name": "Security Fundamentals",
+            "description": "Nền tảng bảo mật"
+          }
+        },
+        {
+          "name": "Security Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "IT & Security Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "CIA triad (Confidentiality, Integrity, Availability)",
+            "Defense in depth",
+            "Principle of least privilege",
+            "Security policies và procedures",
+            "Compliance frameworks overview",
+            "Risk management basics"
+          ],
+          "prerequisites": ["Networking Fundamentals", "Operating Systems"],
+          "nextSkill": {
+            "name": "Cryptography Basics",
+            "description": "Mật mã học cơ bản"
+          }
+        },
+        {
+          "name": "Cryptography Basics",
+          "difficulty": "Trung cấp",
+          "skillType": "IT & Security Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Symmetric encryption (AES, DES)",
+            "Asymmetric encryption (RSA, ECC)",
+            "Hashing algorithms (SHA, MD5)",
+            "Digital signatures",
+            "PKI và certificates",
+            "SSL/TLS protocols"
+          ],
+          "prerequisites": ["Security Fundamentals", "Programming & Scripting"],
+          "nextSkill": {
+            "name": "Network Security",
+            "description": "Bảo mật mạng"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Network & Infrastructure Security",
+      "description": "Bảo mật mạng và hạ tầng CNTT.",
+      "skills": [
+        {
+          "name": "Network Security",
+          "difficulty": "Trung cấp",
+          "skillType": "Network & Infrastructure Security",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Firewall configuration và management",
+            "IDS/IPS systems",
+            "VPN technologies",
+            "Network segmentation",
+            "Zero Trust architecture",
+            "Network monitoring"
+          ],
+          "prerequisites": ["Cryptography Basics"],
+          "nextSkill": {
+            "name": "Cloud Security",
+            "description": "Bảo mật cloud"
+          }
+        },
+        {
+          "name": "Cloud Security",
+          "difficulty": "Trung cấp",
+          "skillType": "Network & Infrastructure Security",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "AWS security services",
+            "Azure security features",
+            "GCP security tools",
+            "Cloud security architecture",
+            "Shared responsibility model",
+            "Cloud compliance"
+          ],
+          "prerequisites": ["Network Security"],
+          "nextSkill": {
+            "name": "Endpoint Security",
+            "description": "Bảo mật endpoint"
+          }
+        },
+        {
+          "name": "Endpoint Security",
+          "difficulty": "Trung cấp",
+          "skillType": "Network & Infrastructure Security",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Antivirus/anti-malware solutions",
+            "Endpoint Detection và Response (EDR)",
+            "Device encryption",
+            "Mobile device management",
+            "Patch management",
+            "Application whitelisting"
+          ],
+          "prerequisites": ["Network Security", "Operating Systems"],
+          "nextSkill": {
+            "name": "Identity & Access Management",
+            "description": "Quản lý định danh và truy cập"
+          }
+        },
+        {
+          "name": "Identity & Access Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Network & Infrastructure Security",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Authentication protocols (LDAP, Kerberos)",
+            "Single Sign-On (SSO)",
+            "Multi-factor authentication",
+            "Privileged Access Management",
+            "Identity federation",
+            "Access control models (RBAC, ABAC)"
+          ],
+          "prerequisites": ["Network Security"],
+          "nextSkill": {
+            "name": "Vulnerability Management",
+            "description": "Quản lý lỗ hổng"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Security Operations",
+      "description": "Vận hành và giám sát bảo mật hàng ngày.",
+      "skills": [
+        {
+          "name": "Vulnerability Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Security Operations",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Vulnerability scanning tools (Nessus, Qualys)",
+            "Vulnerability assessment process",
+            "Risk prioritization",
+            "Remediation tracking",
+            "Patch management",
+            "Vulnerability reporting"
+          ],
+          "prerequisites": ["Identity & Access Management"],
+          "nextSkill": {
+            "name": "Penetration Testing",
+            "description": "Kiểm thử xâm nhập"
+          }
+        },
+        {
+          "name": "Penetration Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Security Operations",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Penetration testing methodologies",
+            "Reconnaissance và enumeration",
+            "Exploitation techniques",
+            "Post-exploitation",
+            "Reporting và remediation",
+            "Tools (Metasploit, Burp Suite, Nmap)"
+          ],
+          "prerequisites": ["Vulnerability Management"],
+          "nextSkill": {
+            "name": "Incident Response",
+            "description": "Phản ứng sự cố"
+          }
+        },
+        {
+          "name": "Incident Response",
+          "difficulty": "Trung cấp",
+          "skillType": "Security Operations",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Incident response lifecycle",
+            "Detection và identification",
+            "Containment strategies",
+            "Eradication và recovery",
+            "Post-incident analysis",
+            "IR playbooks"
+          ],
+          "prerequisites": ["Vulnerability Management"],
+          "nextSkill": {
+            "name": "Security Monitoring",
+            "description": "Giám sát bảo mật"
+          }
+        },
+        {
+          "name": "Security Monitoring",
+          "difficulty": "Trung cấp",
+          "skillType": "Security Operations",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "SIEM implementation và management",
+            "Log management",
+            "Security analytics",
+            "Threat detection rules",
+            "Alert triage",
+            "SOC operations"
+          ],
+          "prerequisites": ["Incident Response"],
+          "nextSkill": {
+            "name": "Threat Intelligence",
+            "description": "Thông tin mối đe dọa"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Threat Analysis & Response",
+      "description": "Phân tích mối đe dọa và phản ứng nâng cao.",
+      "skills": [
+        {
+          "name": "Threat Intelligence",
+          "difficulty": "Nâng cao",
+          "skillType": "Threat Analysis & Response",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Threat intelligence lifecycle",
+            "OSINT gathering",
+            "Threat actor profiles",
+            "IOC identification",
+            "Threat feeds management",
+            "Intelligence sharing (STIX/TAXII)"
+          ],
+          "prerequisites": ["Security Monitoring"],
+          "nextSkill": {
+            "name": "Malware Analysis",
+            "description": "Phân tích mã độc"
+          }
+        },
+        {
+          "name": "Malware Analysis",
+          "difficulty": "Nâng cao",
+          "skillType": "Threat Analysis & Response",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Static analysis techniques",
+            "Dynamic analysis (sandboxing)",
+            "Reverse engineering basics",
+            "Malware classification",
+            "Analysis tools (IDA Pro, Ghidra)",
+            "Malware reporting"
+          ],
+          "prerequisites": ["Threat Intelligence", "Programming & Scripting"],
+          "nextSkill": {
+            "name": "Digital Forensics",
+            "description": "Học pháp chứng số"
+          }
+        },
+        {
+          "name": "Digital Forensics",
+          "difficulty": "Nâng cao",
+          "skillType": "Threat Analysis & Response",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Forensic investigation process",
+            "Evidence collection và preservation",
+            "Disk forensics",
+            "Memory forensics",
+            "Network forensics",
+            "Forensic reporting"
+          ],
+          "prerequisites": ["Malware Analysis", "Incident Response"],
+          "nextSkill": {
+            "name": "Advanced Persistent Threats",
+            "description": "Mối đe dọa nâng cao"
+          }
+        },
+        {
+          "name": "Advanced Persistent Threats",
+          "difficulty": "Nâng cao",
+          "skillType": "Threat Analysis & Response",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "APT lifecycle",
+            "APT group profiles",
+            "Detection strategies",
+            "Hunting techniques",
+            "APT mitigation",
+            "Nation-state threats"
+          ],
+          "prerequisites": ["Threat Intelligence", "Digital Forensics"],
+          "nextSkill": {
+            "name": "Application Security",
+            "description": "Bảo mật ứng dụng"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Application Security",
+      "description": "Bảo mật ứng dụng từ thiết kế đến triển khai.",
+      "skills": [
+        {
+          "name": "Secure Development Lifecycle",
+          "difficulty": "Nâng cao",
+          "skillType": "Application Security",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "SDL phases",
+            "Security requirements",
+            "Threat modeling",
+            "Secure code review",
+            "Security testing",
+            "Security documentation"
+          ],
+          "prerequisites": ["Advanced Persistent Threats"],
+          "nextSkill": {
+            "name": "Web Application Security",
+            "description": "Bảo mật ứng dụng web"
+          }
+        },
+        {
+          "name": "Web Application Security",
+          "difficulty": "Nâng cao",
+          "skillType": "Application Security",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "OWASP Top 10 mitigation",
+            "SQL injection prevention",
+            "XSS prevention",
+            "CSRF protection",
+            "Authentication security",
+            "Session management"
+          ],
+          "prerequisites": ["Secure Development Lifecycle"],
+          "nextSkill": {
+            "name": "API Security",
+            "description": "Bảo mật API"
+          }
+        },
+        {
+          "name": "API Security",
+          "difficulty": "Nâng cao",
+          "skillType": "Application Security",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "API authentication (OAuth 2.0, JWT)",
+            "API rate limiting",
+            "Input validation",
+            "API gateway security",
+            "GraphQL security",
+            "API monitoring"
+          ],
+          "prerequisites": ["Web Application Security"],
+          "nextSkill": {
+            "name": "Container Security",
+            "description": "Bảo mật container"
+          }
+        },
+        {
+          "name": "Container Security",
+          "difficulty": "Nâng cao",
+          "skillType": "Application Security",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Docker security",
+            "Kubernetes security",
+            "Image scanning",
+            "Runtime protection",
+            "Secrets management",
+            "Container orchestration security"
+          ],
+          "prerequisites": ["API Security", "Cloud Security"],
+          "nextSkill": {
+            "name": "DevSecOps",
+            "description": "Bảo mật trong DevOps"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "DevSecOps & Automation",
+      "description": "Tích hợp bảo mật vào quy trình DevOps và tự động hóa.",
+      "skills": [
+        {
+          "name": "DevSecOps",
+          "difficulty": "Nâng cao",
+          "skillType": "DevSecOps & Automation",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "DevSecOps culture và practices",
+            "SAST/DAST integration",
+            "Security in CI/CD pipelines",
+            "Infrastructure as Code security",
+            "Policy as Code",
+            "Security automation"
+          ],
+          "prerequisites": ["Container Security"],
+          "nextSkill": {
+            "name": "Security Automation",
+            "description": "Tự động hóa bảo mật"
+          }
+        },
+        {
+          "name": "Security Automation",
+          "difficulty": "Nâng cao",
+          "skillType": "DevSecOps & Automation",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "SOAR platforms",
+            "Playbook automation",
+            "Security orchestration",
+            "Automated response",
+            "Custom automation scripts",
+            "Integration APIs"
+          ],
+          "prerequisites": ["DevSecOps"],
+          "nextSkill": {
+            "name": "Security Architecture",
+            "description": "Kiến trúc bảo mật"
+          }
+        },
+        {
+          "name": "Security Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "DevSecOps & Automation",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Security architecture frameworks",
+            "Defense in depth design",
+            "Zero Trust implementation",
+            "Security reference architectures",
+            "Architecture review",
+            "Security patterns"
+          ],
+          "prerequisites": ["Security Automation", "Cloud Security"],
+          "nextSkill": {
+            "name": "Cloud-Native Security",
+            "description": "Bảo mật cloud-native"
+          }
+        },
+        {
+          "name": "Cloud-Native Security",
+          "difficulty": "Nâng cao",
+          "skillType": "DevSecOps & Automation",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Cloud security posture management",
+            "Workload protection",
+            "Cloud-native tools",
+            "Multi-cloud security",
+            "Cloud compliance automation",
+            "Serverless security"
+          ],
+          "prerequisites": ["Security Architecture", "Container Security"],
+          "nextSkill": {
+            "name": "Compliance & Governance",
+            "description": "Tuân thủ và quản trị"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Compliance & Governance",
+      "description": "Đảm bảo tuân thủ quy định và quản trị bảo mật.",
+      "skills": [
+        {
+          "name": "Compliance & Governance",
+          "difficulty": "Trung cấp",
+          "skillType": "Compliance & Governance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Compliance frameworks (ISO 27001, NIST)",
+            "SOC 2 compliance",
+            "GDPR requirements",
+            "HIPAA compliance",
+            "PCI DSS requirements",
+            "Audit preparation"
+          ],
+          "prerequisites": ["Cloud-Native Security"],
+          "nextSkill": {
+            "name": "Security Risk Management",
+            "description": "Quản lý rủi ro bảo mật"
+          }
+        },
+        {
+          "name": "Security Risk Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Compliance & Governance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Risk assessment methodologies",
+            "Risk quantification",
+            "Risk treatment strategies",
+            "Business impact analysis",
+            "Risk reporting",
+            "Risk frameworks (FAIR)"
+          ],
+          "prerequisites": ["Compliance & Governance"],
+          "nextSkill": {
+            "name": "Security Policy Development",
+            "description": "Phát triển chính sách bảo mật"
+          }
+        },
+        {
+          "name": "Security Policy Development",
+          "difficulty": "Trung cấp",
+          "skillType": "Compliance & Governance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Policy development process",
+            "Security standards creation",
+            "Procedures và guidelines",
+            "Policy enforcement",
+            "Policy review cycles",
+            "Security awareness programs"
+          ],
+          "prerequisites": ["Security Risk Management"],
+          "nextSkill": {
+            "name": "Privacy Engineering",
+            "description": "Kỹ thuật bảo mật"
+          }
+        },
+        {
+          "name": "Privacy Engineering",
+          "difficulty": "Nâng cao",
+          "skillType": "Compliance & Governance",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Privacy by design",
+            "Data protection techniques",
+            "Consent management",
+            "Data subject rights",
+            "Privacy impact assessments",
+            "Cross-border data transfers"
+          ],
+          "prerequisites": ["Security Policy Development"],
+          "nextSkill": {
+            "name": "Business Continuity",
+            "description": "Liên tục kinh doanh"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Resilience & Recovery",
+      "description": "Đảm bảo khả năng phục hồi và tiếp tục kinh doanh.",
+      "skills": [
+        {
+          "name": "Business Continuity",
+          "difficulty": "Trung cấp",
+          "skillType": "Resilience & Recovery",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "BCP development",
+            "Business impact analysis",
+            "Recovery strategies",
+            "BCP testing",
+            "Crisis management",
+            "Communication planning"
+          ],
+          "prerequisites": ["Privacy Engineering"],
+          "nextSkill": {
+            "name": "Disaster Recovery",
+            "description": "Phục hồi thảm họa"
+          }
+        },
+        {
+          "name": "Disaster Recovery",
+          "difficulty": "Nâng cao",
+          "skillType": "Resilience & Recovery",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "DR planning",
+            "Backup strategies",
+            "RTO/RPO planning",
+            "DR site types",
+            "DR testing",
+            "Cloud DR solutions"
+          ],
+          "prerequisites": ["Business Continuity"],
+          "nextSkill": {
+            "name": "Incident Management",
+            "description": "Quản lý sự cố"
+          }
+        },
+        {
+          "name": "Incident Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Resilience & Recovery",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Incident management frameworks",
+            "Severity classification",
+            "Escalation procedures",
+            "Communication protocols",
+            "Post-mortem reviews",
+            "Incident metrics"
+          ],
+          "prerequisites": ["Disaster Recovery", "Incident Response"],
+          "nextSkill": {
+            "name": "Security Program Management",
+            "description": "Quản lý chương trình bảo mật"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Leadership & Strategy",
+      "description": "Lãnh đạo và xây dựng chiến lược bảo mật doanh nghiệp.",
+      "skills": [
+        {
+          "name": "Security Program Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Security program maturity models",
+            "Security metrics và KPIs",
+            "Budget planning",
+            "Team building",
+            "Vendor management",
+            "Security roadmap"
+          ],
+          "prerequisites": ["Incident Management"],
+          "nextSkill": {
+            "name": "Security Strategy",
+            "description": "Chiến lược bảo mật"
+          }
+        },
+        {
+          "name": "Security Strategy",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Security alignment với business",
+            "Threat landscape analysis",
+            "Security investment optimization",
+            "Emerging threats strategy",
+            "Board reporting",
+            "Security vision"
+          ],
+          "prerequisites": ["Security Program Management"],
+          "nextSkill": {
+            "name": "CISO Readiness",
+            "description": "Sẵn sàng cho vị trí CISO"
+          }
+        },
+        {
+          "name": "CISO Readiness",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Executive communication",
+            "Risk management at enterprise level",
+            "Security governance",
+            "Crisis leadership",
+            "Regulatory engagement",
+            "Industry thought leadership"
+          ],
+          "prerequisites": ["Security Strategy"],
+          "nextSkill": {
+            "name": "Industry Specialization",
+            "description": "Chuyên ngành theo ngành nghề"
+          }
+        },
+        {
+          "name": "Industry Specialization",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Financial sector security",
+            "Healthcare security",
+            "Government security",
+            "Critical infrastructure",
+            "Industrial security (OT/ICS)",
+            "Industry-specific compliance"
+          ],
+          "prerequisites": ["CISO Readiness"],
+          "nextSkill": {
+            "name": "Continuous Learning",
+            "description": "Học tập liên tục"
+          }
+        },
+        {
+          "name": "Continuous Learning",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Security community involvement",
+            "Conference participation",
+            "Certification maintenance",
+            "Research contributions",
+            "Mentoring next generation",
+            "Advisory board participation"
+          ],
+          "prerequisites": ["Industry Specialization"],
+          "nextSkill": {
+            "name": "Security Innovation",
+            "description": "Đổi mới bảo mật"
+          }
+        }
+      ]
+    }
+  ]
+}

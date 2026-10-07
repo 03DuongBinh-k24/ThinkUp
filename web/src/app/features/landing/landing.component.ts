@@ -1,0 +1,450 @@
+import { Component, signal, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { CourseService } from '../../core/services/course.service';
+import { Course } from '../../core/models/course.model';
+import { skillTracks, stats, classroomFeatures, instructors, testimonials, faqItems } from './mock-landing-data';
+
+@Component({
+  selector: 'app-landing-view',
+  standalone: true,
+  imports: [CommonModule, RouterLink, FormsModule],
+  template: `
+    <div class="min-h-screen bg-white text-[#0D111B] font-sans">
+      <main>
+        <!-- 1. Hero Section -->
+        <section class="relative isolate overflow-hidden bg-[#1D93D8] text-white">
+          <div class="relative z-10 mx-auto flex min-h-[640px] flex-col justify-center gap-8 px-6 py-12 sm:px-12 md:px-16 lg:hidden">
+            <div class="pointer-events-none absolute left-1/2 top-[150px] -z-10 h-[360px] w-[2020px] -translate-x-1/2 opacity-70 md:top-[160px] md:h-[430px] md:w-[2400px]" aria-hidden="true">
+              <img src="/assets/landing/hero-wave.svg" alt="" class="h-full w-full object-cover" />
+            </div>
+            <div class="z-10 flex max-w-[650px] flex-col items-start gap-[42px]">
+              <div class="flex max-w-[650px] flex-col gap-6">
+                <h1 class="font-['Inter'] text-[56px] font-bold leading-[0.98] tracking-normal md:text-[86px]">
+                  <span class="text-[#071027]">Think</span>UP
+                </h1>
+                <p class="max-w-[590px] font-['Inter'] text-[16px] font-semibold leading-[24px] text-white md:text-[18px] md:leading-[27px]">
+                  Nền tảng học IT thông minh giúp bạn xây dựng lộ trình rõ ràng từ lập trình cơ bản đến việc làm đầu tiên, thực hành qua dự án và phát triển kỹ năng cùng mentor.
+                </p>
+              </div>
+              <a
+                routerLink="/auth/sign-up"
+                class="inline-flex h-[56px] items-center justify-center rounded-[33.5px] bg-[#FDC357] px-[39px] font-['Inter'] text-[16px] font-extrabold leading-6 text-[#09131A] shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                KHÁM PHÁ NGAY
+              </a>
+            </div>
+            <div class="relative z-10 mx-auto w-full max-w-[520px] self-end">
+              <img
+                src="/assets/landing/hero-people.png"
+                alt="Học viên cùng học trên nền tảng ThinkUp"
+                class="h-auto w-full object-contain"
+              />
+            </div>
+          </div>
+
+          <div class="relative z-10 mx-auto hidden aspect-[1906/727] w-full max-w-[1906px] lg:block">
+            <div class="pointer-events-none absolute left-[-19.1%] top-[23.2%] -z-10 h-[66%] w-[142.2%] opacity-70" aria-hidden="true">
+              <img src="/assets/landing/hero-wave.svg" alt="" class="h-full w-full object-cover" />
+            </div>
+            <h1 class="absolute left-[11.44%] top-[22.65%] font-['Inter'] text-[min(4.83vw,92px)] font-bold leading-[0.98] tracking-normal">
+              <span class="text-[#071027]">Think</span>UP
+            </h1>
+            <p class="absolute left-[11.44%] top-[49.84%] w-[40.58%] font-['Inter'] text-[min(0.94vw,18px)] font-semibold leading-[1.5] text-white">
+              Nền tảng học IT thông minh giúp bạn xây dựng lộ trình rõ ràng từ lập trình cơ bản đến việc làm đầu tiên, thực hành qua dự án và phát triển kỹ năng cùng mentor.
+            </p>
+            <a
+              routerLink="/auth/sign-up"
+              class="absolute left-[11.44%] top-[69.7%] inline-flex h-[7.67%] min-h-[42px] w-[12.13%] min-w-[175px] items-center justify-center rounded-[33.5px] bg-[#FDC357] font-['Inter'] text-[min(0.84vw,16px)] font-extrabold leading-6 text-[#09131A] shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              KHÁM PHÁ NGAY
+            </a>
+            <img
+              src="/assets/landing/hero-people.png"
+              alt="Học viên cùng học trên nền tảng ThinkUp"
+              class="absolute bottom-0 left-[49.5%] z-10 h-[89%] w-auto max-w-none object-contain"
+            />
+          </div>
+        </section>
+
+        <!-- 2. Skills Section -->
+        <section id="about" class="overflow-hidden bg-white px-6 py-16 md:px-16 lg:px-24">
+          <div class="mx-auto max-w-[1440px] flex flex-col gap-8 rounded-[24px] bg-[#F7F9FB] p-6 lg:p-12">
+            <div class="grid items-center gap-10 lg:grid-cols-[0.45fr_0.55fr]">
+              <div class="flex flex-col items-start">
+                <h2 class="max-w-[501px] font-['Inter'] text-[28px] font-bold leading-[1.2] text-[#091426] md:text-[38px] lg:text-[42px] tracking-[-0.02em]">
+                  Học các kỹ năng thiết yếu cho sự nghiệp và cuộc sống
+                </h2>
+                <p class="mt-4 max-w-[501px] font-['Inter'] text-[15px] font-normal leading-[26px] text-[#45474C] md:text-[16px]">
+                  Mở khóa tiềm năng của bạn với lộ trình học tập chuyên sâu từ các chuyên gia hàng đầu trong ngành công nghệ và sáng tạo.
+                </p>
+                <a
+                  routerLink="/main/courses"
+                  class="mt-6 inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#006AB5] px-8 py-4 font-['Inter'] text-[15px] font-bold leading-6 text-white hover:bg-[#00528C] active:scale-[0.98] transition-all"
+                >
+                  Khám phá lộ trình →
+                </a>
+              </div>
+              <div class="flex flex-col gap-6 sm:grid sm:grid-cols-3">
+                @for (track of skillTracks; track track.title; let i = $index) {
+                  <a
+                    [routerLink]="track.href"
+                    class="group flex min-h-[280px] flex-col overflow-hidden rounded-[16px] border border-[#E1E5EB] transition-all hover:-translate-y-1 hover:shadow-xl"
+                    [ngClass]="i === 2 ? 'bg-gradient-to-br from-[#1E293B] to-[#091426] text-white border-transparent' : 'bg-white text-black'"
+                  >
+                    <div class="flex min-h-[198px] items-center justify-center bg-[#0D1528] p-6">
+                      <img
+                        [src]="track.image"
+                        alt=""
+                        class="h-[140px] w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div class="flex flex-1 items-center justify-between gap-4 px-6 py-5">
+                      <h3 class="text-[18px] font-semibold leading-7">{{ track.title }}</h3>
+                      <span
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors"
+                        [ngClass]="i === 2 ? 'bg-white/10 text-white group-hover:bg-[#006AB5]' : 'bg-[#EDF2F8] text-[#0D111B] group-hover:bg-[#006AB5] group-hover:text-white'"
+                      >
+                        →
+                      </span>
+                    </div>
+                  </a>
+                }
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Popular Courses Section -->
+        <section class="relative bg-[#168ADB] px-6 py-16 md:px-16 lg:px-24">
+          <div class="mx-auto max-w-[1440px] flex flex-col gap-10">
+            <h2 class="text-center font-['Inter'] text-[26px] font-bold leading-[36px] text-[#F8F8F8] md:text-[32px] lg:text-[36px]">
+              Bắt đầu với khóa học được yêu thích
+            </h2>
+
+            <div class="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              @for (course of popularCourses(); track course.id) {
+                <article class="flex flex-col rounded-[16px] bg-white overflow-hidden shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                  <div
+                    class="h-44 w-full flex items-center justify-center text-4xl font-bold text-white relative p-4"
+                    [ngStyle]="{ background: course.bgGradient || '#0A1535' }"
+                  >
+                    <span>{{ course.icon || '💻' }}</span>
+                    @if (course.badge) {
+                      <span class="absolute top-3 left-3 bg-[#FB2C36] text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                        {{ course.badge }}
+                      </span>
+                    }
+                  </div>
+                  <div class="p-5 flex flex-col flex-1">
+                    <h3 class="font-bold text-[16px] text-[#0F1C33] line-clamp-2 mb-2">{{ course.title }}</h3>
+                    <p class="text-xs text-[#61738F] mb-3">Giảng viên: {{ course.instructor }}</p>
+                    <div class="flex items-center justify-between text-xs text-[#7A8AA1] mb-4">
+                      <span>⭐ {{ course.rating }} ({{ course.ratingCount }})</span>
+                      <span>{{ course.students }}</span>
+                    </div>
+                    <div class="mt-auto flex items-center justify-between pt-4 border-t border-slate-100">
+                      <div>
+                        <span class="text-xs text-slate-400 line-through block">{{ course.originalPrice | currency:'VND':'symbol':'1.0-0' }}</span>
+                        <span class="text-base font-bold text-[#145CF2]">{{ course.salePrice | currency:'VND':'symbol':'1.0-0' }}</span>
+                      </div>
+                      <a
+                        [routerLink]="['/main/courses', course.id]"
+                        class="px-4 py-2 bg-[#145CF2] text-white rounded-lg text-xs font-semibold hover:bg-[#0B4ACD] transition"
+                      >
+                        Chi tiết
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+
+            <div class="flex justify-center mt-6">
+              <a
+                routerLink="/main/courses"
+                class="inline-flex items-center justify-center rounded-[33.5px] bg-[#FFAA00] px-7 py-3 font-['Inter'] text-[14px] font-bold text-black shadow-lg hover:bg-[#FDB500] active:scale-[0.98] transition-all"
+              >
+                Xem tất cả khóa học
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Stats Section -->
+        <section class="border-y border-[#E1E5EB] bg-white px-6 py-12 md:px-16 lg:px-24">
+          <div class="mx-auto grid max-w-[1280px] grid-cols-2 gap-8 lg:grid-cols-4">
+            @for (item of stats; track item.label) {
+              <div class="text-center">
+                <p class="font-['Inter'] text-[40px] font-semibold leading-[48px] text-[#00528C] md:text-[48px]">
+                  {{ item.value }}
+                </p>
+                <p class="mt-2 font-['Inter'] text-[14px] leading-5 text-[#4D5461]">
+                  {{ item.label }}
+                </p>
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- 5. Interactive Learning Section (Study Room preview) -->
+        <section class="bg-white px-6 py-16 md:px-16 lg:px-24">
+          <div class="mx-auto grid max-w-[1440px] items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+            <div class="relative">
+              <img
+                src="/assets/study-room/studyroom.png"
+                alt="Phòng học ảo hiện đại với màn hình tương tác"
+                class="relative h-auto w-full rounded-[24px] border border-[#E6F4FF] object-cover shadow-xl"
+              />
+            </div>
+            <div class="flex flex-col items-start gap-6 lg:gap-8">
+              <div class="flex flex-col gap-4">
+                <span class="inline-flex self-start rounded-full bg-[#DDE1FF] px-4 py-1.5 font-['Inter'] text-[12px] font-bold uppercase tracking-wider text-[#0038B6]">
+                  TRẢI NGHIỆM MỚI
+                </span>
+                <h2 class="font-['Inter'] text-[32px] font-extrabold leading-[1.1] text-[#191C1E] md:text-[44px] lg:text-[48px]">
+                  Phòng học ảo <span class="text-[#00528C]">tương tác</span>
+                </h2>
+                <p class="font-['Inter'] text-[15px] font-normal leading-[26px] text-[#434656] md:text-[17px]">
+                  Học tập cùng nhau trong thời gian thực với sự hướng dẫn trực tiếp từ các mentor giàu kinh nghiệm, mang lại hiệu quả như học tại lớp.
+                </p>
+              </div>
+              <div class="flex flex-col gap-4 w-full">
+                @for (feature of classroomFeatures; track feature.title) {
+                  <div class="flex gap-4 rounded-[12px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#F2F4F6] text-[#003EC7] font-bold text-lg">
+                      👥
+                    </span>
+                    <div>
+                      <h3 class="font-['Inter'] text-[17px] font-bold text-[#191C1E]">{{ feature.title }}</h3>
+                      <p class="mt-1 font-['Inter'] text-[13px] text-[#434656]">{{ feature.description }}</p>
+                    </div>
+                  </div>
+                }
+              </div>
+              <a
+                routerLink="/learning/study-room"
+                class="inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#006AB5] px-6 py-3 font-['Inter'] text-[15px] font-semibold text-white hover:bg-[#00528C]"
+              >
+                Vào phòng học ảo →
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. Developer Tools & Dashboard Preview Section -->
+        <section class="bg-white px-6 py-16 md:px-16 lg:px-24">
+          <div class="mx-auto flex max-w-[1440px] flex-col items-center gap-10">
+            <div class="text-center flex flex-col gap-3 max-w-[772px]">
+              <h2 class="font-['Inter'] text-[28px] font-extrabold leading-[38px] text-[#09131A] md:text-[38px] lg:text-[42px]">
+                Mọi công cụ <span class="text-[#007BE5]">cần thiết</span> để bạn trở thành Developer
+              </h2>
+              <p class="font-['Inter'] text-[16px] font-bold leading-[26px] text-[#09131A]">
+                Tất cả tích hợp trong một nền tảng học IT duy nhất.
+              </p>
+            </div>
+
+            <div class="relative w-full max-w-[1440px] rounded-[32px] bg-[rgba(0,123,229,0.43)] p-6 md:p-10 min-h-[500px] grid md:grid-cols-[1.1fr_0.9fr] items-center gap-10">
+              <div class="flex flex-col items-start gap-4">
+                <div class="h-28 w-24 rounded-md overflow-hidden">
+                  <img src="/assets/landing/icon-planning-58d7e8.png" alt="" class="h-full w-full object-contain" />
+                </div>
+                <div class="inline-flex rounded-[33.5px] bg-white px-4 py-1 shadow-sm">
+                  <span class="font-['Inter'] text-[11px] font-extrabold uppercase tracking-widest text-[#09131A]">
+                    LỘ TRÌNH
+                  </span>
+                </div>
+                <h3 class="font-['Inter'] text-[26px] font-extrabold leading-[34px] text-[#09131A] md:text-[32px]">
+                  Bảng điều khiển <span class="text-[#193CB8]">học tập của bạn</span>
+                </h3>
+                <ul class="flex flex-col gap-3 mt-2">
+                  <li class="flex items-center gap-3">
+                    <span class="h-2 w-2 shrink-0 rounded-full bg-[#09131A]"></span>
+                    <p class="font-['Inter'] text-[15px] text-[#09131A]">Theo dõi tiến độ từng khoá học và mỗi bài lab.</p>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <span class="h-2 w-2 shrink-0 rounded-full bg-[#09131A]"></span>
+                    <p class="font-['Inter'] text-[15px] text-[#09131A]">Đặt mục tiêu hàng tuần và nhận nhắc nhở từ AI.</p>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <span class="h-2 w-2 shrink-0 rounded-full bg-[#09131A]"></span>
+                    <p class="font-['Inter'] text-[15px] text-[#09131A]">Xem gợi ý khoá học tiếp theo phù hợp với mục tiêu nghề nghiệp.</p>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Right panel mimicking a dashboard view -->
+              <div class="relative rounded-[32px] bg-white p-5 md:p-6 shadow-2xl border border-[#DFE6EB] w-full max-w-[620px] justify-self-center">
+                <div class="flex items-center gap-4 rounded-[28px] bg-[rgba(244,224,249,0.6)] p-3 md:p-4">
+                  <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDC357]">
+                    <span class="text-[18px]">👋</span>
+                  </div>
+                  <div>
+                    <h4 class="font-['Inter'] text-[15px] font-extrabold text-[#09131A]">Chào bạn</h4>
+                    <p class="font-['Inter'] text-[12px] text-[#59656E]">Hôm nay bạn muốn học gì nào?</p>
+                  </div>
+                </div>
+
+                <div class="flex gap-4 border-b border-[#DFE6EB] mt-5 pb-2">
+                  <span class="font-['Inter'] text-[13px] font-bold text-[#09131A] border-b-2 border-[#09131A] pb-2">Đề xuất</span>
+                  <span class="font-['Inter'] text-[13px] font-bold text-[#59656E]">Cần làm</span>
+                  <span class="font-['Inter'] text-[13px] font-bold text-[#59656E]">Tất cả khoá</span>
+                </div>
+
+                <div class="flex flex-col gap-3 mt-4">
+                  <div class="flex gap-3 rounded-[20px] bg-[rgba(236,243,248,0.5)] p-3">
+                    <span class="text-purple-600 text-lg">✨</span>
+                    <div>
+                      <h5 class="font-['Inter'] text-[13px] font-bold text-[#09131A]">Hoàn thành bài lab React Hooks!</h5>
+                      <p class="font-['Inter'] text-[11px] text-[#59656E]">Tiếp tục module 4: State Management</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-3 rounded-[20px] bg-[rgba(236,243,248,0.5)] p-3">
+                    <span class="text-purple-600 text-lg">✨</span>
+                    <div>
+                      <h5 class="font-['Inter'] text-[13px] font-bold text-[#09131A]">Bài kiểm tra Python Data sắp đến hạn</h5>
+                      <p class="font-['Inter'] text-[11px] text-[#59656E]">Còn 2 ngày để nộp bài tập cuối khoá</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. Instructors Section -->
+        <section id="instructors" class="bg-white px-6 py-16 md:px-16 lg:px-24">
+          <div class="mx-auto max-w-[1440px] flex flex-col gap-12">
+            <div class="text-center flex flex-col items-center gap-4">
+              <h2 class="font-['Inter'] text-[30px] font-bold leading-[36px] text-[#0D111B] md:text-[36px]">Giảng viên</h2>
+              <p class="max-w-[672px] font-['Inter'] text-[14px] leading-5 text-[#5D646F] md:text-[16px]">
+                Đội ngũ giảng viên giàu kinh nghiệm, luôn đồng hành và hỗ trợ học viên trong suốt quá trình học tập.
+              </p>
+            </div>
+            <div class="grid gap-8 md:grid-cols-3">
+              @for (instructor of instructors; track instructor.name) {
+                <article class="flex flex-col items-center text-center">
+                  <div class="relative rounded-full p-[5px] shadow-md">
+                    <img
+                      [src]="instructor.image"
+                      [alt]="instructor.name"
+                      class="h-[160px] w-[160px] rounded-full object-cover"
+                    />
+                  </div>
+                  <h3 class="mt-6 font-['Inter'] text-[20px] font-semibold text-[#0D111B]">{{ instructor.name }}</h3>
+                  <p class="mt-1 font-['Inter'] text-[15px] text-[#5D646F]">{{ instructor.role }}</p>
+                  <p class="mt-3 max-w-[400px] font-['Inter'] text-[14px] leading-[22px] text-[#5D646F]">
+                    {{ instructor.description }}
+                  </p>
+                </article>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. Testimonials Section -->
+        <section class="bg-white px-6 py-16 md:px-16 lg:px-24">
+          <div class="mx-auto max-w-[1024px] flex flex-col gap-12">
+            <div class="text-center flex flex-col items-center gap-4">
+              <h2 class="font-['Inter'] text-[30px] font-bold text-[#0D111B]">Đánh giá học viên</h2>
+              <p class="font-['Inter'] text-[14px] text-[#5D646F]">Học viên nói gì về chúng tôi</p>
+            </div>
+            <div class="flex flex-col gap-8">
+              @for (t of testimonials; track t.name) {
+                <article class="flex flex-col gap-6 md:flex-row md:items-center rounded-2xl border border-slate-100 p-6 shadow-sm">
+                  <div class="flex h-[120px] w-[120px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#EDF2F8] p-3 text-center">
+                    <img [src]="t.image" [alt]="t.name" class="h-14 w-14 rounded-full object-cover" />
+                    <h4 class="mt-2 text-xs font-bold text-[#0D111B]">{{ t.name }}</h4>
+                    <p class="text-[10px] text-slate-500">{{ t.role }}</p>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-amber-400 text-sm mb-2">★★★★★</div>
+                    <p class="font-['Inter'] text-[14px] italic text-[#5D646F] leading-relaxed">{{ t.quote }}</p>
+                  </div>
+                </article>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. FAQ Section -->
+        <section class="bg-white px-6 py-16 md:px-16 lg:px-24 border-t border-slate-100">
+          <div class="mx-auto flex max-w-[1440px] flex-col items-center gap-12">
+            <div class="text-center flex flex-col items-center gap-4">
+              <div class="h-20 w-20 rounded-full overflow-hidden">
+                <img src="/assets/landing/faq-logo.png" alt="" class="h-full w-full object-cover" />
+              </div>
+              <h2 class="font-['Inter'] text-[32px] font-extrabold text-[#09131A]">
+                Câu hỏi thường gặp
+              </h2>
+            </div>
+
+            <div class="grid gap-4 w-full md:grid-cols-2">
+              @for (item of faqItems; track item.question; let i = $index) {
+                <div
+                  class="rounded-[14px] border p-5 transition-all cursor-pointer"
+                  [ngClass]="openFaq() === i ? 'border-[#BFE5FF] bg-[#E6F4FF]' : 'border-[#D3ECFF] bg-[#F1F9FF] hover:bg-[#E6F4FF]'"
+                  (click)="toggleFaq(i)"
+                >
+                  <div class="flex w-full items-center justify-between text-left">
+                    <span class="font-['Inter'] text-[15px] font-extrabold text-[#09131A]">{{ item.question }}</span>
+                    <span class="text-lg font-bold">{{ openFaq() === i ? '−' : '+' }}</span>
+                  </div>
+                  @if (openFaq() === i) {
+                    <p class="mt-4 font-['Inter'] text-[13px] leading-5 text-[rgba(9,19,26,0.8)]">
+                      {{ item.answer }}
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- 10. CTA Section -->
+        <section class="bg-[#006AB5] px-6 py-14 text-white text-center">
+          <div class="mx-auto max-w-[768px] flex flex-col items-center gap-6">
+            <h2 class="font-['Inter'] text-[32px] font-bold">
+              Tham gia ThinkUp ngay hôm nay
+            </h2>
+            <p class="text-sm opacity-90">
+              Truy cập không giới hạn 500+ khóa học chất lượng cao
+            </p>
+            <a
+              routerLink="/auth/sign-up"
+              class="inline-flex items-center justify-center rounded-[33.5px] bg-[#FFAA00] px-8 py-3.5 font-bold text-black shadow-lg hover:bg-[#FDB500] transition"
+            >
+              Tham gia ngay
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+  `
+})
+export class LandingComponent implements OnInit {
+  private readonly courseService = inject(CourseService);
+
+  readonly skillTracks = skillTracks;
+  readonly stats = stats;
+  readonly classroomFeatures = classroomFeatures;
+  readonly instructors = instructors;
+  readonly testimonials = testimonials;
+  readonly faqItems = faqItems;
+
+  readonly popularCourses = signal<Course[]>([]);
+  readonly openFaq = signal<number | null>(null);
+
+  ngOnInit(): void {
+    this.courseService.getCourses({ sort: 'popular' }).subscribe({
+      next: (res) => {
+        this.popularCourses.set((res.data || []).slice(0, 4));
+      }
+    });
+  }
+
+  toggleFaq(index: number): void {
+    this.openFaq.set(this.openFaq() === index ? null : index);
+  }
+}

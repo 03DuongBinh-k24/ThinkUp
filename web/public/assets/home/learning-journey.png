@@ -1,0 +1,52 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 620 208" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Learning journey illustration" clip-path="url(#clip0_0_4)">
+<path id="Vector" opacity="0.62" d="M72 168C148 82 220 179 300 92C374 12 454 126 556 36" stroke="var(--stroke-0, #A8C8FF)" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 10"/>
+<g id="Group">
+<path id="Vector_2" d="M145 95H39C29.6112 95 22 102.611 22 112V156C22 165.389 29.6112 173 39 173H145C154.389 173 162 165.389 162 156V112C162 102.611 154.389 95 145 95Z" fill="url(#paint0_linear_0_4)"/>
+<path id="Vector_3" d="M65 111H49C42.9249 111 38 115.925 38 122V138C38 144.075 42.9249 149 49 149H65C71.0751 149 76 144.075 76 138V122C76 115.925 71.0751 111 65 111Z" fill="var(--fill-0, #E8F2FF)"/>
+<path id="Vector_4" d="M50 130L57 137L67 122" stroke="var(--stroke-0, #246BFD)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_5" d="M140 114H90C87.7909 114 86 115.791 86 118C86 120.209 87.7909 122 90 122H140C142.209 122 144 120.209 144 118C144 115.791 142.209 114 140 114Z" fill="var(--fill-0, #16325C)"/>
+<path id="Vector_6" d="M127 130H89C87.3431 130 86 131.343 86 133C86 134.657 87.3431 136 89 136H127C128.657 136 130 134.657 130 133C130 131.343 128.657 130 127 130Z" fill="var(--fill-0, #8AA0BE)"/>
+<path id="Vector_7" d="M141.5 157H40.5C39.1193 157 38 158.119 38 159.5C38 160.881 39.1193 162 40.5 162H141.5C142.881 162 144 160.881 144 159.5C144 158.119 142.881 157 141.5 157Z" fill="var(--fill-0, #BFD3EE)"/>
+</g>
+<g id="Group_2">
+<path id="Vector_8" d="M363 64H237C225.954 64 217 72.9543 217 84V142C217 153.046 225.954 162 237 162H363C374.046 162 383 153.046 383 142V84C383 72.9543 374.046 64 363 64Z" fill="url(#paint1_linear_0_4)"/>
+<path id="Vector_9" d="M250 115C259.941 115 268 106.941 268 97C268 87.0589 259.941 79 250 79C240.059 79 232 87.0589 232 97C232 106.941 240.059 115 250 115Z" fill="var(--fill-0, white)" fill-opacity="0.2"/>
+<path id="Vector_10" d="M242 97L248 103L259 90" stroke="var(--stroke-0, white)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_11" d="M350.5 83H283.5C281.015 83 279 85.0147 279 87.5C279 89.9853 281.015 92 283.5 92H350.5C352.985 92 355 89.9853 355 87.5C355 85.0147 352.985 83 350.5 83Z" fill="var(--fill-0, white)"/>
+<path id="Vector_12" d="M333.5 101H282.5C280.567 101 279 102.567 279 104.5C279 106.433 280.567 108 282.5 108H333.5C335.433 108 337 106.433 337 104.5C337 102.567 335.433 101 333.5 101Z" fill="var(--fill-0, white)" fill-opacity="0.65"/>
+<path id="Vector_13" d="M358 127H242C239.791 127 238 128.791 238 131C238 133.209 239.791 135 242 135H358C360.209 135 362 133.209 362 131C362 128.791 360.209 127 358 127Z" fill="var(--fill-0, white)" fill-opacity="0.25"/>
+<path id="Vector_14" d="M308 127H242C239.791 127 238 128.791 238 131C238 133.209 239.791 135 242 135H308C310.209 135 312 133.209 312 131C312 128.791 310.209 127 308 127Z" fill="var(--fill-0, white)"/>
+</g>
+<g id="Group_3">
+<path id="Vector_15" d="M570 24H456C446.059 24 438 32.0589 438 42V90C438 99.9411 446.059 108 456 108H570C579.941 108 588 99.9411 588 90V42C588 32.0589 579.941 24 570 24Z" fill="url(#paint2_linear_0_4)"/>
+<path id="Vector_16" d="M469 72C478.389 72 486 64.3888 486 55C486 45.6112 478.389 38 469 38C459.611 38 452 45.6112 452 55C452 64.3888 459.611 72 469 72Z" fill="var(--fill-0, #E9E2FF)"/>
+<path id="Vector_17" d="M462 56L468 62L478 49" stroke="var(--stroke-0, #6A4DE8)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_18" d="M564 43H502C499.791 43 498 44.7909 498 47C498 49.2091 499.791 51 502 51H564C566.209 51 568 49.2091 568 47C568 44.7909 566.209 43 564 43Z" fill="var(--fill-0, #16325C)"/>
+<path id="Vector_19" d="M549 59H501C499.343 59 498 60.3431 498 62C498 63.6569 499.343 65 501 65H549C550.657 65 552 63.6569 552 62C552 60.3431 550.657 59 549 59Z" fill="var(--fill-0, #8AA0BE)"/>
+<path id="Vector_20" d="M565.5 84H458.5C457.119 84 456 85.1193 456 86.5C456 87.8807 457.119 89 458.5 89H565.5C566.881 89 568 87.8807 568 86.5C568 85.1193 566.881 84 565.5 84Z" fill="var(--fill-0, #C5D7EF)"/>
+</g>
+<path id="Vector_21" d="M72 176C76.4183 176 80 172.418 80 168C80 163.582 76.4183 160 72 160C67.5817 160 64 163.582 64 168C64 172.418 67.5817 176 72 176Z" fill="var(--fill-0, #56E4AC)" stroke="var(--stroke-0, white)" stroke-width="4"/>
+<path id="Vector_22" d="M300 100C304.418 100 308 96.4183 308 92C308 87.5817 304.418 84 300 84C295.582 84 292 87.5817 292 92C292 96.4183 295.582 100 300 100Z" fill="var(--fill-0, #FFD66B)" stroke="var(--stroke-0, white)" stroke-width="4"/>
+<path id="Vector_23" d="M556 44C560.418 44 564 40.4183 564 36C564 31.5817 560.418 28 556 28C551.582 28 548 31.5817 548 36C548 40.4183 551.582 44 556 44Z" fill="var(--fill-0, #BDA9FF)" stroke="var(--stroke-0, white)" stroke-width="4"/>
+<path id="Vector_24" d="M582 142L591 151L608 131" stroke="var(--stroke-0, #74F0BE)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_25" opacity="0.55" d="M594 167C608.359 167 620 155.359 620 141C620 126.641 608.359 115 594 115C579.641 115 568 126.641 568 141C568 155.359 579.641 167 594 167Z" stroke="var(--stroke-0, #74F0BE)" stroke-width="3"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_4" x1="22" y1="95" x2="88.3261" y2="214.047" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#DCEAFF"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_4" x1="217" y1="64" x2="302.805" y2="209.344" gradientUnits="userSpaceOnUse">
+<stop stop-color="#7FB2FF"/>
+<stop offset="1" stop-color="#9B7CFF"/>
+</linearGradient>
+<linearGradient id="paint2_linear_0_4" x1="438" y1="24" x2="509.62" y2="151.893" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#DCEAFF"/>
+</linearGradient>
+<clipPath id="clip0_0_4">
+<rect width="620" height="208" fill="white"/>
+</clipPath>
+</defs>
+</svg>

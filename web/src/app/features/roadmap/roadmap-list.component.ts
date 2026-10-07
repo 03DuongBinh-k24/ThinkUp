@@ -1,0 +1,209 @@
+import { Component, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { RoadmapService } from '../../core/services/roadmap.service';
+import { AuthService } from '../../core/services/auth.service';
+import { RoadmapMetaItem } from '../../core/models/roadmap.model';
+
+@Component({
+  selector: 'app-roadmap-list',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  template: `
+    <div class="relative min-h-screen bg-[#F8FAFB] font-sans text-[#191C1D]">
+      <!-- Background Ambient Glow -->
+      <div class="pointer-events-none absolute -left-24 top-32 h-72 w-72 rounded-full bg-[#CFE8FD]/60 blur-3xl"></div>
+      <div class="pointer-events-none absolute right-0 top-16 h-64 w-64 rounded-full bg-[#E6F4FF] blur-3xl"></div>
+
+      <main class="relative mx-auto max-w-[1280px] px-6 pb-20 pt-[58px] sm:pt-16">
+        <!-- Header -->
+        <header class="mb-[58px] text-center">
+          <h1 class="text-[36px] font-bold leading-[1.05] tracking-[-0.025em] sm:text-[44px] lg:text-[52px] lg:leading-[55px]">
+            Lộ trình học tập
+          </h1>
+          <p class="mt-4 text-[15px] leading-6 text-[#4D5461] sm:text-[17px]">
+            Chọn lộ trình phù hợp với mục tiêu nghề nghiệp của bạn
+          </p>
+        </header>
+
+        <!-- Subheading & Search/Filters -->
+        <div class="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h2 class="text-[22px] font-semibold leading-[33px]">Tất cả lộ trình</h2>
+            <p class="text-[14px] leading-[21px] text-[#6D717F]">
+              Khám phá {{ totalRoadmaps() }} lộ trình được thiết kế chuẩn chuyên gia ngành công nghệ.
+            </p>
+          </div>
+
+          <div class="w-full sm:w-72">
+            <input
+              type="text"
+              [value]="searchKeyword()"
+              (input)="onSearchInput($event)"
+              placeholder="Tìm theo tên lộ trình..."
+              class="w-full rounded-xl border border-[#D2D5DB] bg-white px-4 py-2.5 text-[14px] text-[#191C1D] placeholder-[#9EA2AE] shadow-sm transition focus:border-[#0088E8] focus:outline-none focus:ring-2 focus:ring-[#8ACEFF]/30"
+            />
+          </div>
+        </div>
+
+        <!-- Notification Toast / Alert -->
+        @if (feedbackMessage()) {
+          <div
+            class="mb-6 flex items-center justify-between rounded-xl p-4 text-[14px] font-medium transition-all"
+            [ngClass]="{
+              'bg-[#E6F7EE] text-[#16A34A] border border-[#16A34A]/20': feedbackType() === 'success',
+              'bg-[#FFF4D1] text-[#D97706] border border-[#D97706]/20': feedbackType() === 'warning'
+            }"
+          >
+            <span>{{ feedbackMessage() }}</span>
+            <button (click)="dismissFeedback()" class="text-xs font-bold underline">Đóng</button>
+          </div>
+        }
+
+        <!-- Roadmaps Grid -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          @for (roadmap of filteredRoadmaps(); track roadmap.id) {
+            <article class="flex min-h-[266px] flex-col rounded-2xl border border-[#D2D5DB]/70 bg-white p-6 transition-shadow hover:shadow-md">
+              <div class="flex flex-1 flex-col gap-5 sm:flex-row">
+                <!-- Avatar Code Badge -->
+                <div
+                  class="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl text-[28px] font-bold shadow-sm"
+                  [ngStyle]="{ 'background-color': roadmap.bgColor, 'color': roadmap.color }"
+                >
+                  {{ roadmap.shortCode }}
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-[20px] font-semibold leading-[30px] text-[#191C1D]">
+                    {{ roadmap.title }}
+                  </h3>
+                  <p class="mt-1 line-clamp-2 text-[14px] leading-6 text-[#4D5461]">
+                    {{ roadmap.desc }}
+                  </p>
+                  <div class="mt-2 text-[12px] font-medium text-[#6D717F]">
+                    <span>{{ roadmap.skillsCount }} kỹ năng cốt lõi</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Enroll Button -->
+              <div class="mt-4">
+                @if (isEnrolled(roadmap.id)) {
+                  <button
+                    (click)="handleToggleEnroll(roadmap)"
+                    type="button"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#16A34A] bg-[#E6F7EE] px-4 py-2.5 text-[14px] font-semibold text-[#16A34A] transition hover:bg-[#d5f3e3]"
+                  >
+                    <span>✓ Đã chọn lộ trình này</span>
+                    <span class="text-xs font-normal text-[#16A34A]/80">(Nhấp để hủy)</span>
+                  </button>
+                } @else {
+                  <button
+                    (click)="handleToggleEnroll(roadmap)"
+                    type="button"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#D2D5DB] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#191C1D] transition hover:border-[#0088E8] hover:text-[#0088E8]"
+                  >
+                    + Chọn lộ trình học này
+                  </button>
+                }
+              </div>
+
+              <!-- Footer with stages & view link -->
+              <div class="mt-6 flex items-center justify-between border-t border-[#D2D5DB]/70 pt-4">
+                <span class="text-[13px] leading-5 text-[#6D717F]">
+                  {{ roadmap.stagesCount }} giai đoạn học tập
+                </span>
+
+                <a
+                  [routerLink]="['/learning/roadmap', roadmap.id]"
+                  class="inline-flex items-center gap-1 text-[15px] font-semibold text-[#0088E8] transition hover:text-[#0077CC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ACEFF]"
+                >
+                  <span>Xem chi tiết</span>
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            </article>
+          } @empty {
+            <div class="col-span-full rounded-2xl border border-dashed border-[#D2D5DB] bg-white p-12 text-center text-[#6D717F]">
+              <p class="text-[16px] font-medium">Không tìm thấy lộ trình phù hợp với từ khóa "{{ searchKeyword() }}"</p>
+              <button (click)="clearSearch()" class="mt-3 text-[14px] font-semibold text-[#0088E8] underline">
+                Xem toàn bộ lộ trình
+              </button>
+            </div>
+          }
+        </div>
+      </main>
+    </div>
+  `
+})
+export class RoadmapListComponent {
+  private readonly roadmapService = inject(RoadmapService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  readonly searchKeyword = signal<string>('');
+  readonly feedbackMessage = signal<string>('');
+  readonly feedbackType = signal<'success' | 'warning'>('success');
+
+  readonly allRoadmaps = this.roadmapService.roadmapsList;
+  readonly totalRoadmaps = computed(() => this.allRoadmaps().length);
+
+  readonly filteredRoadmaps = computed(() => {
+    const keyword = this.searchKeyword().trim().toLowerCase();
+    if (!keyword) return this.allRoadmaps();
+    return this.allRoadmaps().filter((item) =>
+      item.title.toLowerCase().includes(keyword) ||
+      item.desc.toLowerCase().includes(keyword) ||
+      item.shortCode.toLowerCase().includes(keyword)
+    );
+  });
+
+  isEnrolled(roadmapId: string): boolean {
+    return this.roadmapService.isEnrolled(roadmapId);
+  }
+
+  handleToggleEnroll(roadmap: RoadmapMetaItem): void {
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/learning/roadmap' } });
+      return;
+    }
+
+    if (this.isEnrolled(roadmap.id)) {
+      this.roadmapService.unenrollRoadmap(roadmap.id);
+      this.showFeedback('Đã hủy chọn lộ trình học.', 'success');
+      return;
+    }
+
+    const result = this.roadmapService.enrollRoadmap(roadmap.id);
+    if (result.success) {
+      this.showFeedback(result.message, 'success');
+    } else {
+      this.showFeedback(result.message, 'warning');
+    }
+  }
+
+  onSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchKeyword.set(target.value);
+  }
+
+  clearSearch(): void {
+    this.searchKeyword.set('');
+  }
+
+  private showFeedback(message: string, type: 'success' | 'warning'): void {
+    this.feedbackMessage.set(message);
+    this.feedbackType.set(type);
+    setTimeout(() => {
+      if (this.feedbackMessage() === message) {
+        this.feedbackMessage.set('');
+      }
+    }, 4000);
+  }
+
+  dismissFeedback(): void {
+    this.feedbackMessage.set('');
+  }
+}

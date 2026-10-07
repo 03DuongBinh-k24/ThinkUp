@@ -1,0 +1,831 @@
+{
+  "roadmap": {
+    "name": "UI/UX Design",
+    "description": "Lộ trình trở thành UI/UX Designer - từ nền tảng thiết kế cơ bản đến nghiên cứu người dùng, thiết kế giao diện và trải nghiệm sản phẩm số."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Design Fundamentals",
+      "description": "Nền tảng thiết kế cơ bản và nguyên tắc thiết kế.",
+      "skills": [
+        {
+          "name": "Design Principles",
+          "difficulty": "Cơ bản",
+          "skillType": "Design Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Gestalt principles (proximity, similarity, closure, continuity)",
+            "Color theory và color psychology",
+            "Typography fundamentals",
+            "Visual hierarchy và focal point",
+            "Balance, contrast, emphasis, movement",
+            "White space usage"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Drawing & Sketching",
+            "description": "Kỹ năng vẽ và phác thảo ý tưởng"
+          }
+        },
+        {
+          "name": "Drawing & Sketching",
+          "difficulty": "Cơ bản",
+          "skillType": "Design Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Quick sketching techniques",
+            "Wireframe drawing by hand",
+            "Storyboard creation",
+            "Concept ideation sketches",
+            "User flow diagramming",
+            "Visual note-taking"
+          ],
+          "prerequisites": ["Design Principles"],
+          "nextSkill": {
+            "name": "Digital Design Tools",
+            "description": "Công cụ thiết kế số hiện đại"
+          }
+        },
+        {
+          "name": "Digital Design Tools",
+          "difficulty": "Cơ bản",
+          "skillType": "Design Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Figma basics và advanced features",
+            "Adobe XD fundamentals",
+            "Sketch basics",
+            "Adobe Creative Suite (Photoshop, Illustrator)",
+            "Principle/ProtoPie cho animation",
+            "Collaboration features trong design tools"
+          ],
+          "prerequisites": ["Design Principles"],
+          "nextSkill": {
+            "name": "UX Research Fundamentals",
+            "description": "Nghiên cứu người dùng cơ bản"
+          }
+        },
+        {
+          "name": "UX Research Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Design Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "What is UX research và importance",
+            "Qualitative vs quantitative research",
+            "Research ethics và participant recruitment",
+            "Research planning và methodology",
+            "Data collection techniques",
+            "Basic analysis frameworks"
+          ],
+          "prerequisites": ["Design Principles"],
+          "nextSkill": {
+            "name": "User Psychology",
+            "description": "Tâm lý học người dùng trong thiết kế"
+          }
+        },
+        {
+          "name": "User Psychology",
+          "difficulty": "Trung cấp",
+          "skillType": "Design Fundamentals",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Cognitive load theory",
+            "Hick's Law và Fitts's Law",
+            "Miller's Law (7±2 items)",
+            "Jakob's Law",
+            "Doherty Threshold",
+            "Aesthetic-Usability Effect"
+          ],
+          "prerequisites": ["Design Principles"],
+          "nextSkill": {
+            "name": "Design Thinking",
+            "description": "Phương pháp tư duy thiết kế"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "UX Research",
+      "description": "Nghiên cứu người dùng sâu để hiểu nhu cầu và hành vi.",
+      "skills": [
+        {
+          "name": "Design Thinking",
+          "difficulty": "Trung cấp",
+          "skillType": "UX Research",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "5 stages of Design Thinking",
+            "Empathize phase techniques",
+            "Define phase - problem framing",
+            "Ideate phase - brainstorming methods",
+            "Prototype phase approaches",
+            "Test phase best practices"
+          ],
+          "prerequisites": ["User Psychology"],
+          "nextSkill": {
+            "name": "User Interviews",
+            "description": "Phỏng vấn người dùng"
+          }
+        },
+        {
+          "name": "User Interviews",
+          "difficulty": "Trung cấp",
+          "skillType": "UX Research",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Interview script design",
+            "Open-ended vs closed questions",
+            "Active listening techniques",
+            "Probing techniques",
+            "Recording và transcription",
+            "Insight extraction từ interviews"
+          ],
+          "prerequisites": ["UX Research Fundamentals"],
+          "nextSkill": {
+            "name": "Surveys & Questionnaires",
+            "description": "Khảo sát và bảng câu hỏi"
+          }
+        },
+        {
+          "name": "Surveys & Questionnaires",
+          "difficulty": "Trung cấp",
+          "skillType": "UX Research",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Survey design principles",
+            "Question types và when to use",
+            "Avoiding bias trong surveys",
+            "Sample size calculation",
+            "Distribution strategies",
+            "数据分析 basics"
+          ],
+          "prerequisites": ["UX Research Fundamentals"],
+          "nextSkill": {
+            "name": "Usability Testing",
+            "description": "Kiểm tra khả năng sử dụng"
+          }
+        },
+        {
+          "name": "Usability Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "UX Research",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Moderated vs unmoderated testing",
+            "Task design và scenarios",
+            "Think-aloud protocol",
+            "Remote testing tools (UserTesting, Maze)",
+            "Metrics collection (success rate, time on task)",
+            "Reporting findings"
+          ],
+          "prerequisites": ["User Interviews", "Surveys & Questionnaires"],
+          "nextSkill": {
+            "name": "Analytics & Heatmaps",
+            "description": "Phân tích hành vi người dùng"
+          }
+        },
+        {
+          "name": "Analytics & Heatmaps",
+          "difficulty": "Trung cấp",
+          "skillType": "UX Research",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Google Analytics cho UX",
+            "Heatmap interpretation (Hotjar, Crazy Egg)",
+            "Session recordings analysis",
+            "Funnel analysis",
+            "A/B testing interpretation",
+            "Data-driven design decisions"
+          ],
+          "prerequisites": ["Usability Testing"],
+          "nextSkill": {
+            "name": "Personas & User Journeys",
+            "description": "Tạo personas và user journeys"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Information Architecture",
+      "description": "Tổ chức và cấu trúc thông tin hiệu quả.",
+      "skills": [
+        {
+          "name": "Personas & User Journeys",
+          "difficulty": "Trung cấp",
+          "skillType": "Information Architecture",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Primary vs secondary personas",
+            "Empathy maps",
+            "User journey mapping",
+            "Touchpoint identification",
+            "Pain points và opportunities",
+            "Service blueprint basics"
+          ],
+          "prerequisites": ["Analytics & Heatmaps", "Design Thinking"],
+          "nextSkill": {
+            "name": "Content Strategy",
+            "description": "Chiến lược nội dung"
+          }
+        },
+        {
+          "name": "Content Strategy",
+          "difficulty": "Trung cấp",
+          "skillType": "Information Architecture",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Content audit",
+            "Information hierarchy",
+            "Content-first design approach",
+            "Microcopy writing",
+            "Tone of voice guidelines",
+            "Content governance"
+          ],
+          "prerequisites": ["Personas & User Journeys"],
+          "nextSkill": {
+            "name": "Navigation Design",
+            "description": "Thiết kế điều hướng"
+          }
+        },
+        {
+          "name": "Navigation Design",
+          "difficulty": "Trung cấp",
+          "skillType": "Information Architecture",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Navigation patterns (horizontal, vertical, mega menu)",
+            "Breadcrumbs usage",
+            "Search design patterns",
+            "Faceted navigation",
+            "Mobile navigation patterns",
+            "Wayfinding principles"
+          ],
+          "prerequisites": ["Content Strategy"],
+          "nextSkill": {
+            "name": "Site Mapping",
+            "description": "Sơ đồ trang web"
+          }
+        },
+        {
+          "name": "Site Mapping",
+          "difficulty": "Trung cấp",
+          "skillType": "Information Architecture",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Card sorting techniques",
+            "Tree testing",
+            "Sitemap creation tools",
+            "Content grouping",
+            "Label optimization",
+            "IA validation methods"
+          ],
+          "prerequisites": ["Navigation Design"],
+          "nextSkill": {
+            "name": "Wireframing",
+            "description": "Phác thảo giao diện"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Wireframing & Prototyping",
+      "description": "Phác thảo và tạo nguyên mẫu tương tác.",
+      "skills": [
+        {
+          "name": "Wireframing",
+          "difficulty": "Cơ bản",
+          "skillType": "Wireframing & Prototyping",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Low-fidelity wireframing",
+            "Mid-fidelity wireframing",
+            "Wireframe components library",
+            "Layout grid systems",
+            "Responsive wireframing",
+            "Annotation best practices"
+          ],
+          "prerequisites": ["Site Mapping", "Digital Design Tools"],
+          "nextSkill": {
+            "name": "Low-Fidelity Prototyping",
+            "description": "Nguyên mẫu fidelity thấp"
+          }
+        },
+        {
+          "name": "Low-Fidelity Prototyping",
+          "difficulty": "Cơ bản",
+          "skillType": "Wireframing & Prototyping",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Paper prototyping",
+            "Clickable wireframes",
+            "Basic interactions trong Figma",
+            "User flow prototyping",
+            "Rapid prototyping techniques",
+            "Testing with low-fi prototypes"
+          ],
+          "prerequisites": ["Wireframing"],
+          "nextSkill": {
+            "name": "High-Fidelity Prototyping",
+            "description": "Nguyên mẫu fidelity cao"
+          }
+        },
+        {
+          "name": "High-Fidelity Prototyping",
+          "difficulty": "Trung cấp",
+          "skillType": "Wireframing & Prototyping",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Visual design trong prototypes",
+            "Advanced Figma prototyping",
+            "Micro-interactions design",
+            "Animation principles",
+            "Prototype testing",
+            "Developer handoff preparation"
+          ],
+          "prerequisites": ["Low-Fidelity Prototyping", "Design Principles"],
+          "nextSkill": {
+            "name": "UI Design Patterns",
+            "description": "Mẫu thiết kế giao diện"
+          }
+        },
+        {
+          "name": "UI Design Patterns",
+          "difficulty": "Trung cấp",
+          "skillType": "Wireframing & Prototyping",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Common UI patterns theo industry",
+            "Mobile-specific patterns",
+            "Form design patterns",
+            "Dashboard design patterns",
+            "E-commerce UI patterns",
+            "Social media UI patterns"
+          ],
+          "prerequisites": ["High-Fidelity Prototyping"],
+          "nextSkill": {
+            "name": "Responsive Design",
+            "description": "Thiết kế Responsive"
+          }
+        },
+        {
+          "name": "Responsive Design",
+          "difficulty": "Trung cấp",
+          "skillType": "Wireframing & Prototyping",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Mobile-first approach",
+            "Breakpoints và fluid grids",
+            "Responsive images và media",
+            "Touch target sizes",
+            "Progressive disclosure",
+            "Cross-device consistency"
+          ],
+          "prerequisites": ["UI Design Patterns"],
+          "nextSkill": {
+            "name": "Design Systems",
+            "description": "Hệ thống thiết kế"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "UI Design",
+      "description": "Thiết kế giao diện người dùng trực quan và hấp dẫn.",
+      "skills": [
+        {
+          "name": "Design Systems",
+          "difficulty": "Nâng cao",
+          "skillType": "UI Design",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Component-based design approach",
+            "Design tokens",
+            "Style guides creation",
+            "Component documentation",
+            "Design system maintenance",
+            "Scaling design systems"
+          ],
+          "prerequisites": ["Responsive Design", "Design Principles"],
+          "nextSkill": {
+            "name": "Visual Design",
+            "description": "Thiết kế trực quan"
+          }
+        },
+        {
+          "name": "Visual Design",
+          "difficulty": "Nâng cao",
+          "skillType": "UI Design",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Layout composition",
+            "Typography systems",
+            "Color palette creation",
+            "Icon design basics",
+            "Image treatment và photography",
+            "Visual consistency"
+          ],
+          "prerequisites": ["Design Systems"],
+          "nextSkill": {
+            "name": "Motion Design",
+            "description": "Thiết kế chuyển động"
+          }
+        },
+        {
+          "name": "Motion Design",
+          "difficulty": "Nâng cao",
+          "skillType": "UI Design",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Animation principles cho UI",
+            "Micro-interactions",
+            "Transition design",
+            "Loading states",
+            "Success/error animations",
+            "Performance considerations"
+          ],
+          "prerequisites": ["Visual Design", "High-Fidelity Prototyping"],
+          "nextSkill": {
+            "name": "Accessibility Design",
+            "description": "Thiết kếaccessible"
+          }
+        },
+        {
+          "name": "Accessibility Design",
+          "difficulty": "Nâng cao",
+          "skillType": "UI Design",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "WCAG guidelines",
+            "Color contrast requirements",
+            "Screen reader considerations",
+            "Keyboard navigation",
+            "Focus states",
+            "Accessible forms và interactions"
+          ],
+          "prerequisites": ["Visual Design"],
+          "nextSkill": {
+            "name": "Platform-Specific Design",
+            "description": "Thiết kế theo platform"
+          }
+        },
+        {
+          "name": "Platform-Specific Design",
+          "difficulty": "Nâng cao",
+          "skillType": "UI Design",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "iOS Human Interface Guidelines",
+            "Material Design guidelines",
+            "Windows Design System",
+            "Platform-specific interactions",
+            "Cross-platform considerations",
+            "Native vs hybrid design"
+          ],
+          "prerequisites": ["Accessibility Design", "Responsive Design"],
+          "nextSkill": {
+            "name": "User Flow Optimization",
+            "description": "Tối ưu luồng người dùng"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Interaction Design",
+      "description": "Thiết kế tương tác và optimize user flows.",
+      "skills": [
+        {
+          "name": "User Flow Optimization",
+          "difficulty": "Trung cấp",
+          "skillType": "Interaction Design",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Task analysis",
+            "Flow diagram creation",
+            "Conversion funnel optimization",
+            "Error prevention design",
+            "Recovery flows",
+            "Multi-step process design"
+          ],
+          "prerequisites": ["Platform-Specific Design", "Personas & User Journeys"],
+          "nextSkill": {
+            "name": "Form Design",
+            "description": "Thiết kế biểu mẫu"
+          }
+        },
+        {
+          "name": "Form Design",
+          "difficulty": "Trung cấp",
+          "skillType": "Interaction Design",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Form structure optimization",
+            "Input types và validation",
+            "Smart defaults",
+            "Progressive profiling",
+            "Multi-step forms",
+            "Mobile form design"
+          ],
+          "prerequisites": ["User Flow Optimization"],
+          "nextSkill": {
+            "name": "Feedback Systems",
+            "description": "Hệ thống phản hồi"
+          }
+        },
+        {
+          "name": "Feedback Systems",
+          "difficulty": "Trung cấp",
+          "skillType": "Interaction Design",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "System status visibility",
+            "Success/error messages",
+            "Progress indicators",
+            "Confirmation dialogs",
+            "Undo/redo functionality",
+            "Notification design"
+          ],
+          "prerequisites": ["Form Design"],
+          "nextSkill": {
+            "name": "Data Visualization",
+            "description": "Trực quan hóa dữ liệu"
+          }
+        },
+        {
+          "name": "Data Visualization",
+          "difficulty": "Nâng cao",
+          "skillType": "Interaction Design",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Chart types và when to use",
+            "Dashboard design principles",
+            "Data-ink ratio optimization",
+            "Interactive visualizations",
+            "Real-time data display",
+            "Storytelling với data"
+          ],
+          "prerequisites": ["Feedback Systems", "Visual Design"],
+          "nextSkill": {
+            "name": "Gamification Design",
+            "description": "Thiết kế gamification"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Advanced UX",
+      "description": "Các kỹ thuật UX nâng cao và chuyên biệt.",
+      "skills": [
+        {
+          "name": "Gamification Design",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced UX",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Gamification mechanics (points, badges, leaderboards)",
+            "Motivation theory (SDT, Octalysis)",
+            "Progress systems",
+            "Social features",
+            "Retention mechanics",
+            "Ethical gamification"
+          ],
+          "prerequisites": ["Data Visualization"],
+          "nextSkill": {
+            "name": "Conversational UI",
+            "description": "Giao diện hội thoại"
+          }
+        },
+        {
+          "name": "Conversational UI",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced UX",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Chatbot design principles",
+            "Voice UI design",
+            "Conversation flow design",
+            "NLU/NLP basics cho designers",
+            "Multi-modal interfaces",
+            "Error handling trong conversations"
+          ],
+          "prerequisites": ["Interaction Design"],
+          "nextSkill": {
+            "name": "AR/VR UX Design",
+            "description": "Thiết kế UX cho AR/VR"
+          }
+        },
+        {
+          "name": "AR/VR UX Design",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced UX",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Spatial design principles",
+            "3D interaction patterns",
+            "VR comfort considerations",
+            "AR overlay design",
+            "Haptic feedback design",
+            "Cross-reality experiences"
+          ],
+          "prerequisites": ["Conversational UI", "Visual Design"],
+          "nextSkill": {
+            "name": "Service Design",
+            "description": "Thiết kế dịch vụ"
+          }
+        },
+        {
+          "name": "Service Design",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced UX",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Service blueprint creation",
+            "Touchpoint mapping",
+            "Omnichannel experience design",
+            "Frontstage vs backstage processes",
+            "Service recovery",
+            "Measuring service quality"
+          ],
+          "prerequisites": ["Personas & User Journeys", "User Flow Optimization"],
+          "nextSkill": {
+            "name": "UX Writing",
+            "description": "Viết UX"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "UX Writing & Content Design",
+      "description": "Thiết kế nội dung và văn bản trải nghiệm người dùng.",
+      "skills": [
+        {
+          "name": "UX Writing",
+          "difficulty": "Trung cấp",
+          "skillType": "UX Writing & Content Design",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Microcopy principles",
+            "Tone of voice development",
+            "Clear và concise writing",
+            "CTA copywriting",
+            "Error message writing",
+            "Localization considerations"
+          ],
+          "prerequisites": ["Service Design", "Content Strategy"],
+          "nextSkill": {
+            "name": "Content Design",
+            "description": "Thiết kế nội dung"
+          }
+        },
+        {
+          "name": "Content Design",
+          "difficulty": "Nâng cao",
+          "skillType": "UX Writing & Content Design",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Content-first design",
+            "Information hierarchy",
+            "Content modeling",
+            "Content calendars",
+            "Editorial guidelines",
+            "Content metrics và analytics"
+          ],
+          "prerequisites": ["UX Writing"],
+          "nextSkill": {
+            "name": "Voice & Tone Systems",
+            "description": "Hệ thống giọng nói và tông"
+          }
+        },
+        {
+          "name": "Voice & Tone Systems",
+          "difficulty": "Nâng cao",
+          "skillType": "UX Writing & Content Design",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Brand voice development",
+            "Tone spectrum mapping",
+            "Context-aware messaging",
+            "Content guidelines documentation",
+            "Voice consistency across platforms",
+            "Multilingual content strategy"
+          ],
+          "prerequisites": ["Content Design"],
+          "nextSkill": {
+            "name": "AI-Enhanced UX",
+            "description": "UX được hỗ trợ bởi AI"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Leadership & Strategy",
+      "description": "Lãnh đạo đội ngũ thiết kế và xây dựng chiến lược UX.",
+      "skills": [
+        {
+          "name": "AI-Enhanced UX",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "AI trong UX design process",
+            "Generative AI cho ideation",
+            "AI-powered usability testing",
+            "Personalization UX",
+            "AI ethics trong design",
+            "Future of AI + UX"
+          ],
+          "prerequisites": ["Voice & Tone Systems", "AR/VR UX Design"],
+          "nextSkill": {
+            "name": "UX Strategy",
+            "description": "Chiến lược UX"
+          }
+        },
+        {
+          "name": "UX Strategy",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "UX maturity assessment",
+            "Design ROI calculation",
+            "KPIs cho UX",
+            "Competitive analysis",
+            "Innovation frameworks",
+            "Design vision creation"
+          ],
+          "prerequisites": ["AI-Enhanced UX"],
+          "nextSkill": {
+            "name": "Design Team Leadership",
+            "description": "Lãnh đạo đội ngũ thiết kế"
+          }
+        },
+        {
+          "name": "Design Team Leadership",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Hiring và building design teams",
+            "Design culture development",
+            "Mentoring junior designers",
+            "Design critique facilitation",
+            "Cross-functional collaboration",
+            "Design operations"
+          ],
+          "prerequisites": ["UX Strategy"],
+          "nextSkill": {
+            "name": "Stakeholder Management",
+            "description": "Quản lý stakeholder"
+          }
+        },
+        {
+          "name": "Stakeholder Management",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Executive presentation skills",
+            "Design advocacy",
+            "Managing design reviews",
+            "Aligning business và design goals",
+            "Conflict resolution",
+            "Building design partnerships"
+          ],
+          "prerequisites": ["Design Team Leadership"],
+          "nextSkill": {
+            "name": "Continuous Learning",
+            "description": "Học tập liên tục"
+          }
+        },
+        {
+          "name": "Continuous Learning",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Design community involvement",
+            "Conference participation",
+            "Portfolio maintenance",
+            "Side projects và experiments",
+            "Reading design resources",
+            "Teaching và mentoring"
+          ],
+          "prerequisites": ["Stakeholder Management"],
+          "nextSkill": {
+            "name": "Design Systems Lead",
+            "description": "Dẫn dắt thiết kế hệ thống"
+          }
+        }
+      ]
+    }
+  ]
+}

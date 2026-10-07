@@ -1,0 +1,68 @@
+import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-search-and-suggestions',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div class="flex w-full flex-col gap-3 border border-[#E2E8F0] bg-white p-4 shadow-sm rounded-[8px]">
+      <form (ngSubmit)="submitSearch()" class="flex gap-3 w-full flex-col sm:flex-row">
+        <div class="relative flex-1">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            name="query"
+            placeholder="Tìm khóa học, giảng viên, chủ đề"
+            class="h-[46px] w-full rounded-[8px] border border-[#E2E8F0] bg-[#F8FAFC] pl-11 pr-4 text-[14px] font-normal leading-5 text-[#0F172B] outline-none transition-colors placeholder:text-[#0F172B]/50 focus:border-[#2B7FFF] focus:bg-white"
+          />
+          <svg class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+        </div>
+
+        <button
+          type="submit"
+          class="flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[#2B7FFF] px-6 text-[14px] font-semibold text-white transition-all hover:bg-[#1C66DF] active:scale-[0.98] sm:min-w-[133px]"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <span>Tìm kiếm</span>
+        </button>
+      </form>
+
+      @if (suggestedTags.length > 0) {
+        <div class="flex flex-wrap items-center gap-2 text-[12px]">
+          <span class="text-[#62748E] font-medium mr-1">Từ khóa gợi ý:</span>
+          @for (tag of suggestedTags; track tag) {
+            <button
+              type="button"
+              (click)="toggleTag(tag)"
+              class="rounded-full px-3 py-1 font-medium transition-all duration-200"
+              [class]="selectedTags.includes(tag) ? 'bg-[#155DFC] text-white' : 'bg-[#EFF6FF] text-[#155DFC] hover:bg-[#155DFC] hover:text-white'"
+            >
+              {{ tag }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  `
+})
+export class SearchAndSuggestionsComponent {
+  @Input() searchQuery = '';
+  @Input() suggestedTags: string[] = [];
+  @Input() selectedTags: string[] = [];
+  @Output() search = new EventEmitter<string>();
+  @Output() tagToggle = new EventEmitter<string>();
+
+  submitSearch(): void {
+    this.search.emit(this.searchQuery);
+  }
+
+  toggleTag(tag: string): void {
+    this.tagToggle.emit(tag);
+  }
+}

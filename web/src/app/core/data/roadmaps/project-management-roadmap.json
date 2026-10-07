@@ -1,0 +1,706 @@
+{
+  "roadmap": {
+    "name": "Project-management",
+    "description": "Lộ trình trở thành Project Manager (PM) - người lên kế hoạch, tổ chức và quản lý dự án từ khởi động đến đóng gói. Bắt đầu từ nền tảng kinh doanh và tư duy quản lý, phát triển kỹ năng lập kế hoạch, quản lýscope, thời gian, chi phí, rủi ro, đến lãnh đạo đội nhóm, quản lý stakeholder và chuẩn bị chứng chỉ PMP/CAPM."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng kinh doanh, tư duy quản lý và kỹ năng lãnh đạo cơ bản.",
+      "skills": [
+        {
+          "name": "Business Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Doanh nghiệp hoạt động như thế nào: cơ cấu tổ chức, phòng ban, chức năng",
+            "Business model canvas: 9 blocks chính",
+            "Financial basics: profit, loss, revenue, cost, ROI, budget",
+            "KPI và OKR: measure performance",
+            "Organizational structures: functional, matrix, projectized",
+            "Corporate governance: roles, responsibilities, accountability",
+            "Business strategy basics: competitive advantage, market positioning",
+            "Industry knowledge: understanding different sectors"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Project Management Fundamentals",
+            "description": "Nắm vững các khái niệm cốt lõi của quản lý dự án."
+          }
+        },
+        {
+          "name": "Project Management Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Project là gì: temporary, unique, specific objectives",
+            "Project vs Operations: differences",
+            "Project lifecycle: initiating, planning, executing, monitoring & controlling, closing",
+            "Project Manager role: responsibilities, skills, authority",
+            "PMI frameworks: PMBOK Guide overview",
+            "Project success criteria: scope, time, cost, quality, stakeholder satisfaction",
+            "Project constraints: triple constraint (scope, time, cost)",
+            "Project charter: purpose, contents, approval",
+            "Stakeholder identification: initial identification, register",
+            "Project documentation: lessons learned, project plan"
+          ],
+          "prerequisites": ["Business Fundamentals"],
+          "nextSkill": {
+            "name": "Leadership & Management",
+            "description": "Phát triển kỹ năng lãnh đạo và quản lý đội nhóm."
+          }
+        },
+        {
+          "name": "Leadership & Management",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Leadership vs Management: differences",
+            "Leadership styles: autocratic, democratic, laissez-faire, servant leadership",
+            "Emotional intelligence (EQ): self-awareness, self-regulation, empathy, social skills",
+            "Motivation theories: Maslow, Herzberg, McGregor, Expectancy Theory",
+            "Team development: Tuckman's model (Forming, Storming, Norming, Performing, Adjourning)",
+            "Situational leadership: adapting style to team maturity",
+            "Power types: legitimate, reward, coercive, expert, referent",
+            "Decision-making techniques: consensus, majority, autocratic",
+            "Delegation: when, how, monitoring without micromanaging",
+            "Conflict resolution: accommodating, avoiding, compromising, collaborating, competing",
+            "Coaching và mentoring: developing team members"
+          ],
+          "prerequisites": ["Project Management Fundamentals"],
+          "nextSkill": {
+            "name": "Communication Skills",
+            "description": "Phát triển kỹ năng giao tiếp chuyên nghiệp."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Communication & Stakeholder Management",
+      "description": "Giao tiếp hiệu quả và quản lý mối quan hệ với stakeholder.",
+      "skills": [
+        {
+          "name": "Communication Skills",
+          "difficulty": "Cơ bản",
+          "skillType": "Communication & Stakeholder Management",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Communication process: sender, message, channel, receiver, feedback",
+            "Communication methods: written, verbal, non-verbal",
+            "Communication models: push, pull, interactive",
+            "Meeting management: planning, facilitating, follow-up",
+            "Status reporting: weekly, monthly, executive summaries",
+            "Escalation communication: when, how, to whom",
+            "Presentation skills: storytelling, visual aids, handling Q&A",
+            "Negotiation basics: preparation, tactics, win-win approach",
+            "Written communication: emails, reports, proposals",
+            "Cross-cultural communication: working with global teams",
+            "Communication plan: frequency, audience, channel, content"
+          ],
+          "prerequisites": ["Leadership & Management"],
+          "nextSkill": {
+            "name": "Stakeholder Management",
+            "description": "Quản lý mối quan hệ với các bên liên quan."
+          }
+        },
+        {
+          "name": "Stakeholder Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Communication & Stakeholder Management",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Stakeholder identification techniques: brainstorming, organizational analysis",
+            "Stakeholder analysis: Power/Interest Grid, Salience Model",
+            "Stakeholder register: documenting analysis results",
+            "RACI Matrix: Responsible, Accountable, Consulted, Informed",
+            "Stakeholder engagement strategies",
+            "Managing expectations: realistic commitments, regular updates",
+            "Executive communication: brief, focused, action-oriented",
+            "Dealing with difficult stakeholders: patience, empathy, persistence",
+            "Stakeholder communication plan: tailored for each group",
+            "Political awareness: navigating organizational politics",
+            "Building trust and credibility",
+            "Stakeholder satisfaction measurement"
+          ],
+          "prerequisites": ["Communication Skills"],
+          "nextSkill": {
+            "name": "Scope Management",
+            "description": "Quản lý phạm vi dự án và chống scope creep."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Core PM Knowledge Areas",
+      "description": "Quản lý các yếu tố cốt lõi: scope, thời gian, chi phí của dự án.",
+      "skills": [
+        {
+          "name": "Scope Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Core PM Knowledge Areas",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Scope management plan: how scope will be defined, validated, controlled",
+            "Requirements collection techniques",
+            "Scope definition: project scope statement",
+            "Work Breakdown Structure (WBS): decomposition, work packages",
+            "WBS dictionary: detailed descriptions of work packages",
+            "Scope validation: acceptance criteria, formal acceptance",
+            "Scope control: monitoring, change requests, scope creep prevention",
+            "Change management process: change request, impact analysis, approval",
+            "Change control board (CCB): role, process",
+            "Gold plating: avoiding adding unneeded features",
+            "Scope baseline: scope statement, WBS, WBS dictionary"
+          ],
+          "prerequisites": ["Stakeholder Management"],
+          "nextSkill": {
+            "name": "Schedule Management",
+            "description": "Quản lý thời gian và lịch trình dự án."
+          }
+        },
+        {
+          "name": "Schedule Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Core PM Knowledge Areas",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Schedule management plan: how schedule will be developed, managed, controlled",
+            "Activity definition: decomposing work packages into activities",
+            "Activity sequencing: dependencies, milestones, network diagrams",
+            "Dependency types: mandatory, discretionary, external, internal",
+            "Lead and lag: fast tracking, dependencies",
+            "Duration estimation: analogous, parametric, three-point (PERT)",
+            "Critical Path Method (CPM): forward pass, backward pass, float",
+            "Schedule compression: crashing, fast tracking",
+            "Gantt charts: creating, updating, communicating",
+            "Resource leveling và resource smoothing",
+            "Milestone chart: key deliverables, deadlines",
+            "Schedule baseline và schedule control",
+            "Earned Value Management (EVM) basics: SPI, schedule variance"
+          ],
+          "prerequisites": ["Scope Management"],
+          "nextSkill": {
+            "name": "Cost Management",
+            "description": "Quản lý chi phí và ngân sách dự án."
+          }
+        },
+        {
+          "name": "Cost Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Core PM Knowledge Areas",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Cost management plan: how costs will be estimated, budgeted, controlled",
+            "Cost estimation techniques: analogous, parametric, bottom-up, three-point",
+            "Cost types: direct, indirect, fixed, variable, sunk, overhead",
+            "Estimation accuracy: rough order of magnitude (-25% to +75%), definitive (-5% to +10%)",
+            "Cost baseline: time-phased budget",
+            "Budget aggregation: work packages → control accounts → project budget",
+            "Contingency reserve vs management reserve",
+            "Earned Value Management (EVM): PV, EV, AC, CPI, SPI, EAC, ETC, VAC",
+            "Cost control: monitoring, variances, corrective actions",
+            "Cash flow analysis: timing of expenditures",
+            "Financial reporting: earned value reports, variance analysis",
+            "Benefits realization: ensuring project delivers value"
+          ],
+          "prerequisites": ["Schedule Management"],
+          "nextSkill": {
+            "name": "Agile & Hybrid Approaches",
+            "description": "Học cách làm việc với các phương pháp Agile và hybrid."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Agile & Hybrid Approaches",
+      "description": "Làm việc hiệu quả với Agile, Scrum, Kanban và hybrid approaches.",
+      "skills": [
+        {
+          "name": "Agile Methodologies",
+          "difficulty": "Cơ bản",
+          "skillType": "Agile & Hybrid Approaches",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Agile Manifesto: 4 values, 12 principles",
+            "Agile vs Waterfall: comparison, when to use which",
+            "Agile frameworks: Scrum, Kanban, XP, SAFe, LeSS",
+            "Agile estimation: story points, t-shirt sizing, planning poker",
+            "Agile metrics: velocity, burndown, burnup, cycle time, lead time",
+            "User stories: writing, splitting, acceptance criteria",
+            "Definition of Done (DoD) và Definition of Ready (DoR)",
+            "Continuous improvement: retrospectives, kaizen",
+            "Agile contracts: time & materials, story-based",
+            "Scaling Agile: SAFe, LeSS, Nexus, Spotify model"
+          ],
+          "prerequisites": ["Cost Management"],
+          "nextSkill": {
+            "name": "Scrum for Project Managers",
+            "description": "Áp dụng Scrum framework cho quản lý dự án."
+          }
+        },
+        {
+          "name": "Scrum for Project Managers",
+          "difficulty": "Trung cấp",
+          "skillType": "Agile & Hybrid Approaches",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Scrum values: commitment, focus, openness, respect, courage",
+            "Scrum roles: Product Owner, Scrum Master, Development Team",
+            "PM role trong Scrum: servant leader, impediment removal",
+            "Sprint Planning: sprint goal, backlog selection, capacity",
+            "Daily Scrum: purpose, format, keeping it short",
+            "Sprint Review: demo, feedback, adaptation",
+            "Sprint Retrospective: improving process, actionable items",
+            "Product Backlog management: refinement, ordering, maintenance",
+            "Scrum artifacts: Product Backlog, Sprint Backlog, Increment",
+            "Scrum events timing: timeboxing",
+            "Common Scrum anti-patterns và solutions",
+            "Scaling Scrum: Scrum of Scrums, SAFe"
+          ],
+          "prerequisites": ["Agile Methodologies"],
+          "nextSkill": {
+            "name": "Kanban for Project Management",
+            "description": "Áp dụng Kanban cho quản lý công việc."
+          }
+        },
+        {
+          "name": "Kanban for Project Management",
+          "difficulty": "Cơ bản",
+          "skillType": "Agile & Hybrid Approaches",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Kanban principles: visualize, limit WIP, manage flow",
+            "Kanban board: columns, cards, swimlanes",
+            "WIP limits: setting, enforcing, benefits",
+            "Lead time và cycle time",
+            "Cumulative Flow Diagram (CFD): analyzing bottlenecks",
+            "Kanban metrics: throughput, WIP, service level agreements",
+            "Kanban vs Scrum: complementary approaches",
+            "Personal Kanban: individual productivity",
+            "Kanban cadences: daily standup, delivery planning, retrospective",
+            "Kanban tools: Trello, Jira, physical boards",
+            "When to use Kanban: operational work, maintenance, support"
+          ],
+          "prerequisites": ["Scrum for Project Managers"],
+          "nextSkill": {
+            "name": "Hybrid Project Management",
+            "description": "Kết hợp Waterfall và Agile cho dự án thực tế."
+          }
+        },
+        {
+          "name": "Hybrid Project Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Agile & Hybrid Approaches",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Hybrid là gì: combining Waterfall and Agile approaches",
+            "When to use hybrid: regulatory requirements + agile development",
+            "Hybrid models: Water-Scrum-Fall, Agile-Waterfall",
+            "Planning in hybrid: upfront planning + iterative execution",
+            "Governance in hybrid: stage gates + agile ceremonies",
+            "Reporting in hybrid: traditional reports + agile metrics",
+            "Team management in hybrid: different roles, expectations",
+            "Risk management in hybrid: waterfall risks + agile risks",
+            "Contracting in hybrid: fixed price + time & materials",
+            "Tool integration: MS Project + Jira",
+            "Hybrid success factors: flexibility, communication, adaptation"
+          ],
+          "prerequisites": ["Kanban for Project Management"],
+          "nextSkill": {
+            "name": "Risk Management",
+            "description": "Học cách quản lý rủi ro dự án."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Risk & Quality Management",
+      "description": "Quản lý rủi ro, chất lượng và các vấn đề phát sinh trong dự án.",
+      "skills": [
+        {
+          "name": "Risk Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Risk & Quality Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Risk management plan: how risks will be managed",
+            "Risk identification: brainstorming, checklists, SWOT, assumption analysis",
+            "Risk register: documenting identified risks",
+            "Qualitative risk analysis: probability/impact matrix, risk categorization",
+            "Quantitative risk analysis: expected monetary value (EMV), decision trees, Monte Carlo",
+            "Risk response strategies: avoid, mitigate, transfer, accept, exploit, enhance, share",
+            "Risk owners: assigning responsibility",
+            "Risk monitoring: risk reassessment, audits, status meetings",
+            "Issue management: identifying, tracking, resolving issues",
+            "Contingency plans và fallback plans",
+            "Risk buffers: schedule buffer, cost buffer",
+            "Lessons learned: capturing risk knowledge"
+          ],
+          "prerequisites": ["Hybrid Project Management"],
+          "nextSkill": {
+            "name": "Quality Management",
+            "description": "Đảm bảo chất lượng sản phẩm và quy trình."
+          }
+        },
+        {
+          "name": "Quality Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Risk & Quality Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Quality management plan: standards, processes, responsibilities",
+            "Quality vs Grade: differences",
+            "Cost of Quality (COQ): prevention, appraisal, internal failure, external failure",
+            "Quality assurance vs quality control",
+            "Quality assurance: process improvement, audits, standards",
+            "Quality control: inspection, testing, reviews",
+            "Seven basic quality tools: cause-and-effect, check sheets, control charts, histograms, Pareto, scatter diagrams, flowcharts",
+            "Six Sigma basics: DMAIC, reducing defects",
+            "Lean basics: eliminating waste, value stream mapping",
+            "Continuous improvement: PDCA cycle, kaizen",
+            "Quality metrics: defect density, customer satisfaction",
+            "Acceptance criteria: defining and measuring quality"
+          ],
+          "prerequisites": ["Risk Management"],
+          "nextSkill": {
+            "name": "Issues & Change Management",
+            "description": "Quản lý vấn đề và thay đổi trong dự án."
+          }
+        },
+        {
+          "name": "Issues & Change Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Risk & Quality Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Issue vs Risk: differences",
+            "Issue management process: identify, log, assign, track, resolve, close",
+            "Issue log: documenting issues, status updates",
+            "Root cause analysis: 5 Whys, Fishbone diagram",
+            "Change management process: request, evaluate, approve, implement",
+            "Change control board (CCB): composition, authority",
+            "Change request documentation: description, justification, impact",
+            "Impact analysis: scope, schedule, cost, risk",
+            "Change tracking: change log, status reporting",
+            "Scope creep prevention:识别, managing, communicating",
+            "Configuration management: version control, baselines",
+            "Post-change review: lessons learned"
+          ],
+          "prerequisites": ["Quality Management"],
+          "nextSkill": {
+            "name": "Procurement Management",
+            "description": "Quản lý mua sắm và hợp đồng với vendors."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Procurement & Financial Management",
+      "description": "Quản lý mua sắm, hợp đồng và tài chính dự án.",
+      "skills": [
+        {
+          "name": "Procurement Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Procurement & Financial Management",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Procurement plan: what to procure, when, how",
+            "Make or buy analysis",
+            "Contract types: fixed price, cost-reimbursable, time & materials",
+            "Contract nuances: FFP, FPIF, FPEPA, CPFF, CPIF, CPAF",
+            "Procurement process: plan, conduct, control, close",
+            "Request for Proposal (RFP): preparing, evaluating",
+            "Request for Quotation (RFQ): when to use",
+            "Vendor evaluation: criteria, scoring, selection",
+            "Contract negotiations: tactics, terms, conditions",
+            "Contract administration: performance monitoring, payments",
+            "Claims management: disputes, resolution",
+            "Contract closure: acceptance, final payment, lessons learned"
+          ],
+          "prerequisites": ["Issues & Change Management"],
+          "nextSkill": {
+            "name": "Budget & Financial Control",
+            "description": "Quản lý ngân sách và kiểm soát tài chính."
+          }
+        },
+        {
+          "name": "Budget & Financial Control",
+          "difficulty": "Trung cấp",
+          "skillType": "Procurement & Financial Management",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Project budget development: cost aggregation, reserves",
+            "Funding requirements: when funds are needed",
+            "Cash flow management: timing, forecasting",
+            "Cost tracking: actual vs planned, variances",
+            "Earned Value Analysis: PV, EV, AC, CPI, SPI, EAC, ETC, VAC",
+            "Performance measurement baseline",
+            "Variance analysis: cost variance, schedule variance",
+            "Forecasting: estimate at completion, estimate to complete",
+            "Financial reporting: status reports, dashboards",
+            "Benefits management: tracking realized benefits",
+            "ROI calculation: measuring project value",
+            "Financial closure: final accounting, lessons learned"
+          ],
+          "prerequisites": ["Procurement Management"],
+          "nextSkill": {
+            "name": "Resource Management",
+            "description": "Quản lý nguồn lực dự án hiệu quả."
+          }
+        },
+        {
+          "name": "Resource Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Procurement & Financial Management",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Resource management plan: how resources will be acquired, managed",
+            "Resource identification: roles, skills, availability",
+            "Resource estimation: types, quantities, durations",
+            "Resource acquisition: hiring, contracting, internal allocation",
+            "Resource assignment: matching skills to tasks",
+            "Resource leveling: resolving overallocation",
+            "Resource smoothing: optimizing within float",
+            "Resource calendars: availability, time off, holidays",
+            "Team development: training, mentoring, cross-functional skills",
+            "Virtual teams: managing distributed teams",
+            "Resource optimization techniques",
+            "Resource reporting: utilization, availability, conflicts"
+          ],
+          "prerequisites": ["Budget & Financial Control"],
+          "nextSkill": {
+            "name": "Project Execution & Monitoring",
+            "description": "Thực hiện và theo dõi dự án trong quá trình triển khai."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Project Execution & Monitoring",
+      "description": "Thực hiện dự án, theo dõi tiến độ và kiểm soát hiệu suất.",
+      "skills": [
+        {
+          "name": "Project Execution",
+          "difficulty": "Trung cấp",
+          "skillType": "Project Execution & Monitoring",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Direct and manage project work: executing the project plan",
+            "Deliverable management: producing, verifying, accepting",
+            "Team management: assignments, performance, development",
+            "Procurement execution: managing vendors, deliverables",
+            "Quality assurance: ensuring processes are followed",
+            "Communications management: distributing information",
+            "Manage stakeholder engagement: meeting expectations",
+            "Issue resolution: addressing problems promptly",
+            "Vendor management: monitoring performance, relationship building",
+            "Status meetings: running effective project meetings",
+            "Work authorization: ensuring work starts on time"
+          ],
+          "prerequisites": ["Resource Management"],
+          "nextSkill": {
+            "name": "Monitoring & Controlling",
+            "description": "Theo dõi và kiểm soát hiệu suất dự án."
+          }
+        },
+        {
+          "name": "Monitoring & Controlling",
+          "difficulty": "Nâng cao",
+          "skillType": "Project Execution & Monitoring",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Monitoring vs Controlling: differences",
+            "Performance reporting: status reports, progress reports",
+            "Earned Value Management (EVM) chi tiết: PV, EV, AC, SV, CV, SPI, CPI, EAC, ETC, VAC, TCPI",
+            "Variance analysis: interpreting results, corrective actions",
+            "Trend analysis: forecasting project performance",
+            "Reserve analysis: contingency, management reserves",
+            "Scope verification: formal acceptance",
+            "Schedule control: updating, rescheduling, compression",
+            "Cost control: tracking, forecasting, corrective actions",
+            "Quality control: inspection, testing, statistical sampling",
+            "Risk monitoring: reassessment, audits, risk reassessment",
+            "Integrated change control: reviewing changes holistically"
+          ],
+          "prerequisites": ["Project Execution"],
+          "nextSkill": {
+            "name": "Project Closure",
+            "description": "Đóng gói dự án đúng cách và học hỏi từ kinh nghiệm."
+          }
+        },
+        {
+          "name": "Project Closure",
+          "difficulty": "Trung cấp",
+          "skillType": "Project Execution & Monitoring",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Project closure phases: administrative, contractual, lessons learned",
+            "Final deliverable acceptance: formal sign-off",
+            "Administrative closure: documentation, archiving, releases",
+            "Contract closure: final payments, contract close-out",
+            "Lessons learned: conducting sessions, documentation",
+            "Knowledge transfer: handing off to operations",
+            "Team release: releasing team members, recognition",
+            "Financial closure: final budget reconciliation",
+            "Post-implementation review: benefits realization",
+            "Success metrics: measuring project success",
+            "Celebrate success: team recognition, milestones",
+            "Archive project documents: for future reference"
+          ],
+          "prerequisites": ["Monitoring & Controlling"],
+          "nextSkill": {
+            "name": "Project Management Tools",
+            "description": "Thành thạo các công cụ quản lý dự án."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Tools & Advanced Topics",
+      "description": "Thành thạo công cụ PM và các chủ đề nâng cao.",
+      "skills": [
+        {
+          "name": "Project Management Tools",
+          "difficulty": "Cơ bản",
+          "skillType": "Tools & Advanced Topics",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "MS Project: creating projects, tasks, resources, assignments",
+            "MS Project: Gantt charts, critical path, resource leveling",
+            "MS Project: tracking progress, earned value, reporting",
+            "Jira: project setup, boards, workflows, filters",
+            "Jira: backlog management, sprint management, reports",
+            "Trello: boards, cards, lists, power-ups",
+            "Asana: tasks, projects, timelines, portfolios",
+            "Monday.com: boards, automation, dashboards",
+            "Confluence: documentation, knowledge base, templates",
+            "Smartsheet: project planning, collaboration, reporting",
+            "Primavera P6: for large projects (overview)",
+            "Collaboration tools: Slack, Microsoft Teams, Zoom",
+            "Document management: SharePoint, Google Drive, Dropbox"
+          ],
+          "prerequisites": ["Project Closure"],
+          "nextSkill": {
+            "name": "Advanced PM Topics",
+            "description": "Nắm vững các chủ đề quản lý dự án nâng cao."
+          }
+        },
+        {
+          "name": "Advanced PM Topics",
+          "difficulty": "Nâng cao",
+          "skillType": "Tools & Advanced Topics",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Portfolio management: selecting, prioritizing, balancing projects",
+            "Program management: managing related projects for benefits",
+            "Benefits realization management: ensuring value delivery",
+            "Organizational change management: ADKAR, Kotter's 8 steps",
+            "Complexity and uncertainty: VUCA, Cynefin framework",
+            "Multi-project management: dependencies, resource conflicts",
+            "Global项目: cultural differences, time zones, virtual teams",
+            "Governance frameworks: project governance, decision rights",
+            "Strategic alignment: linking projects to strategy",
+            "Value-driven delivery: focusing on outcomes",
+            "Critical chain project management",
+            "Lean project management: eliminating waste in projects"
+          ],
+          "prerequisites": ["Project Management Tools"],
+          "nextSkill": {
+            "name": "Professional Certifications",
+            "description": "Chuẩn bị các chứng chỉ chuyên ngành."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Certification & Career",
+      "description": "Chuẩn bị chứng chỉ và phát triển sự nghiệp quản lý dự án.",
+      "skills": [
+        {
+          "name": "PMP Certification Preparation",
+          "difficulty": "Nâng cao",
+          "skillType": "Certification & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "PMP overview: eligibility, exam format, domains",
+            "PMP domains: People, Process, Business Environment",
+            "Predictive project management: PMBOK processes",
+            "Agile and hybrid approaches: mindset, practices",
+            "Study plan: creating, resources, practice exams",
+            "Practice questions: analyzing, understanding patterns",
+            "Exam strategies: time management, question analysis",
+            "PMI mindset: servant leadership, value delivery",
+            "Ethical considerations: PMI Code of Ethics",
+            "Continuing education: PDUs, renewal process"
+          ],
+          "prerequisites": ["Advanced PM Topics"],
+          "nextSkill": {
+            "name": "CAPM Certification",
+            "description": "Chứng chỉ entry-level cho người mới bắt đầu."
+          }
+        },
+        {
+          "name": "CAPM Certification",
+          "difficulty": "Trung cấp",
+          "skillType": "Certification & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "CAPM overview: eligibility (23 hours education, secondary degree)",
+            "CAPM exam content outline",
+            "Predictive approach: processes, knowledge areas",
+            "Agile approach: principles, practices",
+            "Study resources: PMBOK Guide, study guides, online courses",
+            "Practice exams: preparation strategies",
+            "CAPM vs PMP: differences, career path",
+            "Maintaining certification: renewal requirements"
+          ],
+          "prerequisites": ["PMP Certification Preparation"],
+          "nextSkill": {
+            "name": "Other Certifications",
+            "description": "Các chứng chỉ khác để phát triển sự nghiệp."
+          }
+        },
+        {
+          "name": "Other Certifications & Career Development",
+          "difficulty": "Nâng cao",
+          "skillType": "Certification & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Agile certifications: CSM, PSM, CSPO, SAFe Agilist",
+            "Six Sigma certifications: Yellow Belt, Green Belt, Black Belt",
+            "PRINCE2: Foundation, Practitioner",
+            "CompTIA Project+: entry-level certification",
+            "PMI-ACP: Agile Certified Practitioner",
+            "PMI-RMP: Risk Management Professional",
+            "PMI-SP: Scheduling Professional",
+            "PfMP: Portfolio Management Professional",
+            "PgMP: Program Management Professional",
+            "Career paths: PM → Senior PM → PMO Director → VP",
+            "Building PM portfolio: documenting achievements",
+            "Networking: PMI chapters, PM communities, LinkedIn",
+            "Mentoring: developing next generation PMs",
+            "Salary negotiation: preparation, research, tactics",
+            "Leadership development: executive presence, strategic thinking"
+          ],
+          "prerequisites": ["CAPM Certification"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Project Manager và sẵn sàng cho sự nghiệp."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,832 @@
+{
+  "roadmap": {
+    "name": "Front-end-developer",
+    "description": "Lộ trình trở thành Frontend Developer - người xây dựng giao diện và trải nghiệm người dùng cho ứng dụng web. Bắt đầu từ nền tảng máy tính, phát triển kỹ năng HTML/CSS/JavaScript, thành thạo TypeScript, React, Next.js, đến quản lý trạng thái, testing, tối ưu hiệu năng và triển khai ứng dụng."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng máy tính, internet và logic lập trình cơ bản.",
+      "skills": [
+        {
+          "name": "Computer Science Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/8",
+          "whatYouWillLearn": [
+            "Cấu trúc dữ liệu cơ bản: Array, Object, Stack, Queue, Linked List",
+            "Thuật toán: tìm kiếm Linear Search, Binary Search",
+            "Thuật toán sắp xếp: Bubble Sort, Selection Sort, Insertion Sort",
+            "Big O Notation - đánh giá hiệu suất thuật toán O(1), O(n), O(n²)",
+            "Logic lập trình và tư duy giải quyết vấn đề (Computational Thinking)",
+            "Recursion cơ bản",
+            "Cách máy tính hoạt động: CPU, RAM, Storage, I/O",
+            "Hệ thống số: binary, hexadecimal"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Web Foundation",
+            "description": "Nắm vững cách thức hoạt động của web và internet."
+          }
+        },
+        {
+          "name": "Web Foundation",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/8",
+          "whatYouWillLearn": [
+            "Internet hoạt động như thế nào: HTTP/HTTPS, DNS, TCP/IP",
+            "Client-Server Model và Request-Response cycle",
+            "Browser là gì và cách browser render trang web (Critical Rendering Path)",
+            "Developer Tools trên Chrome/Firefox: Elements, Console, Network",
+            "URL structure: protocol, domain, path, query parameters, hash",
+            "Cookies, Local Storage, Session Storage - sự khác biệt và khi nào dùng",
+            "Web Standards và W3C",
+            "REST API concepts cơ bản"
+          ],
+          "prerequisites": ["Computer Science Basics"],
+          "nextSkill": {
+            "name": "HTML & Semantic Markup",
+            "description": "Bắt đầu học ngôn ngữ đánh-mark HTML để tạo cấu trúc trang web."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Core Frontend",
+      "description": "Xây dựng nền tảng phát triển giao diện web với HTML, CSS và JavaScript.",
+      "skills": [
+        {
+          "name": "HTML & Semantic Markup",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Frontend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "Cấu trúc cơ bản trang HTML: DOCTYPE, html, head, body",
+            "Thẻ HTML semantic: header, nav, main, section, article, aside, footer",
+            "Thẻ nội dung: h1-h6, p, a, img, ul, ol, li, span, div, pre, code",
+            "Forms và input elements: text, email, password, checkbox, radio, select, textarea, date",
+            "Form validation: required, pattern, min, max, HTML5 validation",
+            "Table: table, thead, tbody, tfoot, tr, td, th, colspan, rowspan",
+            "HTML attributes nâng cao: data-*, tabindex, contenteditable, draggable",
+            "HTML5 semantic elements và microdata",
+            "Accessibility (a11y): ARIA roles, labels, live regions, keyboard navigation",
+            "Meta tags: viewport, description, Open Graph, Twitter Cards",
+            "Favicon và apple-touch-icon",
+            "HTML entities và special characters",
+            "Internationalization (i18n) basics: lang attribute, dir attribute"
+          ],
+          "prerequisites": ["Web Foundation"],
+          "nextSkill": {
+            "name": "CSS & Layout",
+            "description": "Học cách định dạng và tạo kiểu cho trang web."
+          }
+        },
+        {
+          "name": "CSS & Layout",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Frontend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "CSS Selectors: class, id, attribute, pseudo-classes, pseudo-elements, combinators",
+            "Box Model chi tiết: margin, border, padding, content, box-sizing",
+            "Typography: font-family, font-size, font-weight, line-height, letter-spacing",
+            "Colors: hex, rgb, rgba, hsl, hsla, color keywords",
+            "Backgrounds: background-color, background-image, background-size, gradient",
+            "Display: block, inline, inline-block, none, flex, grid",
+            "Position: static, relative, absolute, fixed, sticky",
+            "Flexbox: justify-content, align-items, align-self, flex-grow, flex-shrink, flex-basis, flex-wrap, order, gap",
+            "CSS Grid: grid-template-columns, grid-template-rows, grid-area, grid-template-areas, auto-fit, auto-fill, minmax(), gap",
+            "Flexbox vs Grid: khi nào dùng cái nào",
+            "Media Queries: breakpoints, min-width, max-width, orientation, print",
+            "Mobile-first vs Desktop-first approach",
+            "CSS Variables (Custom Properties): khai báo, sử dụng, scope",
+            "Units: px, em, rem, %, vh, vw, vmin, vmax, ch",
+            "Transitions và Animations cơ bản: transition, @keyframes, animation",
+            "CSS Specificity và Cascade: cách browser quyết định style nào được áp dụng",
+            "Overflow: visible, hidden, scroll, auto",
+            "Z-index và stacking context",
+            "Pseudo-elements: ::before, ::after, ::first-line, ::selection"
+          ],
+          "prerequisites": ["HTML & Semantic Markup"],
+          "nextSkill": {
+            "name": "JavaScript Basics",
+            "description": "Bắt đầu học ngôn ngữ lập trình JavaScript."
+          }
+        },
+        {
+          "name": "JavaScript Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Frontend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "Cách nhúng JavaScript vào HTML: inline, internal, external, defer, async",
+            "Biến: var, let, const - sự khác biệt và best practices",
+            "Primitive types: string, number, boolean, null, undefined, symbol, bigint",
+            "Reference types: objects, arrays, functions",
+            "Toán tử: arithmetic (+, -, *, /, %), comparison (==, ===, !=, !==), logical (&&, ||, !)",
+            "String methods: length, charAt, indexOf, slice, substring, replace, split, trim, includes, startsWith, endsWith",
+            "Câu điều khiển: if/else, switch/case, ternary operator",
+            "Vòng lặp: for, while, do-while, for...of, for...in, break, continue",
+            "Functions: declaration, expression, arrow function, parameters, return, default parameters, rest parameters",
+            "Array và Array methods: push, pop, shift, unshift, splice, slice, map, filter, reduce, find, findIndex, includes, every, some, sort, reverse, flat, flatMap",
+            "Object và Object methods: properties, methods, shorthand properties, computed properties",
+            "Destructuring: array destructuring, object destructuring, nested destructuring, default values",
+            "Spread operator (...) và Rest parameters",
+            "Template literals và tagged templates",
+            "Optional chaining (?.) và Nullish coalescing (??)",
+            "Error handling: try, catch, finally, throw, custom errors",
+            "JSON: JSON.parse(), JSON.stringify()"
+          ],
+          "prerequisites": ["CSS & Layout"],
+          "nextSkill": {
+            "name": "DOM Manipulation & Events",
+            "description": "Học cách tương tác và thay đổi nội dung trang web."
+          }
+        },
+        {
+          "name": "DOM Manipulation & Events",
+          "difficulty": "Cơ bản",
+          "skillType": "Core Frontend",
+          "stagePosition": "2/8",
+          "whatYouWillLearn": [
+            "DOM Tree và Nodes: Document, Element, Text, Attribute nodes",
+            "Selecting elements: getElementById, getElementsByClassName, getElementsByTagName, querySelector, querySelectorAll",
+            "Modifying content: textContent, innerHTML, innerText, outerHTML",
+            "Changing styles: element.style, classList (add, remove, toggle, contains)",
+            "Creating and removing elements: createElement, appendChild, removeChild, insertBefore, replaceChild, prepend, append, remove",
+            "Attribute manipulation: getAttribute, setAttribute, removeAttribute, hasAttribute, dataset",
+            "Traversing DOM: parentElement, parentNode, children, firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, closest, matches",
+            "DocumentFragment và template element để tối ưu performance",
+            "Event types: click, dblclick, mouseover, mouseout, mousedown, mouseup, keydown, keyup, keypress, submit, change, input, focus, blur, scroll, resize, load, DOMContentLoaded",
+            "addEventListener và removeEventListener",
+            "Event object và event properties: target, currentTarget, type, clientX/Y, preventDefault, stopPropagation",
+            "Event bubbling, capturing, và event delegation",
+            "Form handling: FormData, form validation, form events",
+            "Intersection Observer API cho lazy loading",
+            "Mutation Observer API",
+            "requestAnimationFrame cho animations"
+          ],
+          "prerequisites": ["JavaScript Basics"],
+          "nextSkill": {
+            "name": "Advanced JavaScript",
+            "description": "Nâng cao kỹ năng JavaScript với ES6+ và các concept nâng cao."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Advanced Frontend",
+      "description": "Phát triển kỹ năng JavaScript nâng cao, TypeScript và responsive design chuyên nghiệp.",
+      "skills": [
+        {
+          "name": "Advanced JavaScript",
+          "difficulty": "Trung cấp",
+          "skillType": "Advanced Frontend",
+          "stagePosition": "3/8",
+          "whatYouWillLearn": [
+            "Execution Context và Execution Stack",
+            "Hoisting: variables và functions",
+            "Scope: global scope, function scope, block scope",
+            "Closure: lexical scope, closure patterns, practical use cases",
+            "Callbacks và Callback Hell",
+            "Promises: tạo Promise, chaining, error handling, Promise.all, Promise.race, Promise.allSettled, Promise.any",
+            "Async/Await: syntax, error handling với try/catch, sequential vs parallel execution",
+            "Event Loop: Call Stack, Web APIs, Callback Queue, Microtask Queue",
+            "Modules: CommonJS (require/module.exports), ES Modules (import/export), dynamic imports",
+            "Prototypes: prototype chain, Object.create(), __proto__ vs prototype",
+            "ES6 Classes: constructor, methods, static methods, getters/setters, inheritance với extends/super, private fields (#)",
+            "Iterators và Generators: Symbol.iterator, yield keyword",
+            "Proxy và Reflect",
+            "WeakMap và WeakSet: khi nào dùng, memory management",
+            "Currying và Partial Application",
+            "Debouncing và Throttling: implementation và use cases",
+            "Functional Programming basics: pure functions, higher-order functions, immutability"
+          ],
+          "prerequisites": ["DOM Manipulation & Events"],
+          "nextSkill": {
+            "name": "TypeScript",
+            "description": "Học TypeScript để viết JavaScript an toàn và maintainable hơn."
+          }
+        },
+        {
+          "name": "TypeScript",
+          "difficulty": "Trung cấp",
+          "skillType": "Advanced Frontend",
+          "stagePosition": "3/8",
+          "whatYouWillLearn": [
+            "TypeScript là gì và tại sao dùng TypeScript",
+            "Basic types: string, number, boolean, null, undefined, any, unknown, void, never",
+            "Arrays và Tuples",
+            "Objects và type annotations",
+            "Interfaces: khai báo, extends, optional properties, readonly properties",
+            "Type aliases: type keyword, union types, intersection types",
+            "Classes trong TypeScript: access modifiers (public, private, protected), abstract classes",
+            "Generics: type parameters, generic constraints, generic interfaces, generic functions",
+            "Enums: numeric enums, string enums, const enums",
+            "Type assertions và Non-null assertion operator (!)",
+            "Utility types: Partial, Required, Pick, Omit, Record, Readonly, ReturnType, Parameters",
+            "Declaration files (.d.ts) và @types packages",
+            "TypeScript configuration: tsconfig.json",
+            "TypeScript với React: typing props, events, hooks, refs",
+            "TypeScript với API calls: typing responses, error handling",
+            "TypeScript best practices và common patterns"
+          ],
+          "prerequisites": ["Advanced JavaScript"],
+          "nextSkill": {
+            "name": "Responsive Design & CSS Framework",
+            "description": "Học cách tạo giao diện responsive và sử dụng CSS framework."
+          }
+        },
+        {
+          "name": "Responsive Design & CSS Framework",
+          "difficulty": "Trung cấp",
+          "skillType": "Advanced Frontend",
+          "stagePosition": "3/8",
+          "whatYouWillLearn": [
+            "Responsive Design principles: fluid grids, flexible images, media queries",
+            "Mobile-first approach: viết CSS cho mobile trước, mở rộng cho desktop",
+            "Breakpoints: standard breakpoints (320px, 375px, 768px, 1024px, 1440px)",
+            "CSS Flexbox nâng cao: flex-grow, flex-shrink, flex-basis, flex shorthand, order, align-self, flex container vs flex item",
+            "CSS Grid nâng cao: grid-template-areas, auto-fit, auto-fill, minmax(), grid-column, grid-row, implicit vs explicit grid",
+            "Container Queries (CSS): responsive theo container thay vì viewport",
+            "Tailwind CSS: utility-first approach, responsive utilities, dark mode, custom configuration",
+            "Tailwind CSS components: buttons, cards, forms, navigation",
+            "SCSS/SASS: variables, nesting, mixins, functions, partials, imports, extends",
+            "CSS architecture: BEM naming convention (Block, Element, Modifier)",
+            "CSS-in-JS overview: styled-components, Emotion, CSS Modules",
+            "Responsive images: srcset, sizes, picture element, art direction",
+            "Responsive typography: fluid typography với clamp(), min(), max()",
+            "Dark mode implementation: prefers-color-scheme, CSS variables",
+            "Print styles và print media query"
+          ],
+          "prerequisites": ["CSS & Layout"],
+          "nextSkill": {
+            "name": "Git & Version Control",
+            "description": "Học cách quản lý code và collaboration với Git."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Development Workflow",
+      "description": "Quy trình phát triển chuyên nghiệp: version control, công cụ build và debugging.",
+      "skills": [
+        {
+          "name": "Git & Version Control",
+          "difficulty": "Cơ bản",
+          "skillType": "Development Workflow",
+          "stagePosition": "4/8",
+          "whatYouWillLearn": [
+            "Git là gì và tại sao cần Version Control",
+            "Git basics: init, add, commit, status, log, diff, show",
+            "Branching: branch, checkout, switch, merge, delete",
+            "Remote repositories: remote, push, pull, fetch, clone",
+            "GitHub/GitLab: tạo repo, manage branches, settings",
+            "Pull Request/Merge Request workflow và Code Review best practices",
+            "Git stash: lưu và khôi phục temporary changes",
+            "Git rebase: linear history, interactive rebase",
+            "Merge vs Rebase: khi nào dùng cái nào",
+            "Merge conflicts:识别, resolve, và best practices",
+            "Git cherry-pick: chọn commit cụ thể từ branch khác",
+            ".gitignore: loại file không cần track, template cho Node.js",
+            "Git tags: annotated tags vs lightweight tags",
+            "Git blame và Git bisect cho debugging",
+            "Git workflow: Git Flow, GitHub Flow, Trunk-based Development",
+            "Conventional Commits: feat, fix, chore, docs, style, refactor, test, perf",
+            "Git hooks với Husky: pre-commit, commit-msg, pre-push"
+          ],
+          "prerequisites": ["TypeScript"],
+          "nextSkill": {
+            "name": "Package Managers & Build Tools",
+            "description": "Học cách quản lý dependencies và tối ưu build process."
+          }
+        },
+        {
+          "name": "Package Managers & Build Tools",
+          "difficulty": "Trung cấp",
+          "skillType": "Development Workflow",
+          "stagePosition": "4/8",
+          "whatYouWillLearn": [
+            "npm basics: init, install, uninstall, update, run, scripts",
+            "package.json chi tiết: dependencies, devDependencies, scripts, engines, workspaces",
+            "package-lock.json vs yarn.lock vs pnpm-lock.yaml",
+            "Semantic Versioning (semver): major, minor, patch, ranges (^, ~)",
+            "npm scripts: lifecycle scripts, custom scripts, parallel/serial scripts",
+            "npx và package execution: chạy package không cần install",
+            "Yarn basics: yarn add, yarn remove, yarn workspaces",
+            "pnpm: advantages, pnpm install, content-addressable storage",
+            "npm audit và security: audit fix, vulnerability scanning",
+            "Monorepo với npm/yarn workspaces",
+            "Webpack fundamentals: entry, output, loaders, plugins, devServer",
+            "Webpack configuration chi tiết: babel-loader, css-loader, style-loader, file-loader",
+            "Vite: why Vite, ES modules dev server, HMR, build optimization",
+            "Vite configuration: plugins, aliases, environment variables",
+            "Babel: presets (@babel/preset-env, @babel/preset-react), plugins, configuration",
+            "PostCSS: autoprefixer, postcss-preset-env",
+            "Environment variables: .env files, VITE_* prefix, process.env",
+            "Source Maps: debugging production code"
+          ],
+          "prerequisites": ["Git & Version Control"],
+          "nextSkill": {
+            "name": "Browser DevTools & Debugging",
+            "description": "Nắm vững công cụ debug trên browser để giải quyết vấn đề hiệu quả."
+          }
+        },
+        {
+          "name": "Browser DevTools & Debugging",
+          "difficulty": "Cơ bản",
+          "skillType": "Development Workflow",
+          "stagePosition": "4/8",
+          "whatYouWillLearn": [
+            "Chrome DevTools overview: открываем и navigating",
+            "Elements panel: inspect DOM, edit CSS, box model visualization",
+            "Console panel: logging, filtering, command line, console methods (table, group, time)",
+            "Network panel: request/response, headers, payload, timing, status codes, filtering",
+            "Sources panel: breakpoints, step through code, watch variables, call stack",
+            "Performance panel: recording, flame chart, identifying bottlenecks",
+            "Application panel: storage (cookies, local storage, session storage), service workers",
+            "Lighthouse panel: performance, accessibility, best practices, SEO audits",
+            "Remote debugging: debug on mobile devices",
+            "Debugging techniques: breakpoints, conditional breakpoints, DOM breakpoints, XHR breakpoints",
+            "Console methods: console.log, console.error, console.warn, console.table, console.group, console.time",
+            "Network throttling:模拟 slower connections",
+            "Device toolbar: test responsive design",
+            "Coverage panel: unused CSS/JS",
+            "Memory panel: heap snapshots, allocation instrumentation"
+          ],
+          "prerequisites": ["Package Managers & Build Tools"],
+          "nextSkill": {
+            "name": "React",
+            "description": "Bắt đầu học framework React để xây dựng UI phức tạp."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Frontend Framework",
+      "description": "Thành thạo framework React và Next.js để xây dựng ứng dụng web hiện đại.",
+      "skills": [
+        {
+          "name": "React",
+          "difficulty": "Trung cấp",
+          "skillType": "Frontend Framework",
+          "stagePosition": "5/8",
+          "whatYouWillLearn": [
+            "React là gì: library cho UI development, declarative approach",
+            "JSX syntax và expressions: embedding JS in HTML-like syntax",
+            "React components: Functional Components là standard",
+            "Props: truyền dữ liệu từ component cha xuống con, prop types, default props",
+            "State: useState hook - quản lý state cục bộ",
+            "useEffect hook: side effects, cleanup function, dependency array",
+            "useRef hook: DOM references, mutable values không trigger re-render",
+            "useMemo hook: memoize expensive calculations",
+            "useCallback hook: memoize functions",
+            "useReducer hook: complex state logic, dispatch actions",
+            "Conditional rendering: ternary, &&, early return, conditional hooks",
+            "Lists và Keys: rendering arrays, tại sao cần key, key best practices",
+            "Forms: controlled components, uncontrolled components, form handling, validation",
+            "Custom Hooks: tách logic tái sử dụng, naming convention (use*)",
+            "Context API: createContext, useContext, Provider pattern, khi nào dùng",
+            "React component lifecycle: mounting, updating, unmounting (useEffect phases)",
+            "React DevTools: inspect component tree, props, state, performance",
+            "React Strict Mode: double rendering, detecting side effects",
+            "Fragments: <></>, shorthand syntax, tại sao dùng",
+            "Portals: render outside parent DOM tree",
+            "Error Boundaries: catch errors in component tree",
+            "Composition vs Inheritance: composition pattern trong React",
+            "Controlled vs Uncontrolled components: khi nào dùng cái nào",
+            "React best practices: component organization, naming, file structure"
+          ],
+          "prerequisites": ["Browser DevTools & Debugging", "TypeScript"],
+          "nextSkill": {
+            "name": "React Advanced Patterns",
+            "description": "Nâng cao kỹ năng React với patterns và performance optimization."
+          }
+        },
+        {
+          "name": "React Advanced Patterns",
+          "difficulty": "Nâng cao",
+          "skillType": "Frontend Framework",
+          "stagePosition": "5/8",
+          "whatYouWillLearn": [
+            "Higher-Order Components (HOC): concept, implementation, use cases",
+            "Render Props pattern: sharing logic via render props",
+            "Compound Components pattern: managing shared state between related components",
+            "Custom Hooks nâng cao: useReducer + useContext, complex hooks",
+            "State Reducer pattern: customizing hook behavior",
+            "Control Props pattern: external control of component state",
+            "React.lazy và Suspense: code splitting, lazy loading components",
+            "Suspense cho Data Fetching (overview)",
+            "React.memo: preventing unnecessary re-renders",
+            "useMemo và useCallback optimization strategies",
+            "Re-render analysis: React DevTools Profiler, identifying unnecessary renders",
+            "Virtual scrolling: react-window, react-virtualized cho lists dài",
+            "Infinite scrolling implementation",
+            "React patterns: container/presentational, render props, hooks",
+            "Performance optimization checklist cho React apps",
+            "React Concurrent Features overview (Suspense, transitions)",
+            "Server Components và Server Actions (Next.js App Router)"
+          ],
+          "prerequisites": ["React"],
+          "nextSkill": {
+            "name": "Next.js",
+            "description": "Học framework Next.js cho ứng dụng React full-stack."
+          }
+        },
+        {
+          "name": "Next.js",
+          "difficulty": "Trung cấp",
+          "skillType": "Frontend Framework",
+          "stagePosition": "5/8",
+          "whatYouWillLearn": [
+            "Next.js là gì: React meta-framework, advantages over CRA",
+            "App Router vs Pages Router: sự khác biệt và khi nào dùng",
+            "File-based Routing: file system conventions, route groups, parallel routes",
+            "Layouts: nested layouts, shared layouts, layout.js/layout.tsx",
+            "Loading và Error UI: loading.js, error.js, not-found.js",
+            "Server Components vs Client Components ('use client' directive)",
+            "Data Fetching trong App Router: fetch, async components, caching",
+            "Server Actions: mutations, form handling, revalidation",
+            "Static Generation (SSG): generateStaticParams, prerendering",
+            "Dynamic Routes: [slug], [...slug], [[...slug]]",
+            "Route Handlers (API Routes trong App Router): GET, POST, PUT, DELETE",
+            "Middleware: request interception, redirects, rewrites, headers",
+            "Image optimization: next/image component, lazy loading, formats",
+            "Font optimization: next/font, Google Fonts, local fonts",
+            "Metadata API: generateMetadata, SEO optimization, Open Graph",
+            "Internationalization (i18n): routing, locale detection",
+            "Caching: Data Cache, Full Route Cache, Router Cache, revalidation strategies",
+            "Streaming với Suspense và loading states",
+            "Deployment: Vercel, Netlify, Docker, self-hosted",
+            "Next.js project structure best practices"
+          ],
+          "prerequisites": ["React Advanced Patterns"],
+          "nextSkill": {
+            "name": "State Management",
+            "description": "Học cách quản lý trạng thái ứng dụng quy mô lớn."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "State Management & Data",
+      "description": "Quản lý trạng thái phức tạp, tích hợp với backend API và xử lý dữ liệu.",
+      "skills": [
+        {
+          "name": "State Management",
+          "difficulty": "Trung cấp",
+          "skillType": "State Management & Data",
+          "stagePosition": "6/8",
+          "whatYouWillLearn": [
+            "Local state vs Global state vs Server state: sự khác biệt",
+            "Khi nào cần state management library vs Context API",
+            "Context API + useReducer: built-in state management, implementation patterns",
+            "Context API limitations: performance issues, when to avoid",
+            "Redux fundamentals: Actions, Action Creators, Reducers, Store, Dispatch",
+            "Redux Toolkit (RTK): configureStore, createSlice, createAsyncThunk",
+            "RTK Query: createApi, endpoints, polling, cache invalidation",
+            "Redux middleware: custom middleware, logging, thunks",
+            "Redux DevTools: time-travel debugging, action inspection",
+            "Zustand: lightweight state management, simplicity, TypeScript support",
+            "Zustand patterns: slices, middleware, persistence",
+            "Jotai: atomic state management, when to use vs Zustand",
+            "Recoil: atom, selector, graph-like state (overview)",
+            "XState: finite state machines, when complexity requires it",
+            "React Query/TanStack Query: server state management, caching, synchronization",
+            "TanStack Query hooks: useQuery, useInfiniteQuery, useMutation",
+            "TanStack Query patterns: query invalidation, optimistic updates, dependent queries",
+            "Server state vs Client state: best practices",
+            "State persistence: localStorage, sessionStorage, URL state",
+            "State management patterns: atoms, stores, slices, reducers"
+          ],
+          "prerequisites": ["Next.js"],
+          "nextSkill": {
+            "name": "API Integration & Backend Communication",
+            "description": "Kết nối frontend với backend qua REST API và GraphQL."
+          }
+        },
+        {
+          "name": "API Integration & Backend Communication",
+          "difficulty": "Trung cấp",
+          "skillType": "State Management & Data",
+          "stagePosition": "6/8",
+          "whatYouWillLearn": [
+            "REST API concepts: HTTP methods (GET, POST, PUT, PATCH, DELETE), status codes",
+            "REST API design: resource naming, pagination, filtering, sorting",
+            "Fetch API: GET, POST, PUT, DELETE requests, options, headers",
+            "Axios: configuration, interceptors, transforms, error handling",
+            "Fetch vs Axios: sự khác biệt và khi nào dùng",
+            "Request/Response Headers: Content-Type, Authorization, Accept, Custom headers",
+            "Request body: JSON, FormData, URL-encoded, multipart",
+            "Authentication: JWT tokens, Bearer tokens, Access tokens + Refresh tokens",
+            "Token storage: localStorage vs httpOnly cookies, security considerations",
+            "Protected routes và auth guards: client-side vs server-side",
+            "Error handling: HTTP errors, network errors, timeout, retry logic",
+            "Loading states: skeleton screens, spinners, optimistic UI",
+            "Data caching strategies: cache-first, network-first, stale-while-revalidate, cache-and-network",
+            "GraphQL basics: queries, mutations, subscriptions, schema",
+            "Apollo Client: setup, useQuery, useMutation, cache management",
+            "WebSocket: real-time data, implementation patterns",
+            "Server-Sent Events (SSE): one-way real-time updates",
+            "File upload: FormData, progress tracking, multiple files",
+            "API versioning và backward compatibility",
+            "CORS: same-origin policy, preflight requests, configuration",
+            "API documentation: OpenAPI/Swagger basics"
+          ],
+          "prerequisites": ["State Management"],
+          "nextSkill": {
+            "name": "Testing",
+            "description": "Bắt đầu học cách test ứng dụng để đảm bảo chất lượng."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Quality Assurance",
+      "description": "Đảm bảo chất lượng code với testing, linting, accessibility và SEO.",
+      "skills": [
+        {
+          "name": "Testing",
+          "difficulty": "Trung cấp",
+          "skillType": "Quality Assurance",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "Testing pyramid: unit, integration, end-to-end",
+            "Testing concepts: test doubles, mocking, stubbing, spying",
+            "Jest setup và configuration: jest.config.js, setup files",
+            "Jest basics: describe, it/test, expect, beforeEach, afterEach",
+            "Matchers: toBe, toEqual, toBeTruthy, toBeFalsy, toContain, toHaveLength, toThrow, toBeNull, toBeUndefined",
+            "Testing asynchronous code: async/await, callbacks, setTimeout, promises",
+            "Mocking: jest.fn(), jest.mock(), jest.spyOn(), manual mocks",
+            "React Testing Library (RTL) setup",
+            "RTL philosophy: test like a user, not implementation details",
+            "RTL queries: getByRole, getByText, getByLabelText, getByTestId, queryBy*, findBy*",
+            "RTL actions: fireEvent, userEvent (preferred), type, click, tab",
+            "Testing React components: rendering, assertions, interactions",
+            "Testing forms: input changes, form submission, validation messages",
+            "Testing hooks: renderHook từ @testing-library/react",
+            "Testing custom hooks: setup, assertions, cleanup",
+            "Mocking API calls với MSW (Mock Service Worker): handlers, server, setup",
+            "Testing async components: loading states, data fetching, error states",
+            "Testing Context và Provider wrapping",
+            "Code Coverage: lines, branches, functions, statements, thresholds",
+            "Test reporting: jest-junit, HTML reports",
+            "TDD (Test-Driven Development) workflow: red-green-refactor",
+            "BDD (Behavior-Driven Development) với Cucumber (overview)",
+            "Testing best practices: test isolation, deterministic tests, AAA pattern"
+          ],
+          "prerequisites": ["API Integration & Backend Communication"],
+          "nextSkill": {
+            "name": "E2E Testing",
+            "description": "Học cách test end-to-end toàn bộ application."
+          }
+        },
+        {
+          "name": "E2E Testing",
+          "difficulty": "Nâng cao",
+          "skillType": "Quality Assurance",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "E2E testing là gì: test toàn bộ application như người dùng thực",
+            "Cypress vs Playwright: sự khác biệt và khi nào dùng",
+            "Cypress setup: installation, cypress.config.js, folder structure",
+            "Cypress basics: cy.visit, cy.get, cy.contains, cy.click, cy.type",
+            "Cypress commands: custom commands, chaining, assertions",
+            "Cypress selectors: data-testid, cy.findByRole, cy.findByText",
+            "Cypress waits: implicit waits, cy.wait(), retryability",
+            "Cypress intercept: mock API responses, network requests",
+            "Cypress fixtures: mock data management",
+            "Cypress plugins: extending functionality",
+            "Playwright setup: installation, playwright.config.ts",
+            "Playwright basics: page, locator, actions, assertions",
+            "Playwright locators: getByRole, getByText, getByTestId, CSS, XPath",
+            "Playwright auto-waiting và web-first assertions",
+            "Playwright network interception: route, fulfill, abort",
+            "Playwright fixtures và test data setup",
+            "Page Object Model pattern: organizing test code",
+            "Visual regression testing: screenshots, comparison",
+            "Cross-browser testing: running tests on multiple browsers",
+            "CI integration: running E2E tests in pipelines",
+            "Test data management: seeding, cleanup, isolation"
+          ],
+          "prerequisites": ["Testing"],
+          "nextSkill": {
+            "name": "Code Quality & Linting",
+            "description": "Sử dụng công cụ để đảm bảo code quality và consistency."
+          }
+        },
+        {
+          "name": "Code Quality & Linting",
+          "difficulty": "Cơ bản",
+          "skillType": "Quality Assurance",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "ESLint: linting JavaScript/TypeScript và React",
+            "ESLint flat config (eslint.config.js): modern configuration",
+            "ESLint rules: off, warn, error, options",
+            "ESLint plugins: @typescript-eslint, react, react-hooks, import, jsxa11y",
+            "ESLint extends: recommended configs, sharing configs",
+            "ESLint custom rules và overrides",
+            "Prettier: code formatting, opinionated formatter",
+            "Prettier configuration: .prettierrc, options (printWidth, tabWidth, singleQuote, trailingComma)",
+            "ESLint + Prettier integration: eslint-config-prettier, eslint-plugin-prettier",
+            "lint-staged: running linters on staged files only",
+            "Husky: Git hooks automation, setup, .husky folder",
+            "Commitlint: commit message conventions, @commitlint/config-conventional",
+            "EditorConfig: .editorconfig cho team consistency across editors",
+            "TypeScript strict mode và additional checks",
+            "Code review best practices: checklist, automation",
+            "SonarCloud/SonarQube: code quality platform (overview)",
+            "Código smells và anti-patterns detection"
+          ],
+          "prerequisites": ["E2E Testing"],
+          "nextSkill": {
+            "name": "Accessibility (a11y)",
+            "description": "Học cách tạo ứng dụng accessible cho tất cả người dùng."
+          }
+        },
+        {
+          "name": "Accessibility (a11y)",
+          "difficulty": "Trung cấp",
+          "skillType": "Quality Assurance",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "Web Accessibility là gì: WAI-ARIA, WCAG guidelines",
+            "WCAG principles: Perceivable, Operable, Understandable, Robust",
+            "WCAG conformance levels: A, AA, AAA",
+            "Semantic HTML: tại sao quan trọng cho accessibility",
+            "Heading hierarchy: proper use of h1-h6",
+            "Landmarks: header, nav, main, aside, footer",
+            "Form accessibility: labels, fieldset, legend, error messages, aria-describedby",
+            "Image accessibility: alt text, decorative images, complex images",
+            "Link accessibility: descriptive text, skip navigation",
+            "ARIA roles: dialog, alert, status, tablist, tree",
+            "ARIA properties: aria-label, aria-labelledby, aria-describedby, aria-live, aria-hidden",
+            "ARIA states: aria-expanded, aria-selected, aria-checked, aria-disabled",
+            "Keyboard navigation: focus management, tab order, roving tabindex",
+            "Focus traps: trong modals, dialogs",
+            "Screen reader testing: NVDA, VoiceOver, JAWS basics",
+            "Color contrast: tools và requirements",
+            "Accessible animations: prefers-reduced-motion",
+            "Testing accessibility: axe-core, Lighthouse, pa11y",
+            "Accessibility audit workflow",
+            "Inclusive design principles"
+          ],
+          "prerequisites": ["Code Quality & Linting"],
+          "nextSkill": {
+            "name": "SEO Fundamentals",
+            "description": "Học cách tối ưu SEO cho ứng dụng web."
+          }
+        },
+        {
+          "name": "SEO Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Quality Assurance",
+          "stagePosition": "7/8",
+          "whatYouWillLearn": [
+            "SEO là gì: Search Engine Optimization, tại sao quan trọng",
+            "How search engines work: crawling, indexing, ranking",
+            "On-page SEO: title tags, meta descriptions, headings, content",
+            "Technical SEO: URL structure, canonical tags, robots.txt, sitemap.xml",
+            "Meta tags: viewport, description, Open Graph (og:title, og:description, og:image)",
+            "Twitter Cards: twitter:card, twitter:title, twitter:description",
+            "Structured Data (Schema.org): JSON-LD, rich snippets",
+            "Open Graph protocol: implementing OG tags for social sharing",
+            "Canonical URLs: preventing duplicate content",
+            "Hreflang: internationalization và multi-language SEO",
+            "Image SEO: alt text, file names, lazy loading, WebP format",
+            "Page speed optimization for SEO: Core Web Vitals",
+            "Mobile-first indexing: responsive design impact",
+            "SSR vs SSG vs CSR: SEO implications",
+            "Next.js SEO: Metadata API, generateMetadata, dynamic sitemaps",
+            "SEO tools: Google Search Console, Google Analytics, Lighthouse",
+            "Content SEO: keyword research basics, content structure",
+            "Link building basics: internal links, external links"
+          ],
+          "prerequisites": ["Accessibility (a11y)"],
+          "nextSkill": {
+            "name": "Performance Optimization",
+            "description": "Tối ưu hóa hiệu suất ứng dụng web."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Performance & Deployment",
+      "description": "Tối ưu hiệu năng, bảo mật và triển khai ứng dụng lên production.",
+      "skills": [
+        {
+          "name": "Performance Optimization",
+          "difficulty": "Nâng cao",
+          "skillType": "Performance & Deployment",
+          "stagePosition": "8/8",
+          "whatYouWillLearn": [
+            "Core Web Vitals: LCP (Largest Contentful Paint), FID (First Input Delay), CLS (Cumulative Layout Shift), INP (Interaction to Next Paint)",
+            "Performance metrics: FCP (First Contentful Paint), TTFB (Time to First Byte), TTI (Time to Interactive)",
+            "Lighthouse audits: cách đọc scores và actionable recommendations",
+            "Bundle optimization: code splitting, dynamic imports, tree shaking",
+            "Code splitting với React.lazy và Suspense",
+            "Route-based code splitting trong Next.js",
+            "Lazy Loading: images, components, routes, iframes",
+            "Image optimization: WebP/AVIF formats, responsive images, CDN, next/image",
+            "Font optimization: font-display (swap, optional, fallback), font subsetting, preloading, next/font",
+            "Critical CSS: extracting above-the-fold CSS",
+            "Minification: CSS, JavaScript, HTML minification",
+            "Compression: Gzip, Brotli, server-side compression",
+            "Caching strategies: HTTP caching (Cache-Control, ETag, Last-Modified), service workers, CDN caching",
+            "Preloading и prefetching: rel=preload, rel=prefetch, rel=preconnect",
+            "DNS prefetch và preconnect hints",
+            "Virtualization: react-window, react-virtualized cho lists dài",
+            "Intersection Observer cho lazy loading và infinite scroll",
+            "Performance monitoring: Web Vitals library, Real User Monitoring (RUM)",
+            "Performance budgets: setting và enforcing",
+            "Performance testing: Lighthouse CI, WebPageTest",
+            "React performance: React.memo, useMemo, useCallback, avoiding re-renders",
+            "Profiling: React DevTools Profiler, Chrome Performance panel"
+          ],
+          "prerequisites": ["SEO Fundamentals"],
+          "nextSkill": {
+            "name": "CI/CD & Deployment",
+            "description": "Học cách thiết lập pipeline và triển khai ứng dụng."
+          }
+        },
+        {
+          "name": "CI/CD & Deployment",
+          "difficulty": "Trung cấp",
+          "skillType": "Performance & Deployment",
+          "stagePosition": "8/8",
+          "whatYouWillLearn": [
+            "CI/CD concepts: Continuous Integration, Continuous Delivery, Continuous Deployment",
+            "GitHub Actions: workflows, jobs, steps, triggers, matrix builds",
+            "GitHub Actions examples: lint, test, build, deploy pipeline",
+            "GitHub Actions với Node.js: setup-node, caching dependencies",
+            "GitHub Actions secrets và environment variables",
+            "Deployment platforms: Vercel, Netlify, Railway, Render",
+            "Vercel deployment: connecting repo, build settings, environment variables",
+            "Vercel features: preview deployments, serverless functions, edge middleware",
+            "Netlify deployment: build settings, form handling, functions",
+            "Docker basics: Dockerfile, docker-compose, containerizing a React/Next.js app",
+            "Docker multi-stage builds cho optimization",
+            "Docker deployment: pushing to registry, running containers",
+            "Kubernetes basics: pods, services, deployments (overview)",
+            "Infrastructure as Code (IaC): Terraform basics (overview)",
+            "Monitoring và logging: Sentry, LogRocket, Datadog (overview)",
+            "Feature flags: LaunchDarkly, Vercel Flags, custom implementation",
+            "Blue-green deployments và canary releases",
+            "Rollback strategies",
+            "Environment management: development, staging, production",
+            "Domain configuration và SSL/TLS certificates",
+            "CDN setup: CloudFlare, AWS CloudFront (overview)"
+          ],
+          "prerequisites": ["Performance Optimization"],
+          "nextSkill": {
+            "name": "Web Security Basics",
+            "description": "Nắm vững các lỗ hổng bảo mật phổ biến và cách phòng ngừa."
+          }
+        },
+        {
+          "name": "Web Security Basics",
+          "difficulty": "Trung cấp",
+          "skillType": "Performance & Deployment",
+          "stagePosition": "8/8",
+          "whatYouWillLearn": [
+            "OWASP Top 10: overview các lỗ hổng bảo mật phổ biến nhất",
+            "Cross-Site Scripting (XSS): stored, reflected, DOM-based XSS",
+            "XSS prevention: input sanitization, Content Security Policy (CSP), escaping output",
+            "Cross-Site Request Forgery (CSRF): attack vector, prevention methods",
+            "CSRF tokens, SameSite cookies, CORS configuration",
+            "Content Security Policy (CSP): directives, implementation, reporting",
+            "HTTPS: TLS/SSL, certificate management, HTTP to HTTPS redirect",
+            "Secure headers: Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy",
+            "Authentication security: password hashing, bcrypt, rate limiting",
+            "Session management: secure session cookies, session fixation prevention",
+            "JWT security: algorithm confusion, token expiration, refresh token rotation",
+            "Input validation: client-side vs server-side validation",
+            "SQL injection basics (for full-stack awareness)",
+            "Dependency security: npm audit, Snyk, Dependabot",
+            "Secret management: environment variables, .env files, never committing secrets",
+            "Browser security: Same-Origin Policy, CORS, sandboxing",
+            "Subresource Integrity (SRI): verifying external resources",
+            "Security headers configuration: helmet.js, meta tags",
+            "Security testing: OWASP ZAP, Burp Suite basics",
+            "Incident response basics"
+          ],
+          "prerequisites": ["CI/CD & Deployment"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Frontend Developer và sẵn sàng cho công việc thực tế."
+          }
+        }
+      ]
+    }
+  ]
+}

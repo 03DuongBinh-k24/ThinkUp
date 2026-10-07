@@ -1,0 +1,88 @@
+import { Component, Input, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { UserProfile } from '../../../../../core/models/profile.model';
+import { ProfileService } from '../../../../../core/services/profile.service';
+
+@Component({
+  selector: 'app-profile-hero',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  template: `
+    <section class="relative h-auto min-w-0 overflow-hidden rounded-[24px] border border-[#E0E5EB] bg-white px-6 py-8 sm:px-[33px] xl:h-[202px] xl:pb-[33px] xl:pt-[41px]">
+      <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(173deg,#F0F9FF_0%,rgba(241,246,255,0)_50%)]"></div>
+      <div class="relative flex flex-col gap-6 sm:flex-row sm:items-end">
+        <!-- Avatar Wrapper -->
+        <div class="relative shrink-0 self-start group">
+          <div class="absolute -inset-1 rounded-full bg-[linear-gradient(45deg,#4A79FF,transparent)] opacity-40 blur-[6px]"></div>
+          @if (profile.avatarUrl) {
+            <img [src]="profile.avatarUrl" [alt]="'Ảnh đại diện của ' + profile.name" class="relative h-32 w-32 rounded-full bg-white object-cover ring-4 ring-white shadow-md cursor-pointer transition-transform group-hover:scale-[1.02]" (click)="fileInput.click()" title="Bấm để tải ảnh đại diện mới" />
+          } @else {
+            <div class="relative grid h-32 w-32 place-items-center rounded-full bg-[#E8EEFF] text-3xl font-bold text-[#155DFC] ring-4 ring-white cursor-pointer" (click)="fileInput.click()" title="Bấm để tải ảnh đại diện mới">
+              {{ (profile.name || 'U').trim().charAt(0).toUpperCase() }}
+            </div>
+          }
+          <!-- Input ẩn tải ảnh trực tiếp -->
+          <input #fileInput type="file" accept="image/png,image/jpeg,image/webp" (change)="onAvatarUpload($event)" class="sr-only" aria-label="Tải ảnh đại diện mới" />
+          <button
+            type="button"
+            (click)="fileInput.click()"
+            aria-label="Tải ảnh đại diện mới"
+            title="Tải ảnh đại diện mới"
+            class="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full bg-[#4A79FF] text-white shadow-lg transition hover:bg-[#3563E9] active:scale-95"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          </button>
+        </div>
+
+        <!-- Info Details -->
+        <div class="min-w-0 flex-1 sm:pb-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-[28px] font-semibold leading-[34px] text-[#071123]">{{ profile.name }}</h1>
+            <span class="rounded-full bg-[#F0F9FF] px-[13px] py-[3px] text-[12px] font-semibold leading-4 text-[#4A79FF] shadow-sm">PRO</span>
+          </div>
+          <p class="mt-1 text-[16px] leading-6 text-[#596475]">{{ profile.headline }}</p>
+          <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] leading-5 text-[#596475]">
+            <span class="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              {{ profile.email }}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              {{ profile.location }}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+              Tham gia {{ profile.joinedAt }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Edit Profile Action Button -->
+        <a routerLink="/main/profile/edit" class="flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-[#4A79FF] px-5 text-[14px] leading-5 font-medium text-white shadow-sm transition hover:bg-[#3563E9] active:bg-[#244FD1]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          Chỉnh sửa hồ sơ
+        </a>
+      </div>
+    </section>
+  `,
+})
+export class ProfileHeroComponent {
+  private profileService = inject(ProfileService);
+  @Input({ required: true }) profile!: UserProfile;
+
+  onAvatarUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          this.profileService.updateAvatar(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    }
+  }
+}

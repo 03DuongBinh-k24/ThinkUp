@@ -1,0 +1,175 @@
+<main class="min-h-screen bg-[#F9F9FF] text-[#0F172B]">
+  <div class="mx-auto w-full max-w-[1589px] px-4 pb-16 pt-8 sm:px-6 xl:px-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-[14px] leading-5 text-[#6B7280] mb-4" aria-label="Breadcrumb">
+      <a routerLink="/main/courses" class="hover:text-[#0088E8]">Khóa học</a>
+      <span>›</span>
+      <span>Giỏ hàng</span>
+    </nav>
+
+    <!-- Page Title -->
+    <div class="flex min-h-[42px] items-center mb-6">
+      <h1 class="text-[28px] font-bold leading-[42px] tracking-[-0.7px] text-[#1A1A1A]">
+        Giỏ hàng của bạn <span class="align-baseline text-[16px] font-normal leading-6 text-[#6B7280]">({{ cartItems().length }} khóa học)</span>
+      </h1>
+    </div>
+
+    @if (!loading() && cartItems().length === 0) {
+      <div class="flex flex-col items-center justify-center min-h-[400px] py-16 text-center bg-white rounded-[18px] border border-[#EEF0F3] p-8">
+        <div class="w-20 h-20 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#0088E8] mb-4">
+          <svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+          </svg>
+        </div>
+        <h2 class="text-[20px] font-bold text-[#1A1A1A] mb-2">Giỏ hàng của bạn đang trống</h2>
+        <p class="text-[14px] text-[#6B7280] max-w-md mb-6">Hãy khám phá các khóa học chất lượng cao và thêm vào giỏ hàng ngay!</p>
+        <a routerLink="/main/courses" class="inline-flex h-[44px] items-center px-6 rounded-full bg-[#006AB5] text-white font-semibold text-[14px] hover:bg-[#00528C] transition">
+          Khám phá khóa học
+        </a>
+      </div>
+    }
+
+    @if (cartItems().length > 0) {
+      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <!-- Left Table Section -->
+        <section class="min-w-0 rounded-[18px] border border-[#EEF0F3] bg-white p-[25px]">
+          <!-- Table Header -->
+          <div class="grid grid-cols-[22px_minmax(0,1fr)_120px] items-center gap-4 border-b border-[#EEF0F3] pb-[13px] text-[14px] font-semibold leading-5 text-[#374151]">
+            <button
+              type="button"
+              (click)="toggleSelectAll()"
+              class="grid h-[22px] w-[22px] place-items-center rounded-[6px] border-[1.5px] transition"
+              [class]="isAllSelected() ? 'border-[#0088E8] bg-[#0088E8] text-white' : 'border-[#D1D5DB] bg-white'"
+            >
+              @if (isAllSelected()) {
+                <span class="text-[14px] font-bold leading-none">✓</span>
+              }
+            </button>
+            <span>Khóa học</span>
+            <span class="text-right">Đơn giá</span>
+          </div>
+
+          <!-- Items List -->
+          <div class="divide-y divide-[#EEF0F3]">
+            @for (item of cartItems(); track item.id) {
+              <div class="grid grid-cols-[22px_minmax(0,1fr)_120px] items-start gap-4 py-5">
+                <!-- Checkbox -->
+                <button
+                  type="button"
+                  (click)="toggleSelect(item.id)"
+                  class="mt-1 grid h-[22px] w-[22px] place-items-center rounded-[6px] border-[1.5px] transition"
+                  [class]="selectedIds().includes(item.id) ? 'border-[#0088E8] bg-[#0088E8] text-white' : 'border-[#D1D5DB] bg-white'"
+                >
+                  @if (selectedIds().includes(item.id)) {
+                    <span class="text-[14px] font-bold leading-none">✓</span>
+                  }
+                </button>
+
+                <!-- Course Info -->
+                <div class="flex flex-col sm:flex-row gap-4 min-w-0">
+                  <div
+                    class="h-[80px] w-full sm:w-[140px] shrink-0 rounded-[8px] overflow-hidden"
+                    [style.background]="item.thumbnailUrl ? 'url(' + item.thumbnailUrl + ') center/cover' : 'linear-gradient(164deg, #0A1535 0%, #1A2A5E 100%)'"
+                  ></div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-[15px] font-bold leading-5 text-[#111827] line-clamp-2 hover:text-[#0088E8] cursor-pointer"
+                        [routerLink]="['/main/courses', item.id]">
+                      {{ item.displayTitle || item.title }}
+                    </h3>
+                    <p class="text-[12px] text-[#64748B] mt-1">Giảng viên: <span class="font-medium text-[#111827]">{{ item.instructor }}</span></p>
+                    <div class="flex items-center gap-4 mt-3 text-[12px]">
+                      <button type="button" (click)="removeItem(item.id)" class="text-[#EF4444] hover:underline font-medium">
+                        Xóa
+                      </button>
+                      <button type="button" (click)="addToFavorites(item)" class="text-[#64748B] hover:text-[#0088E8] font-medium">
+                        Lưu vào yêu thích
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Price -->
+                <div class="text-right">
+                  <div class="text-[16px] font-bold text-[#0088E8]">
+                    {{ formatPrice(item.salePrice) }}
+                  </div>
+                  @if (item.originalPrice > item.salePrice) {
+                    <div class="text-[12px] text-[#94A3B8] line-through mt-0.5">
+                      {{ formatPrice(item.originalPrice) }}
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <a routerLink="/main/courses" class="mt-5 inline-flex h-[43px] items-center rounded-[8px] border border-[#E5E7EB] bg-white px-4 text-[13px] font-medium leading-5 text-[#374151] transition hover:bg-[#F8FAFC]">
+            ← Tiếp tục mua sắm
+          </a>
+        </section>
+
+        <!-- Right Summary Card -->
+        <aside class="sticky top-[102px] space-y-4">
+          <div class="rounded-[18px] border border-[#EEF0F3] bg-white p-[25px]">
+            <h2 class="text-[18px] font-bold text-[#111827] pb-4 border-b border-[#EEF0F3]">
+              Tóm tắt đơn hàng
+            </h2>
+
+            <div class="space-y-3 py-4 text-[14px]">
+              <div class="flex justify-between text-[#64748B]">
+                <span>Đã chọn</span>
+                <span class="font-semibold text-[#111827]">{{ selectedIds().length }} khóa học</span>
+              </div>
+              <div class="flex justify-between text-[#64748B]">
+                <span>Tạm tính</span>
+                <span class="font-semibold text-[#111827]">{{ formatPrice(selectedTotal()) }}</span>
+              </div>
+              @if (voucherDiscount() > 0) {
+                <div class="flex justify-between text-[#16A34A]">
+                  <span>Giảm giá</span>
+                  <span class="font-semibold">-{{ formatPrice(voucherDiscount()) }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Voucher Box -->
+            <div class="pt-2 pb-4 border-t border-[#EEF0F3]">
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  [(ngModel)]="voucherCode"
+                  placeholder="Mã giảm giá (ví dụ: THINKUP50)"
+                  class="flex-1 h-10 px-3 border border-[#E2E8F0] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#006AB5]/40"
+                />
+                <button
+                  type="button"
+                  (click)="applyVoucher()"
+                  class="px-4 h-10 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F172A] font-semibold text-[13px] rounded-[8px] transition"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+
+            <div class="border-t border-[#EEF0F3] pt-4">
+              <div class="flex justify-between items-baseline mb-6">
+                <span class="text-[16px] font-bold text-[#111827]">Tổng thanh toán</span>
+                <span class="text-[24px] font-extrabold text-[#0088E8]">{{ formatPrice(finalTotal()) }}</span>
+              </div>
+
+              <button
+                type="button"
+                (click)="proceedToCheckout()"
+                [disabled]="selectedIds().length === 0"
+                class="w-full h-[48px] bg-[#006AB5] hover:bg-[#00528C] disabled:bg-[#CBD5E1] disabled:cursor-not-allowed text-white font-bold text-[15px] rounded-[10px] transition shadow-sm flex items-center justify-center"
+              >
+                Thanh toán ({{ selectedIds().length }})
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    }
+  </div>
+</main>

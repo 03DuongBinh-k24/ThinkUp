@@ -1,0 +1,708 @@
+{
+  "roadmap": {
+    "name": "Business-analysis",
+    "description": "Lộ trình trở thành Business Analyst (BA) - người phân tích nhu cầu kinh doanh, kết nối giữa stakeholder và team kỹ thuật để đảm bảo sản phẩm đáp ứng mục tiêu kinh doanh. Bắt đầu từ nền tảng kinh doanh, phát triển kỹ năng thu thập và tài liệu hóa yêu cầu, phân tích quy trình, làm việc với data, đến quản lý stakeholder và các chứng chỉ chuyên ngành."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng kinh doanh, tư duy phân tích và cách thức hoạt động của doanh nghiệp.",
+      "skills": [
+        {
+          "name": "Business Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Doanh nghiệp hoạt động như thế nào: cơ cấu tổ chức, phòng ban, chức năng",
+            "Business model: revenue streams, cost structure, value proposition",
+            "Financial basics: profit, loss, revenue, cost, ROI, KPI",
+            "Các loại hình doanh nghiệp: B2B, B2C, B2G",
+            "Supply chain basics: upstream, downstream, logistics",
+            "Marketing basics: customer segments, channels, branding",
+            "Operations management: quy trình, hiệu quả, bottleneck",
+            "Business terminology thông dụng trong môi trường doanh nghiệp"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Analytical Thinking & Problem Solving",
+            "description": "Phát triển tư duy phân tích và giải quyết vấn đề."
+          }
+        },
+        {
+          "name": "Analytical Thinking & Problem Solving",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Critical thinking: đánh giá thông tin, phân biệt fact vs opinion",
+            "Root cause analysis: 5 Whys, Fishbone Diagram (Ishikawa)",
+            "Problem decomposition: breaking down complex problems",
+            "Logical reasoning: deductive, inductive, abductive",
+            "Data-driven decision making",
+            "Hypothesis-driven analysis",
+            "Systems thinking: nhìn nhận vấn đề trong hệ thống lớn",
+            "Decision matrices: weighted scoring, pros/cons analysis",
+            "MECE principle: Mutually Exclusive, Collectively Exhaustive",
+            "Issue trees và problem trees"
+          ],
+          "prerequisites": ["Business Fundamentals"],
+          "nextSkill": {
+            "name": "Business Analysis Core Concepts",
+            "description": "Nắm vững các khái niệm cốt lõi của Business Analysis."
+          }
+        },
+        {
+          "name": "Business Analysis Core Concepts",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Business Analyst là gì: vai trò, trách nhiệm, kỹ năng cần có",
+            "BABOK Guide overview: 6 kiến thức chính của BA",
+            "Business analysis工作流程: planning, elicitation, analysis, documentation, validation",
+            "Types of requirements: business, stakeholder, solution, transition",
+            "Requirements lifecycle: from elicitation to validation",
+            "Stakeholder concepts: types, roles, influence",
+            "Enterprise analysis: business case, feasibility study",
+            "Solution evaluation: metrics, benefits, ROI",
+            "BA deliverables: BRD, FRD, user stories, process maps",
+            "Ethics và professional conduct cho BA"
+          ],
+          "prerequisites": ["Analytical Thinking & Problem Solving"],
+          "nextSkill": {
+            "name": "Communication Skills",
+            "description": "Phát triển kỹ năng giao tiếp và làm việc với người."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Communication & Soft Skills",
+      "description": "Phát triển kỹ năng giao tiếp, thuyết trình và làm việc với stakeholder.",
+      "skills": [
+        {
+          "name": "Communication Skills",
+          "difficulty": "Cơ bản",
+          "skillType": "Communication & Soft Skills",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Giao tiếp hiệu quả: active listening, paraphrasing, summarizing",
+            "Verbal communication: meeting, presentation,电话, video call",
+            "Written communication: email, report, documentation style",
+            "Non-verbal communication: body language, tone of voice",
+            "Adapting communication style cho different audiences",
+            "Facilitation skills: leading meetings, workshops",
+            "Negotiation basics: win-win, BATNA, anchoring",
+            "Conflict resolution: approaches, de-escalation techniques",
+            "Presentation skills: structure, storytelling, visual aids",
+            "Report writing: executive summary, findings, recommendations"
+          ],
+          "prerequisites": ["Business Analysis Core Concepts"],
+          "nextSkill": {
+            "name": "Stakeholder Management",
+            "description": "Học cách quản lý và làm việc với stakeholders."
+          }
+        },
+        {
+          "name": "Stakeholder Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Communication & Soft Skills",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Stakeholder identification: brainstorming, organizational chart",
+            "Stakeholder analysis: Power/Interest Grid, RACI Matrix",
+            "Stakeholder mapping: influence, impact, attitude",
+            "Engagement strategies: informed, consulted, involved, empowered",
+            "Managing expectations: realistic commitments, regular updates",
+            "Building relationships: trust, credibility, rapport",
+            "Dealing with difficult stakeholders: techniques, patience",
+            "Stakeholder communication plan: frequency, channel, content",
+            "Political awareness: navigating organizational politics",
+            "Escalation strategies: when and how to escalate"
+          ],
+          "prerequisites": ["Communication Skills"],
+          "nextSkill": {
+            "name": "Facilitation & Workshop",
+            "description": "Học cách tổ chức và điều hành workshop hiệu quả."
+          }
+        },
+        {
+          "name": "Facilitation & Workshop",
+          "difficulty": "Trung cấp",
+          "skillType": "Communication & Soft Skills",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Workshop planning: objectives, agenda, participant selection",
+            "Facilitation techniques: icebreakers, brainstorming, dot voting",
+            "Requirement workshops: JAD sessions, discovery sessions",
+            "User story mapping workshops",
+            "Process improvement workshops: Lean, Six Sigma basics",
+            "Retrospective facilitation",
+            "Managing group dynamics: dominant personalities, quiet participants",
+            "Time management trong workshops",
+            "Visual facilitation: sketching, whiteboarding",
+            "Documentation during workshops: notes, action items, decisions",
+            "Post-workshop follow-up: minutes, action tracking"
+          ],
+          "prerequisites": ["Stakeholder Management"],
+          "nextSkill": {
+            "name": "Requirements Elicitation",
+            "description": "Học cách thu thập yêu cầu từ stakeholders."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Requirements Management",
+      "description": "Thu thập, phân tích, tài liệu hóa và quản lý yêu cầu dự án.",
+      "skills": [
+        {
+          "name": "Requirements Elicitation",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Management",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Elicitation techniques overview",
+            "Interviews: preparation, questioning techniques (open, closed, probing)",
+            "Questionnaires/Surveys: design, distribution, analysis",
+            "Observation/Job shadowing: watching users work",
+            "Document analysis: reviewing existing documentation",
+            "Brainstorming: structured vs unstructured",
+            "Focus groups: facilitating group discussions",
+            "Prototyping: low-fidelity, high-fidelity, throwaway vs evolutionary",
+            "Interface analysis: integrating with external systems",
+            "Reverse engineering: understanding legacy systems",
+            "Contextual inquiry: understanding work in context",
+            "Elicitation results: validating, organizing, documenting"
+          ],
+          "prerequisites": ["Facilitation & Workshop"],
+          "nextSkill": {
+            "name": "Requirements Documentation",
+            "description": "Học cách tài liệu hóa yêu cầu chi tiết."
+          }
+        },
+        {
+          "name": "Requirements Documentation",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Management",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "BRD (Business Requirements Document): structure, content",
+            "FRD (Functional Requirements Document): detailed specs",
+            "SRS (Software Requirements Specification)",
+            "User Stories format: As a... I want... So that...",
+            "Acceptance Criteria: Given/When/Then (Gherkin syntax)",
+            "Use Cases: actors, scenarios, flow, extensions",
+            "User Story Mapping: user activities, tasks, releases",
+            "Epic, Feature, Story hierarchy",
+            "Requirements traceability matrix (RTM)",
+            "Data Dictionary: data elements, definitions, formats",
+            "Business Rules catalog",
+            "Non-functional requirements: performance, security, usability",
+            "Wireframes và mockups: low-fi, high-fi",
+            "Prototyping tools: Figma, Balsamiq, Axure"
+          ],
+          "prerequisites": ["Requirements Elicitation"],
+          "nextSkill": {
+            "name": "Requirements Analysis & Validation",
+            "description": "Phân tích và xác nhận yêu cầu với stakeholders."
+          }
+        },
+        {
+          "name": "Requirements Analysis & Validation",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Management",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Requirements prioritization: MoSCoW, Kano Model, Value vs Effort",
+            "Requirements分解: breaking down epics into stories",
+            "Gap analysis: current state vs future state",
+            "Feasibility analysis: technical, operational, economic",
+            "Risk assessment cho requirements",
+            "Requirements validation techniques: reviews, walkthroughs, prototyping",
+            "Requirements sign-off:获取正式批准",
+            "Managing requirements changes: change control process",
+            "Requirements traceability: linking requirements to design, test cases",
+            "Conflict resolution: handling conflicting requirements",
+            "Requirements repository: storing, organizing, versioning"
+          ],
+          "prerequisites": ["Requirements Documentation"],
+          "nextSkill": {
+            "name": "Process Modeling & Analysis",
+            "description": "Học cách mô hình hóa và phân tích quy trình kinh doanh."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Process Modeling & Analysis",
+      "description": "Mô hình hóa quy trình kinh doanh và phân tích hiệu quả.",
+      "skills": [
+        {
+          "name": "Process Modeling (BPMN)",
+          "difficulty": "Trung cấp",
+          "skillType": "Process Modeling & Analysis",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Business Process Modeling: purpose, benefits",
+            "BPMN 2.0 fundamentals: events, activities, gateways, flows",
+            "BPMN notations: start/end events, tasks, sub-processes",
+            "Gateway types: exclusive, parallel, inclusive, event-based",
+            "Sequence flows và message flows",
+            "Swimlanes: pools, lanes, responsibilities",
+            "Process hierarchies: level 0, 1, 2 diagrams",
+            "As-Is vs To-Be process modeling",
+            "Process improvement: Lean, Six Sigma basics",
+            "Value stream mapping",
+            "Bottleneck identification và elimination",
+            "Process metrics: cycle time, throughput, efficiency",
+            "BPMN tools: Bizagi, Camunda, Lucidchart"
+          ],
+          "prerequisites": ["Requirements Analysis & Validation"],
+          "nextSkill": {
+            "name": "UML Diagrams",
+            "description": "Học cách vẽ các loại UML diagram."
+          }
+        },
+        {
+          "name": "UML Diagrams",
+          "difficulty": "Trung cấp",
+          "skillType": "Process Modeling & Analysis",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "UML overview: structural vs behavioral diagrams",
+            "Use Case Diagram: actors, use cases, relationships",
+            "Activity Diagram: flows, decisions, parallel activities",
+            "Sequence Diagram: objects, messages, lifelines, activation",
+            "Class Diagram: classes, attributes, methods, relationships",
+            "State Diagram: states, transitions, events, guards",
+            "Component Diagram: components, interfaces, dependencies",
+            "Deployment Diagram: nodes, artifacts, connections",
+            "ER Diagram: entities, attributes, relationships (Crow's Foot)",
+            "When to use which diagram type",
+            "UML tools: draw.io, Enterprise Architect, PlantUML, StarUML",
+            "Diagramming best practices: clarity, consistency, naming"
+          ],
+          "prerequisites": ["Process Modeling (BPMN)"],
+          "nextSkill": {
+            "name": "Data Modeling",
+            "description": "Học cách thiết kế data model cho hệ thống."
+          }
+        },
+        {
+          "name": "Data Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "Process Modeling & Analysis",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Data modeling concepts: entity, attribute, relationship",
+            "Conceptual data model: high-level entities và relationships",
+            "Logical data model: detailed attributes, keys, relationships",
+            "Physical data model: tables, columns, indexes, constraints",
+            "ER Diagram: Crow's Foot notation, Chen notation",
+            "Relationship types: 1:1, 1:N, N:M",
+            "Normalization: 1NF, 2NF, 3NF, BCNF",
+            "Denormalization: khi nào cần, trade-offs",
+            "Data dictionary: definitions, data types, constraints",
+            "Master data management (MDM) concepts",
+            "Data quality: accuracy, completeness, consistency, timeliness",
+            "Data governance basics",
+            "Data modeling tools: ERwin, dbdiagram.io, DBeaver"
+          ],
+          "prerequisites": ["UML Diagrams"],
+          "nextSkill": {
+            "name": "User Experience (UX) Basics",
+            "description": "Nắm vững nguyên tắc UX để tạo sản phẩm tốt hơn."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "UX & Product Thinking",
+      "description": "Nắm vững nguyên tắc UX và tư duy sản phẩm để tạo giá trị cho người dùng.",
+      "skills": [
+        {
+          "name": "User Experience (UX) Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "UX & Product Thinking",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "UX là gì: difference between UX, UI, CX",
+            "UX principles: usability, accessibility, desirability",
+            "User-centered design (UCD) process",
+            "User personas: tạo và sử dụng personas",
+            "User journeys: mapping user interactions với product",
+            "Empathy maps: understanding user thoughts, feelings, actions",
+            "Jobs to be Done (JTBD) framework",
+            "User story mapping: activities, tasks, releases",
+            "Wireframing: low-fidelity, mid-fidelity, high-fidelity",
+            "Information architecture: organizing content, navigation",
+            "Usability heuristics: Nielsen's 10 usability heuristics",
+            "Accessibility basics: WCAG principles"
+          ],
+          "prerequisites": ["Data Modeling"],
+          "nextSkill": {
+            "name": "Product Management Basics",
+            "description": "Nắm vững tư duy sản phẩm và product lifecycle."
+          }
+        },
+        {
+          "name": "Product Management Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "UX & Product Thinking",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Product lifecycle: introduction, growth, maturity, decline",
+            "Product vision và strategy",
+            "Product roadmap: themes, features, releases",
+            "MVP (Minimum Viable Product) concept",
+            "Product-market fit: measuring và achieving",
+            "Metrics và KPIs: AARRR framework, North Star Metric",
+            "Competitive analysis: SWOT, Porter's Five Forces",
+            "Market research techniques",
+            "Customer discovery: validate assumptions",
+            "A/B testing basics: design, execution, analysis",
+            "Feature prioritization frameworks: RICE, ICE, Weighted Scoring",
+            "Product discovery vs delivery"
+          ],
+          "prerequisites": ["User Experience (UX) Basics"],
+          "nextSkill": {
+            "name": "Agile Methodologies",
+            "description": "Học cách làm việc trong môi trường Agile."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Project Methodologies",
+      "description": "Làm việc hiệu quả trong các phương pháp quản lý dự án: Agile, Scrum, Waterfall.",
+      "skills": [
+        {
+          "name": "Agile Methodologies",
+          "difficulty": "Cơ bản",
+          "skillType": "Project Methodologies",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Agile Manifesto: 4 values, 12 principles",
+            "Agile vs Waterfall: comparison, when to use which",
+            "Agile frameworks overview: Scrum, Kanban, XP, SAFe",
+            "User stories trong Agile: INVEST criteria",
+            "Agile estimation: story points, t-shirt sizing, planning poker",
+            "Velocity và capacity planning",
+            "Agile metrics: burndown chart, burnup chart, cycle time",
+            "Continuous improvement: retrospectives, kaizen",
+            "Definition of Done (DoD) và Definition of Ready (DoR)",
+            "Agile tools: Jira, Azure DevOps, Trello"
+          ],
+          "prerequisites": ["Product Management Basics"],
+          "nextSkill": {
+            "name": "Scrum Framework",
+            "description": "Học chi tiết framework Scrum."
+          }
+        },
+        {
+          "name": "Scrum Framework",
+          "difficulty": "Trung cấp",
+          "skillType": "Project Methodologies",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Scrum overview: values, roles, events, artifacts",
+            "Scrum Roles: Product Owner, Scrum Master, Development Team",
+            "BA role trong Scrum: Product Owner vs BA",
+            "Sprint Planning: sprint goal, backlog selection",
+            "Daily Scrum: purpose, format, anti-patterns",
+            "Sprint Review: demo, feedback, adaptation",
+            "Sprint Retrospective: improving process",
+            "Product Backlog:创建, refinement, prioritization",
+            "Sprint Backlog: commitment, completion criteria",
+            "Scrum artifacts: Product Backlog, Sprint Backlog, Increment",
+            "Scrum scales: Nexus, LeSS, SAFe",
+            "Common Scrum anti-patterns và how to avoid"
+          ],
+          "prerequisites": ["Agile Methodologies"],
+          "nextSkill": {
+            "name": "Kanban",
+            "description": "Học phương pháp Kanban cho quản lý công việc."
+          }
+        },
+        {
+          "name": "Kanban",
+          "difficulty": "Cơ bản",
+          "skillType": "Project Methodologies",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Kanban basics: visual workflow, work-in-progress limits",
+            "Kanban board: columns, cards, swimlanes",
+            "Kanban principles: visualize, limit WIP, manage flow, make policies explicit",
+            "Kanban practices: implement feedback loops, improve collaboratively",
+            "WIP limits: setting, enforcing, benefits",
+            "Lead time và cycle time",
+            "Cumulative Flow Diagram (CFD)",
+            "Kanban vs Scrum: when to use which",
+            "Kanban tools: Trello, Jira, physical boards",
+            "Kanban metrics: throughput, WIP, service level agreements",
+            "Personal Kanban: individual productivity"
+          ],
+          "prerequisites": ["Scrum Framework"],
+          "nextSkill": {
+            "name": "Waterfall Methodology",
+            "description": "Nắm vững phương pháp Waterfall truyền thống."
+          }
+        },
+        {
+          "name": "Waterfall Methodology",
+          "difficulty": "Cơ bản",
+          "skillType": "Project Methodologies",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Waterfall phases: Requirements, Design, Implementation, Testing, Deployment, Maintenance",
+            "Waterfall vs Agile: comparison, trade-offs",
+            "When to use Waterfall: regulated industries, fixed scope",
+            "Requirements phase: BRD, sign-off process",
+            "Design phase: technical design, architecture",
+            "V-Model: verification và validation",
+            "Change management trong Waterfall",
+            "Gate reviews và phase approvals",
+            "Waterfall documentation requirements",
+            "Hybrid approaches: Waterfall + Agile"
+          ],
+          "prerequisites": ["Kanban"],
+          "nextSkill": {
+            "name": "Data Analysis & SQL",
+            "description": "Học cách phân tích data và sử dụng SQL."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Data Analysis",
+      "description": "Phân tích dữ liệu để hỗ trợ quyết định kinh doanh.",
+      "skills": [
+        {
+          "name": "Data Analysis & SQL",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Analysis",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Data analysis process: collect, process, analyze, visualize",
+            "SQL basics: SELECT, FROM, WHERE, ORDER BY, LIMIT",
+            "SQL joins: INNER, LEFT, RIGHT, FULL OUTER, CROSS",
+            "SQL aggregation: GROUP BY, HAVING, COUNT, SUM, AVG, MIN, MAX",
+            "SQL subqueries và CTEs",
+            "SQL functions: string, date, conditional (CASE WHEN)",
+            "Data quality checks: NULLs, duplicates, consistency",
+            "Descriptive statistics: mean, median, mode, standard deviation",
+            "Data segmentation: grouping, cohort analysis",
+            "Trend analysis: time series basics",
+            "Correlation vs causation",
+            "SQL tools: MySQL, PostgreSQL, SQLite"
+          ],
+          "prerequisites": ["Waterfall Methodology"],
+          "nextSkill": {
+            "name": "Excel & Spreadsheet Analysis",
+            "description": "Nắm vững Excel cho phân tích dữ liệu."
+          }
+        },
+        {
+          "name": "Excel & Spreadsheet Analysis",
+          "difficulty": "Cơ bản",
+          "skillType": "Data Analysis",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Excel fundamentals: navigation, formatting, shortcuts",
+            "Formulas: SUM, AVERAGE, COUNT, IF, VLOOKUP, INDEX/MATCH",
+            "Pivot Tables: summarizing, grouping, filtering",
+            "Conditional formatting: highlighting data patterns",
+            "Data validation: input rules, dropdown lists",
+            "Charts: bar, line, pie, combo - choosing the right type",
+            "Data analysis: sorting, filtering, subtotals",
+            "What-If Analysis: Goal Seek, Scenario Manager, Data Tables",
+            "Macros basics: recording, running simple macros",
+            "Power Query: importing, transforming data",
+            "Data cleaning techniques in Excel",
+            "Large dataset management: tables, structured references"
+          ],
+          "prerequisites": ["Data Analysis & SQL"],
+          "nextSkill": {
+            "name": "Data Visualization & BI Tools",
+            "description": "Học cách visualize data và sử dụng BI tools."
+          }
+        },
+        {
+          "name": "Data Visualization & BI Tools",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Analysis",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Data visualization principles: clarity, accuracy, efficiency",
+            "Choosing the right chart type for data",
+            "Dashboard design: layout, interactivity, storytelling",
+            "Power BI: connecting data, creating reports, dashboards",
+            "Power BI: DAX basics, measures, calculated columns",
+            "Power BI: visualizations, filters, slicers",
+            "Tableau overview: connecting data, creating worksheets",
+            "Google Data Studio (Looker Studio): basics",
+            "Dashboard best practices: KPIs, trends, comparisons",
+            "Data storytelling: narrative, insights, recommendations",
+            "Report automation: scheduled refresh, distribution",
+            "Mobile dashboards: responsive design",
+            "Data literacy: helping others understand data"
+          ],
+          "prerequisites": ["Excel & Spreadsheet Analysis"],
+          "nextSkill": {
+            "name": "Business Intelligence Concepts",
+            "description": "Nắm vững khái niệm BI và analytics."
+          }
+        },
+        {
+          "name": "Business Intelligence Concepts",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Analysis",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "BI là gì: converting data into actionable insights",
+            "OLAP vs OLTP: differences, use cases",
+            "Data warehouse concepts: ETL, dimensional modeling",
+            "Star schema và snowflake schema",
+            "Metrics và KPIs: defining, measuring, reporting",
+            "Descriptive, diagnostic, predictive, prescriptive analytics",
+            "Reporting vs analytics: difference",
+            "Self-service BI: empowering business users",
+            "Data governance: policies, quality, security",
+            "Data-driven culture: promoting data literacy",
+            "Common BI challenges và如何克服"
+          ],
+          "prerequisites": ["Data Visualization & BI Tools"],
+          "nextSkill": {
+            "name": "Domain Knowledge & Specialization",
+            "description": "Phát triển kiến thức chuyên ngành."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Domain Knowledge & Specialization",
+      "description": "Phát triển kiến thức chuyên sâu theo ngành và các kỹ năng nâng cao.",
+      "skills": [
+        {
+          "name": "Domain Knowledge",
+          "difficulty": "Trung cấp",
+          "skillType": "Domain Knowledge & Specialization",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Tại sao domain knowledge quan trọng cho BA",
+            "Domain research techniques: industry reports, expert interviews",
+            "Building domain vocabulary và glossary",
+            "Understanding domain-specific regulations compliance",
+            "Common domains: Banking/Finance, Healthcare, E-commerce, Telecom, Insurance",
+            "Banking/Finance basics: accounts, transactions, compliance, KYC",
+            "Healthcare basics: patient flow, EHR, HIPAA compliance",
+            "E-commerce basics: catalog, cart, checkout, fulfillment",
+            "Supply chain basics: procurement, inventory, logistics",
+            "Manufacturing basics: production, quality control",
+            "Building domain expertise:持续学习, industry events"
+          ],
+          "prerequisites": ["Business Intelligence Concepts"],
+          "nextSkill": {
+            "name": "Advanced BA Techniques",
+            "description": "Áp dụng các kỹ thuật BA nâng cao."
+          }
+        },
+        {
+          "name": "Advanced BA Techniques",
+          "difficulty": "Nâng cao",
+          "skillType": "Domain Knowledge & Specialization",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Business case development: ROI analysis, cost-benefit",
+            "Feasibility studies: technical, operational, economic",
+            "Capability maturity models (CMM)",
+            "SWOT analysis và competitive analysis",
+            "Gap analysis: current state, future state, roadmap",
+            "Impact analysis: assessing changes to requirements",
+            "Risk analysis: identification, assessment, mitigation",
+            "Cost estimation: techniques, accuracy levels",
+            "Vendor evaluation: RFP, vendor comparison, selection criteria",
+            "Solution evaluation: benefits realization, value assessment",
+            "Post-implementation review: lessons learned",
+            "Organizational change management basics"
+          ],
+          "prerequisites": ["Domain Knowledge"],
+          "nextSkill": {
+            "name": "Tools & Software Proficiency",
+            "description": "Thành thạo các công cụ làm việc của BA."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Tools & Certification",
+      "description": "Thành thạo các công cụ BA và chuẩn bị chứng chỉ chuyên ngành.",
+      "skills": [
+        {
+          "name": "BA Tools & Software",
+          "difficulty": "Cơ bản",
+          "skillType": "Tools & Certification",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Jira: project management, backlog management, boards, reports",
+            "Jira: creating issues, sprint management, filters, dashboards",
+            "Confluence: documentation, pages, spaces, templates",
+            "Trello: boards, cards, lists, power-ups",
+            "Azure DevOps: boards, backlogs, work items",
+            "Draw.io (diagrams.net): flowcharts, BPMN, UML",
+            "Lucidchart: collaboration, templates",
+            "Figma basics: viewing designs, commenting, handoff",
+            "Balsamiq: low-fidelity wireframes",
+            "Microsoft Visio: professional diagrams",
+            "Miro/Mural: virtual whiteboarding, workshops",
+            "Postman: API testing basics",
+            "Slack/Teams: collaboration, communication",
+            "Microsoft Office: Word, PowerPoint, Excel nâng cao"
+          ],
+          "prerequisites": ["Advanced BA Techniques"],
+          "nextSkill": {
+            "name": "Professional Certifications",
+            "description": "Chuẩn bị các chứng chỉ chuyên ngành BA."
+          }
+        },
+        {
+          "name": "Professional Certifications",
+          "difficulty": "Nâng cao",
+          "skillType": "Tools & Certification",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "CCBA (Certification of Capability in Business Analysis): eligibility, domains, preparation",
+            "CBAP (Certified Business Analysis Professional): advanced certification",
+            "PMI-PBA (Professional in Business Analysis): PMI certification",
+            "ECBA (Entry Certificate in Business Analysis): beginner certification",
+            "Scrum certifications: CSM, PSM, CSPO",
+            "Six Sigma certifications: Yellow Belt, Green Belt",
+            "Product Owner certifications: CSPO, PSPO",
+            "Certification preparation: study plan, resources, practice exams",
+            "Building a BA portfolio: documenting work, case studies",
+            "Networking: BA communities, meetups, conferences",
+            "Career progression: Junior BA → BA → Senior BA → Lead BA → BA Manager",
+            "Mentoring và coaching: developing others",
+            "Continuous learning: staying current with trends, tools, methodologies"
+          ],
+          "prerequisites": ["BA Tools & Software"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Business Analyst và sẵn sàng cho công việc thực tế."
+          }
+        }
+      ]
+    }
+  ]
+}

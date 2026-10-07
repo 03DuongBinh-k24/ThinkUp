@@ -1,0 +1,746 @@
+{
+  "roadmap": {
+    "name": "Devops-engineering",
+    "description": "Lộ trình trở thành DevOps Engineer - người kết nối giữa Development và Operations, xây dựng pipeline CI/CD, quản lý infrastructure, containers, automation và monitoring. Bắt đầu từ nền tảng Linux/networking, phát triển kỹ năng scripting, containers, IaC, cloud, đến SRE và security practices."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng Linux, networking và các khái niệm cơ bản của IT infrastructure.",
+      "skills": [
+        {
+          "name": "Linux Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Linux installation: Ubuntu, CentOS, Debian",
+            "Linux filesystem: hierarchy, directories, files",
+            "File operations: ls, cd, pwd, mkdir, rm, cp, mv, touch, cat, less, more",
+            "File permissions: chmod, chown, chgrp, octal permissions",
+            "User management: useradd, usermod, userdel, passwd, groups",
+            "Process management: ps, top, htop, kill, killall, nice, nohup",
+            "Package management: apt (Debian/Ubuntu), yum/dnf (RHEL/CentOS)",
+            "Service management: systemctl, service",
+            "Disk management: df, du, mount, fdisk, lsblk",
+            "Log management: journalctl, /var/log, syslog",
+            "Cron jobs: scheduling tasks",
+            "Shell redirection: stdin, stdout, stderr, pipes",
+            "SSH: key-based authentication, config, tunneling",
+            "Firewall basics: iptables, ufw",
+            "System monitoring: uptime, free, vmstat, iostat"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Networking Fundamentals",
+            "description": "Nắm vững kiến thức networking cơ bản."
+          }
+        },
+        {
+          "name": "Networking Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "OSI Model: 7 layers, functions, protocols",
+            "TCP/IP Model: comparison với OSI",
+            "IP addressing: IPv4, IPv6, subnetting, CIDR notation",
+            "DNS: records (A, AAAA, CNAME, MX, TXT, NS), DNS resolution process",
+            "HTTP/HTTPS: methods, status codes, headers, TLS/SSL handshake",
+            "Load balancing concepts: round-robin, least connections",
+            "Proxy servers: forward proxy, reverse proxy",
+            "NAT, PAT, port forwarding",
+            "Firewall concepts: packet filtering, stateful inspection",
+            "VPN basics: types, protocols",
+            "Network troubleshooting: ping, traceroute, nslookup, dig, netstat, ss, curl",
+            "HTTP tools: curl, wget, httpie",
+            "SSL/TLS certificates: generation, installation, Let's Encrypt"
+          ],
+          "prerequisites": ["Linux Fundamentals"],
+          "nextSkill": {
+            "name": "Computer Science Basics",
+            "description": "Nắm vững kiến thức CS cơ bản cho DevOps."
+          }
+        },
+        {
+          "name": "Computer Science Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Cấu trúc dữ liệu cơ bản: Array, Stack, Queue, Hash Table",
+            "Thuật toán: search, sort basics",
+            "Big O Notation: O(1), O(log n), O(n)",
+            "Git version control: init, add, commit, branch, merge, push, pull",
+            "Git workflow: feature branch, main/develop",
+            "Remote repositories: GitHub, GitLab, Bitbucket",
+            "Code review basics: pull requests, merge requests",
+            "Command line proficiency: navigation, file operations, processes",
+            "Text editors: vim, nano, VS Code",
+            "Environment variables: PATH, HOME, custom variables",
+            "Shell scripting basics: variables, conditionals, loops"
+          ],
+          "prerequisites": ["Networking Fundamentals"],
+          "nextSkill": {
+            "name": "Bash Scripting",
+            "description": "Bắt đầu học scripting để automation."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Scripting & Programming",
+      "description": "Phát triển kỹ năng scripting để automation và tooling.",
+      "skills": [
+        {
+          "name": "Bash Scripting",
+          "difficulty": "Cơ bản",
+          "skillType": "Scripting & Programming",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Shell script structure: shebang, variables, comments",
+            "Variables: environment, local, special variables ($0, $1, $@, $?, $$)",
+            "User input: read command",
+            "Conditionals: if/else, test command, [ ], [[ ]]",
+            "Comparison operators: -eq, -ne, -lt, -gt, -le, -ge, =, !=, -z, -n",
+            "File test operators: -f, -d, -e, -r, -w, -x, -s",
+            "Logical operators: &&, ||, !",
+            "Loops: for, while, until, break, continue",
+            "Arrays: indexed arrays, associative arrays",
+            "Functions:定义, parameters, return values",
+            "String manipulation: substring, length, replace",
+            "Regular expressions basics",
+            "Error handling: exit codes, trap",
+            "Practical scripts: backup, monitoring, deployment",
+            "Script best practices: debugging, logging, documentation"
+          ],
+          "prerequisites": ["Computer Science Basics"],
+          "nextSkill": {
+            "name": "Python for DevOps",
+            "description": "Học Python cho automation và tooling nâng cao."
+          }
+        },
+        {
+          "name": "Python for DevOps",
+          "difficulty": "Trung cấp",
+          "skillType": "Scripting & Programming",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Python basics: variables, types, operators",
+            "Control flow: if/else, for, while",
+            "Functions: parameters, return, *args, **kwargs",
+            "File I/O: reading, writing, working with files",
+            "Modules và packages: import, pip, virtual environments",
+            "String manipulation: formatting, regex (re module)",
+            "Error handling: try/except, custom exceptions",
+            "Data structures: lists, dictionaries, sets, tuples",
+            "JSON processing: parsing, serialization",
+            "HTTP requests: requests library",
+            "Working with APIs: REST, authentication",
+            "Subprocess: running shell commands from Python",
+            "argparse: building CLI tools",
+            "Paramiko: SSH automation",
+            "Boto3: AWS SDK for Python",
+            "PyYAML: working with YAML files",
+            "Logging: log levels, formatting, handlers",
+            "Unit testing: pytest basics",
+            "DevOps tools: creating automation scripts",
+            "Configuration management scripts"
+          ],
+          "prerequisites": ["Bash Scripting"],
+          "nextSkill": {
+            "name": "Go (Optional)",
+            "description": "Học Go cho DevOps tooling (optional nhưng recommended)."
+          }
+        },
+        {
+          "name": "Go (Optional)",
+          "difficulty": "Nâng cao",
+          "skillType": "Scripting & Programming",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Go basics: variables, types, operators",
+            "Control flow: if, for, switch",
+            "Functions và methods",
+            "Structs và interfaces",
+            "Packages và modules",
+            "Error handling patterns",
+            "Goroutines và channels: concurrency",
+            "File I/O và networking",
+            "Working with JSON/YAML/TOML",
+            "Building CLI tools với cobra",
+            "HTTP client và server",
+            "Testing trong Go",
+            "When to use Go vs Python",
+            "Go trong DevOps tools: Docker, Kubernetes, Terraform"
+          ],
+          "prerequisites": ["Python for DevOps"],
+          "nextSkill": {
+            "name": "CI/CD Fundamentals",
+            "description": "Bắt đầu học CI/CD pipelines."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "CI/CD & Automation",
+      "description": "Xây dựng và quản lý pipelines CI/CD để tự động hóa build, test, deploy.",
+      "skills": [
+        {
+          "name": "CI/CD Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "CI/CD & Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "CI/CD concepts: Continuous Integration, Delivery, Deployment",
+            "CI/CD pipeline stages: build, test, deploy",
+            "Pipeline design: triggers, stages, steps, artifacts",
+            "Environment management: development, staging, production",
+            "Deployment strategies: blue-green, canary, rolling, recreate",
+            "Rollback strategies: database, code, configuration",
+            "Secret management: credentials, API keys, certificates",
+            "Branching strategies: GitFlow, GitHub Flow, trunk-based",
+            "Pipeline as Code: defining pipelines in version control",
+            "Quality gates: linting, testing, security scanning",
+            "Artifact management: storing, versioning, promotion",
+            "Release management: versioning, changelogs, release notes"
+          ],
+          "prerequisites": ["Go (Optional)"],
+          "nextSkill": {
+            "name": "GitHub Actions",
+            "description": "Học GitHub Actions cho CI/CD."
+          }
+        },
+        {
+          "name": "GitHub Actions",
+          "difficulty": "Trung cấp",
+          "skillType": "CI/CD & Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "GitHub Actions overview: workflows, jobs, steps, triggers",
+            "Workflow syntax: name, on, jobs, steps",
+            "Triggers: push, pull_request, schedule, workflow_dispatch",
+            "Jobs và steps: runs-on, uses, run, with, env",
+            "Actions marketplace: reusable actions",
+            "Custom actions: JavaScript, Docker, composite",
+            "Secrets và environment variables",
+            "Matrix builds: testing across multiple OS/versions",
+            "Caching: dependencies, Docker layers",
+            "Artifacts: uploading, downloading build outputs",
+            "Self-hosted runners: setup, management",
+            "Concurrency control: preventing duplicate runs",
+            "GitHub Actions examples: Node.js, Python, Docker",
+            "Reusable workflows: sharing pipeline logic",
+            "GitHub Actions best practices: security, organization"
+          ],
+          "prerequisites": ["CI/CD Fundamentals"],
+          "nextSkill": {
+            "name": "Jenkins",
+            "description": "Học Jenkins cho CI/CD (alternative)."
+          }
+        },
+        {
+          "name": "Jenkins",
+          "difficulty": "Trung cấp",
+          "skillType": "CI/CD & Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Jenkins overview: architecture, master/agent",
+            "Jenkins installation: Docker, package manager",
+            "Jenkins UI: dashboard, jobs, builds, console output",
+            "Job types: Freestyle, Pipeline, Multibranch",
+            "Pipeline as Code: Jenkinsfile (Declarative, Scripted)",
+            "Pipeline syntax: stages, steps, post, agent",
+            "Shared libraries: reusable pipeline code",
+            "Plugins: installation, management, popular plugins",
+            "Credentials management: username/password, SSH keys",
+            "Agents: configuring, adding, managing",
+            "Triggers: SCM poll, timer, webhook",
+            "Post-build actions: notifications, deployments",
+            "Jenkins security: authentication, authorization, CSRF",
+            "Jenkins best practices: pipeline organization, caching",
+            "Jenkins vs GitHub Actions: comparison"
+          ],
+          "prerequisites": ["GitHub Actions"],
+          "nextSkill": {
+            "name": "GitLab CI/CD",
+            "description": "Học GitLab CI/CD (alternative)."
+          }
+        },
+        {
+          "name": "GitLab CI/CD",
+          "difficulty": "Trung cấp",
+          "skillType": "CI/CD & Automation",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "GitLab CI/CD overview: integrated solution",
+            ".gitlab-ci.yml: configuration file",
+            "Jobs và stages: defining pipeline structure",
+            "Runner types: shared, group, project-specific",
+            "Docker executor: using containers for jobs",
+            "Shell executor: running on host",
+            "Cache và artifacts: optimizing pipeline",
+            "Variables: predefined, custom, protected, masked",
+            "Services: database, Redis in pipelines",
+            "Environments: deployment targets",
+            "Review apps: dynamic environments",
+            "GitLab Container Registry: storing Docker images",
+            "Security scanning: SAST, DAST, dependency scanning",
+            "GitLab vs GitHub Actions: comparison",
+            "GitLab CI/CD best practices"
+          ],
+          "prerequisites": ["Jenkins"],
+          "nextSkill": {
+            "name": "Docker",
+            "description": "Bắt đầu học containerization với Docker."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Containerization",
+      "description": "Container hóa ứng dụng với Docker và orchestration với Kubernetes.",
+      "skills": [
+        {
+          "name": "Docker",
+          "difficulty": "Trung cấp",
+          "skillType": "Containerization",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Docker fundamentals: containers, images, registries, layers",
+            "Dockerfile: instructions (FROM, RUN, COPY, ADD, CMD, ENTRYPOINT, EXPOSE, WORKDIR, ENV)",
+            "Building images: docker build, tags, multi-stage builds",
+            "Running containers: docker run, ports, volumes, networks",
+            "Docker Compose: multi-container applications",
+            "Docker Compose configuration: services, build, ports, volumes, env_file",
+            "Docker volumes: named volumes, bind mounts, anonymous volumes",
+            "Docker networking: bridge, host, overlay, none",
+            "Docker security: non-root user, minimal images, secrets",
+            "Docker registry: Docker Hub, private registries, AWS ECR",
+            "Docker debugging: logs, exec, inspect, top, stats",
+            "Docker optimization: .dockerignore, layer caching, image size",
+            "Docker for databases: PostgreSQL, MongoDB, Redis",
+            "Docker environments: development, testing, production",
+            "Docker Swarm basics: clustering, service management"
+          ],
+          "prerequisites": ["GitLab CI/CD"],
+          "nextSkill": {
+            "name": "Kubernetes",
+            "description": "Học Kubernetes cho container orchestration."
+          }
+        },
+        {
+          "name": "Kubernetes",
+          "difficulty": "Nâng cao",
+          "skillType": "Containerization",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Kubernetes architecture: control plane, nodes, components",
+            "Kubernetes objects: Pods, ReplicaSets, Deployments, Services",
+            "Pods: lifecycle, containers, init containers, sidecars",
+            "Deployments: rolling updates, rollback, scaling",
+            "Services: ClusterIP, NodePort, LoadBalancer, ExternalName",
+            "Ingress: routing, TLS termination, path-based routing",
+            "ConfigMaps và Secrets: managing configuration",
+            "Namespaces: organizing resources",
+            "Persistent Volumes: storage, PVC, StorageClasses",
+            "StatefulSets: stateful applications",
+            "DaemonSets: running pods on all nodes",
+            "Jobs và CronJobs: batch processing",
+            "Resource limits: CPU, memory requests and limits",
+            "Health checks: liveness probe, readiness probe, startup probe",
+            "Horizontal Pod Autoscaler (HPA): auto-scaling",
+            "kubectl: command-line tool, common commands",
+            "Helm: package manager, charts, values",
+            "Kubernetes networking: CNI, service mesh basics",
+            "Kubernetes security: RBAC, NetworkPolicies, PodSecurity",
+            "Kubernetes monitoring: metrics-server, Prometheus"
+          ],
+          "prerequisites": ["Docker"],
+          "nextSkill": {
+            "name": "Infrastructure as Code",
+            "description": "Học cách quản lý infrastructure bằng code."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Infrastructure as Code",
+      "description": "Quản lý infrastructure bằng code với Terraform, Ansible và CloudFormation.",
+      "skills": [
+        {
+          "name": "Terraform",
+          "difficulty": "Trung cấp",
+          "skillType": "Infrastructure as Code",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Infrastructure as Code concepts: declarative vs imperative",
+            "Terraform basics: providers, resources, data sources",
+            "HCL syntax: blocks, attributes, expressions",
+            "Terraform workflow: init, plan, apply, destroy",
+            "State management: local state, remote state (S3, Terraform Cloud)",
+            "State locking: preventing concurrent modifications",
+            "Modules: reusable components, input/output variables",
+            "Workspaces: managing multiple environments",
+            "Variables: types, defaults, validation, sensitive",
+            "Outputs: exporting values, using outputs",
+            "Data sources: querying existing resources",
+            "Provisioners: local-exec, remote-exec, file",
+            "Terraform Cloud/Enterprise: collaboration, state management",
+            "Terraform import: bringing existing resources under management",
+            "Terraform best practices: directory structure, naming, state",
+            "AWS provider: EC2, VPC, RDS, S3, IAM",
+            "GCP provider: compute, networking, storage",
+            "Azure provider: resources, networking, storage"
+          ],
+          "prerequisites": ["Kubernetes"],
+          "nextSkill": {
+            "name": "Ansible",
+            "description": "Học Ansible cho configuration management."
+          }
+        },
+        {
+          "name": "Ansible",
+          "difficulty": "Trung cấp",
+          "skillType": "Infrastructure as Code",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Ansible overview: agentless, push-based",
+            "Ansible architecture: control node, managed nodes, inventory",
+            "Inventory: static, dynamic, grouping hosts",
+            "Ad-hoc commands: running tasks on managed nodes",
+            "Playbooks: YAML format, tasks, handlers, variables",
+            "Modules: common modules (yum/apt, service, copy, template, user)",
+            "Variables: facts, playbook vars, inventory vars, extra vars",
+            "Conditionals: when clause, comparisons",
+            "Loops: with_items, loop, include_tasks",
+            "Handlers: triggered tasks, notify",
+            "Templates: Jinja2 templating, variables in templates",
+            "Roles: organizing playbooks, directory structure",
+            "Ansible Galaxy: shared roles, collections",
+            "Vault: encrypting sensitive data",
+            "Ansible best practices: task organization, idempotency",
+            "Ansible vs Terraform: differences, when to use which",
+            "Ansible for configuration management: installing packages, managing services",
+            "Ansible for provisioning: working with Terraform"
+          ],
+          "prerequisites": ["Terraform"],
+          "nextSkill": {
+            "name": "Cloud Platform (AWS)",
+            "description": "Bắt đầu học cloud platform."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Cloud Platforms",
+      "description": "Làm việc với các cloud platform: AWS, GCP, Azure.",
+      "skills": [
+        {
+          "name": "AWS Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Cloud Platforms",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "AWS overview: regions, availability zones, edge locations",
+            "IAM: users, groups, roles, policies, best practices",
+            "EC2: instances, security groups, key pairs, elastic IP, AMIs",
+            "VPC: subnets, route tables, internet gateway, NAT gateway, NACLs",
+            "S3: buckets, objects, policies, lifecycle, versioning, replication",
+            "RDS: managed databases, Multi-AZ, read replicas, backups",
+            "ElastiCache: managed Redis/Memcached",
+            "ELB: Application Load Balancer, Network Load Balancer",
+            "Auto Scaling Groups: scaling policies, lifecycle hooks",
+            "Lambda: serverless functions, triggers, layers",
+            "API Gateway: REST API, HTTP API, authorizers",
+            "CloudFront: CDN, caching, invalidation",
+            "Route 53: DNS management, health checks",
+            "CloudWatch: monitoring, alarms, logs, dashboards",
+            "ECS: container service, Fargate, task definitions",
+            "EKS: managed Kubernetes",
+            "AWS CLI: command-line interface, common commands",
+            "AWS cost management: pricing, Free Tier, Cost Explorer"
+          ],
+          "prerequisites": ["Ansible"],
+          "nextSkill": {
+            "name": "GCP Fundamentals",
+            "description": "Học Google Cloud Platform."
+          }
+        },
+        {
+          "name": "GCP Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Cloud Platforms",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "GCP overview: regions, zones, projects",
+            "IAM: users, service accounts, roles, policies",
+            "Compute Engine: VMs, instance groups, templates",
+            "VPC: subnets, firewall rules, routes, Cloud NAT",
+            "Cloud Storage: buckets, classes, lifecycle, versioning",
+            "Cloud SQL: managed databases, replicas, backups",
+            "Cloud Run: serverless containers",
+            "GKE: managed Kubernetes, node pools, autopilot",
+            "Cloud Functions: serverless functions",
+            "Cloud Build: CI/CD service",
+            "Cloud Monitoring: metrics, alerts, dashboards",
+            "Cloud Logging: log explorer, sinks, exports",
+            "Cloud CDN: caching, invalidation",
+            "Cloud Armor: DDoS protection, WAF",
+            "gcloud CLI: command-line interface",
+            "GCP vs AWS: comparison, migration considerations"
+          ],
+          "prerequisites": ["AWS Fundamentals"],
+          "nextSkill": {
+            "name": "Azure Fundamentals",
+            "description": "Học Microsoft Azure."
+          }
+        },
+        {
+          "name": "Azure Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Cloud Platforms",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Azure overview: regions, availability zones, resource groups",
+            "Azure AD: users, groups, service principals, managed identity",
+            "Virtual Machines: sizes, images, disks, availability sets",
+            "Virtual Networks: subnets, NSGs, peering, load balancers",
+            "Storage Accounts: blobs, files, tables, queues",
+            "Azure SQL: managed databases, elastic pools",
+            "Azure Kubernetes Service (AKS): clusters, node pools",
+            "Azure Functions: serverless compute",
+            "Azure DevOps: pipelines, repos, boards",
+            "Azure Monitor: metrics, alerts, log analytics",
+            "Azure CDN: caching, custom domains",
+            "Azure Key Vault: secrets, keys, certificates",
+            "Azure CLI: command-line interface",
+            "Azure vs AWS/GCP: comparison, migration",
+            "Azure cost management: pricing, budgets, reservations"
+          ],
+          "prerequisites": ["GCP Fundamentals"],
+          "nextSkill": {
+            "name": "Monitoring & Observability",
+            "description": "Học cách monitor và observe systems."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Monitoring & Observability",
+      "description": "Xây dựng hệ thống monitoring, logging và observability.",
+      "skills": [
+        {
+          "name": "Monitoring Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Monitoring & Observability",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Monitoring concepts: metrics, logs, traces",
+            "Monitoring pillars: availability, performance, capacity",
+            "Alerting: thresholds, escalation, notification channels",
+            "SLA, SLO, SLI:定义, measurement, commitments",
+            "Error budgets: managing reliability vs velocity",
+            "Dashboards: design, visualization, interactivity",
+            "On-call practices: rotations, runbooks, escalation",
+            "Incident management: detection, response, resolution, postmortem",
+            "Monitoring architecture: agents, collectors, storage, visualization",
+            "Data retention: storage, cost, compliance",
+            "Monitoring tools overview: Prometheus, Grafana, ELK, Datadog",
+            "Monitoring best practices: what to monitor, alert fatigue"
+          ],
+          "prerequisites": ["Azure Fundamentals"],
+          "nextSkill": {
+            "name": "Prometheus & Grafana",
+            "description": "Học monitoring stack phổ biến nhất."
+          }
+        },
+        {
+          "name": "Prometheus & Grafana",
+          "difficulty": "Trung cấp",
+          "skillType": "Monitoring & Observability",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Prometheus overview: pull-based metrics, time-series database",
+            "Prometheus architecture: server, exporters, Pushgateway",
+            "Metrics types: counter, gauge, histogram, summary",
+            "PromQL basics: queries, aggregation, functions",
+            "Prometheus exporters: node_exporter, blackbox_exporter, custom exporters",
+            "Service discovery: Kubernetes, Consul, EC2",
+            "Alerting rules: defining alerts, routing",
+            "Alertmanager: silencing, inhibition, routing, notification",
+            "Grafana overview: data sources, dashboards, panels",
+            "Grafana visualization: graphs, tables, heatmaps, singlestats",
+            "Grafana alerting: unified alerting, notification channels",
+            "Grafana variables: dynamic dashboards",
+            "Grafana plugins: extending functionality",
+            "Prometheus + Grafana integration",
+            "Recording rules: pre-computing expensive queries",
+            "Prometheus best practices: naming, instrumentation"
+          ],
+          "prerequisites": ["Monitoring Fundamentals"],
+          "nextSkill": {
+            "name": "ELK Stack (Elasticsearch, Logstash, Kibana)",
+            "description": "Học logging stack ELK."
+          }
+        },
+        {
+          "name": "ELK Stack",
+          "difficulty": "Nâng cao",
+          "skillType": "Monitoring & Observability",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "ELK Stack overview: Elasticsearch, Logstash, Kibana, Beats",
+            "Elasticsearch:索引, documents, mappings, queries",
+            "Elasticsearch architecture: clusters, nodes, shards, replicas",
+            "Logstash: input, filter, output plugins",
+            "Logstash pipelines: processing, transformation, enrichment",
+            "Kibana: discovering logs, visualizations, dashboards",
+            "Kibana Lens: creating visualizations",
+            "Filebeat: shipping logs, modules, processors",
+            "Metricbeat: collecting metrics, modules",
+            "Application logs: structured logging, correlation IDs",
+            "Centralized logging: aggregation, indexing, searching",
+            "Log retention: ILM (Index Lifecycle Management)",
+            "ELK security: authentication, authorization, encryption",
+            "ELK on Kubernetes: Elastic Cloud on Kubernetes (ECK)",
+            "ELK alternatives: Loki, Datadog, Splunk",
+            "ELK best practices: index management, query optimization"
+          ],
+          "prerequisites": ["Prometheus & Grafana"],
+          "nextSkill": {
+            "name": "Security & SRE",
+            "description": "Học security practices và SRE principles."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Security & SRE",
+      "description": "Bảo mật infrastructure và áp dụng SRE principles.",
+      "skills": [
+        {
+          "name": "DevSecOps & Security",
+          "difficulty": "Nâng cao",
+          "skillType": "Security & SRE",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "DevSecOps shift-left: security early in pipeline",
+            "OWASP Top 10: web application security risks",
+            "SAST: Static Application Security Testing",
+            "DAST: Dynamic Application Security Testing",
+            "SCA: Software Composition Analysis, dependency scanning",
+            "Container security: image scanning, runtime protection",
+            "Kubernetes security: RBAC, NetworkPolicies, PodSecurity",
+            "Secret management: HashiCorp Vault, AWS Secrets Manager",
+            "Infrastructure security: least privilege, defense in depth",
+            "Network security: firewalls, VPN, zero trust",
+            "Compliance: SOC2, HIPAA, GDPR, PCI-DSS basics",
+            "Security automation: automated patching, vulnerability scanning",
+            "Incident response: preparation, detection, containment, recovery",
+            "Security monitoring: SIEM, log analysis, anomaly detection",
+            "Penetration testing basics: tools, methodology",
+            "Security best practices: hardening, access control"
+          ],
+          "prerequisites": ["ELK Stack"],
+          "nextSkill": {
+            "name": "Site Reliability Engineering (SRE)",
+            "description": "Áp dụng SRE principles vào operations."
+          }
+        },
+        {
+          "name": "Site Reliability Engineering (SRE)",
+          "difficulty": "Nâng cao",
+          "skillType": "Security & SRE",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "SRE principles: software engineering approach to operations",
+            "SLA, SLO, SLI: definition, measurement, error budgets",
+            "Error budgets: consuming, managing, policies",
+            "Toil reduction: automation, elimination, measurement",
+            "Capacity planning: demand forecasting, provisioning",
+            "Release engineering: canary, blue-green, feature flags",
+            "Incident management: detection, response, resolution",
+            "Postmortem culture: blameless postmortems, learning",
+            "Monitoring distributed systems: observability, tracing",
+            "SRE tools: monitoring, alerting, incident management",
+            "SRE practices: runbooks, playbooks, game days",
+            "SRE vs traditional ops: differences, benefits",
+            "Building SRE culture: mindset, practices, organization"
+          ],
+          "prerequisites": ["DevSecOps & Security"],
+          "nextSkill": {
+            "name": "Advanced Topics & Career",
+            "description": "Chủ đề nâng cao và phát triển sự nghiệp."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Advanced Topics & Career",
+      "description": "Chủ đề nâng cao và phát triển sự nghiệp DevOps Engineer.",
+      "skills": [
+        {
+          "name": "Advanced DevOps Practices",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Topics & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "GitOps: pull-based deployment, ArgoCD, Flux",
+            "Service Mesh: Istio, Linkerd, traffic management",
+            "Platform engineering: internal developer platforms",
+            "Chaos engineering: Litmus, Chaos Monkey, fault injection",
+            "FinOps: cloud cost optimization, resource tagging",
+            "Multi-cloud strategy: avoiding vendor lock-in",
+            "Edge computing: CDN, edge functions, IoT",
+            "Serverless operations: Lambda, Cloud Functions management",
+            "Database operations: backups, replication, failover",
+            "Disaster recovery: RPO, RTO, multi-region",
+            "Infrastructure testing: terratest, infrastructure validation",
+            "DevOps maturity model: assessing and improving"
+          ],
+          "prerequisites": ["Site Reliability Engineering (SRE)"],
+          "nextSkill": {
+            "name": "Certifications",
+            "description": "Chuẩn bị các chứng chỉ DevOps."
+          }
+        },
+        {
+          "name": "DevOps Certifications",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced Topics & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "AWS certifications: Cloud Practitioner, Solutions Architect, DevOps Engineer",
+            "GCP certifications: Associate Cloud Engineer, Professional Cloud DevOps Engineer",
+            "Azure certifications: AZ-900, AZ-104, AZ-400",
+            "Kubernetes certifications: CKA, CKAD, CKS",
+            "Terraform certifications: HashiCorp Terraform Associate",
+            "Docker certifications: Docker Certified Associate",
+            "Certification study strategies: resources, practice exams",
+            "Building DevOps portfolio: projects, case studies",
+            "DevOps communities: DevOps Days, conferences, meetups",
+            "Career paths: DevOps Engineer → Senior → Staff → Principal → Platform Lead",
+            "DevOps roles: SRE, Platform Engineer, Cloud Engineer",
+            "Salary negotiation: market rates, negotiation tactics",
+            "Continuous learning: staying current with trends, tools"
+          ],
+          "prerequisites": ["Advanced DevOps Practices"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình DevOps Engineer và sẵn sàng cho sự nghiệp."
+          }
+        }
+      ]
+    }
+  ]
+}

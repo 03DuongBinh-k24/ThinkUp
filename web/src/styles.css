@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  html, body {
+    font-family: var(--font-sans);
+  }
+
+  /* Đảm bảo toàn bộ chữ (inputs, buttons, headings, paragraphs) đều thừa kế Inter */
+  input, button, textarea, select, h1, h2, h3, h4, h5, h6, p, span, a, label {
+    font-family: inherit;
+  }
+
+  /* Ngoại lệ duy nhất cho Brand Logo */
+  .brand-logo, [data-brand-logo] {
+    font-family: 'Inter', sans-serif;
+  }
+}
+

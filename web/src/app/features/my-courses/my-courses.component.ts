@@ -1,0 +1,315 @@
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { CourseService } from '../../core/services/course.service';
+import { EnrolledCourse } from '../../core/models/course.model';
+
+interface FilterTab {
+  value: 'all' | 'learning' | 'completed';
+  label: string;
+}
+
+@Component({
+  selector: 'app-my-courses',
+  standalone: true,
+  imports: [CommonModule, RouterLink, FormsModule],
+  template: `
+    <div class="min-h-screen bg-[#F9F9FF] text-[#0F172B] font-sans">
+      <main class="mx-auto w-full max-w-[1770px] px-5 py-8 sm:px-8 xl:px-[24px]">
+        <!-- Page Title -->
+        <h1 class="text-[24px] font-bold leading-8 text-[#0F172B]">Khóa học của tôi</h1>
+        <p class="mt-1 text-[13.1px] leading-5 text-[#62748E]">
+          Quản lý và tiếp tục hành trình học tập của bạn
+        </p>
+
+        <!-- Search and Filter Bar -->
+        @if (status() === 'success' && courses().length > 0) {
+          <div class="mt-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <!-- Search Input -->
+            <form (ngSubmit)="applySearch()" class="flex w-full xl:w-[576px] shrink-0">
+              <label class="sr-only" for="course-search">Tìm kiếm khóa học của bạn</label>
+              <div class="flex h-11 w-full items-center gap-2 rounded-[8px] border border-[#E2E8F0] bg-white p-1 pl-4 focus-within:border-[#155DFC] focus-within:ring-2 focus-within:ring-[#155DFC]/15">
+                <input
+                  id="course-search"
+                  name="search"
+                  [(ngModel)]="searchInput"
+                  placeholder="Tìm kiếm khóa học của bạn..."
+                  class="min-w-0 flex-1 bg-transparent text-[13.3px] text-[#0F172B] placeholder:text-[#90A1B9] outline-none"
+                />
+                <button
+                  type="submit"
+                  class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[#155DFC] px-5 text-[14px] font-medium text-white transition hover:bg-[#0F4CD1]"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span class="hidden sm:inline">Tìm kiếm</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Filter Buttons -->
+            <div class="flex flex-wrap items-center gap-3" aria-label="Lọc theo trạng thái">
+              <span class="mr-1 text-[13px] text-[#62748E]">Lọc theo trạng thái:</span>
+              <div class="flex items-center gap-2">
+                @for (item of filterTabs; track item.value) {
+                  <button
+                    type="button"
+                    (click)="setFilter(item.value)"
+                    class="flex h-[36px] items-center justify-center rounded-[8px] border px-4 text-[13.3px] transition"
+                    [ngClass]="{
+                      'border-[#155DFC] bg-[#155DFC] text-white': currentFilter() === item.value,
+                      'border-[#E2E8F0] bg-white text-[#45556C] hover:border-[#93C5FD]': currentFilter() !== item.value
+                    }"
+                  >
+                    {{ item.label }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Loading State -->
+        @if (status() === 'loading') {
+          <div class="mt-7 flex flex-col gap-4">
+            @for (i of [1, 2, 3]; track i) {
+              <div class="h-[150px] animate-pulse rounded-[16px] border border-[#E2E8F0] bg-white p-4"></div>
+            }
+          </div>
+        }
+
+        <!-- Error State -->
+        @if (status() === 'error') {
+          <div class="mt-7 rounded-[16px] border border-red-200 bg-red-50 p-6 text-center text-[14px] text-red-700">
+            Không thể tải danh sách khóa học. Vui lòng tải lại trang.
+          </div>
+        }
+
+        <!-- Empty State (No courses enrolled) -->
+        @if (status() === 'success' && courses().length === 0) {
+          <div class="mt-7 flex min-h-[460px] flex-col items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-white px-6 py-16 text-center">
+            <span class="mb-5 grid h-20 w-20 place-items-center rounded-full bg-[#EEF7FF] text-[#155DFC]">
+              <svg class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </span>
+            <h2 class="text-xl font-bold text-[#0F172B]">Bạn chưa đăng ký hoặc mua khóa học nào</h2>
+            <p class="mt-2 max-w-md text-[14px] leading-6 text-[#62748E]">
+              Khám phá những khóa học phù hợp để bắt đầu hành trình học tập của bạn ngay hôm nay.
+            </p>
+            <a
+              routerLink="/main/courses"
+              class="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-[#155DFC] px-5 text-[14px] font-semibold text-white transition hover:bg-[#0F4CD1]"
+            >
+              Khám phá khóa học
+            </a>
+          </div>
+        }
+
+        <!-- Empty Search Result -->
+        @if (status() === 'success' && courses().length > 0 && visibleCourses().length === 0) {
+          <div class="mt-7 flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-white px-6 py-16 text-center">
+            <span class="mb-5 grid h-20 w-20 place-items-center rounded-full bg-[#EEF7FF] text-[#155DFC]">
+              <svg class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <h2 class="text-xl font-bold text-[#0F172B]">Không tìm thấy khóa học</h2>
+            <p class="mt-2 max-w-md text-[14px] leading-6 text-[#62748E]">
+              Hãy thử từ khóa khác hoặc chuyển bộ lọc sang Tất cả.
+            </p>
+            <button
+              (click)="resetFilterAndSearch()"
+              class="mt-6 inline-flex h-11 items-center justify-center rounded-lg border border-[#155DFC] bg-white px-5 text-[14px] font-semibold text-[#155DFC] transition hover:bg-[#F0F6FF]"
+            >
+              Xem tất cả khóa học
+            </button>
+          </div>
+        }
+
+        <!-- Course List & Stats Block -->
+        @if (status() === 'success' && visibleCourses().length > 0) {
+          <div class="mt-7 flex flex-col gap-[14px]">
+            <!-- Overall Progress Summary Block -->
+            <div class="flex flex-col gap-4 rounded-[16px] border border-[#C7DBFF] bg-[#F0F6FF] p-[18px_22px] md:flex-row md:items-center md:justify-between">
+              <div class="flex flex-col gap-[5px]">
+                <h2 class="text-[18px] font-semibold text-[#0F1C33]">Tiến độ học tập tổng quan</h2>
+                <p class="text-[14px] text-[#61738F]">
+                  {{ stats().inProgress }} khóa học đang học · {{ stats().completedLessons }}/{{ stats().totalLessons }} bài đã hoàn thành
+                </p>
+              </div>
+              <div class="flex items-center gap-3 md:w-[420px] shrink-0">
+                <div class="h-[10px] flex-1 overflow-hidden rounded-full bg-[#CCDEF5]">
+                  <div
+                    class="h-full rounded-full bg-[#145CF2] transition-all duration-500"
+                    [style.width.%]="stats().progress"
+                  ></div>
+                </div>
+                <span class="font-semibold text-[#145CF2] text-[16px]">{{ stats().progress }}%</span>
+              </div>
+            </div>
+
+            <!-- List of Enrolled Courses -->
+            <section class="flex flex-col gap-[14px]" aria-label="Danh sách khóa học đã đăng ký">
+              @for (course of visibleCourses(); track course.id) {
+                <article class="group flex flex-col xl:flex-row items-center gap-5 rounded-[16px] border border-[#E3E8F0] bg-white p-4 transition hover:shadow-md">
+                  <!-- Thumbnail / Cover badge -->
+                  <div
+                    class="relative flex h-[116px] w-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-[12px] p-4 text-center xl:w-[204px]"
+                    [ngStyle]="{ 'background-color': course.cover || '#0D3D2E' }"
+                  >
+                    <h3 class="text-[18px] font-bold leading-[23px] text-white">
+                      {{ course.coverTitle || course.title }}
+                    </h3>
+                    @if (course.coverSubtitle) {
+                      <p class="mt-1 text-[11px] leading-[14px] text-[#E2E8F0] line-clamp-1">
+                        {{ course.coverSubtitle }}
+                      </p>
+                    }
+                    @if (course.badge) {
+                      <div class="absolute left-3 top-3 rounded bg-[#FB2C36] px-2 py-0.5 text-[10px] font-bold text-white">
+                        {{ course.badge }}
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Course Info -->
+                  <div class="flex flex-1 flex-col gap-1.5 w-full xl:w-auto">
+                    <h2 class="line-clamp-2 text-[16px] font-semibold text-[#0F1C33]">
+                      {{ course.title }}
+                    </h2>
+                    <p class="text-[14px] text-[#61738F]">
+                      Giảng viên: <span class="font-medium text-[#0F172B]">{{ course.instructor }}</span>
+                    </p>
+                    <p class="text-[13px] text-[#7A8AA1]">
+                      {{ course.completedLessons }} / {{ course.totalLessons }} bài học hoàn thành
+                    </p>
+                  </div>
+
+                  <!-- Progress Bar -->
+                  <div class="flex w-full flex-col gap-2 xl:w-[380px] shrink-0">
+                    <div class="flex items-center justify-between text-[13px]">
+                      <span class="font-medium text-[#576680]">Tiến độ khóa học</span>
+                      <span class="font-semibold text-[#145CF2]">{{ getCoursePercent(course) }}%</span>
+                    </div>
+                    <div class="h-[9px] w-full overflow-hidden rounded-full bg-[#E0E8F2]">
+                      <div
+                        class="h-full rounded-full bg-[#145CF2] transition-all duration-300"
+                        [style.width.%]="getCoursePercent(course)"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Action Link -->
+                  <div class="mt-2 flex w-full justify-end xl:mt-0 xl:w-auto xl:shrink-0">
+                    <a
+                      [routerLink]="['/main/courses', course.id]"
+                      class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[11px] bg-[#145CF2] px-6 text-[14px] font-semibold text-white transition hover:bg-[#0B4ACD] xl:w-[160px]"
+                    >
+                      <span>{{ getCoursePercent(course) === 100 ? 'Xem lại' : 'Tiếp tục học' }}</span>
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </a>
+                  </div>
+                </article>
+              }
+            </section>
+          </div>
+        }
+      </main>
+    </div>
+  `
+})
+export class MyCoursesComponent implements OnInit {
+  private readonly courseService = inject(CourseService);
+
+  readonly courses = signal<EnrolledCourse[]>([]);
+  readonly currentFilter = signal<'all' | 'learning' | 'completed'>('all');
+  readonly searchQuery = signal<string>('');
+  readonly status = signal<'loading' | 'success' | 'error'>('loading');
+
+  searchInput = '';
+
+  readonly filterTabs: FilterTab[] = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'learning', label: 'Đang học' },
+    { value: 'completed', label: 'Đã hoàn thành' }
+  ];
+
+  readonly visibleCourses = computed(() => {
+    const all = this.courses();
+    const filter = this.currentFilter();
+    const query = this.searchQuery().trim().toLowerCase();
+
+    return all.filter((course) => {
+      const progress = course.totalLessons > 0 ? course.completedLessons / course.totalLessons : 0;
+      const matchesStatus =
+        filter === 'all' ||
+        (filter === 'completed' ? progress === 1 : progress > 0 && progress < 1);
+
+      const matchesQuery =
+        !query ||
+        course.title.toLowerCase().includes(query) ||
+        course.instructor.toLowerCase().includes(query);
+
+      return matchesStatus && matchesQuery;
+    });
+  });
+
+  readonly stats = computed(() => {
+    const list = this.courses();
+    let inProgress = 0;
+    let completedLessons = 0;
+    let totalLessons = 0;
+
+    for (const c of list) {
+      if (c.completedLessons > 0 && c.completedLessons < c.totalLessons) {
+        inProgress++;
+      }
+      completedLessons += c.completedLessons || 0;
+      totalLessons += c.totalLessons || 0;
+    }
+
+    const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    return { inProgress, completedLessons, totalLessons, progress };
+  });
+
+  ngOnInit(): void {
+    this.fetchCourses();
+  }
+
+  fetchCourses(): void {
+    this.status.set('loading');
+    this.courseService.getMyCourses().subscribe({
+      next: (res) => {
+        this.courses.set(res.data || []);
+        this.status.set('success');
+      },
+      error: () => {
+        this.status.set('error');
+      }
+    });
+  }
+
+  setFilter(filter: 'all' | 'learning' | 'completed'): void {
+    this.currentFilter.set(filter);
+  }
+
+  applySearch(): void {
+    this.searchQuery.set(this.searchInput);
+  }
+
+  resetFilterAndSearch(): void {
+    this.searchInput = '';
+    this.searchQuery.set('');
+    this.currentFilter.set('all');
+  }
+
+  getCoursePercent(course: EnrolledCourse): number {
+    if (!course.totalLessons) return 0;
+    return Math.round((course.completedLessons / course.totalLessons) * 100);
+  }
+}

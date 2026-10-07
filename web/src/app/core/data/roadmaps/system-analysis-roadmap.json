@@ -1,0 +1,793 @@
+{
+  "roadmap": {
+    "name": "System Analysis",
+    "description": "Lộ trình trở thành System Analyst - từ nền tảng công nghệ thông tin đến phân tích, thiết kế và triển khai các hệ thống thông tin phục vụ doanh nghiệp."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "IT Foundations",
+      "description": "Nền tảng công nghệ thông tin và lập trình cơ bản.",
+      "skills": [
+        {
+          "name": "Computer Science Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "IT Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Operating systems concepts",
+            "Networking fundamentals (TCP/IP, HTTP)",
+            "Database concepts",
+            "Data structures và algorithms basics",
+            "Software development lifecycle",
+            "Cloud computing basics"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Programming Basics",
+            "description": "Lập trình cơ bản"
+          }
+        },
+        {
+          "name": "Programming Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "IT Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Programming logic và flowcharts",
+            "Object-oriented programming concepts",
+            "SQL fundamentals",
+            "Web technologies basics (HTML, CSS, JS)",
+            "API concepts",
+            "Version control (Git)"
+          ],
+          "prerequisites": ["Computer Science Fundamentals"],
+          "nextSkill": {
+            "name": "Database Design",
+            "description": "Thiết kế cơ sở dữ liệu"
+          }
+        },
+        {
+          "name": "Database Design",
+          "difficulty": "Trung cấp",
+          "skillType": "IT Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Relational database concepts",
+            "ER modeling",
+            "Normalization (1NF, 2NF, 3NF)",
+            "SQL queries optimization",
+            "Database administration basics",
+            "NoSQL concepts"
+          ],
+          "prerequisites": ["Programming Basics"],
+          "nextSkill": {
+            "name": "System Architecture",
+            "description": "Kiến trúc hệ thống"
+          }
+        },
+        {
+          "name": "System Architecture",
+          "difficulty": "Trung cấp",
+          "skillType": "IT Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Client-server architecture",
+            "Three-tier architecture",
+            "Microservices vs monolithic",
+            "API design principles",
+            "Message queuing systems",
+            "Load balancing concepts"
+          ],
+          "prerequisites": ["Computer Science Fundamentals", "Programming Basics"],
+          "nextSkill": {
+            "name": "Business Analysis Basics",
+            "description": "Nền tảng phân tích kinh doanh"
+          }
+        },
+        {
+          "name": "Business Analysis Basics",
+          "difficulty": "Cơ bản",
+          "skillType": "IT Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Business process mapping",
+            "Requirements gathering techniques",
+            "Stakeholder identification",
+            "Gap analysis basics",
+            "Documentation standards",
+            "Business modeling basics"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Requirements Engineering",
+            "description": "Kỹ thuật yêu cầu"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Requirements Engineering",
+      "description": "Thu thập, phân tích và quản lý yêu cầu hệ thống.",
+      "skills": [
+        {
+          "name": "Requirements Engineering",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Engineering",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Types of requirements (functional, non-functional)",
+            "Requirements elicitation techniques",
+            "Requirements analysis và validation",
+            "Requirements documentation (SRS, BRD)",
+            "Requirements traceability",
+            "Requirements change management"
+          ],
+          "prerequisites": ["Business Analysis Basics"],
+          "nextSkill": {
+            "name": "Use Case Modeling",
+            "description": "Mô hình hóa use case"
+          }
+        },
+        {
+          "name": "Use Case Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Engineering",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Use case diagram creation",
+            "Actor identification",
+            "Use case descriptions",
+            "Include và extend relationships",
+            "Use case scenarios",
+            "Use case prioritization"
+          ],
+          "prerequisites": ["Requirements Engineering"],
+          "nextSkill": {
+            "name": "User Stories & Agile",
+            "description": "User stories và phương pháp Agile"
+          }
+        },
+        {
+          "name": "User Stories & Agile",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Engineering",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "INVEST criteria cho user stories",
+            "Acceptance criteria writing",
+            "Story mapping",
+            "Agile estimation (story points, Planning Poker)",
+            "Sprint planning",
+            "Backlog grooming"
+          ],
+          "prerequisites": ["Use Case Modeling"],
+          "nextSkill": {
+            "name": "Business Process Modeling",
+            "description": "Mô hình hóa quy trình kinh doanh"
+          }
+        },
+        {
+          "name": "Business Process Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "Requirements Engineering",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "BPMN (Business Process Model and Notation)",
+            "Process flow diagrams",
+            "Activity diagrams",
+            "State diagrams",
+            "Decision tables",
+            "Process optimization"
+          ],
+          "prerequisites": ["Requirements Engineering"],
+          "nextSkill": {
+            "name": "UML Modeling",
+            "description": "Mô hình hóa UML"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "System Design",
+      "description": "Thiết kế hệ thống phần mềm chi tiết.",
+      "skills": [
+        {
+          "name": "UML Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "System Design",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Class diagrams",
+            "Sequence diagrams",
+            "Component diagrams",
+            "Deployment diagrams",
+            "Activity diagrams",
+            "Package diagrams"
+          ],
+          "prerequisites": ["Business Process Modeling"],
+          "nextSkill": {
+            "name": "Object-Oriented Design",
+            "description": "Thiết kế hướng đối tượng"
+          }
+        },
+        {
+          "name": "Object-Oriented Design",
+          "difficulty": "Nâng cao",
+          "skillType": "System Design",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "SOLID principles",
+            "Design patterns (GoF patterns)",
+            "Creational patterns (Factory, Singleton)",
+            "Structural patterns (Adapter, Facade)",
+            "Behavioral patterns (Observer, Strategy)",
+            "Anti-patterns và refactoring"
+          ],
+          "prerequisites": ["UML Modeling", "Programming Basics"],
+          "nextSkill": {
+            "name": "API Design",
+            "description": "Thiết kế API"
+          }
+        },
+        {
+          "name": "API Design",
+          "difficulty": "Nâng cao",
+          "skillType": "System Design",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "RESTful API design principles",
+            "GraphQL concepts",
+            "API versioning",
+            "Authentication (OAuth, JWT)",
+            "Rate limiting và throttling",
+            "API documentation (Swagger/OpenAPI)"
+          ],
+          "prerequisites": ["Object-Oriented Design"],
+          "nextSkill": {
+            "name": "Data Modeling",
+            "description": "Mô hình hóa dữ liệu"
+          }
+        },
+        {
+          "name": "Data Modeling",
+          "difficulty": "Nâng cao",
+          "skillType": "System Design",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Conceptual data modeling",
+            "Logical data modeling",
+            "Physical data modeling",
+            "Dimensional modeling (star schema, snowflake)",
+            "Data warehouse design",
+            "Data lake architecture"
+          ],
+          "prerequisites": ["Database Design", "Object-Oriented Design"],
+          "nextSkill": {
+            "name": "System Integration",
+            "description": "Tích hợp hệ thống"
+          }
+        },
+        {
+          "name": "System Integration",
+          "difficulty": "Nâng cao",
+          "skillType": "System Design",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Integration patterns",
+            "Enterprise Service Bus (ESB)",
+            "Message queues (RabbitMQ, Kafka)",
+            "ETL processes",
+            "Middleware concepts",
+            "API gateway patterns"
+          ],
+          "prerequisites": ["API Design", "System Architecture"],
+          "nextSkill": {
+            "name": "Security Design",
+            "description": "Thiết kế bảo mật"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Security & Quality",
+      "description": "Bảo mật hệ thống và đảm bảo chất lượng.",
+      "skills": [
+        {
+          "name": "Security Design",
+          "difficulty": "Nâng cao",
+          "skillType": "Security & Quality",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Security architecture principles",
+            "Authentication và authorization",
+            "Data encryption",
+            "OWASP Top 10",
+            "Security auditing",
+            "Compliance requirements"
+          ],
+          "prerequisites": ["System Integration"],
+          "nextSkill": {
+            "name": "Quality Assurance",
+            "description": "Đảm bảo chất lượng"
+          }
+        },
+        {
+          "name": "Quality Assurance",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Quality",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Testing methodologies",
+            "Test planning",
+            "Unit testing basics",
+            "Integration testing",
+            "User acceptance testing",
+            "Performance testing basics"
+          ],
+          "prerequisites": ["System Design"],
+          "nextSkill": {
+            "name": "Performance Engineering",
+            "description": "Kỹ thuật hiệu năng"
+          }
+        },
+        {
+          "name": "Performance Engineering",
+          "difficulty": "Nâng cao",
+          "skillType": "Security & Quality",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Performance requirements",
+            "Capacity planning",
+            "Load testing",
+            "Stress testing",
+            "Performance monitoring",
+            "Bottleneck identification"
+          ],
+          "prerequisites": ["Quality Assurance", "System Architecture"],
+          "nextSkill": {
+            "name": "DevOps Basics",
+            "description": "Nền tảng DevOps"
+          }
+        },
+        {
+          "name": "DevOps Basics",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Quality",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "CI/CD concepts",
+            "Version control strategies",
+            "Container basics (Docker)",
+            "Infrastructure as Code basics",
+            "Monitoring và logging",
+            "Incident management"
+          ],
+          "prerequisites": ["Performance Engineering"],
+          "nextSkill": {
+            "name": "Project Management",
+            "description": "Quản lý dự án"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Project Management",
+      "description": "Quản lý dự án hệ thống và đội ngũ.",
+      "skills": [
+        {
+          "name": "Project Management",
+          "difficulty": "Trung cấp",
+          "skillType": "Project Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Project planning và estimation",
+            "Risk management",
+            "Resource allocation",
+            "Timeline management",
+            "Budget tracking",
+            "Status reporting"
+          ],
+          "prerequisites": ["DevOps Basics"],
+          "nextSkill": {
+            "name": "Agile Methodologies",
+            "description": "Phương pháp Agile"
+          }
+        },
+        {
+          "name": "Agile Methodologies",
+          "difficulty": "Trung cấp",
+          "skillType": "Project Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Scrum framework",
+            "Kanban methodology",
+            "Sprint planning và execution",
+            "Daily standups",
+            "Retrospectives",
+            "Scaled Agile (SAFe basics)"
+          ],
+          "prerequisites": ["Project Management", "User Stories & Agile"],
+          "nextSkill": {
+            "name": "Team Leadership",
+            "description": "Lãnh đạo đội ngũ"
+          }
+        },
+        {
+          "name": "Team Leadership",
+          "difficulty": "Nâng cao",
+          "skillType": "Project Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Technical team management",
+            "Mentoring developers",
+            "Code review practices",
+            "Knowledge sharing",
+            "Conflict resolution",
+            "Performance evaluation"
+          ],
+          "prerequisites": ["Agile Methodologies"],
+          "nextSkill": {
+            "name": "Stakeholder Communication",
+            "description": "Giao tiếp với stakeholder"
+          }
+        },
+        {
+          "name": "Stakeholder Communication",
+          "difficulty": "Trung cấp",
+          "skillType": "Project Management",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Presentation skills",
+            "Technical writing",
+            "Requirements reviews",
+            "Status reporting",
+            "Expectation management",
+            "Negotiation skills"
+          ],
+          "prerequisites": ["Team Leadership"],
+          "nextSkill": {
+            "name": "Enterprise Architecture",
+            "description": "Kiến trúc doanh nghiệp"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Enterprise Systems",
+      "description": "Hệ thống cấp doanh nghiệp và tích hợp.",
+      "skills": [
+        {
+          "name": "Enterprise Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Enterprise Systems",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Enterprise architecture frameworks (TOGAF, Zachman)",
+            "Architecture governance",
+            "Technology standards",
+            "Architecture roadmaps",
+            "Capability mapping",
+            "Architecture review boards"
+          ],
+          "prerequisites": ["Stakeholder Communication", "System Design"],
+          "nextSkill": {
+            "name": "ERP Systems",
+            "description": "Hệ thống ERP"
+          }
+        },
+        {
+          "name": "ERP Systems",
+          "difficulty": "Nâng cao",
+          "skillType": "Enterprise Systems",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "ERP modules và functionality",
+            "Business process integration",
+            "Master data management",
+            "ERP implementation approaches",
+            "Customization vs configuration",
+            "ERP maintenance"
+          ],
+          "prerequisites": ["Enterprise Architecture", "Business Analysis Basics"],
+          "nextSkill": {
+            "name": "CRM Systems",
+            "description": "Hệ thống CRM"
+          }
+        },
+        {
+          "name": "CRM Systems",
+          "difficulty": "Nâng cao",
+          "skillType": "Enterprise Systems",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "CRM concepts và modules",
+            "Sales automation",
+            "Marketing automation",
+            "Customer service modules",
+            "CRM customization",
+            "CRM analytics"
+          ],
+          "prerequisites": ["ERP Systems"],
+          "nextSkill": {
+            "name": "Data Warehousing",
+            "description": "Kho dữ liệu"
+          }
+        },
+        {
+          "name": "Data Warehousing",
+          "difficulty": "Nâng cao",
+          "skillType": "Enterprise Systems",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Data warehouse architecture",
+            "ETL/ELT processes",
+            "Dimensional modeling",
+            "OLAP vs OLTP",
+            "Business intelligence tools",
+            "Data governance basics"
+          ],
+          "prerequisites": ["Data Modeling", "ERP Systems"],
+          "nextSkill": {
+            "name": "Cloud Architecture",
+            "description": "Kiến trúc cloud"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Modern Technologies",
+      "description": "Công nghệ hiện đại và xu hướng mới.",
+      "skills": [
+        {
+          "name": "Cloud Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Technologies",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Cloud service models (IaaS, PaaS, SaaS)",
+            "Cloud deployment models",
+            "Multi-cloud strategies",
+            "Cloud-native design",
+            "Serverless architecture",
+            "Cloud cost optimization"
+          ],
+          "prerequisites": ["Data Warehousing", "System Architecture"],
+          "nextSkill": {
+            "name": "Microservices Architecture",
+            "description": "Kiến trúc microservices"
+          }
+        },
+        {
+          "name": "Microservices Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Technologies",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Microservices principles",
+            "Service decomposition",
+            "Inter-service communication",
+            "Service mesh concepts",
+            "Distributed systems challenges",
+            "Migration strategies"
+          ],
+          "prerequisites": ["Cloud Architecture", "API Design"],
+          "nextSkill": {
+            "name": "Event-Driven Architecture",
+            "description": "Kiến trúc sự kiện"
+          }
+        },
+        {
+          "name": "Event-Driven Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Technologies",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Event sourcing",
+            "CQRS pattern",
+            "Message brokers",
+            "Event streaming (Kafka)",
+            "Saga pattern",
+            "Event-driven integration"
+          ],
+          "prerequisites": ["Microservices Architecture", "System Integration"],
+          "nextSkill": {
+            "name": "AI/ML Integration",
+            "description": "Tích hợp AI/ML"
+          }
+        },
+        {
+          "name": "AI/ML Integration",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Technologies",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "AI/ML use cases in enterprise",
+            "ML model integration",
+            "API integration cho AI services",
+            "Data pipeline cho ML",
+            "AI governance",
+            "Ethical AI considerations"
+          ],
+          "prerequisites": ["Cloud Architecture", "Data Warehousing"],
+          "nextSkill": {
+            "name": "IoT Systems",
+            "description": "Hệ thống IoT"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Digital Transformation",
+      "description": "Chuyển đổi số và đổi mới công nghệ.",
+      "skills": [
+        {
+          "name": "IoT Systems",
+          "difficulty": "Nâng cao",
+          "skillType": "Digital Transformation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "IoT architecture patterns",
+            "Edge computing concepts",
+            "IoT protocols (MQTT, CoAP)",
+            "IoT security",
+            "IoT data management",
+            "Digital twin concepts"
+          ],
+          "prerequisites": ["AI/ML Integration", "Cloud Architecture"],
+          "nextSkill": {
+            "name": "Blockchain Applications",
+            "description": "Ứng dụng blockchain"
+          }
+        },
+        {
+          "name": "Blockchain Applications",
+          "difficulty": "Nâng cao",
+          "skillType": "Digital Transformation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Blockchain fundamentals",
+            "Smart contracts",
+            "Distributed ledger concepts",
+            "Blockchain use cases",
+            "Blockchain integration",
+            "Blockchain limitations"
+          ],
+          "prerequisites": ["Event-Driven Architecture"],
+          "nextSkill": {
+            "name": "Digital Strategy",
+            "description": "Chiến lược số"
+          }
+        },
+        {
+          "name": "Digital Strategy",
+          "difficulty": "Nâng cao",
+          "skillType": "Digital Transformation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Digital maturity assessment",
+            "Digital transformation roadmap",
+            "Innovation frameworks",
+            "Technology adoption strategies",
+            "Change management",
+            "ROI of digital initiatives"
+          ],
+          "prerequisites": ["IoT Systems", "Blockchain Applications"],
+          "nextSkill": {
+            "name": "IT Governance",
+            "description": "Quản trị IT"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Leadership & Strategy",
+      "description": "Lãnh đạo và chiến lược CNTT doanh nghiệp.",
+      "skills": [
+        {
+          "name": "IT Governance",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "IT governance frameworks (COBIT)",
+            "IT service management (ITIL)",
+            "Vendor management",
+            "IT budgeting",
+            "IT policy development",
+            "Compliance management"
+          ],
+          "prerequisites": ["Digital Strategy", "Enterprise Architecture"],
+          "nextSkill": {
+            "name": "Solution Architecture",
+            "description": "Kiến trúc giải pháp"
+          }
+        },
+        {
+          "name": "Solution Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Solution design documents",
+            "Technology selection",
+            "Architecture decision records",
+            "Proof of concept planning",
+            "Solution evaluation",
+            "Architecture governance"
+          ],
+          "prerequisites": ["IT Governance", "System Design"],
+          "nextSkill": {
+            "name": "Enterprise Consulting",
+            "description": "Tư vấn doanh nghiệp"
+          }
+        },
+        {
+          "name": "Enterprise Consulting",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Client relationship management",
+            "Consulting methodologies",
+            "Problem framing",
+            "Solution selling",
+            "Proposal writing",
+            "Delivery management"
+          ],
+          "prerequisites": ["Solution Architecture", "Stakeholder Communication"],
+          "nextSkill": {
+            "name": "Technology Innovation",
+            "description": "Đổi mới công nghệ"
+          }
+        },
+        {
+          "name": "Technology Innovation",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Innovation management",
+            "Emerging technology evaluation",
+            "Proof of concept execution",
+            "Innovation culture",
+            "Technology scouting",
+            "Patent landscape analysis"
+          ],
+          "prerequisites": ["Enterprise Consulting"],
+          "nextSkill": {
+            "name": "CIO/CTO Readiness",
+            "description": "Sẵn sàng cho vị trí CIO/CTO"
+          }
+        },
+        {
+          "name": "CIO/CTO Readiness",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Strategic IT planning",
+            "Board-level communication",
+            "Digital leadership",
+            "Organizational transformation",
+            "Talent strategy",
+            "Technology vision"
+          ],
+          "prerequisites": ["Technology Innovation"],
+          "nextSkill": {
+            "name": "Continuous Learning",
+            "description": "Học tập liên tục"
+          }
+        }
+      ]
+    }
+  ]
+}

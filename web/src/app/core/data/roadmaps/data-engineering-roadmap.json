@@ -1,0 +1,777 @@
+{
+  "roadmap": {
+    "name": "Data-engineering",
+    "description": "Lộ trình trở thành Data Engineer - người xây dựng và quản lý data infrastructure, pipelines, data warehouse để hỗ trợ analytics và data science. Bắt đầu từ nền tảng programming, phát triển kỹ năng SQL/Python, big data technologies (Spark, Kafka), data pipelines (Airflow, dbt), cloud data services, đến data governance và modern data stack."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng programming, Linux và computer science cho data engineering.",
+      "skills": [
+        {
+          "name": "Programming Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Python basics: variables, types, operators, control flow",
+            "Python functions: parameters, return, *args, **kwargs",
+            "Python data structures: lists, dicts, sets, tuples",
+            "File I/O: reading/writing files (CSV, JSON, text)",
+            "Error handling: try/except, custom exceptions",
+            "Modules và packages: import, pip, virtual environments",
+            "Command line proficiency: bash basics, navigation",
+            "Scripting: automating repetitive tasks",
+            "Version control: Git basics (init, add, commit, branch)",
+            "Data types: primitive vs complex, when to use what",
+            "Functions vs classes: when to use what",
+            "Debugging techniques: print, debugger, logging"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Linux & Command Line",
+            "description": "Nắm vững Linux cho data engineering."
+          }
+        },
+        {
+          "name": "Linux & Command Line",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Linux basics: filesystem, directories, files",
+            "File operations: ls, cd, mkdir, rm, cp, mv, find, grep",
+            "Text processing: cat, less, head, tail, awk, sed",
+            "Permissions: chmod, chown, user management",
+            "Process management: ps, top, kill, nohup",
+            "Package management: apt, yum/dnf",
+            "Shell scripting: bash, variables, loops, conditionals",
+            "Cron jobs: scheduling tasks",
+            "SSH: remote access, key-based auth",
+            "Environment variables: PATH, export, .bashrc",
+            "Networking basics: curl, wget, ping, dig",
+            "Disk management: df, du, mount"
+          ],
+          "prerequisites": ["Programming Fundamentals"],
+          "nextSkill": {
+            "name": "Computer Science for Data Engineering",
+            "description": "Nắm vững CS basics cho data workloads."
+          }
+        },
+        {
+          "name": "Computer Science for Data Engineering",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Cấu trúc dữ liệu: Array, Linked List, Stack, Queue, Hash Table, Tree",
+            "Thuật toán: search, sort, complexity",
+            "Big O notation: O(1), O(log n), O(n), O(n log n)",
+            "Data structures trong Python: list, dict, set, deque",
+            "Hash tables: hashing, collisions, use cases",
+            "Trees: binary tree, B-tree, LSM tree (for databases)",
+            "Object-oriented programming basics",
+            "Design patterns: singleton, factory, observer",
+            "Network basics: HTTP, REST, APIs",
+            "Database concepts overview: RDBMS, NoSQL",
+            "Concurrency basics: threads, processes (overview)",
+            "Memory management: stack, heap, garbage collection"
+          ],
+          "prerequisites": ["Linux & Command Line"],
+          "nextSkill": {
+            "name": "SQL Mastery",
+            "description": "Thành thạo SQL cho data engineering."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "SQL & Database Mastery",
+      "description": "Thành thạo SQL nâng cao và database concepts cho data engineering.",
+      "skills": [
+        {
+          "name": "SQL Mastery",
+          "difficulty": "Trung cấp",
+          "skillType": "SQL & Database Mastery",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "SQL fundamentals: SELECT, FROM, WHERE, ORDER BY, LIMIT",
+            "JOINs: INNER, LEFT, RIGHT, FULL OUTER, CROSS, SELF",
+            "Aggregation: GROUP BY, HAVING, COUNT, SUM, AVG, MIN, MAX",
+            "Subqueries: in SELECT, FROM, WHERE, correlated",
+            "CTEs: WITH clause, recursive CTEs",
+            "Window functions: ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD",
+            "Window functions: SUM, AVG, COUNT OVER partitions",
+            "CASE WHEN: conditional logic",
+            "UNION, INTERSECT, EXCEPT",
+            "String functions: CONCAT, SUBSTRING, REGEXP_REPLACE",
+            "Date functions: DATEADD, DATEDIFF, DATE_TRUNC, EXTRACT",
+            "JSON functions: JSON_EXTRACT, JSONB operators",
+            "Array functions: ARRAY_AGG, UNNEST (PostgreSQL)",
+            "Performance: EXPLAIN ANALYZE, indexes, query optimization",
+            "Partitioning: horizontal partitioning strategies"
+          ],
+          "prerequisites": ["Computer Science for Data Engineering"],
+          "nextSkill": {
+            "name": "Database Systems",
+            "description": "Hiểu các hệ thống database cho data engineering."
+          }
+        },
+        {
+          "name": "Database Systems",
+          "difficulty": "Trung cấp",
+          "skillType": "SQL & Database Mastery",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "RDBMS architecture: storage, query processing, transaction management",
+            "PostgreSQL: advanced features, extensions, performance tuning",
+            "PostgreSQL: JSONB, arrays, window functions, CTEs",
+            "MySQL: differences from PostgreSQL, InnoDB engine",
+            "Indexing: B-Tree, Hash, GIN, GiST, composite, partial, covering",
+            "Query optimization: execution plans, statistics, vacuum",
+            "Partitioning: range, hash, list partitioning",
+            "Replication: master-slave, streaming, logical replication",
+            "Connection pooling: PgBouncer, why important",
+            "NoSQL databases: types (Document, Key-Value, Column, Graph)",
+            "MongoDB: documents, collections, aggregation pipeline",
+            "Redis: data types, use cases, caching patterns",
+            "Cassandra: wide-column store, partitioning, consistency",
+            "Database comparison: when to use what",
+            "Database administration basics: backup, restore, monitoring"
+          ],
+          "prerequisites": ["SQL Mastery"],
+          "nextSkill": {
+            "name": "Data Modeling",
+            "description": "Thiết kế data models cho analytics và warehousing."
+          }
+        },
+        {
+          "name": "Data Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "SQL & Database Mastery",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Data modeling process: requirements → conceptual → logical → physical",
+            "Conceptual modeling: entities, relationships, ER diagrams",
+            "Logical modeling: attributes, keys, constraints",
+            "Physical modeling: tables, columns, indexes, partitioning",
+            "Normalization: 1NF, 2NF, 3NF, BCNF",
+            "Denormalization: star schema, snowflake schema",
+            "Dimensional modeling: facts, dimensions, measures",
+            "Fact tables: transactions, snapshots, accumulating",
+            "Dimension tables: types (缓慢变化维度 Type 1, 2, 3)",
+            "Slowly Changing Dimensions (SCD): Type 1, 2, 3 implementation",
+            "Data warehouse modeling: star vs snowflake vs vault",
+            "Data vault modeling: hubs, links, satellites",
+            "One Big Table (OBT): when to use",
+            "Modeling for different workloads: OLTP vs OLAP",
+            "Data modeling tools: ERD, dbdiagram.io, DBeaver",
+            "Data dictionary: business glossary, metadata management"
+          ],
+          "prerequisites": ["Database Systems"],
+          "nextSkill": {
+            "name": "Python for Data Engineering",
+            "description": "Học Python nâng cao cho data engineering."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Python for Data Engineering",
+      "description": "Phát triển kỹ năng Python nâng cao cho data pipelines và ETL.",
+      "skills": [
+        {
+          "name": "Python Advanced",
+          "difficulty": "Trung cấp",
+          "skillType": "Python for Data Engineering",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Object-oriented programming: classes, inheritance, polymorphism",
+            "Decorators: function wrapping, common decorators",
+            "Generators: yield, memory efficiency, pipelines",
+            "Context managers: with statement, __enter__/__exit__",
+            "Itertools: chain, product, combinations, permutations",
+            "Functools: partial, reduce, lru_cache",
+            "Logging: log levels, handlers, formatters",
+            "argparse/click: building CLI tools",
+            "Configuration management: .env, YAML, TOML",
+            "Unit testing: pytest, fixtures, mocking",
+            "Virtual environments: venv, poetry, conda",
+            "Type hints: annotations, typing module",
+            "Async programming: asyncio, aiohttp basics"
+          ],
+          "prerequisites": ["Data Modeling"],
+          "nextSkill": {
+            "name": "Python Data Libraries",
+            "description": "Sử dụng các library data trong Python."
+          }
+        },
+        {
+          "name": "Python Data Libraries",
+          "difficulty": "Trung cấp",
+          "skillType": "Python for Data Engineering",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Pandas: Series, DataFrame, operations, groupby, merge",
+            "Pandas: reading/writing data (CSV, JSON, Parquet, SQL)",
+            "Pandas: missing data, data types, string operations",
+            "NumPy: arrays, operations, broadcasting",
+            "SQLAlchemy: ORM, engine, sessions, raw SQL execution",
+            "Psycopg2/asyncpg: PostgreSQL drivers, connection management",
+            "PyMongo: MongoDB driver, CRUD operations, aggregation",
+            "Redis-py: Redis client, data operations",
+            "Requests/httpx: HTTP clients, API interaction",
+            "BeautifulSoup/Scrapy: web scraping basics",
+            "CSV/JSON/Parquet handling: reading, writing, optimization",
+            "Polars: fast DataFrame library (overview)",
+            "Performance: vectorization, chunking, memory management"
+          ],
+          "prerequisites": ["Python Advanced"],
+          "nextSkill": {
+            "name": "PySpark",
+            "description": "Bắt đầu học Apache Spark với Python."
+          }
+        },
+        {
+          "name": "PySpark",
+          "difficulty": "Nâng cao",
+          "skillType": "Python for Data Engineering",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Spark architecture: driver, executors, cluster manager",
+            "SparkSession: creating, configuring",
+            "Spark DataFrames:创建, operations, transformations",
+            "Spark SQL: running SQL queries",
+            "Lazy evaluation: transformations vs actions",
+            "Reading data: CSV, JSON, Parquet, ORC, Avro",
+            "Writing data: modes (overwrite, append, ignore, error)",
+            "Transformations: select, filter, withColumn, drop",
+            "Aggregations: groupBy, agg, window functions",
+            "Joins: inner, left, right, full, cross, broadcast",
+            "UDFs: user-defined functions",
+            "Broadcast variables, accumulators",
+            "Partitioning: repartition, coalesce, partition by",
+            "Caching: persist, cache, storage levels",
+            "Performance: shuffle, skew, broadcast joins",
+            "Spark on cloud: EMR, Dataproc, Databricks"
+          ],
+          "prerequisites": ["Python Data Libraries"],
+          "nextSkill": {
+            "name": "Data Architecture",
+            "description": "Thiết kế kiến trúc data cho tổ chức."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Data Architecture",
+      "description": "Thiết kế kiến trúc data: data lake, data warehouse, data mesh.",
+      "skills": [
+        {
+          "name": "Data Lake Architecture",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Architecture",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Data lake là gì: storing raw data at scale",
+            "Data lake vs data warehouse: differences, use cases",
+            "Data lake architecture: bronze, silver, gold layers",
+            "Data lakehouse: combining lake và warehouse benefits",
+            "Storage formats: Parquet, ORC, Avro, Delta Lake, Iceberg",
+            "Parquet: columnar storage, compression, partitioning",
+            "Delta Lake: ACID transactions, time travel, schema evolution",
+            "Apache Iceberg: table format, hidden partitioning",
+            "Data lake storage: S3, ADLS, GCS, HDFS",
+            "File organization: partitioning, bucketing, compaction",
+            "Data lake governance: access control, auditing",
+            "Data lake security: encryption, VPC, IAM",
+            "Data lake performance: file size optimization, predicate pushdown",
+            "Medallion architecture: bronze/silver/gold",
+            "Data lake best practices: naming, organization, lifecycle"
+          ],
+          "prerequisites": ["PySpark"],
+          "nextSkill": {
+            "name": "Data Warehouse Architecture",
+            "description": "Thiết kế data warehouse cho analytics."
+          }
+        },
+        {
+          "name": "Data Warehouse Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Data Architecture",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Data warehouse concepts: OLAP vs OLTP",
+            "Data warehouse architecture: top-down vs bottom-up",
+            "Kimball methodology: dimensional modeling, ETL",
+            "Inmon methodology: normalized approach",
+            "Star schema: facts, dimensions, advantages",
+            "Snowflake schema: normalized dimensions",
+            "Slowly Changing Dimensions: Type 1, 2, 3",
+            "Fact table types: transaction, snapshot, accumulating",
+            "Grain: defining the level of detail",
+            "Aggregate tables: summary tables, rollups",
+            "Materialized views: pre-computed queries",
+            "Data warehouse on cloud: Redshift, BigQuery, Snowflake, Synapse",
+            "Cloud data warehouse comparison",
+            "Data warehouse performance: clustering, materialized views",
+            "Data warehouse cost: storage, compute, queries"
+          ],
+          "prerequisites": ["Data Lake Architecture"],
+          "nextSkill": {
+            "name": "Data Mesh Principles",
+            "description": "Nắm vững data mesh principles."
+          }
+        },
+        {
+          "name": "Data Mesh Principles",
+          "difficulty": "Nâng cao",
+          "skillType": "Data Architecture",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Data mesh overview: decentralized data architecture",
+            "Four principles: domain ownership, data as product, self-serve, federated governance",
+            "Domain ownership: data by domain experts",
+            "Data as product: quality, discoverability, addressability",
+            "Self-serve platform: enabling domain teams",
+            "Federated computational governance: standards, automation",
+            "Data mesh vs data warehouse vs data lake",
+            "Implementation: roles, responsibilities, organization",
+            "Data contracts: defining and managing agreements",
+            "Data product thinking: SLAs, documentation, metrics",
+            "Platform engineering for data mesh",
+            "Challenges: organizational change, complexity",
+            "When to adopt data mesh: scale, organization, culture"
+          ],
+          "prerequisites": ["Data Warehouse Architecture"],
+          "nextSkill": {
+            "name": "Big Data Technologies",
+            "description": "Học các công cụ big data."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Big Data Technologies",
+      "description": "Làm việc với các công cụ big data: Hadoop, Spark, Kafka.",
+      "skills": [
+        {
+          "name": "Apache Spark Deep Dive",
+          "difficulty": "Nâng cao",
+          "skillType": "Big Data Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Spark architecture: driver, executors, cluster manager, shuffle",
+            "Spark SQL: Catalyst optimizer, Tungsten execution engine",
+            "Spark Structured Streaming: real-time processing",
+            "Spark Streaming (DStream): micro-batch processing",
+            "Spark MLlib: machine learning at scale",
+            "Spark GraphX: graph processing",
+            "Spark performance tuning: shuffle optimization, skew handling",
+            "Spark memory management: execution, storage, user memory",
+            "Spark on Kubernetes: Spark Operator",
+            "Delta Lake with Spark: ACID, time travel, schema evolution",
+            "Iceberg with Spark: table format, partitioning",
+            "Spark cluster management: YARN, Mesos, Kubernetes",
+            "Monitoring Spark: Spark UI, metrics",
+            "Spark best practices: partitioning, caching, broadcast"
+          ],
+          "prerequisites": ["Data Mesh Principles"],
+          "nextSkill": {
+            "name": "Apache Kafka",
+            "description": "Học Apache Kafka cho streaming data."
+          }
+        },
+        {
+          "name": "Apache Kafka",
+          "difficulty": "Nâng cao",
+          "skillType": "Big Data Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Kafka overview: distributed event streaming platform",
+            "Kafka architecture: brokers, topics, partitions, consumer groups",
+            "Kafka producers: configuration, batching, compression",
+            "Kafka consumers: group management, offset management",
+            "Kafka topics: creation, configuration, partitioning strategy",
+            "Kafka Connect: source connectors, sink connectors",
+            "Kafka Streams: stream processing, DSL, transformations",
+            "Kafka Schema Registry: Avro, JSON Schema, Protobuf",
+            "Kafka security: SSL, SASL, ACLs",
+            "Kafka monitoring: metrics, consumer lag, health checks",
+            "Kafka exactly-once semantics: transactions, idempotent producers",
+            "Kafka vs alternatives: Pulsar, Kinesis, Pub/Sub",
+            "Kafka on cloud: MSK, Confluent Cloud, Event Hubs",
+            "Kafka use cases: event sourcing, CDC, real-time analytics",
+            "Kafka best practices: topic design, partition strategy"
+          ],
+          "prerequisites": ["Apache Spark Deep Dive"],
+          "nextSkill": {
+            "name": "Apache Airflow",
+            "description": "Học Apache Airflow cho workflow orchestration."
+          }
+        },
+        {
+          "name": "Apache Airflow",
+          "difficulty": "Trung cấp",
+          "skillType": "Big Data Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Airflow overview: workflow orchestration platform",
+            "Airflow architecture: scheduler, webserver, workers, metadata DB",
+            "DAGs: directed acyclic graphs, defining workflows",
+            "Operators: BashOperator, PythonOperator, SQL operators",
+            "Sensors: file, time, external triggers",
+            "Tasks: task dependencies, upstream, downstream",
+            "Variables và Connections: managing configuration",
+            "XComs: passing data between tasks",
+            "Templates: Jinja templating, macros",
+            "Error handling: retries, retry_delay, on_failure_callback",
+            "Dynamic DAG generation: parameterized workflows",
+            "Airflow 2.x: TaskFlow API, decorators, dataset-driven",
+            "Airflow on cloud: MWAA, Cloud Composer, Astronomer",
+            "Monitoring: web UI, logs, alerts",
+            "Airflow best practices: task design, idempotency"
+          ],
+          "prerequisites": ["Apache Kafka"],
+          "nextSkill": {
+            "name": "Other Orchestration Tools",
+            "description": "Các công cụ orchestration khác."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Pipeline & ETL Tools",
+      "description": "Xây dựng và quản lý data pipelines với các công cụ ETL hiện đại.",
+      "skills": [
+        {
+          "name": "dbt (Data Build Tool)",
+          "difficulty": "Trung cấp",
+          "skillType": "Pipeline & ETL Tools",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "dbt overview: transformation layer for analytics",
+            "dbt project structure: models, sources, tests, macros",
+            "SQL models: SELECT statements as models",
+            "Model materialization: view, table, incremental, ephemeral",
+            "Sources: defining source data, freshness tests",
+            "Tests: schema tests, data tests, custom tests",
+            "Macros: reusable SQL, Jinja templating",
+            "Variables: dynamic configuration",
+            "Snapshots: tracking historical data (SCD Type 2)",
+            "Seeds: loading CSV data",
+            "Exposures: documenting downstream dependencies",
+            "dbt docs: auto-generated documentation",
+            "dbt on cloud: dbt Cloud, managed orchestration",
+            "dbt packages: Hub, community packages",
+            "dbt best practices: naming, testing, documentation"
+          ],
+          "prerequisites": ["Apache Airflow"],
+          "nextSkill": {
+            "name": "Modern ETL Tools",
+            "description": "Các công cụ ETL hiện đại khác."
+          }
+        },
+        {
+          "name": "Modern ETL Tools",
+          "difficulty": "Trung cấp",
+          "skillType": "Pipeline & ETL Tools",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Fivetran: managed data connectors, ELT approach",
+            "Airbyte: open-source data integration",
+            "Stitch: simple data integration",
+            "Talend: enterprise data integration",
+            "Apache NiFi: data flow automation",
+            "Prefect: modern workflow orchestration",
+            "Dagster: data asset orchestration",
+            "Mage: modern data pipeline tool",
+            "ETL vs ELT: differences, when to use which",
+            "CDC (Change Data Capture): Debezium, strategies",
+            "Data integration patterns: batch, streaming, hybrid",
+            "Tool selection criteria: cost, scale, maintainability",
+            "Open-source vs managed: trade-offs",
+            "Integration with cloud services"
+          ],
+          "prerequisites": ["dbt (Data Build Tool)"],
+          "nextSkill": {
+            "name": "Cloud Data Services",
+            "description": "Làm việc với data services trên cloud."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Cloud Data Services",
+      "description": "Làm việc với data services trên AWS, GCP, Azure.",
+      "skills": [
+        {
+          "name": "AWS Data Services",
+          "difficulty": "Trung cấp",
+          "skillType": "Cloud Data Services",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "S3: object storage, lifecycle, replication, storage classes",
+            "AWS Glue: serverless ETL, crawlers, data catalog",
+            "AWS Glue DataBrew: data preparation",
+            "Athena: serverless queries on S3",
+            "Redshift: data warehouse, spectrum, serverless",
+            "Lake Formation: data lake governance, fine-grained access",
+            "Kinesis: data streams, Firehose, analytics",
+            "MSK (Managed Streaming for Kafka)",
+            "EMR: managed Hadoop/Spark clusters",
+            "Aurora: relational database, serverless",
+            "DynamoDB: NoSQL, streams, global tables",
+            "DMS (Database Migration Service)",
+            "AWS Lambda: serverless ETL functions",
+            "Step Functions: workflow orchestration",
+            "AWS Glue jobs: Spark, Python Shell"
+          ],
+          "prerequisites": ["Modern ETL Tools"],
+          "nextSkill": {
+            "name": "GCP Data Services",
+            "description": "Làm việc với data services trên GCP."
+          }
+        },
+        {
+          "name": "GCP Data Services",
+          "difficulty": "Trung cấp",
+          "skillType": "Cloud Data Services",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Cloud Storage: object storage, classes, lifecycle",
+            "BigQuery: serverless data warehouse, ML integration",
+            "BigQuery: slots, reservations, cost optimization",
+            "Cloud Dataflow: stream/batch processing (Apache Beam)",
+            "Cloud Dataproc: managed Spark/Hadoop",
+            "Cloud Pub/Sub: messaging, event streaming",
+            "Cloud Composer: managed Airflow",
+            "Cloud Dataprep: data preparation",
+            "Cloud Data Catalog: metadata management",
+            "Cloud DLP: data loss prevention",
+            "Cloud Spanner: globally distributed relational DB",
+            "Cloud Firestore: NoSQL document database",
+            "Cloud SQL: managed relational databases",
+            "Data integration: Cloud Data Fusion (overview)"
+          ],
+          "prerequisites": ["AWS Data Services"],
+          "nextSkill": {
+            "name": "Azure Data Services",
+            "description": "Làm việc với data services trên Azure."
+          }
+        },
+        {
+          "name": "Azure Data Services",
+          "difficulty": "Trung cấp",
+          "skillType": "Cloud Data Services",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Azure Data Lake Storage (ADLS): Gen2, hierarchical namespace",
+            "Azure Synapse Analytics: data warehousing, serverless",
+            "Azure Data Factory: ETL/ELT pipelines, activities",
+            "Azure Databricks: managed Spark, collaborative notebooks",
+            "Azure Stream Analytics: real-time processing",
+            "Azure Event Hubs: big data streaming",
+            "Azure Cosmos DB: multi-model, globally distributed",
+            "Azure SQL Database: managed relational DB",
+            "Azure SQL Managed Instance",
+            "Azure Database for PostgreSQL/MySQL",
+            "Azure Purview (Microsoft Purview): data governance",
+            "Azure Data Catalog: metadata discovery",
+            "Azure Functions: serverless ETL",
+            "Azure Logic Apps: workflow automation"
+          ],
+          "prerequisites": ["GCP Data Services"],
+          "nextSkill": {
+            "name": "Data Governance & Quality",
+            "description": "Quản trị dữ liệu và đảm bảo chất lượng."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Data Governance & Quality",
+      "description": "Quản trị dữ liệu, đảm bảo chất lượng và cataloging.",
+      "skills": [
+        {
+          "name": "Data Governance",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Governance & Quality",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Data governance overview: policies, processes, roles",
+            "Data governance framework: people, process, technology",
+            "Data ownership: roles, responsibilities, accountability",
+            "Data stewardship: quality, compliance, documentation",
+            "Data classification: sensitivity levels, handling",
+            "Data cataloging: metadata, discovery, documentation",
+            "Data lineage: tracking data flow, transformations",
+            "Data access control: RBAC, ABAC, policies",
+            "Data privacy: GDPR, CCPA, HIPAA compliance",
+            "Data ethics: responsible use, bias, transparency",
+            "Master data management (MDM)",
+            "Reference data management",
+            "Data governance tools: Collibra, Alation, Atlan",
+            "Data governance on cloud: Lake Formation, Purview"
+          ],
+          "prerequisites": ["Azure Data Services"],
+          "nextSkill": {
+            "name": "Data Quality",
+            "description": "Đảm bảo chất lượng dữ liệu."
+          }
+        },
+        {
+          "name": "Data Quality",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Governance & Quality",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Data quality dimensions: accuracy, completeness, consistency, timeliness, validity, uniqueness",
+            "Data quality assessment: profiling, metrics, scores",
+            "Data profiling: statistical analysis, pattern detection",
+            "Data validation rules: constraints, business rules",
+            "Data cleansing: standardization, deduplication, imputation",
+            "Data enrichment: augmenting data with external sources",
+            "Data quality tools: Great Expectations, dbt tests, Deequ",
+            "Great Expectations: expectations, suites, checkpoints",
+            "dbt tests: schema tests, data tests, custom tests",
+            "Data monitoring: anomaly detection, alerts",
+            "Data contracts: defining quality SLAs",
+            "Data reconciliation: verifying across systems",
+            "Automated data quality: pipelines, monitoring",
+            "Data quality reporting: dashboards, metrics"
+          ],
+          "prerequisites": ["Data Governance"],
+          "nextSkill": {
+            "name": "Data Observability",
+            "description": "Theo dõi và observe data pipelines."
+          }
+        },
+        {
+          "name": "Data Observability",
+          "difficulty": "Nâng cao",
+          "skillType": "Data Governance & Quality",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Data observability overview: monitoring data health",
+            "Five pillars: freshness, volume, schema, distribution, lineage",
+            "Freshness monitoring: detecting stale data",
+            "Volume monitoring: unexpected row counts",
+            "Schema monitoring: column changes, new/removed fields",
+            "Distribution monitoring: statistical anomalies",
+            "Lineage tracking: upstream/downstream impact",
+            "Data observability tools: Monte Carlo, Bigeye, elementary",
+            "Elementary: open-source data observability for dbt",
+            "Alerting: thresholds, anomaly-based, smart routing",
+            "Incident management: data incidents, response",
+            "Root cause analysis: finding data issues quickly",
+            "Data SLAs: defining, monitoring, enforcing",
+            "Data observability on cloud: native tools"
+          ],
+          "prerequisites": ["Data Quality"],
+          "nextSkill": {
+            "name": "Modern Data Stack & Career",
+            "description": "Nắm vững modern data stack và phát triển sự nghiệp."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Modern Data Stack & Career",
+      "description": "Modern data stack, streaming và phát triển sự nghiệp.",
+      "skills": [
+        {
+          "name": "Modern Data Stack",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Data Stack & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Modern data stack components: ingestion, storage, transformation, serving",
+            "ELT pattern: extract, load, transform",
+            "Reverse ETL: pushing data back to operational tools",
+            "Data activation: using data in business tools",
+            "Headless BI: metrics layer, semantic layer",
+            "Metrics store: MetricFlow, Cube.js, dbt metrics",
+            "Semantic layer: defining business metrics centrally",
+            "Data contracts: producer-consumer agreements",
+            "Data product thinking: treating data as a product",
+            "Data platform engineering: building internal platforms",
+            "Open table formats: Delta Lake, Iceberg, Hudi comparison",
+            "Compute engines: Trino, Presto, Spark SQL comparison",
+            "Data stack architecture patterns",
+            "Tool selection: evaluating options, making choices",
+            "Data stack evolution: trends, emerging technologies"
+          ],
+          "prerequisites": ["Data Observability"],
+          "nextSkill": {
+            "name": "Streaming & Real-time",
+            "description": "Xây dựng real-time data pipelines."
+          }
+        },
+        {
+          "name": "Streaming & Real-time",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Data Stack & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Batch vs streaming: differences, use cases",
+            "Real-time architectures: Lambda, Kappa",
+            "Stream processing: Apache Flink, Spark Structured Streaming",
+            "Apache Flink: state management, windowing, exactly-once",
+            "Kafka Streams: stream processing, joins, aggregations",
+            "KSQL: SQL for stream processing",
+            "CDC (Change Data Capture): Debezium, patterns",
+            "Real-time analytics: OLAP databases (ClickHouse, Druid)",
+            "Real-time dashboards: streaming data visualization",
+            "Event-driven architecture: events, CQRS, event sourcing",
+            "Real-time ML: feature stores, model serving",
+            "Real-time use cases: fraud detection, recommendations, monitoring",
+            "Testing streaming applications: challenges, approaches",
+            "Monitoring streaming: lag, throughput, latency"
+          ],
+          "prerequisites": ["Modern Data Stack"],
+          "nextSkill": {
+            "name": "Certifications & Career",
+            "description": "Chuẩn bị chứng chỉ và phát triển sự nghiệp."
+          }
+        },
+        {
+          "name": "Certifications & Career",
+          "difficulty": "Nâng cao",
+          "skillType": "Modern Data Stack & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "AWS certifications: Data Engineer Specialty, Solutions Architect",
+            "GCP certifications: Data Engineer, Professional Cloud Data Engineer",
+            "Azure certifications: DP-203 (Data Engineer), DP-600",
+            "Databricks certifications: Data Engineer Associate/Professional",
+            "Snowflake certifications: SnowPro Core/Advanced",
+            "dbt certifications: Analytics Engineering",
+            "Certification study strategies: resources, practice",
+            "Building portfolio: data engineering projects, GitHub",
+            "Data engineering projects: end-to-end pipelines",
+            "Data engineering communities: Data Council, Locally Optimistic",
+            "Career paths: DE → Senior → Staff → Principal → Manager",
+            "Salary negotiation: market research, tactics",
+            "Continuous learning: conferences, blogs, podcasts",
+            "Emerging trends: AI/ML integration, data mesh, real-time"
+          ],
+          "prerequisites": ["Streaming & Real-time"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Data Engineer và sẵn sàng cho sự nghiệp."
+          }
+        }
+      ]
+    }
+  ]
+}

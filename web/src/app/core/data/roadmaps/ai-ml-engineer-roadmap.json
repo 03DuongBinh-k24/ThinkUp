@@ -1,0 +1,831 @@
+{
+  "roadmap": {
+    "name": "AI/ML Engineer",
+    "description": "Lộ trình trở thành kỹ sư AI/ML - từ nền tảng lập trình và toán học đến xây dựng, triển khai các mô hình học máy và trí tuệ nhân tạo trong thực tế."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundations",
+      "description": "Nền tảng lập trình Python, toán học và thống kê cần thiết cho AI/ML.",
+      "skills": [
+        {
+          "name": "Python Programming",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Cú pháp và cấu trúc dữ liệu cơ bản của Python",
+            "Object-Oriented Programming (OOP) trong Python",
+            "Xử lý file và exceptions",
+            "List comprehension và generators",
+            "Virtual environments và pip/package management",
+            "Debugging và testing cơ bản"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Linear Algebra",
+            "description": "Toán học tuyến tính là nền tảng cho các phép toán ma trận trong ML"
+          }
+        },
+        {
+          "name": "Linear Algebra",
+          "difficulty": "Trung cấp",
+          "skillType": "Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Vectors và matrices operations",
+            "Dot product, cross product",
+            "Matrix multiplication và inverse",
+            "Eigenvalues và eigenvectors",
+            "Singular Value Decomposition (SVD)",
+            "Application trong machine learning"
+          ],
+          "prerequisites": ["Python Programming"],
+          "nextSkill": {
+            "name": "Calculus",
+            "description": "Giải tích là nền tảng cho việc tối ưu hóa mô hình"
+          }
+        },
+        {
+          "name": "Calculus",
+          "difficulty": "Trung cấp",
+          "skillType": "Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Derivatives và partial derivatives",
+            "Chain rule và gradient",
+            "Gradient descent optimization",
+            "Multivariable calculus",
+            "Integration cơ bản",
+            "Application trong backpropagation"
+          ],
+          "prerequisites": ["Linear Algebra"],
+          "nextSkill": {
+            "name": "Probability & Statistics",
+            "description": "Xác suất thống kê là ngôn ngữ của machine learning"
+          }
+        },
+        {
+          "name": "Probability & Statistics",
+          "difficulty": "Trung cấp",
+          "skillType": "Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Probability distributions (Gaussian, Bernoulli, etc.)",
+            "Bayes' theorem và Bayesian inference",
+            "Hypothesis testing và p-values",
+            "Maximum Likelihood Estimation (MLE)",
+            "Descriptive statistics và data analysis",
+            "Statistical significance và confidence intervals"
+          ],
+          "prerequisites": ["Calculus"],
+          "nextSkill": {
+            "name": "Data Structures & Algorithms",
+            "description": "Cấu trúc dữ liệu và thuật toán cho hiệu năng tối ưu"
+          }
+        },
+        {
+          "name": "Data Structures & Algorithms",
+          "difficulty": "Trung cấp",
+          "skillType": "Foundations",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Arrays, Linked Lists, Stacks, Queues",
+            "Trees và Graphs",
+            "Sorting và Searching algorithms",
+            "Dynamic Programming",
+            "Big O notation và complexity analysis",
+            "Optimization algorithms"
+          ],
+          "prerequisites": ["Python Programming"],
+          "nextSkill": {
+            "name": "NumPy & Pandas",
+            "description": "Thư viện tính toán khoa học và xử lý dữ liệu"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Data Science Foundations",
+      "description": "Xây dựng nền tảng khoa học dữ liệu với các công cụ xử lý và phân tích dữ liệu.",
+      "skills": [
+        {
+          "name": "NumPy & Pandas",
+          "difficulty": "Cơ bản",
+          "skillType": "Data Science Foundations",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "NumPy arrays và operations",
+            "Pandas DataFrames và Series",
+            "Data cleaning và preprocessing",
+            "Data manipulation và transformation",
+            "Handling missing values",
+            "Merging và joining datasets"
+          ],
+          "prerequisites": ["Python Programming", "Data Structures & Algorithms"],
+          "nextSkill": {
+            "name": "Data Visualization",
+            "description": "Trực quan hóa dữ liệu để hiểu insight"
+          }
+        },
+        {
+          "name": "Data Visualization",
+          "difficulty": "Cơ bản",
+          "skillType": "Data Science Foundations",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Matplotlib và Seaborn basics",
+            "Interactive visualization với Plotly",
+            "Statistical plots (histograms, box plots, heatmaps)",
+            "Time series visualization",
+            "Dashboard design principles",
+            "Storytelling với data"
+          ],
+          "prerequisites": ["NumPy & Pandas"],
+          "nextSkill": {
+            "name": "SQL for Data Science",
+            "description": "Truy vấn và phân tích dữ liệu bằng SQL"
+          }
+        },
+        {
+          "name": "SQL for Data Science",
+          "difficulty": "Cơ bản",
+          "skillType": "Data Science Foundations",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Advanced SQL queries",
+            "Window functions và CTEs",
+            "Query optimization",
+            "Working với large datasets",
+            "Data aggregation và transformation",
+            "SQL cho machine learning pipelines"
+          ],
+          "prerequisites": ["NumPy & Pandas"],
+          "nextSkill": {
+            "name": "Feature Engineering",
+            "description": "Tạo và chọn features hiệu quả cho mô hình"
+          }
+        },
+        {
+          "name": "Feature Engineering",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Science Foundations",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Feature extraction từ raw data",
+            "Feature scaling và normalization",
+            "Encoding categorical variables",
+            "Feature selection techniques",
+            "Dimensionality reduction (PCA, t-SNE)",
+            "Feature importance và analysis"
+          ],
+          "prerequisites": ["NumPy & Pandas", "Probability & Statistics"],
+          "nextSkill": {
+            "name": "Machine Learning Fundamentals",
+            "description": "Nền tảng các thuật toán học máy"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "Machine Learning Fundamentals",
+      "description": "Nắm vững các thuật toán học máy cơ bản và cách chúng hoạt động.",
+      "skills": [
+        {
+          "name": "Supervised Learning",
+          "difficulty": "Trung cấp",
+          "skillType": "Machine Learning Fundamentals",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Linear Regression và Logistic Regression",
+            "Decision Trees và Random Forests",
+            "Support Vector Machines (SVM)",
+            "K-Nearest Neighbors (KNN)",
+            "Naive Bayes classifier",
+            "Model evaluation metrics (accuracy, precision, recall, F1)"
+          ],
+          "prerequisites": ["Feature Engineering", "Probability & Statistics"],
+          "nextSkill": {
+            "name": "Unsupervised Learning",
+            "description": "Học không giám sát cho clustering và dimensionality reduction"
+          }
+        },
+        {
+          "name": "Unsupervised Learning",
+          "difficulty": "Trung cấp",
+          "skillType": "Machine Learning Fundamentals",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "K-Means Clustering",
+            "Hierarchical Clustering",
+            "DBSCAN",
+            "Principal Component Analysis (PCA)",
+            "Latent Dirichlet Allocation (LDA)",
+            "Anomaly detection"
+          ],
+          "prerequisites": ["Supervised Learning"],
+          "nextSkill": {
+            "name": "Model Evaluation & Validation",
+            "description": "Đánh giá và validation mô hình ML"
+          }
+        },
+        {
+          "name": "Model Evaluation & Validation",
+          "difficulty": "Trung cấp",
+          "skillType": "Machine Learning Fundamentals",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Cross-validation techniques",
+            "Bias-variance tradeoff",
+            "Overfitting và underfitting",
+            "Hyperparameter tuning (Grid Search, Random Search, Bayesian)",
+            "Model selection criteria (AIC, BIC)",
+            "Confusion matrix và ROC curves"
+          ],
+          "prerequisites": ["Supervised Learning", "Unsupervised Learning"],
+          "nextSkill": {
+            "name": "Scikit-learn",
+            "description": "Thư viện ML toàn diện cho Python"
+          }
+        },
+        {
+          "name": "Scikit-learn",
+          "difficulty": "Trung cấp",
+          "skillType": "Machine Learning Fundamentals",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Preprocessing và pipelines",
+            "Model training và prediction",
+            "Hyperparameter optimization",
+            "Ensemble methods (bagging, boosting)",
+            "Model persistence và serialization",
+            "Integration với deep learning frameworks"
+          ],
+          "prerequisites": ["Supervised Learning", "Unsupervised Learning"],
+          "nextSkill": {
+            "name": "Deep Learning Fundamentals",
+            "description": "Nền tảng học sâu và neural networks"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Deep Learning",
+      "description": "Học sâu với neural networks và các kiến trúc hiện đại.",
+      "skills": [
+        {
+          "name": "Neural Networks Fundamentals",
+          "difficulty": "Nâng cao",
+          "skillType": "Deep Learning",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Perceptrons và multilayer networks",
+            "Activation functions (ReLU, Sigmoid, Softmax)",
+            "Backpropagation algorithm",
+            "Gradient descent variants (SGD, Adam, RMSprop)",
+            "Weight initialization techniques",
+            "Regularization (Dropout, BatchNorm, L1/L2)"
+          ],
+          "prerequisites": ["Scikit-learn", "Calculus", "Linear Algebra"],
+          "nextSkill": {
+            "name": "PyTorch / TensorFlow",
+            "description": "Frameworks chính cho deep learning"
+          }
+        },
+        {
+          "name": "PyTorch / TensorFlow",
+          "difficulty": "Nâng cao",
+          "skillType": "Deep Learning",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Tensor operations và autograd",
+            "Building custom layers và models",
+            "Training loops và optimization",
+            "GPU acceleration",
+            "Model serialization và deployment",
+            "Debugging và profiling"
+          ],
+          "prerequisites": ["Neural Networks Fundamentals"],
+          "nextSkill": {
+            "name": "CNNs (Convolutional Neural Networks)",
+            "description": "Mạng nơ-ron tích chập cho vision tasks"
+          }
+        },
+        {
+          "name": "CNNs (Convolutional Neural Networks)",
+          "difficulty": "Nâng cao",
+          "skillType": "Deep Learning",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Convolutional layers và pooling",
+            "Architectures (LeNet, AlexNet, VGG, ResNet, EfficientNet)",
+            "Transfer learning và fine-tuning",
+            "Object detection (YOLO, R-CNN)",
+            "Semantic segmentation",
+            "Data augmentation techniques"
+          ],
+          "prerequisites": ["PyTorch / TensorFlow"],
+          "nextSkill": {
+            "name": "RNNs & Sequence Models",
+            "description": "Mạng nơ-ron hồi tiếp cho dữ liệu chuỗi"
+          }
+        },
+        {
+          "name": "RNNs & Sequence Models",
+          "difficulty": "Nâng cao",
+          "skillType": "Deep Learning",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Vanilla RNNs và limitations",
+            "LSTM (Long Short-Term Memory)",
+            "GRU (Gated Recurrent Units)",
+            "Bidirectional RNNs",
+            "Sequence-to-sequence models",
+            "Attention mechanisms basics"
+          ],
+          "prerequisites": ["PyTorch / TensorFlow"],
+          "nextSkill": {
+            "name": "Generative Models",
+            "description": "Mô hình generative (GANs, VAEs)"
+          }
+        },
+        {
+          "name": "Generative Models",
+          "difficulty": "Nâng cao",
+          "skillType": "Deep Learning",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Generative Adversarial Networks (GANs)",
+            "Variational Autoencoders (VAEs)",
+            "Style transfer và image generation",
+            "Text generation approaches",
+            "Evaluation metrics cho generative models",
+            "Ethical considerations trong AI generation"
+          ],
+          "prerequisites": ["CNNs (Convolutional Neural Networks)", "RNNs & Sequence Models"],
+          "nextSkill": {
+            "name": "Transformers",
+            "description": "Kiến trúc transformer đằng sau LLMs"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Advanced AI Technologies",
+      "description": "Các công nghệ AI tiên tiến: Transformers, LLMs, và chuyên ngành.",
+      "skills": [
+        {
+          "name": "Transformers",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced AI Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Self-attention mechanism",
+            "Multi-head attention",
+            "Positional encoding",
+            "Transformer architecture (Encoder-Decoder)",
+            "BERT, GPT, T5 architectures",
+            "Implementation từ scratch"
+          ],
+          "prerequisites": ["Generative Models"],
+          "nextSkill": {
+            "name": "LLMs (Large Language Models)",
+            "description": "Các mô hình ngôn ngữ lớn"
+          }
+        },
+        {
+          "name": "LLMs (Large Language Models)",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced AI Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Pre-training và fine-tuning LLMs",
+            "Prompt engineering techniques",
+            "RLHF (Reinforcement Learning from Human Feedback)",
+            "RAG (Retrieval-Augmented Generation)",
+            "Fine-tuning với LoRA, QLoRA",
+            "Evaluation và benchmarking LLMs"
+          ],
+          "prerequisites": ["Transformers"],
+          "nextSkill": {
+            "name": "Reinforcement Learning",
+            "description": "Học tăng cường cho các bài toán quyết định"
+          }
+        },
+        {
+          "name": "Reinforcement Learning",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced AI Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Markov Decision Processes (MDPs)",
+            "Q-Learning và Deep Q-Networks (DQN)",
+            "Policy Gradient methods",
+            "Actor-Critic methods (A2C, PPO)",
+            "Multi-agent reinforcement learning",
+            "Applications trong robotics và gaming"
+          ],
+          "prerequisites": ["Deep Learning Fundamentals"],
+          "nextSkill": {
+            "name": "NLP (Natural Language Processing)",
+            "description": "Xử lý ngôn ngữ tự nhiên chuyên sâu"
+          }
+        },
+        {
+          "name": "NLP (Natural Language Processing)",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced AI Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Tokenization và text preprocessing",
+            "Word embeddings (Word2Vec, GloVe, FastText)",
+            "Named Entity Recognition (NER)",
+            "Sentiment analysis",
+            "Text classification và clustering",
+            "Machine translation"
+          ],
+          "prerequisites": ["Transformers", "RNNs & Sequence Models"],
+          "nextSkill": {
+            "name": "Computer Vision",
+            "description": "Thị giác máy tính chuyên sâu"
+          }
+        },
+        {
+          "name": "Computer Vision",
+          "difficulty": "Nâng cao",
+          "skillType": "Advanced AI Technologies",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Image classification và recognition",
+            "Object detection và tracking",
+            "Image segmentation (semantic, instance, panoptic)",
+            "3D vision và depth estimation",
+            "Video analysis",
+            "OCR và document understanding"
+          ],
+          "prerequisites": ["CNNs (Convolutional Neural Networks)"],
+          "nextSkill": {
+            "name": "ML System Design",
+            "description": "Thiết kế hệ thống ML end-to-end"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "MLOps & Deployment",
+      "description": "Triển khai và vận hành các mô hình ML trong production.",
+      "skills": [
+        {
+          "name": "Model Deployment",
+          "difficulty": "Nâng cao",
+          "skillType": "MLOps & Deployment",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Model serialization (ONNX, TorchScript, SavedModel)",
+            "REST API serving với FastAPI/Flask",
+            "Containerization với Docker",
+            "Model optimization (quantization, pruning, distillation)",
+            "Batch vs real-time inference",
+            "A/B testing cho models"
+          ],
+          "prerequisites": ["PyTorch / TensorFlow", "Scikit-learn"],
+          "nextSkill": {
+            "name": "Cloud ML Services",
+            "description": "Dịch vụ ML trên cloud platforms"
+          }
+        },
+        {
+          "name": "Cloud ML Services",
+          "difficulty": "Nâng cao",
+          "skillType": "MLOps & Deployment",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "AWS SageMaker và Bedrock",
+            "Google Cloud Vertex AI",
+            "Azure Machine Learning",
+            "Managed model serving",
+            "AutoML services",
+            "Cost optimization cho ML workloads"
+          ],
+          "prerequisites": ["Model Deployment"],
+          "nextSkill": {
+            "name": "MLOps Pipelines",
+            "description": "Xây dựng pipelines ML tự động hóa"
+          }
+        },
+        {
+          "name": "MLOps Pipelines",
+          "difficulty": "Nâng cao",
+          "skillType": "MLOps & Deployment",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "MLflow cho experiment tracking",
+            "Kubeflow và TFX pipelines",
+            "Data versioning với DVC",
+            "Feature stores (Feast, Tecton)",
+            "CI/CD cho ML models",
+            "Monitoring và drift detection"
+          ],
+          "prerequisites": ["Cloud ML Services"],
+          "nextSkill": {
+            "name": "Data Engineering for ML",
+            "description": "Kỹ thuật dữ liệu cho ML pipelines"
+          }
+        },
+        {
+          "name": "Data Engineering for ML",
+          "difficulty": "Nâng cao",
+          "skillType": "MLOps & Deployment",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Data pipelines với Apache Airflow",
+            "Stream processing với Kafka",
+            "Data lakes và data warehouses",
+            "ETL/ELT processes",
+            "Data quality và validation",
+            "Scalable data processing với Spark"
+          ],
+          "prerequisites": ["NumPy & Pandas", "SQL for Data Science"],
+          "nextSkill": {
+            "name": "Kubernetes for ML",
+            "description": "Quản lý containers và orchestration cho ML"
+          }
+        },
+        {
+          "name": "Kubernetes for ML",
+          "difficulty": "Nâng cao",
+          "skillType": "MLOps & Deployment",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Kubernetes basics và architecture",
+            "Deploying ML models trên K8s",
+            "GPU scheduling và resource management",
+            "Model serving với KServe/Seldon",
+            "Scaling inference workloads",
+            "Monitoring và logging"
+          ],
+          "prerequisites": ["Model Deployment", "Cloud ML Services"],
+          "nextSkill": {
+            "name": "Responsible AI",
+            "description": "AI có trách nhiệm và ethical considerations"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Responsible AI & Ethics",
+      "description": "Đảm bảo AI phát triển có trách nhiệm, công bằng và minh bạch.",
+      "skills": [
+        {
+          "name": "Fairness & Bias Mitigation",
+          "difficulty": "Trung cấp",
+          "skillType": "Responsible AI & Ethics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Types of bias trong ML models",
+            "Fairness metrics (demographic parity, equalized odds)",
+            "Bias detection và mitigation techniques",
+            "Fair AI trong hiring, lending, criminal justice",
+            "Datasheets cho datasets",
+            "Model cards và transparency"
+          ],
+          "prerequisites": ["Supervised Learning", "Model Evaluation & Validation"],
+          "nextSkill": {
+            "name": "Explainable AI (XAI)",
+            "description": "Giải thích quyết định của AI models"
+          }
+        },
+        {
+          "name": "Explainable AI (XAI)",
+          "difficulty": "Nâng cao",
+          "skillType": "Responsible AI & Ethics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "SHAP (SHapley Additive exPlanations)",
+            "LIME (Local Interpretable Model-agnostic Explanations)",
+            "Feature importance analysis",
+            "Attention visualization",
+            "Counterfactual explanations",
+            "Model interpretability vs accuracy tradeoff"
+          ],
+          "prerequisites": ["Fairness & Bias Mitigation"],
+          "nextSkill": {
+            "name": "AI Safety & Alignment",
+            "description": "An toàn và alignment của AI systems"
+          }
+        },
+        {
+          "name": "AI Safety & Alignment",
+          "difficulty": "Nâng cao",
+          "skillType": "Responsible AI & Ethics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Alignment problem và challenges",
+            "Constitutional AI",
+            "Red teaming và adversarial testing",
+            "Robustness và adversarial examples",
+            "AI governance frameworks",
+            "Long-term AI safety considerations"
+          ],
+          "prerequisites": ["Explainable AI (XAI)", "LLMs (Large Language Models)"],
+          "nextSkill": {
+            "name": "Privacy-Preserving ML",
+            "description": "Bảo vệ privacy trong machine learning"
+          }
+        },
+        {
+          "name": "Privacy-Preserving ML",
+          "difficulty": "Nâng cao",
+          "skillType": "Responsible AI & Ethics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Differential privacy",
+            "Federated learning",
+            "Homomorphic encryption cho ML",
+            "Secure multi-party computation",
+            "Data anonymization techniques",
+            "GDPR compliance cho ML systems"
+          ],
+          "prerequisites": ["Fairness & Bias Mitigation"],
+          "nextSkill": {
+            "name": "AI Product Management",
+            "description": "Quản lý sản phẩm AI từ ý tưởng đến triển khai"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "AI Research & Innovation",
+      "description": "Đẩy ranh giới AI với nghiên cứu và phát triển công nghệ mới.",
+      "skills": [
+        {
+          "name": "Research Methods",
+          "difficulty": "Nâng cao",
+          "skillType": "AI Research & Innovation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Reading và hiểu research papers",
+            "Reproducing research results",
+            "Thiết kế experiments hiệu quả",
+            "Statistical significance trong research",
+            "Writing research papers",
+            "Peer review process"
+          ],
+          "prerequisites": ["Deep Learning Fundamentals"],
+          "nextSkill": {
+            "name": "Novel Architectures",
+            "description": "Phát triển kiến trúc models mới"
+          }
+        },
+        {
+          "name": "Novel Architectures",
+          "difficulty": "Nâng cao",
+          "skillType": "AI Research & Innovation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Neural Architecture Search (NAS)",
+            "Efficient architectures (MobileNet, ShuffleNet)",
+            "Graph Neural Networks (GNNs)",
+            "Neural ODEs và continuous-depth models",
+            "Spiking Neural Networks",
+            "Quantum machine learning basics"
+          ],
+          "prerequisites": ["Research Methods", "Transformers", "CNNs (Convolutional Neural Networks)"],
+          "nextSkill": {
+            "name": "Multimodal AI",
+            "description": "AI xử lý đa modal (text, image, audio)"
+          }
+        },
+        {
+          "name": "Multimodal AI",
+          "difficulty": "Nâng cao",
+          "skillType": "AI Research & Innovation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Vision-Language Models (CLIP, DALL-E, GPT-4V)",
+            "Audio-visual learning",
+            "Cross-modal retrieval",
+            "Multimodal transformers",
+            "Video understanding",
+            "Multimodal generation"
+          ],
+          "prerequisites": ["Novel Architectures", "LLMs (Large Language Models)", "Computer Vision"],
+          "nextSkill": {
+            "name": "Edge AI & Optimization",
+            "description": "Tối ưu hóa AI cho edge devices"
+          }
+        },
+        {
+          "name": "Edge AI & Optimization",
+          "difficulty": "Nâng cao",
+          "skillType": "AI Research & Innovation",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Model compression techniques",
+            "Knowledge distillation",
+            "Quantization (INT8, INT4, mixed precision)",
+            "Pruning và structured pruning",
+            "Edge deployment (TensorRT, Core ML, TFLite)",
+            "Hardware-aware NAS"
+          ],
+          "prerequisites": ["Model Deployment", "Novel Architectures"],
+          "nextSkill": {
+            "name": "AI for Good",
+            "description": "Ứng dụng AI giải quyết vấn đề xã hội"
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Leadership & Strategy",
+      "description": "Dẫn dắt đội ngũ AI và xây dựng chiến lược AI cho tổ chức.",
+      "skills": [
+        {
+          "name": "AI Team Leadership",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Building và managing AI teams",
+            "Technical mentorship",
+            "Cross-functional collaboration",
+            "Project prioritization và resource allocation",
+            "Stakeholder communication",
+            "AI talent recruitment"
+          ],
+          "prerequisites": ["MLOps Pipelines", "Responsible AI & Ethics"],
+          "nextSkill": {
+            "name": "AI Strategy",
+            "description": "Xây dựng chiến lược AI cho tổ chức"
+          }
+        },
+        {
+          "name": "AI Strategy",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "AI use case identification và prioritization",
+            "Build vs buy decisions",
+            "AI ROI measurement",
+            "Technology roadmap planning",
+            "Vendor evaluation và selection",
+            "Change management cho AI adoption"
+          ],
+          "prerequisites": ["AI Team Leadership"],
+          "nextSkill": {
+            "name": "Industry Applications",
+            "description": "Ứng dụng AI trong các ngành cụ thể"
+          }
+        },
+        {
+          "name": "Industry Applications",
+          "difficulty": "Nâng cao",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "AI trong healthcare (medical imaging, drug discovery)",
+            "AI trong finance (fraud detection, algorithmic trading)",
+            "AI trong retail (recommendation systems, demand forecasting)",
+            "AI trong manufacturing (predictive maintenance, quality control)",
+            "AI trong自动驾驶 (autonomous driving)",
+            "AI trong giáo dục (personalized learning)"
+          ],
+          "prerequisites": ["AI Strategy"],
+          "nextSkill": {
+            "name": "Continuous Learning",
+            "description": "Cập nhật kiến thức và trends mới nhất"
+          }
+        },
+        {
+          "name": "Continuous Learning",
+          "difficulty": "Trung cấp",
+          "skillType": "Leadership & Strategy",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Staying updated với latest research",
+            "Contributing to open-source AI projects",
+            "Attending conferences và workshops",
+            "Building professional network",
+            "Publishing và sharing knowledge",
+            "Mentoring next-gen AI engineers"
+          ],
+          "prerequisites": ["Industry Applications"],
+          "nextSkill": {
+            "name": "AI Product Manager",
+            "description": "Quản lý sản phẩm AI end-to-end"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+<div class="min-h-screen bg-[#F9F9FF] text-[#0F172B]">
+  <main class="mx-auto w-full max-w-[1776px] px-5 py-8 sm:px-6 lg:px-8">
+    <!-- Title -->
+    <div class="flex items-center gap-2">
+      <h1 class="text-[24px] font-bold leading-9 text-[#0F172B]">Khóa học yêu thích</h1>
+      <svg class="h-6 w-6 fill-[#FB2C36] text-[#FB2C36]" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+      </svg>
+    </div>
+    <p class="mt-1 text-[13px] leading-5 text-[#62748E]">Danh sách các khóa học bạn đã yêu thích.</p>
+
+    <!-- Sort Bar -->
+    @if (isReady() && courses().length > 0) {
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-4">
+        <span class="inline-flex h-[38px] items-center rounded-[8px] bg-[#155DFC] px-4 text-[14px] font-semibold text-white">
+          Tất cả ({{ courses().length }})
+        </span>
+
+        <div class="relative flex items-center gap-3">
+          <span class="text-[13px] text-[#62748E]">Sắp xếp:</span>
+          <button
+            type="button"
+            (click)="isSortOpen.update(v => !v)"
+            class="flex h-[38px] min-w-[177px] items-center justify-between gap-3 rounded-[8px] border border-[#E2E8F0] bg-white px-4 text-[14px] text-[#45556C]"
+          >
+            {{ activeSortLabel() }}
+            <svg class="h-4 w-4 transition" [class.rotate-180]="isSortOpen()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+
+          @if (isSortOpen()) {
+            <div class="absolute right-0 top-11 z-20 w-[210px] overflow-hidden rounded-[8px] border border-[#E2E8F0] bg-white py-1 shadow-lg">
+              @for (option of sortOptions; track option.value) {
+                <button
+                  type="button"
+                  (click)="selectSort(option.value)"
+                  class="block w-full px-4 py-2 text-left text-[13px] hover:bg-[#F8FAFC]"
+                  [class.font-semibold]="sort() === option.value"
+                  [class.text-[#155DFC]]="sort() === option.value"
+                  [class.text-[#45556C]]="sort() !== option.value"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (isReady() && courses().length === 0) {
+      <section class="mt-7 flex min-h-[480px] flex-col items-center justify-center rounded-[18px] border border-dashed border-[#CBD5E1] bg-white px-6 py-16 text-center">
+        <span class="mb-5 grid h-20 w-20 place-items-center rounded-full bg-[#FFF1F2] text-[#FB2C36]">
+          <svg class="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+        </span>
+        <h2 class="text-xl font-bold">Bạn chưa có khóa học yêu thích</h2>
+        <p class="mt-2 max-w-md text-[14px] leading-6 text-[#62748E]">Nhấn vào biểu tượng trái tim trên khóa học bạn quan tâm để lưu lại và xem sau.</p>
+        <a routerLink="/main/courses" class="mt-6 inline-flex h-11 items-center rounded-[8px] bg-[#155DFC] px-5 text-[14px] font-semibold text-white transition hover:bg-[#0F4CD1]">
+          Khám phá khóa học
+        </a>
+      </section>
+    }
+
+    <!-- Courses Grid -->
+    @if (isReady() && sortedCourses().length > 0) {
+      <section class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        @for (course of sortedCourses(); track course.id) {
+          <app-course-card [course]="course" />
+        }
+      </section>
+    }
+  </main>
+</div>

@@ -1,0 +1,724 @@
+{
+  "roadmap": {
+    "name": "Data-analysis",
+    "description": "Lộ trình trở thành Data Analyst - người phân tích dữ liệu để tạo insights hỗ trợ quyết định kinh doanh. Bắt đầu từ nền tảng toán/statistics, phát triển kỹ năng SQL, Python, visualization, BI tools, đến advanced analytics và storytelling với data."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng toán học, statistics cơ bản và tư duy phân tích.",
+      "skills": [
+        {
+          "name": "Mathematics for Data Analysis",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Basic algebra: equations, inequalities, functions",
+            "Linear algebra basics: vectors, matrices (intro)",
+            "Calculus basics: derivatives, integrals (conceptual)",
+            "Set theory: sets, unions, intersections",
+            "Logic và critical thinking",
+            "Mathematical notation và terminology",
+            "Applied math for business: growth rates, percentages, ratios",
+            "Number sense: estimation, mental math, reasonableness checks"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Statistics Fundamentals",
+            "description": "Nắm vững statistics cơ bản cho phân tích dữ liệu."
+          }
+        },
+        {
+          "name": "Statistics Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Descriptive statistics: mean, median, mode, range",
+            "Measures of spread: variance, standard deviation, IQR",
+            "Data distributions: normal, skewed, bimodal",
+            "Percentiles và quartiles",
+            "Z-scores và standardization",
+            "Correlation vs causation",
+            "Basic probability: rules, conditional probability",
+            "Central Limit Theorem",
+            "Sampling methods: random, stratified, cluster",
+            "Margin of error và confidence (conceptual)",
+            "Common statistical mistakes và biases",
+            "When to use which statistical measure"
+          ],
+          "prerequisites": ["Mathematics for Data Analysis"],
+          "nextSkill": {
+            "name": "Excel & Spreadsheet Analysis",
+            "description": "Bắt đầu phân tích dữ liệu với Excel."
+          }
+        },
+        {
+          "name": "Excel & Spreadsheet Analysis",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Excel fundamentals: cells, sheets, formatting, navigation",
+            "Formulas: SUM, AVERAGE, COUNT, COUNTA, COUNTBLANK",
+            "Lookup functions: VLOOKUP, HLOOKUP, INDEX/MATCH, XLOOKUP",
+            "Conditional functions: SUMIF, COUNTIF, AVERAGEIF, nested IF",
+            "Text functions: LEFT, RIGHT, MID, CONCATENATE, TRIM, LEN",
+            "Date functions: TODAY, NOW, DATEDIF, EOMONTH, YEAR/MONTH/DAY",
+            "Pivot Tables: creating, summarizing, grouping, filtering",
+            "Pivot Charts: visualizing pivot data",
+            "Conditional formatting: highlighting data patterns",
+            "Data validation: input rules, dropdown lists",
+            "Sorting và filtering: basic, custom, advanced",
+            "Data cleaning in Excel: duplicates, text-to-columns, find-replace",
+            "Charts: bar, line, pie, scatter, combo",
+            "What-If Analysis: Goal Seek, Scenario Manager, Data Tables",
+            "Sparklines: inline charts",
+            "Named ranges và structured references",
+            "Macros basics: recording, running simple macros",
+            "Power Query basics: importing, transforming data",
+            "Excel shortcuts: productivity tips"
+          ],
+          "prerequisites": ["Statistics Fundamentals"],
+          "nextSkill": {
+            "name": "Analytical Thinking & Business Acumen",
+            "description": "Phát triển tư duy phân tích và hiểu biết kinh doanh."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Business & Analytical Skills",
+      "description": "Phát triển tư duy phân tích và hiểu biết kinh doanh.",
+      "skills": [
+        {
+          "name": "Analytical Thinking & Problem Solving",
+          "difficulty": "Cơ bản",
+          "skillType": "Business & Analytical Skills",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Critical thinking: evaluating information, distinguishing fact vs opinion",
+            "Problem decomposition: breaking down complex problems",
+            "Root cause analysis: 5 Whys, Fishbone diagram",
+            "Hypothesis-driven analysis",
+            "MECE principle: Mutually Exclusive, Collectively Exhaustive",
+            "Logical reasoning: deductive, inductive",
+            "Decision frameworks: matrices, weighted scoring",
+            "Systems thinking: understanding interconnections",
+            "First principles thinking: challenging assumptions",
+            "Pattern recognition: identifying trends, anomalies",
+            "Structured problem-solving: issue trees, hypothesis trees"
+          ],
+          "prerequisites": ["Excel & Spreadsheet Analysis"],
+          "nextSkill": {
+            "name": "Business Fundamentals",
+            "description": "Nắm vững kiến thức kinh doanh cơ bản."
+          }
+        },
+        {
+          "name": "Business Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Business & Analytical Skills",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Business models: B2B, B2C, B2G, marketplace, subscription",
+            "Financial metrics: revenue, profit, margin, ROI, CAC, LTV",
+            "Unit economics: understanding business viability",
+            "KPIs: defining, measuring, reporting",
+            "Marketing metrics: conversion, CTR, CPM, CPA",
+            "Sales metrics: pipeline, win rate, deal size, velocity",
+            "Product metrics: DAU/MAU, retention, churn, engagement",
+            "Operations metrics: efficiency, throughput, cycle time",
+            "Customer metrics: NPS, CSAT, CES, churn rate",
+            "Competitive analysis: market positioning, SWOT",
+            "Business terminology: common terms across functions",
+            "Understanding organizational goals và initiatives"
+          ],
+          "prerequisites": ["Analytical Thinking & Problem Solving"],
+          "nextSkill": {
+            "name": "SQL & Database Fundamentals",
+            "description": "Học SQL để truy cập và phân tích dữ liệu."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "SQL & Database",
+      "description": "Thành thạo SQL để truy vấn và phân tích dữ liệu từ database.",
+      "skills": [
+        {
+          "name": "SQL Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "SQL & Database",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "SQL overview: what is SQL, RDBMS concepts",
+            "SELECT statement: columns, aliases, DISTINCT",
+            "FROM clause: single table, table aliases",
+            "WHERE clause: conditions, comparison operators",
+            "AND, OR, NOT operators",
+            "IN, BETWEEN, LIKE, IS NULL operators",
+            "ORDER BY: sorting ascending, descending, multiple columns",
+            "LIMIT/OFFSET: pagination",
+            "Aggregate functions: COUNT, SUM, AVG, MIN, MAX",
+            "GROUP BY: grouping data, aggregate results",
+            "HAVING: filtering grouped data",
+            "INSERT INTO: adding data",
+            "UPDATE: modifying data",
+            "DELETE: removing data",
+            "Creating tables: CREATE TABLE, data types, constraints"
+          ],
+          "prerequisites": ["Business Fundamentals"],
+          "nextSkill": {
+            "name": "SQL Intermediate",
+            "description": "Nâng cao kỹ năng SQL với joins và subqueries."
+          }
+        },
+        {
+          "name": "SQL Intermediate",
+          "difficulty": "Trung cấp",
+          "skillType": "SQL & Database",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "JOINs: INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN",
+            "CROSS JOIN và SELF JOIN",
+            "Multiple JOINs: joining 3+ tables",
+            "Subqueries: in SELECT, FROM, WHERE",
+            "Correlated subqueries",
+            "Common Table Expressions (CTEs): WITH clause",
+            "Window functions: ROW_NUMBER, RANK, DENSE_RANK",
+            "Window functions: LAG, LEAD, FIRST_VALUE, LAST_VALUE",
+            "Window functions: SUM, AVG, COUNT OVER partitions",
+            "CASE WHEN: conditional logic in queries",
+            "COALESCE, NULLIF: handling NULL values",
+            "String functions: CONCAT, SUBSTRING, UPPER, LOWER, TRIM",
+            "Date functions: DATEADD, DATEDIFF, DATE_TRUNC",
+            "UNION, INTERSECT, EXCEPT: combining queries",
+            "View creation và usage",
+            "Query performance basics: EXPLAIN, indexes"
+          ],
+          "prerequisites": ["SQL Fundamentals"],
+          "nextSkill": {
+            "name": "Database Design & Modeling",
+            "description": "Hiểu cách thiết kế database hiệu quả."
+          }
+        },
+        {
+          "name": "Database Design & Modeling",
+          "difficulty": "Trung cấp",
+          "skillType": "SQL & Database",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "Database design process: requirements → conceptual → logical → physical",
+            "Entity-Relationship modeling: entities, attributes, relationships",
+            "ER Diagram: Crow's Foot notation",
+            "Normalization: 1NF, 2NF, 3NF, BCNF",
+            "Denormalization: khi nào cần, trade-offs",
+            "Data types selection: choosing appropriate types",
+            "Primary keys: UUID vs auto-increment",
+            "Foreign keys: ON DELETE, ON UPDATE actions",
+            "Indexes: B-Tree, composite, partial, covering",
+            "Data dictionary: definitions, business glossary",
+            "Data warehouse concepts: star schema, snowflake schema",
+            "Dimensional modeling: facts, dimensions, measures",
+            "ETL vs ELT concepts",
+            "Data quality: accuracy, completeness, consistency",
+            "Database tools: DBeaver, pgAdmin, MySQL Workbench"
+          ],
+          "prerequisites": ["SQL Intermediate"],
+          "nextSkill": {
+            "name": "Python for Data Analysis",
+            "description": "Bắt đầu học Python cho phân tích dữ liệu."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "Programming for Data Analysis",
+      "description": "Học Python và các libraries để phân tích dữ liệu hiệu quả.",
+      "skills": [
+        {
+          "name": "Python Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Programming for Data Analysis",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Python basics: variables, data types, operators",
+            "Control flow: if/elif/else, for, while",
+            "Functions: definition, parameters, return, lambda",
+            "Data structures: lists, dictionaries, sets, tuples",
+            "List comprehensions: concise data transformation",
+            "String methods: split, join, replace, strip, format",
+            "File I/O: reading/writing files (CSV, text)",
+            "Error handling: try/except, specific exceptions",
+            "Modules và packages: import, pip install",
+            "Virtual environments: venv, conda environments",
+            "Jupyter Notebook: cells, markdown, execution order",
+            "JupyterLab: interface, extensions",
+            "Google Colab: cloud notebooks, GPU access",
+            "Python for data analysis: why Python over other languages"
+          ],
+          "prerequisites": ["Database Design & Modeling"],
+          "nextSkill": {
+            "name": "Pandas",
+            "description": "Học Pandas cho data manipulation."
+          }
+        },
+        {
+          "name": "Pandas",
+          "difficulty": "Trung cấp",
+          "skillType": "Programming for Data Analysis",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Series: 1D labeled array, operations",
+            "DataFrame: 2D labeled data structure",
+            "Reading data: read_csv, read_excel, read_sql, read_json",
+            "Writing data: to_csv, to_excel, to_sql, to_json",
+            "Basic operations: head, tail, info, describe, shape",
+            "Selection: [], loc, iloc, conditional selection",
+            "Filtering: boolean indexing, query method",
+            "Sorting: sort_values, sort_index",
+            "Missing data: isnull, dropna, fillna, interpolate",
+            "Data types: astype, to_datetime, to_numeric",
+            "String operations: str accessor methods",
+            "Apply functions: apply, map, applymap",
+            "Grouping: groupby, agg, transform, filter",
+            "Merging: merge, join, concat",
+            "Pivoting: pivot_table, melt, stack, unstack",
+            "Time series: resample, rolling, shift",
+            "Multi-index: hierarchical indexing",
+            "Performance: vectorization, avoiding loops"
+          ],
+          "prerequisites": ["Python Fundamentals"],
+          "nextSkill": {
+            "name": "NumPy",
+            "description": "Học NumPy cho numerical computing."
+          }
+        },
+        {
+          "name": "NumPy",
+          "difficulty": "Trung cấp",
+          "skillType": "Programming for Data Analysis",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "NumPy arrays: creation, attributes, indexing",
+            "Array creation: array, zeros, ones, arange, linspace",
+            "Random number generation: rand, randint, normal",
+            "Array operations: element-wise operations, broadcasting",
+            "Array indexing: slicing, boolean indexing, fancy indexing",
+            "Array reshaping: reshape, flatten, ravel",
+            "Linear algebra: dot, matmul, transpose, inverse",
+            "Statistical operations: mean, std, var, min, max, percentile",
+            "Sorting: sort, argsort, searchsorted",
+            "Set operations: unique, intersect1d, union1d",
+            "Broadcasting: rules, use cases",
+            "Performance: vectorized operations vs loops",
+            "NumPy vs Python lists: performance comparison",
+            "Working with Pandas: underlying arrays"
+          ],
+          "prerequisites": ["Pandas"],
+          "nextSkill": {
+            "name": "Data Visualization (Python)",
+            "description": "Học visualization với Python."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Data Visualization",
+      "description": "Tạo visualizations và dashboards để communicate insights.",
+      "skills": [
+        {
+          "name": "Data Visualization (Python)",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Visualization",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Matplotlib basics: figures, axes, subplots",
+            "Matplotlib plots: line, bar, scatter, histogram, box",
+            "Customization: colors, styles, labels, titles, legends",
+            "Seaborn: statistical visualization library",
+            "Seaborn plots: relplot, catplot, displot, pairplot",
+            "Seaborn themes: darkgrid, whitegrid, dark, white",
+            "Plotly: interactive visualizations",
+            "Plotly express:快速创建 interactive charts",
+            "Plotly graph_objects: fine-grained control",
+            "Interactive dashboards: Dash, Streamlit basics",
+            "Choosing the right chart type for data",
+            "Visualization best practices: clarity, accuracy, efficiency",
+            "Color theory: sequential, diverging, qualitative palettes",
+            "Saving visualizations: PNG, SVG, PDF",
+            "Embedding in reports: Jupyter, HTML"
+          ],
+          "prerequisites": ["NumPy"],
+          "nextSkill": {
+            "name": "Tableau",
+            "description": "Học Tableau cho BI và visualization."
+          }
+        },
+        {
+          "name": "Tableau",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Visualization",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Tableau Desktop: interface, connecting to data",
+            "Data sources: Excel, CSV, databases, cloud sources",
+            "Data preparation: joins, unions, blending, data types",
+            "Worksheets: building visualizations",
+            "Marks card: color, size, label, detail, tooltip",
+            "Shelves: rows, columns, filters, pages",
+            "Chart types: bar, line, scatter, maps, treemap, heatmap",
+            "Calculations: calculated fields, table calculations",
+            "Parameters: dynamic controls, what-if analysis",
+            "Sets và groups: categorizing data",
+            "Dashboards: combining worksheets, layout",
+            "Dashboard actions: filter, highlight, URL, parameter",
+            "Storytelling: creating narrative with data",
+            "Publishing to Tableau Server/Cloud",
+            "Tableau Prep: data preparation工具",
+            "Performance optimization: extracts, filters, relationships",
+            "Tableau best practices: design, interactivity"
+          ],
+          "prerequisites": ["Data Visualization (Python)"],
+          "nextSkill": {
+            "name": "Power BI",
+            "description": "Học Power BI cho BI và visualization."
+          }
+        },
+        {
+          "name": "Power BI",
+          "difficulty": "Trung cấp",
+          "skillType": "Data Visualization",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Power BI Desktop: interface, data connections",
+            "Data sources: Excel, SQL, web, APIs",
+            "Power Query: transforming data, M language basics",
+            "Data modeling: relationships, star schema",
+            "DAX basics: measures, calculated columns",
+            "DAX functions: CALCULATE, FILTER, ALL, RELATED",
+            "Visualizations: bar, line, card, table, matrix, map",
+            "Formatting: themes, conditional formatting",
+            "Slicers và filters: interactive filtering",
+            "Bookmarks và drill-through",
+            "Row-level security (RLS): restricting data access",
+            "Publishing to Power BI Service",
+            "Power BI Service: workspaces, apps, scheduled refresh",
+            "Power BI Mobile: viewing dashboards on mobile",
+            "Power BI tips: performance, design best practices",
+            "Power BI vs Tableau: comparison, when to use which"
+          ],
+          "prerequisites": ["Tableau"],
+          "nextSkill": {
+            "name": "Statistics for Data Analysis",
+            "description": "Áp dụng statistics nâng cao vào phân tích."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Statistics & Analytics",
+      "description": "Áp dụng statistics và analytics techniques nâng cao.",
+      "skills": [
+        {
+          "name": "Statistics for Data Analysis",
+          "difficulty": "Trung cấp",
+          "skillType": "Statistics & Analytics",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Probability distributions: normal, binomial, Poisson",
+            "Hypothesis testing: null hypothesis, alternative hypothesis",
+            "p-value: interpretation, significance levels",
+            "Type I and Type II errors",
+            "Confidence intervals: calculation, interpretation",
+            "T-tests: one-sample, two-sample, paired",
+            "Chi-square test: categorical data analysis",
+            "ANOVA: comparing multiple groups",
+            "Correlation analysis: Pearson, Spearman",
+            "Simple linear regression: interpretation, prediction",
+            "Multiple linear regression: assumptions, interpretation",
+            "A/B testing: statistical significance, sample size",
+            "Survival analysis basics: churn, retention",
+            "Time series basics: trend, seasonality, stationarity",
+            "Statistical tools: Python scipy.stats, statsmodels"
+          ],
+          "prerequisites": ["Power BI"],
+          "nextSkill": {
+            "name": "Advanced Analytics with Python",
+            "description": "Áp dụng techniques nâng cao với Python."
+          }
+        },
+        {
+          "name": "Advanced Analytics with Python",
+          "difficulty": "Nâng cao",
+          "skillType": "Statistics & Analytics",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Scikit-learn overview: classification, regression, clustering",
+            "Linear regression: model building, evaluation metrics",
+            "Logistic regression: binary classification",
+            "Decision trees: Random Forest, feature importance",
+            "K-Means clustering: grouping similar data",
+            "Dimensionality reduction: PCA basics",
+            "Model evaluation: train/test split, cross-validation",
+            "Metrics: accuracy, precision, recall, F1, AUC-ROC, RMSE, MAE",
+            "Feature engineering: creating meaningful features",
+            "Feature selection: importance, correlation, removal",
+            "Bias-variance tradeoff",
+            "Overfitting and underfitting",
+            "Time series forecasting: ARIMA, Prophet basics",
+            "Natural Language Processing basics: text analysis",
+            "Anomaly detection: identifying outliers"
+          ],
+          "prerequisites": ["Statistics for Data Analysis"],
+          "nextSkill": {
+            "name": "Data Wrangling & ETL",
+            "description": "Làm sạch và transform dữ liệu."
+          }
+        },
+        {
+          "name": "Data Wrangling & ETL",
+          "difficulty": "Trung cấp",
+          "skillType": "Statistics & Analytics",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Data quality assessment: accuracy, completeness, consistency, timeliness",
+            "Missing data strategies: deletion, imputation, flagging",
+            "Data type conversions: strings, dates, numbers",
+            "String cleaning: standardization, deduplication",
+            "Date parsing: various formats, time zones",
+            "Outlier detection: IQR method, Z-score, visualization",
+            "Outlier treatment: removal, capping, transformation",
+            "Data normalization: min-max, z-score",
+            "Data encoding: one-hot, label, ordinal",
+            "Feature scaling: standardization, normalization",
+            "Merge và join operations: combining datasets",
+            "Reshaping data: wide to long, long to wide",
+            "Aggregation: creating summary statistics",
+            "Automating data pipelines: scripts, scheduling",
+            "ETL tools overview: Apache Airflow, dbt, Talend",
+            "Data validation: ensuring data integrity"
+          ],
+          "prerequisites": ["Advanced Analytics with Python"],
+          "nextSkill": {
+            "name": "Machine Learning Basics",
+            "description": "Nắm vững basics machine learning."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Machine Learning Basics",
+      "description": "Nắm vững fundamentals machine learning cho data analysis.",
+      "skills": [
+        {
+          "name": "Supervised Learning",
+          "difficulty": "Nâng cao",
+          "skillType": "Machine Learning Basics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Supervised learning overview: labeled data, prediction",
+            "Regression: predicting continuous values",
+            "Linear regression: assumptions, interpretation, diagnostics",
+            "Polynomial regression: non-linear relationships",
+            "Logistic regression: binary classification",
+            "Decision trees: splitting criteria, overfitting",
+            "Random Forest: ensemble methods, feature importance",
+            "Gradient Boosting: XGBoost, LightGBM basics",
+            "Model evaluation regression: MSE, RMSE, MAE, R²",
+            "Model evaluation classification: accuracy, precision, recall, F1",
+            "Confusion matrix: true/false positives/negatives",
+            "ROC curve và AUC: threshold analysis",
+            "Cross-validation: k-fold, stratified",
+            "Hyperparameter tuning: GridSearch, RandomSearch",
+            "Feature importance: understanding model decisions"
+          ],
+          "prerequisites": ["Data Wrangling & ETL"],
+          "nextSkill": {
+            "name": "Unsupervised Learning",
+            "description": "Học unsupervised learning cho clustering và patterns."
+          }
+        },
+        {
+          "name": "Unsupervised Learning",
+          "difficulty": "Nâng cao",
+          "skillType": "Machine Learning Basics",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Unsupervised learning overview: no labels, pattern discovery",
+            "K-Means clustering: choosing K, elbow method, silhouette score",
+            "Hierarchical clustering: dendrograms, agglomerative",
+            "DBSCAN: density-based clustering, noise handling",
+            "Dimensionality reduction: PCA, t-SNE",
+            "PCA: components, explained variance, visualization",
+            "Association rules: Apriori algorithm basics",
+            "Anomaly detection: Isolation Forest, local outlier factor",
+            "Cluster evaluation: silhouette, Davies-Bouldin index",
+            "Customer segmentation applications",
+            "Market basket analysis basics",
+            "Topic modeling: LDA basics",
+            "Practical applications: when to use which method"
+          ],
+          "prerequisites": ["Supervised Learning"],
+          "nextSkill": {
+            "name": "Business Intelligence & Reporting",
+            "description": "Xây dựng BI systems và reporting."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Business Intelligence & Reporting",
+      "description": "Xây dựng hệ thống BI, reporting và dashboarding.",
+      "skills": [
+        {
+          "name": "BI Systems & Architecture",
+          "difficulty": "Trung cấp",
+          "skillType": "Business Intelligence & Reporting",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "BI architecture: data sources, ETL, data warehouse, analytics, visualization",
+            "Data warehouse concepts: OLAP vs OLTP",
+            "Dimensional modeling: star schema, snowflake schema",
+            "Facts và dimensions: designing for analytics",
+            "Slowly changing dimensions (SCD): Type 1, 2, 3",
+            "Data mart vs data warehouse",
+            "ETL vs ELT: choosing the right approach",
+            "Data pipeline design: batch vs streaming",
+            "BI tools comparison: Tableau, Power BI, Looker, Metabase",
+            "Self-service BI: empowering business users",
+            "Data governance: policies, quality, security",
+            "BI success factors: user adoption, data quality, alignment"
+          ],
+          "prerequisites": ["Unsupervised Learning"],
+          "nextSkill": {
+            "name": "Dashboard Design",
+            "description": "Thiết kế dashboard hiệu quả."
+          }
+        },
+        {
+          "name": "Dashboard Design",
+          "difficulty": "Trung cấp",
+          "skillType": "Business Intelligence & Reporting",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Dashboard design principles: clarity, accuracy, efficiency",
+            "Choosing the right visualization for data",
+            "Dashboard layout: grid, hierarchy, flow",
+            "KPI selection: metrics that matter",
+            "Color usage: meaning, accessibility, consistency",
+            "Interactive elements: filters, drill-down, tooltips",
+            "Mobile dashboard design: responsive layouts",
+            "Dashboard vs report: differences, use cases",
+            "Storytelling with dashboards: narrative flow",
+            "User-centered design: understanding audience",
+            "Dashboard performance: loading speed, interactivity",
+            "Common dashboard mistakes: clutter, misleading visuals",
+            "Dashboard maintenance: updates, accuracy checks",
+            "Design tools: Figma, Adobe XD for wireframing",
+            "User feedback: iterating on dashboard design"
+          ],
+          "prerequisites": ["BI Systems & Architecture"],
+          "nextSkill": {
+            "name": "Storytelling with Data",
+            "description": "Kể chuyện hiệu quả với dữ liệu."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Communication & Career",
+      "description": "Kỹ năng giao tiếp, storytelling và phát triển sự nghiệp.",
+      "skills": [
+        {
+          "name": "Storytelling with Data",
+          "difficulty": "Trung cấp",
+          "skillType": "Communication & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Data storytelling: context, data, narrative",
+            "Audience awareness: technical vs non-technical",
+            "Storytelling frameworks: situation-complication-resolution",
+            "Data narrative: beginning, middle, end",
+            "Highlighting insights: what to emphasize",
+            "Using visuals to support narrative",
+            "Executive summaries: concise, actionable",
+            "Common storytelling mistakes: too much data, no narrative",
+            "Practice: presenting findings to different audiences",
+            "Tools for storytelling: slides, dashboards, notebooks",
+            "Storytelling resources: Cole Nussbaumer Knaflic",
+            "Building confidence: practice, feedback, improvement"
+          ],
+          "prerequisites": ["Dashboard Design"],
+          "nextSkill": {
+            "name": "Presentation & Communication",
+            "description": "Trình bày và giao tiếp findings hiệu quả."
+          }
+        },
+        {
+          "name": "Presentation & Communication",
+          "difficulty": "Trung cấp",
+          "skillType": "Communication & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Presenting data findings: structure, delivery",
+            "Slide design: clarity, simplicity, visuals",
+            "Handling Q&A: anticipating questions, staying composed",
+            "Written communication: emails, reports, documentation",
+            "Technical writing: clear, concise, structured",
+            "Stakeholder communication: adapting to audience",
+            "Meeting facilitation: data review meetings",
+            "Cross-functional communication: with engineering, product, marketing",
+            "Data request management: understanding, scoping, delivering",
+            "Expectation management: timelines, limitations",
+            "Building relationships: credibility, trust",
+            "Remote communication: best practices for virtual presentations"
+          ],
+          "prerequisites": ["Storytelling with Data"],
+          "nextSkill": {
+            "name": "Career Development",
+            "description": "Phát triển sự nghiệp Data Analyst."
+          }
+        },
+        {
+          "name": "Career Development",
+          "difficulty": "Nâng cao",
+          "skillType": "Communication & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Data Analyst career paths: analyst → senior → lead → manager",
+            "Specialization paths: analytics engineer, data scientist, BI developer",
+            "Building portfolio: case studies, projects, GitHub",
+            "Kaggle competitions: practice, community, recognition",
+            "Resume tips: highlighting impact, quantifying achievements",
+            "Interview preparation: SQL tests, case studies, behavioral",
+            "SQL interview practice: common patterns, optimization",
+            "Take-home assignments: approach, time management",
+            "Certifications: Google Data Analytics, Microsoft PL-300, IBM Data Analyst",
+            "Data communities: meetups, conferences, online forums",
+            "Continuous learning: courses, books, podcasts",
+            "Salary negotiation: market research, negotiation tactics",
+            "Mentorship: finding mentors, being a mentor",
+            "Staying current: new tools, techniques, trends"
+          ],
+          "prerequisites": ["Presentation & Communication"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Data Analyst và sẵn sàng cho sự nghiệp."
+          }
+        }
+      ]
+    }
+  ]
+}

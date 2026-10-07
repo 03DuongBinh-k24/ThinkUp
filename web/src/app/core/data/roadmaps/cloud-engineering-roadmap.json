@@ -1,0 +1,792 @@
+{
+  "roadmap": {
+    "name": "Cloud-engineering",
+    "description": "Lộ trình trở thành Cloud Engineer - người thiết kế, triển khai và quản lý infrastructure trên cloud platforms (AWS, GCP, Azure). Bắt đầu từ nền tảng networking/Linux, phát triển kỹ năng cloud services, IaC, containers, security, đến kiến trúc cloud và tối ưu hóa chi phí."
+  },
+  "stages": [
+    {
+      "stageId": 1,
+      "name": "Foundation",
+      "description": "Nắm vững nền tảng Linux, networking, scripting và các khái niệm IT cơ bản.",
+      "skills": [
+        {
+          "name": "Linux Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Linux filesystem hierarchy: /etc, /var, /usr, /home, /tmp",
+            "File operations: ls, cd, mkdir, rm, cp, mv, find, grep",
+            "File permissions: chmod, chown, chgrp, umask",
+            "User management: useradd, usermod, groups, sudo",
+            "Process management: ps, top, kill, systemctl, journalctl",
+            "Package management: apt, yum/dnf",
+            "Disk management: df, du, mount, fdisk, lsblk",
+            "Networking tools: ip, ifconfig, ss, netstat, curl, wget",
+            "SSH: key-based auth, config, tunneling, agent forwarding",
+            "Log management: /var/log, journalctl, syslog",
+            "Shell scripting: variables, conditionals, loops",
+            "Systemd: services, timers, targets"
+          ],
+          "prerequisites": [],
+          "nextSkill": {
+            "name": "Networking Fundamentals",
+            "description": "Nắm vững kiến thức networking cho cloud."
+          }
+        },
+        {
+          "name": "Networking Fundamentals",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "OSI Model: 7 layers, functions, protocols tại mỗi layer",
+            "TCP/IP Model: comparison với OSI",
+            "IP addressing: IPv4, IPv6, subnetting, CIDR, VLSM",
+            "DNS: resolution process, record types (A, AAAA, CNAME, MX, TXT, NS, SOA)",
+            "HTTP/HTTPS: methods, status codes, headers, TLS handshake",
+            "TCP vs UDP: differences, use cases",
+            "Load balancing concepts: algorithms, health checks",
+            "Proxy: forward, reverse (Nginx, HAProxy)",
+            "SSL/TLS: certificates, encryption, chain of trust",
+            "VPN: types, protocols (IPsec, WireGuard, OpenVPN)",
+            "Firewall: packet filtering, stateful inspection",
+            "Network troubleshooting: ping, traceroute, nslookup, dig, tcpdump",
+            "CDN concepts: edge caching, origin, invalidation",
+            "DNS management: zones, records, TTL"
+          ],
+          "prerequisites": ["Linux Fundamentals"],
+          "nextSkill": {
+            "name": "Scripting for Cloud",
+            "description": "Học scripting cho automation trên cloud."
+          }
+        },
+        {
+          "name": "Scripting for Cloud",
+          "difficulty": "Cơ bản",
+          "skillType": "Foundation",
+          "stagePosition": "1/9",
+          "whatYouWillLearn": [
+            "Bash scripting: variables, loops, conditionals, functions",
+            "Python for cloud: boto3, google-cloud, azure-sdk",
+            "AWS CLI: configuration, common commands",
+            "gcloud CLI: configuration, common commands",
+            "az CLI: configuration, common commands",
+            "JSON/YAML processing: parsing, manipulation",
+            "HTTP requests: curl, wget, httpie",
+            "API interaction: REST, authentication",
+            "Automation scripts: backup, monitoring, cleanup",
+            "Error handling trong scripts",
+            "Logging best practices",
+            "Script scheduling: cron, systemd timers"
+          ],
+          "prerequisites": ["Networking Fundamentals"],
+          "nextSkill": {
+            "name": "Cloud Computing Fundamentals",
+            "description": "Nắm vững các khái niệm cốt lõi của cloud computing."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 2,
+      "name": "Cloud Computing Fundamentals",
+      "description": "Nắm vững các khái niệm cloud, service models và shared responsibility.",
+      "skills": [
+        {
+          "name": "Cloud Concepts & Models",
+          "difficulty": "Cơ bản",
+          "skillType": "Cloud Computing Fundamentals",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Cloud computing definition: on-demand, scalable, pay-as-you-go",
+            "Service models: IaaS, PaaS, SaaS, FaaS",
+            "Deployment models: public, private, hybrid, multi-cloud",
+            "Cloud advantages: elasticity, scalability, agility, cost optimization",
+            "Cloud challenges: vendor lock-in, security, compliance",
+            "Shared responsibility model: customer vs provider",
+            "Cloud pricing models: on-demand, reserved, spot, savings plans",
+            "Cloud regions và availability zones: designing for resilience",
+            "Edge computing: CDN, edge locations, local zones",
+            "Cloud service comparison: AWS vs GCP vs Azure",
+            "Cloud economics: TCO, ROI, cost vs benefit",
+            "Well-Architected Frameworks: AWS, Azure, GCP"
+          ],
+          "prerequisites": ["Scripting for Cloud"],
+          "nextSkill": {
+            "name": "Cloud Architecture Principles",
+            "description": "Nắm vững nguyên tắc thiết kế kiến trúc cloud."
+          }
+        },
+        {
+          "name": "Cloud Architecture Principles",
+          "difficulty": "Cơ bản",
+          "skillType": "Cloud Computing Fundamentals",
+          "stagePosition": "2/9",
+          "whatYouWillLearn": [
+            "Well-Architected Framework pillars: operational excellence, security, reliability, performance efficiency, cost optimization",
+            "Reliability principles: fault tolerance, high availability, disaster recovery",
+            "Security principles: defense in depth, least privilege, encryption",
+            "Performance efficiency: right-sizing, caching, CDNs",
+            "Cost optimization: resource tagging, monitoring, reserved capacity",
+            "Sustainability pillar: green computing, efficiency",
+            "Design for failure: assumptions, testing, recovery",
+            "Loose coupling: microservices, event-driven",
+            "Scalability patterns: horizontal, vertical, auto-scaling",
+            "Availability design: multi-AZ, multi-region",
+            "Disaster recovery: RPO, RTO, strategies",
+            "Well-Architected Tool: AWS review, remediation"
+          ],
+          "prerequisites": ["Cloud Concepts & Models"],
+          "nextSkill": {
+            "name": "AWS Core Services",
+            "description": "Bắt đầu học AWS - cloud platform phổ biến nhất."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 3,
+      "name": "AWS Core Services",
+      "description": "Thành thạo các dịch vụ cốt lõi của AWS.",
+      "skills": [
+        {
+          "name": "AWS Compute & Networking",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Core Services",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "EC2: instance types, AMIs, user data, placement groups",
+            "EC2 security: security groups, NACLs, key pairs",
+            "EC2 storage: EBS volumes, instance store, EFS",
+            "EC2 networking: ENI, Elastic IP, VPC peering",
+            "Auto Scaling Groups: launch templates, scaling policies, lifecycle hooks",
+            "Elastic Load Balancing: ALB, NLB, CLB, GLB",
+            "VPC: subnets, route tables, internet gateway, NAT gateway",
+            "VPC peering, transit gateway, VPN, Direct Connect",
+            "ECS: container service, Fargate, task definitions, services",
+            "EKS: managed Kubernetes, node groups, Fargate profiles",
+            "Lambda: serverless functions, triggers, layers, concurrency",
+            "Lightsail: simplified compute for small workloads",
+            "Batch: batch processing at scale"
+          ],
+          "prerequisites": ["Cloud Architecture Principles"],
+          "nextSkill": {
+            "name": "AWS Storage & Database",
+            "description": "Quản lý storage và database trên AWS."
+          }
+        },
+        {
+          "name": "AWS Storage & Database",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Core Services",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "S3: buckets, objects, classes, lifecycle policies",
+            "S3 features: versioning, replication, encryption, access points",
+            "S3 Static Website Hosting: configuration, CloudFront",
+            "S3 lifecycle: transitions, expiration, rules",
+            "EBS: volume types, snapshots, encryption, performance",
+            "EFS: shared file system, performance modes, encryption",
+            "FSx: managed file systems (Windows, Lustre)",
+            "Storage Gateway: hybrid cloud storage",
+            "Snow Family: data migration (Snowcone, Snowball, Snowmobile)",
+            "RDS: Multi-AZ, read replicas, automated backups",
+            "Aurora: serverless, global database, cloning",
+            "DynamoDB: on-demand, provisioned, GSIs, LSIs",
+            "DynamoDB streams, global tables, DAX",
+            "ElastiCache: Redis, Memcached",
+            "Neptune: graph database",
+            "DocumentDB: MongoDB-compatible",
+            "Keyspaces: managed Cassandra",
+            "QLDB: ledger database"
+          ],
+          "prerequisites": ["AWS Compute & Networking"],
+          "nextSkill": {
+            "name": "AWS Security & Identity",
+            "description": "Quản lý security và identity trên AWS."
+          }
+        },
+        {
+          "name": "AWS Security & Identity",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Core Services",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "IAM: users, groups, roles, policies, best practices",
+            "IAM policies: JSON syntax, evaluation logic, condition keys",
+            "IAM roles: use cases, trust policies, assume role",
+            "IAM policies: managed vs inline, permissions boundaries",
+            "IAM Identity Center (SSO): identity federation, SAML 2.0",
+            "AWS Organizations: multi-account strategy, SCPs",
+            "KMS: encryption keys, key policies, grants, multi-region",
+            "CloudHSM: dedicated hardware security module",
+            "Secrets Manager: rotation, cross-account, replication",
+            "Certificate Manager: SSL/TLS certificates, auto-renewal",
+            "WAF: web application firewall, rules, managed rules",
+            "Shield: DDoS protection, Standard vs Advanced",
+            "GuardDuty: threat detection, findings",
+            "Inspector: vulnerability assessment, compliance",
+            "Security Hub: centralized security, compliance checks",
+            "Macie: sensitive data discovery in S3",
+            "CloudTrail: API logging, auditing",
+            "AWS Config: resource compliance, conformance packs"
+          ],
+          "prerequisites": ["AWS Storage & Database"],
+          "nextSkill": {
+            "name": "AWS Operations & Monitoring",
+            "description": "Quản lý operations và monitoring trên AWS."
+          }
+        },
+        {
+          "name": "AWS Operations & Monitoring",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Core Services",
+          "stagePosition": "3/9",
+          "whatYouWillLearn": [
+            "CloudWatch: metrics, alarms, dashboards, logs",
+            "CloudWatch Logs: log groups, insights, subscriptions",
+            "CloudWatch Events/EventBridge: rules, targets, schedules",
+            "CloudTrail: API logging, cloudTrail Insights",
+            "AWS Config: resource recording, rules, remediation",
+            "Systems Manager: sessions, patch management, automation",
+            "Systems Manager Parameter Store: configuration, secrets",
+            "CloudFormation: templates, stacks, change sets, drift detection",
+            "AWS CDK: infrastructure as code với programming languages",
+            "Elastic Beanstalk: PaaS deployment, environments",
+            "CodePipeline: CI/CD pipelines",
+            "CodeBuild: build service, buildspec.yml",
+            "CodeDeploy: deployment automation",
+            "CodeCommit: Git repositories (deprecated)",
+            "X-Ray: distributed tracing",
+            "AWS Health: service health, personal health dashboard"
+          ],
+          "prerequisites": ["AWS Security & Identity"],
+          "nextSkill": {
+            "name": "AWS Cost Management",
+            "description": "Quản lý và tối ưu chi phí AWS."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 4,
+      "name": "AWS Advanced & Multi-Cloud",
+      "description": "Nâng cao AWS và mở rộng sang GCP, Azure.",
+      "skills": [
+        {
+          "name": "AWS Cost Management & Optimization",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Advanced & Multi-Cloud",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "AWS pricing models: on-demand, reserved, spot, savings plans",
+            "Cost Explorer: visualization, forecasting, recommendations",
+            "AWS Budgets: cost, usage, reservation budgets",
+            "Cost allocation tags: tracking, reporting",
+            "Trusted Advisor: cost optimization checks",
+            "Compute Optimizer: right-sizing recommendations",
+            "Reserved Instances: purchasing, modifying, selling",
+            "Savings Plans: commitment, flexibility",
+            "Spot Instances: interruptions, use cases, best practices",
+            "Graviton processors: ARM-based, cost benefits",
+            "S3 storage classes: cost optimization, lifecycle",
+            "Data transfer costs: understanding, optimizing",
+            "FinOps practices: culture, processes, tools",
+            "Cost anomaly detection: identifying unexpected spend",
+            "AWS Cost and Usage Report: detailed billing"
+          ],
+          "prerequisites": ["AWS Operations & Monitoring"],
+          "nextSkill": {
+            "name": "GCP Core Services",
+            "description": "Mở rộng sang Google Cloud Platform."
+          }
+        },
+        {
+          "name": "GCP Core Services",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Advanced & Multi-Cloud",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "GCP overview: regions, zones, projects, orgs",
+            "Compute Engine: VMs, instance groups, templates, sole-tenant",
+            "GKE: managed Kubernetes, autopilot, node pools, workloads",
+            "Cloud Run: serverless containers, always-on vs min instances",
+            "Cloud Functions: Gen1 vs Gen2, triggers, vpc-connector",
+            "VPC: subnets, firewall rules, Cloud NAT, Cloud Armor",
+            "Cloud Storage: classes, lifecycle, versioning, retention",
+            "Cloud SQL: MySQL, PostgreSQL, SQL Server, HA, read replicas",
+            "Cloud Spanner: globally distributed, relational database",
+            "Firestore: NoSQL, real-time, offline support",
+            "Memorystore: Redis, Memcached",
+            "Cloud CDN: caching, signed URLs, invalidation",
+            "Cloud Load Balancing: HTTP(S), TCP/UDP, Internal",
+            "Cloud IAM: users, service accounts, roles, policies",
+            "Cloud KMS: key management, HSM",
+            "Cloud Build: CI/CD, build triggers, substitutions",
+            "gcloud CLI: common commands, configurations"
+          ],
+          "prerequisites": ["AWS Cost Management & Optimization"],
+          "nextSkill": {
+            "name": "Azure Core Services",
+            "description": "Mở rộng sang Microsoft Azure."
+          }
+        },
+        {
+          "name": "Azure Core Services",
+          "difficulty": "Trung cấp",
+          "skillType": "AWS Advanced & Multi-Cloud",
+          "stagePosition": "4/9",
+          "whatYouWillLearn": [
+            "Azure overview: regions, availability zones, subscriptions, resource groups",
+            "Virtual Machines: sizes, images, disks, availability sets, scale sets",
+            "Azure Kubernetes Service (AKS): clusters, node pools, identity",
+            "Azure Functions: triggers, bindings, premium plan",
+            "App Service: web apps, deployment slots, auto-scale",
+            "Virtual Networks: subnets, NSGs, peering, load balancers",
+            "Storage Accounts: blobs, files, tables, queues, replication",
+            "Azure SQL: managed databases, elastic pools, serverless",
+            "Cosmos DB: multi-model, globally distributed",
+            "Azure Cache for Redis",
+            "Azure CDN: caching, custom domains, rules",
+            "Azure AD: users, groups, service principals, managed identity",
+            "Azure Key Vault: secrets, keys, certificates",
+            "Azure Monitor: metrics, alerts, log analytics workspace",
+            "Azure DevOps: pipelines, repos, boards, artifacts",
+            "ARM templates: infrastructure as code",
+            "az CLI: common commands, configurations"
+          ],
+          "prerequisites": ["GCP Core Services"],
+          "nextSkill": {
+            "name": "Infrastructure as Code",
+            "description": "Quản lý infrastructure bằng code."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 5,
+      "name": "Infrastructure as Code",
+      "description": "Triển khai và quản lý infrastructure bằng Terraform và CloudFormation.",
+      "skills": [
+        {
+          "name": "Terraform",
+          "difficulty": "Trung cấp",
+          "skillType": "Infrastructure as Code",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "IaC concepts: declarative vs imperative, drift detection",
+            "Terraform basics: providers, resources, data sources",
+            "HCL syntax: blocks, attributes, expressions, functions",
+            "Terraform workflow: init, plan, apply, destroy",
+            "State management: local, remote (S3+DynamoDB, Terraform Cloud)",
+            "State locking: DynamoDB, preventing concurrent modifications",
+            "Modules: reusable components, versioning, registries",
+            "Workspaces: managing multiple environments",
+            "Variables: types, defaults, validation, sensitive, tfvars",
+            "Outputs: exporting values, cross-module communication",
+            "Data sources: querying existing resources",
+            "Provisioners: local-exec, remote-exec, file",
+            "Terraform Cloud/Enterprise: VCS integration, policy as code",
+            "Sentinel: policy as code, compliance",
+            "Terraform import: bringing existing resources under management",
+            "Terraform best practices: directory structure, naming, state",
+            "Terraform testing: terratest, validate, plan",
+            "Multi-cloud Terraform: managing AWS, GCP, Azure"
+          ],
+          "prerequisites": ["Azure Core Services"],
+          "nextSkill": {
+            "name": "CloudFormation & CDK",
+            "description": "Học CloudFormation và CDK cho AWS."
+          }
+        },
+        {
+          "name": "CloudFormation & CDK",
+          "difficulty": "Trung cấp",
+          "skillType": "Infrastructure as Code",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "CloudFormation: templates, stacks, change sets, drift detection",
+            "CloudFormation YAML syntax: Resources, Outputs, Parameters, Mappings",
+            "CloudFormation functions: Ref, Fn::GetAtt, Fn::If, Fn::Join",
+            "Stack policies: preventing updates to critical resources",
+            "CloudStack: nested stacks, cross-stack references",
+            "Change sets: reviewing changes before applying",
+            "CloudFormation imports: adopting existing resources",
+            "AWS CDK: infrastructure as code với TypeScript/Python",
+            "CDK concepts: constructs, stacks, apps",
+            "CDK constructs: L1, L2, L3 (patterns)",
+            "CDK best practices: project structure, context, assets",
+            "CDK vs CloudFormation: comparison, when to use which",
+            "CDK patterns: VPC, ECS, Lambda, static website",
+            "Custom resources: Lambda-backed, SSM-backed"
+          ],
+          "prerequisites": ["Terraform"],
+          "nextSkill": {
+            "name": "Container Orchestration on Cloud",
+            "description": "Quản lý containers trên cloud platforms."
+          }
+        },
+        {
+          "name": "Container Orchestration on Cloud",
+          "difficulty": "Nâng cao",
+          "skillType": "Infrastructure as Code",
+          "stagePosition": "5/9",
+          "whatYouWillLearn": [
+            "Kubernetes on AWS: EKS, Fargate, node groups",
+            "EKS add-ons: CoreDNS, kube-proxy, VPC CNI",
+            "EKS networking: VPC, subnets, security groups, load balancers",
+            "EKS storage: EBS, EFS, FSx for Lustre",
+            "EKS security: IAM roles for service accounts (IRSA), Pod Identity",
+            "EKS logging: control plane, audit, API server",
+            "Kubernetes on GCP: GKE, autopilot, Anthos",
+            "GKE networking: VPC-native, Dataplane V2",
+            "Kubernetes on Azure: AKS, virtual nodes, Azure CNI",
+            "AKS networking: Azure CNI, kubenet, overlay",
+            "Helm: package manager, charts, repositories, values",
+            "Kustomize: configuration management, overlays",
+            "Service mesh: Istio, Linkerd on cloud",
+            "GitOps: ArgoCD, Flux on cloud",
+            "Container registries: ECR, GCR, ACR",
+            "Multi-cluster management: Anthos, Rancher"
+          ],
+          "prerequisites": ["CloudFormation & CDK"],
+          "nextSkill": {
+            "name": "Cloud Security & Compliance",
+            "description": "Bảo mật và compliance trên cloud."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 6,
+      "name": "Security & Compliance",
+      "description": "Bảo mật infrastructure và đảm bảo compliance trên cloud.",
+      "skills": [
+        {
+          "name": "Cloud Security Fundamentals",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Compliance",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Cloud security principles: shared responsibility, defense in depth",
+            "Identity and Access Management: best practices",
+            "IAM policies: least privilege, condition keys, boundaries",
+            "Role-based access control (RBAC): design, implementation",
+            "Service control policies: organization-wide guardrails",
+            "Network security: security groups, NACLs, private subnets",
+            "Data encryption: at rest, in transit, key management",
+            "Key management: KMS, CloudHSM, key rotation",
+            "Secrets management: Secrets Manager, Parameter Store, Vault",
+            "Certificate management: SSL/TLS, auto-rotation",
+            "WAF rules: protecting web applications",
+            "DDoS protection: Shield, Cloud Armor",
+            "Vulnerability scanning: Inspector, GuardDuty",
+            "Penetration testing: AWS policy, best practices",
+            "Security monitoring: CloudTrail, Config, Security Hub"
+          ],
+          "prerequisites": ["Container Orchestration on Cloud"],
+          "nextSkill": {
+            "name": "Compliance Frameworks",
+            "description": "Đáp ứng các tiêu chuẩn compliance."
+          }
+        },
+        {
+          "name": "Compliance Frameworks",
+          "difficulty": "Trung cấp",
+          "skillType": "Security & Compliance",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "Compliance overview: why compliance matters",
+            "SOC 2: trust service criteria, Type I vs Type II",
+            "ISO 27001: information security management",
+            "HIPAA: healthcare data protection",
+            "PCI DSS: payment card data security",
+            "GDPR: data privacy, consent, right to deletion",
+            "FedRAMP: US government cloud compliance",
+            "AWS compliance programs: compliance offerings",
+            "Azure compliance: compliance manager, trust center",
+            "GCP compliance: compliance resource center",
+            "Compliance automation: Config Rules, Security Hub",
+            "Audit logging: CloudTrail, Azure Activity Log, GCP Audit",
+            "Data classification: sensitivity levels, handling",
+            "Incident response: cloud-specific considerations",
+            "Evidence collection: compliance auditing"
+          ],
+          "prerequisites": ["Cloud Security Fundamentals"],
+          "nextSkill": {
+            "name": "Disaster Recovery & Business Continuity",
+            "description": "Thiết kế DR và business continuity trên cloud."
+          }
+        },
+        {
+          "name": "Disaster Recovery & Business Continuity",
+          "difficulty": "Nâng cao",
+          "skillType": "Security & Compliance",
+          "stagePosition": "6/9",
+          "whatYouWillLearn": [
+            "DR concepts: RPO, RTO, availability, durability",
+            "DR strategies: backup & restore, pilot light, warm standby, multi-site",
+            "AWS DR services: S3 replication, RDS replication, Route 53 failover",
+            "Cross-region replication: S3, DynamoDB, Aurora",
+            "AWS Backup: centralized backup, lifecycle rules",
+            "GCP DR: multi-region, Cloud SQL replicas, backup",
+            "Azure DR: Azure Site Recovery, geo-redundant storage",
+            "Backup strategies: full, incremental, differential",
+            "Backup automation: AWS Backup, scripts, scheduled jobs",
+            "Restore procedures: testing, validation, documentation",
+            "Failover automation: Route 53, health checks, DNS",
+            "Chaos engineering: testing resilience (AWS FIS, Gremlin)",
+            "Game days: planned failure exercises",
+            "DR testing: regular testing, documentation",
+            "Business continuity planning: impact analysis, strategies"
+          ],
+          "prerequisites": ["Compliance Frameworks"],
+          "nextSkill": {
+            "name": "Cloud Architecture Patterns",
+            "description": "Học các pattern kiến trúc cloud nâng cao."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 7,
+      "name": "Architecture & Design Patterns",
+      "description": "Thiết kế kiến trúc cloud hiệu quả với các design patterns.",
+      "skills": [
+        {
+          "name": "Well-Architected Framework Deep Dive",
+          "difficulty": "Nâng cao",
+          "skillType": "Architecture & Design Patterns",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Operational Excellence pillar: documentation, automation, iteration",
+            "Security pillar: defense in depth, access control, data protection",
+            "Reliability pillar: fundamentals, design choices, implementation",
+            "Performance Efficiency pillar: selection, review, tradeoffs",
+            "Cost Optimization pillar: understanding spending, cost-effective resources",
+            "Sustainability pillar: region selection, hardware efficiency",
+            "Well-Architected Reviews: conducting, remediation plans",
+            "AWS Well-Architected Tool: running assessments",
+            "Azure Well-Architected Review",
+            "GCP Architecture Framework",
+            "Lenses: analytics, machine learning, IoT, serverless",
+            "Pillar trade-offs: balancing competing priorities",
+            "Well-Architected best practices implementation"
+          ],
+          "prerequisites": ["Disaster Recovery & Business Continuity"],
+          "nextSkill": {
+            "name": "Microservices & Serverless Architecture",
+            "description": "Thiết kế microservices và serverless trên cloud."
+          }
+        },
+        {
+          "name": "Microservices & Serverless Architecture",
+          "difficulty": "Nâng cao",
+          "skillType": "Architecture & Design Patterns",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Microservices principles: loose coupling, high cohesion",
+            "Service communication: synchronous, asynchronous",
+            "API Gateway patterns: routing, authentication, rate limiting",
+            "Service mesh: Istio, App Mesh, traffic management",
+            "Event-driven architecture: events, event sourcing, CQRS",
+            "Message queues: SQS, SNS, EventBridge, Kinesis",
+            "Serverless patterns: Lambda, Step Functions, EventBridge",
+            "Step Functions: workflows, parallel, choice, error handling",
+            "API Gateway + Lambda: REST API, HTTP API",
+            "Serverless databases: DynamoDB, Aurora Serverless",
+            "EventBridge: event bus, rules, targets, schemas",
+            "Kinesis: data streams, analytics, Firehose",
+            "Microservices testing: contract testing, integration testing",
+            "Decomposing monoliths: strangler fig, parallel run",
+            "Serverless limitations: cold starts, execution limits",
+            "Microservices vs monolith: trade-offs, decision factors"
+          ],
+          "prerequisites": ["Well-Architected Framework Deep Dive"],
+          "nextSkill": {
+            "name": "Data Architecture on Cloud",
+            "description": "Thiết kế data architecture trên cloud."
+          }
+        },
+        {
+          "name": "Data Architecture on Cloud",
+          "difficulty": "Nâng cao",
+          "skillType": "Architecture & Design Patterns",
+          "stagePosition": "7/9",
+          "whatYouWillLearn": [
+            "Data lake vs data warehouse: differences, use cases",
+            "AWS data services: S3, Glue, Athena, Redshift, Lake Formation",
+            "AWS Glue: ETL, crawlers, jobs, data catalog",
+            "Athena: serverless queries on S3",
+            "Redshift: data warehouse, spectrum, serverless",
+            "Lake Formation: data lake governance",
+            "GCP data services: BigQuery, Dataflow, Dataproc, Pub/Sub",
+            "BigQuery: serverless analytics, ML integration",
+            "Dataflow: stream and batch processing",
+            "Azure data services: Synapse, Data Lake, Data Factory",
+            "Synapse Analytics: data warehousing, serverless",
+            "Data Factory: data integration, ETL/ELT",
+            "Streaming architectures: Kinesis, Kafka, Pub/Sub",
+            "Real-time analytics: Kinesis Analytics, Dataflow",
+            "Data governance: cataloging, lineage, quality",
+            "ETL vs ELT patterns: choosing the right approach",
+            "Data security: encryption, access control, compliance"
+          ],
+          "prerequisites": ["Microservices & Serverless Architecture"],
+          "nextSkill": {
+            "name": "Observability & Monitoring",
+            "description": "Xây dựng observability trên cloud."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 8,
+      "name": "Observability & Operations",
+      "description": "Xây dựng observability, monitoring và operational excellence.",
+      "skills": [
+        {
+          "name": "Cloud Monitoring & Observability",
+          "difficulty": "Trung cấp",
+          "skillType": "Observability & Operations",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "Three pillars: metrics, logs, traces",
+            "CloudWatch (AWS): metrics, alarms, dashboards, logs, insights",
+            "CloudWatch Logs: subscription filters, metric filters, exports",
+            "CloudWatch alarms: composite alarms, anomaly detection",
+            "CloudWatch Synthetics: canary monitoring",
+            "CloudWatch X-Ray: distributed tracing",
+            "Azure Monitor: metrics, logs, workbooks, alerts",
+            "Azure Log Analytics: KQL queries, workspaces",
+            "Azure Application Insights: APM, distributed tracing",
+            "GCP Cloud Monitoring: metrics, alerting, dashboards",
+            "GCP Cloud Logging: log explorer, sinks, exports",
+            "GCP Cloud Trace: distributed tracing",
+            "Prometheus + Grafana on cloud: deployment, configuration",
+            "ELK Stack on cloud: managed services (OpenSearch, etc.)",
+            "Datadog: unified monitoring, APM, logs",
+            "Observability best practices: instrumentation, alerting, dashboards"
+          ],
+          "prerequisites": ["Data Architecture on Cloud"],
+          "nextSkill": {
+            "name": "Cloud Operations & Automation",
+            "description": "Tự động hóa operations trên cloud."
+          }
+        },
+        {
+          "name": "Cloud Operations & Automation",
+          "difficulty": "Trung cấp",
+          "skillType": "Observability & Operations",
+          "stagePosition": "8/9",
+          "whatYouWillLearn": [
+            "AWS Systems Manager: session manager, patch manager, automation",
+            "Systems Manager Parameter Store: configuration management",
+            "AWS Config: resource compliance, conformance packs, remediation",
+            "AWS Config Rules: custom rules, auto-remediation",
+            "CloudFormation StackSets: multi-account, multi-region",
+            "Terraform modules: reusable infrastructure",
+            "Ansible on cloud: configuration management at scale",
+            "Lambda automation: scheduled tasks, event-driven operations",
+            "EventBridge rules: automating responses to events",
+            "AWS Backup: centralized backup management",
+            "AWS License Manager: software licensing",
+            "AWS Service Catalog: approved products",
+            "ChatOps: incident management, notifications",
+            "Automation runbooks: documenting procedures",
+            "Self-healing: auto-remediation patterns",
+            "Operational best practices: runbooks, playbooks, postmortems"
+          ],
+          "prerequisites": ["Cloud Monitoring & Observability"],
+          "nextSkill": {
+            "name": "Certifications & Career",
+            "description": "Chuẩn bị chứng chỉ và phát triển sự nghiệp."
+          }
+        }
+      ]
+    },
+    {
+      "stageId": 9,
+      "name": "Certifications & Career",
+      "description": "Chuẩn bị chứng chỉ cloud và phát triển sự nghiệp.",
+      "skills": [
+        {
+          "name": "AWS Certifications",
+          "difficulty": "Nâng cao",
+          "skillType": "Certifications & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Cloud Practitioner: foundational, business-focused",
+            "Solutions Architect Associate: design resilient, high-performing architectures",
+            "Solutions Architect Professional: advanced design, complex scenarios",
+            "SysOps Administrator Associate: operations, monitoring, deployment",
+            "DevOps Engineer Professional: CI/CD, automation, IaC",
+            "Advanced Networking Specialty: complex networking, hybrid",
+            "Security Specialty: security design, implementation",
+            "Database Specialty: database design, migration",
+            "Study strategies: hands-on, practice exams, whitepapers",
+            "AWS documentation: FAQs, whitepapers, guides",
+            "AWS Skill Builder: courses, labs, certifications"
+          ],
+          "prerequisites": ["Cloud Operations & Automation"],
+          "nextSkill": {
+            "name": "Multi-Cloud Certifications",
+            "description": "Chứng chỉ trên GCP và Azure."
+          }
+        },
+        {
+          "name": "Multi-Cloud Certifications",
+          "difficulty": "Nâng cao",
+          "skillType": "Certifications & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "GCP Associate Cloud Engineer: deploy, manage, secure",
+            "GCP Professional Cloud Architect: design, develop, manage",
+            "GCP Professional Cloud DevOps Engineer: SRE, CI/CD",
+            "GCP Professional Cloud Security Engineer: security design",
+            "Azure Fundamentals (AZ-900): cloud concepts, core services",
+            "Azure Administrator (AZ-104): manage Azure subscriptions",
+            "Azure Solutions Architect (AZ-305): design cloud solutions",
+            "Azure DevOps Engineer (AZ-400): DevOps practices",
+            "Multi-cloud certifications: strategy, benefits",
+            "Certification maintenance: renewals, continuing education",
+            "Building multi-cloud skills: transferable knowledge"
+          ],
+          "prerequisites": ["AWS Certifications"],
+          "nextSkill": {
+            "name": "Career Paths & Specializations",
+            "description": "Chọn hướng phát triển sự nghiệp."
+          }
+        },
+        {
+          "name": "Career Paths & Specializations",
+          "difficulty": "Nâng cao",
+          "skillType": "Certifications & Career",
+          "stagePosition": "9/9",
+          "whatYouWillLearn": [
+            "Cloud Engineer career path: Junior → Mid → Senior → Staff → Principal",
+            "Specialization paths: Solutions Architect, DevOps, Security, Data",
+            "Cloud Architect: designing complex architectures, governance",
+            "Cloud Security Engineer: security architecture, compliance",
+            "Cloud Data Engineer: data pipelines, analytics, ML",
+            "Cloud Network Engineer: networking, hybrid, edge",
+            "Cloud Platform Engineer: internal platforms, developer experience",
+            "Building portfolio: cloud projects, open source contributions",
+            "Cloud communities: AWS Community, Cloud Native, LinkedIn",
+            "Salary negotiation: market research, negotiation tactics",
+            "Cloud consulting: client engagement, solution design",
+            "Cloud leadership: CTO, VP Engineering, Cloud Center of Excellence",
+            "Continuous learning: re:Invent, Cloud Next, Ignite, conferences",
+            "Emerging trends: AI/ML on cloud, edge computing, Web3"
+          ],
+          "prerequisites": ["Multi-Cloud Certifications"],
+          "nextSkill": {
+            "name": "Career Ready!",
+            "description": "Hoàn thành lộ trình Cloud Engineer và sẵn sàng cho sự nghiệp."
+          }
+        }
+      ]
+    }
+  ]
+}
