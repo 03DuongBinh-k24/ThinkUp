@@ -1,0 +1,20 @@
+{
+  "name": "thinkup-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "ThinkUp Backend API Services",
+  "scripts": {
+    "test": "node --test src/user/test/*.user.test.js",
+    "test:signup": "node --test src/user/test/signup.user.test.js",
+    "test:signin": "node --test src/user/test/signin.user.test.js",
+    "test:forgot": "node --test src/user/test/forgot-password.user.test.js",
+    "test:onboarding": "node --test src/user/test/onboarding.user.test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.1.0",
+    "nodemailer": "^7.0.13"
+  }
+}
