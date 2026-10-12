@@ -5,7 +5,8 @@ import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CartItem, OrderSummary, Voucher, TransactionRow, TransactionDetail } from '../models/commerce.model';
 import { Course } from '../models/course.model';
-import { MOCK_COURSES } from '../data/mock-courses';
+import { MOCK_COURSES } from '../data/mock/mock-courses';
+import { MOCK_BILLING_DETAILS, MOCK_BILLING_EMAIL, MOCK_BILLING_ROWS } from '../data/mock/mock-billing';
 
 function formatMoney(value: number): string {
   return `${new Intl.NumberFormat('vi-VN').format(value)}đ`;
@@ -43,10 +44,26 @@ export class CommerceService {
     if (ids.length === 0) return items; // Default to all if none selected
     return items.filter(item => ids.includes(item.id));
   });
-  readonly transactions = this._transactions.asReadonly();
+  // TODO(pre-deploy): Nhớ bỏ giao dịch mẫu khi lịch sử thanh toán lấy từ API theo tài khoản.
+  readonly transactions = () => {
+    const email = this.currentUserEmail();
+    const ownTransactions = this._transactions().filter(row =>
+      this._transactionDetails()[row.id]?.invoice.buyer.email.toLowerCase() === email,
+    );
+    return email === MOCK_BILLING_EMAIL
+      ? [...ownTransactions, ...MOCK_BILLING_ROWS.filter(row => !ownTransactions.some(own => own.id === row.id))]
+      : ownTransactions;
+  };
 
   constructor() {
     this.loadFromStorage();
+  }
+
+  private currentUserEmail(): string {
+    try {
+      const user = JSON.parse(localStorage.getItem('thinkup_current_user') || 'null') as { email?: string } | null;
+      return user?.email?.toLowerCase() || '';
+    } catch { return ''; }
   }
 
   private loadFromStorage(): void {
@@ -61,6 +78,7 @@ export class CommerceService {
           return;
         }
       }
+      // TODO(pre-deploy): Nhớ xóa giỏ hàng mẫu khi có dữ liệu giỏ hàng thật.
       // Initial sample cart items
       const sample = MOCK_COURSES.slice(0, 2).map(normalizeCommerceCourse);
       this._cartItems.set(sample);
@@ -139,6 +157,7 @@ export class CommerceService {
     this.persistState();
   }
 
+  // TODO(pre-deploy): Nhớ xóa giao dịch và hóa đơn mock khi tích hợp thanh toán thật.
   completePurchase(params: {
     courses: CartItem[];
     summary: OrderSummary;
@@ -238,6 +257,8 @@ export class CommerceService {
   }
 
   getTransactionDetail(id: string): TransactionDetail | undefined {
-    return this._transactionDetails()[id];
+    const email = this.currentUserEmail();
+    const detail = this._transactionDetails()[id] ?? (email === MOCK_BILLING_EMAIL ? MOCK_BILLING_DETAILS[id] : undefined);
+    return detail?.invoice.buyer.email.toLowerCase() === email ? detail : undefined;
   }
 }

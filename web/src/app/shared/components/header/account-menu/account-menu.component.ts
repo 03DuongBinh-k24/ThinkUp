@@ -15,176 +15,15 @@ export interface MenuItem {
   selector: 'app-account-menu',
   standalone: true,
   imports: [CommonModule, RouterLink],
-  template: `
-    <div class="relative shrink-0 select-none">
-      <!-- Avatar Trigger Button -->
-      <button
-        type="button"
-        (click)="toggleMenu($event)"
-        class="group flex h-12 w-12 items-center justify-center rounded-full bg-transparent p-0 transition-all duration-200 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#006AB5] text-[#3898EC]"
-        aria-haspopup="menu"
-        [attr.aria-expanded]="isOpen()"
-        aria-label="Mở menu tài khoản học viên"
-      >
-        @if (avatarUrl) {
-          <span class="h-12 w-12 grid shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-[#3898EC] bg-white shadow-sm transition-transform group-hover:scale-105">
-            <img [src]="avatarUrl" alt="Ảnh đại diện" class="h-full w-full object-cover" />
-          </span>
-        } @else {
-          <svg class="h-12 w-12 shrink-0 text-[#3898EC] transition-transform group-hover:scale-105" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <circle cx="12" cy="10" r="3"></circle>
-            <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path>
-          </svg>
-        }
-      </button>
-
-      <!-- Dropdown Menu (Khớp 100% Figma node 3202:29398 và AccountMenu.jsx) -->
-      @if (isOpen()) {
-        <div
-          role="menu"
-          aria-label="Menu tài khoản học viên"
-          (click)="$event.stopPropagation()"
-          class="absolute right-0 top-full z-[100] mt-3 max-h-[calc(100vh-6rem)] w-[300px] overflow-y-auto rounded-[12px] border border-[#E2E8F0] bg-white py-2 shadow-[0px_8px_10px_-6px_rgba(0,0,0,0.1),0px_20px_25px_-5px_rgba(0,0,0,0.12)] animate-in fade-in zoom-in-95 duration-150"
-        >
-          <!-- User Profile Header -->
-          <div class="flex items-center gap-3 px-4 pb-3 pt-2">
-            @if (avatarUrl) {
-              <span class="h-12 w-12 grid shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-[#3898EC] bg-white shadow-sm">
-                <img [src]="avatarUrl" alt="Ảnh đại diện" class="h-full w-full object-cover" />
-              </span>
-            } @else {
-              <svg class="h-12 w-12 shrink-0 text-[#3898EC]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="10" r="3"></circle>
-                <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path>
-              </svg>
-            }
-            <div class="min-w-0">
-              <p class="truncate text-[15px] font-semibold leading-5 text-[#172033]">{{ displayName }}</p>
-              <p class="truncate text-[12px] font-semibold leading-5 text-[#64748B]">
-                {{ email || roleLabel }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Divider -->
-          <div class="my-1 h-px bg-[#F1F5F9]"></div>
-
-          <!-- Menu Items List -->
-          <div class="flex flex-col py-1">
-            @for (item of menuItems; track item.label) {
-              @if (item.dividerBefore) {
-                <div class="my-1 h-px bg-[#E8ECF2]"></div>
-              }
-              <a
-                [routerLink]="item.href"
-                role="menuitem"
-                (click)="closeMenu()"
-                class="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left text-[14px] font-semibold leading-5 text-[#334155] transition-colors hover:bg-[#F8FAFC] hover:text-[#006AB5] focus-visible:bg-[#F0F6FF] focus-visible:text-[#006AB5] focus-visible:outline-none"
-              >
-                <!-- Icon Lucide tương ứng -->
-                <span class="h-[18px] w-[18px] shrink-0 text-[#64748B] transition-colors group-hover:text-[#006AB5] flex items-center justify-center">
-                  @switch (item.icon) {
-                    @case ('user') {
-                      <!-- UserRound -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>
-                      </svg>
-                    }
-                    @case ('heart') {
-                      <!-- Heart -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                      </svg>
-                    }
-                    @case ('book') {
-                      <!-- BookOpen -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                      </svg>
-                    }
-                    @case ('newspaper') {
-                      <!-- Newspaper -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>
-                      </svg>
-                    }
-                    @case ('credit-card') {
-                      <!-- CreditCard -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
-                      </svg>
-                    }
-                    @case ('badge') {
-                      <!-- BadgeCheck -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>
-                      </svg>
-                    }
-                    @case ('bell') {
-                      <!-- Bell -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-                      </svg>
-                    }
-                    @case ('settings') {
-                      <!-- Settings -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                      </svg>
-                    }
-                    @case ('lifebuoy') {
-                      <!-- LifeBuoy -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" x2="9.17" y1="4.93" y2="9.17"/><line x1="14.83" x2="19.07" y1="14.83" y2="19.07"/><line x1="14.83" x2="19.07" y1="9.17" y2="4.93"/><line x1="4.93" x2="9.17" y1="19.07" y2="14.83"/>
-                      </svg>
-                    }
-                    @case ('help') {
-                      <!-- CircleHelp -->
-                      <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/>
-                      </svg>
-                    }
-                  }
-                </span>
-
-                <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
-
-                @if (item.badge) {
-                  <span class="grid h-6 w-6 place-items-center rounded-full bg-[#EF4444] text-[11px] font-semibold text-white">
-                    {{ item.badge }}
-                  </span>
-                }
-              </a>
-            }
-          </div>
-
-          <!-- Divider -->
-          <div class="my-1 h-px bg-[#F1F5F9]"></div>
-
-          <!-- Logout Action -->
-          <button
-            type="button"
-            role="menuitem"
-            (click)="onLogout()"
-            class="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left text-[14px] font-semibold leading-5 text-[#DC2626] transition-colors hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none"
-          >
-            <svg class="h-[18px] w-[18px] shrink-0 text-[#DC2626]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
-            </svg>
-            <span class="min-w-0 flex-1 truncate">Đăng xuất</span>
-          </button>
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './account-menu.component.html',
+  styleUrl: './account-menu.component.css'
 })
 export class AccountMenuComponent {
   private router = inject(Router);
   private el = inject(ElementRef);
   private authService = inject(AuthService);
 
+  // TODO(pre-deploy): Nhớ xóa thông tin tài khoản mặc định mock khi có phiên người dùng thật.
   @Input() displayName = 'Nguyễn An Nhiên';
   @Input() email = 'annhien.nguyen@thinkup.edu.vn';
   @Input() avatarUrl = '/assets/profile/overview-avatar.png';
@@ -197,7 +36,7 @@ export class AccountMenuComponent {
     { label: 'Khóa học yêu thích', href: '/main/favorites', icon: 'heart' },
     { label: 'Khóa học của tôi', href: '/main/my-courses', icon: 'book' },
     { label: 'Quản lý bài viết', href: '/main/blog', icon: 'newspaper' },
-    { label: 'Lịch sử thanh toán', href: '/main/profile', icon: 'credit-card' },
+    { label: 'Lịch sử thanh toán', href: '/main/profile/billing', icon: 'credit-card' },
     { label: 'Chứng chỉ', href: '/main/profile', icon: 'badge' },
     { label: 'Thông báo', href: '/main/profile', icon: 'bell', badge: 3, dividerBefore: true },
     { label: 'Cài đặt', href: '/main/profile/edit', icon: 'settings' },

@@ -5,7 +5,8 @@ import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Course, CourseFilters, CourseFilterOptions, CourseListResponse, EnrolledCourse } from '../models/course.model';
 import { StudentPreferences } from '../models/user.model';
-import { MOCK_COURSES, MOCK_CATEGORIES, MOCK_POPULAR_TAGS } from '../data/mock-courses';
+import { MOCK_COURSES, MOCK_CATEGORIES, MOCK_POPULAR_TAGS } from '../data/mock/mock-courses';
+import { MOCK_ENROLLED_COURSES } from '../data/mock/mock-enrolled-courses';
 
 @Injectable({ providedIn: 'root' })
 export class CourseService {
@@ -146,46 +147,8 @@ export class CourseService {
   }
 
   getMyCourses(): Observable<{ success: boolean; data: EnrolledCourse[] }> {
-    const mockEnrolled: EnrolledCourse[] = [
-      {
-        id: 'reactjs',
-        title: 'ReactJS - Từ cơ bản đến nâng cao',
-        instructor: 'Nguyễn Văn A',
-        totalLessons: 45,
-        completedLessons: 20,
-        coverTitle: 'ReactJS',
-        coverSubtitle: 'Chinh phục Frontend hiện đại',
-        cover: '#0A1535',
-        badge: 'HOT',
-        lastStudiedAt: 'Hôm qua'
-      },
-      {
-        id: 'python-data',
-        title: 'Python for Data Science - Phân tích dữ liệu thực chiến',
-        instructor: 'Lê Văn C',
-        totalLessons: 60,
-        completedLessons: 15,
-        coverTitle: 'Python Data',
-        coverSubtitle: 'Thống kê & Machine Learning',
-        cover: '#1E293B',
-        lastStudiedAt: '3 ngày trước'
-      },
-      {
-        id: 'javascript-es6',
-        title: 'JavaScript ES6+ - Nâng cao kỹ năng lập trình',
-        instructor: 'Trần Thị B',
-        totalLessons: 32,
-        completedLessons: 32,
-        coverTitle: 'JS ES6+',
-        coverSubtitle: 'Tối ưu code chuyên nghiệp',
-        cover: '#F7DF1E',
-        badge: 'HOÀN THÀNH',
-        lastStudiedAt: '1 tuần trước'
-      }
-    ];
-
     return this.http.get<{ success: boolean; data: EnrolledCourse[] }>(`${this.apiUrl}/user/dashboard`, { withCredentials: true }).pipe(
-      catchError(() => of({ success: true, data: mockEnrolled }))
+      catchError(() => of({ success: true, data: MOCK_ENROLLED_COURSES }))
     );
   }
 
@@ -215,7 +178,8 @@ export class CourseService {
       'mobile': ['mobile', 'flutter', 'react native', 'ios', 'android', 'swift', 'kotlin'],
       'data-ai': ['data', 'ai', 'python', 'machine learning', 'deep learning', 'data science', 'sql'],
       'devops-cloud': ['devops', 'cloud', 'docker', 'kubernetes', 'aws', 'linux', 'ci/cd'],
-      'explore': [] // Khám phá tự do: không loại trừ gắt gao
+      'explore': [],
+      'ui-ux': ['ui/ux', 'design', 'thiết kế', 'figma']
     };
 
     const targetKeywords = roleKeywordMap[targetRole] || [targetRole];
@@ -233,8 +197,6 @@ export class CourseService {
 
     // 1. HARD FILTER: Khóa học phải thuộc nghề hoặc có ít nhất 1 kỹ năng trùng
     const filtered = courses.filter(c => {
-      if (targetRole === 'explore') return true;
-
       const courseTags = (c.tags || []).map(t => t.toLowerCase());
       const courseTitle = (c.title || '').toLowerCase();
       const courseCategory = (c.category || '').toLowerCase();
@@ -294,7 +256,7 @@ export class CourseService {
       return (b.studentsCount || 0) - (a.studentsCount || 0);
     });
 
-    return filtered.length > 0 ? filtered : courses.slice(0, 4);
+    return filtered;
   }
 }
 

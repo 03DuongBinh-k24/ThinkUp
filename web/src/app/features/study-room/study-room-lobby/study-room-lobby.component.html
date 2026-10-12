@@ -1,0 +1,68 @@
+<main class="study-lobby">
+  <div class="lobby-container">
+    <section class="hero">
+      <img class="hero-image" src="/assets/study-room/lobby-hero-reference.gif" alt="Không gian phòng học ảo ThinkUp" />
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <div class="hero-copy">
+          <h1>PHÒNG <span>HỌC ẢO</span></h1>
+          <p>Tận hưởng phòng học ảo thế hệ mới với âm nhạc lofi tập trung, giao diện tùy biến theo sở thích, quản lý thành viên thông minh và Canvas cộng tác trực tiếp để học cùng nhau mọi lúc, mọi nơi.</p>
+          <div class="hero-actions">
+            <button class="primary-pill" type="button" (click)="quickJoin()"><svg lucideSparkles></svg>Bắt đầu học cùng nhau <svg lucideArrowRight></svg></button>
+            <button class="secondary-pill" type="button" (click)="openCreate()"><svg lucidePlus></svg>Tạo phòng riêng</button>
+          </div>
+        </div>
+        <div class="theme-carousel">
+          <div class="theme-previews">
+            @for (theme of visiblePreviews(); track theme.id) {
+              <button type="button" class="theme-preview" (click)="selectTheme(theme)" [attr.aria-label]="'Chọn giao diện ' + theme.name">
+                @if (theme.type === 'video') { <video [src]="theme.src" autoplay muted loop playsinline></video> } @else { <img [src]="theme.src" [alt]="theme.name" /> }<span class="preview-eye">@if (theme.type === 'video') { <svg lucidePlay></svg> } @else { <svg lucideEye></svg> }</span>
+              </button>
+            }
+          </div>
+          <button class="carousel-arrow left" type="button" (click)="setPreviewPage(-1)" aria-label="Xem theme trước"><svg lucideChevronLeft></svg></button>
+          <button class="carousel-arrow right" type="button" (click)="setPreviewPage(1)" aria-label="Xem theme tiếp theo"><svg lucideChevronRight></svg></button>
+          <div class="carousel-dots"><button type="button" [class.active]="previewPage() === 0" (click)="previewPage.set(0)" aria-label="Nhóm theme 1"></button><button type="button" [class.active]="previewPage() === 1" (click)="previewPage.set(1)" aria-label="Nhóm theme 2"></button><button type="button" [class.active]="previewPage() === 2" (click)="previewPage.set(2)" aria-label="Nhóm theme 3"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="below-grid">
+      <section class="discover">
+        <div class="discover-controls">
+          <div class="discover-heading"><h2>Khám phá không gian học</h2><label class="search-box"><svg lucideSearch></svg><input type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Tìm theo tên phòng, chủ đề hoặc kỹ năng..." /></label></div>
+          <div class="tabs">@for (tab of tabs; track tab.key) { <button type="button" [class.selected]="selectedTab() === tab.key" (click)="selectedTab.set(tab.key)">{{ tab.label }}</button> }</div>
+          <div class="topics"><div>@for (topic of topics; track topic) { <button type="button" [class.selected]="selectedTopic() === topic" (click)="selectedTopic.set(topic)">{{ topic }}</button> }</div><button type="button" class="refresh" (click)="search.set(''); selectedTopic.set('Tất cả'); selectedTab.set('trending')"><svg lucideRotateCcw></svg>Làm mới</button></div>
+        </div>
+        <div class="rooms-grid">
+          @for (room of filteredRooms(); track room.roomId) {
+            <article class="room-card">
+              <div class="room-image" [style.background]="themeBackground(room.theme)">@if (isVideoTheme(room.theme)) { <video [src]="themeVideo(room.theme)" autoplay muted loop playsinline></video> } @else if (hasThemeImage(room.theme)) { <img [src]="themeImage(room.theme)" alt="" /> }<span class="visibility" [class.private]="room.type === 'private'">● {{ room.type === 'private' ? 'Riêng tư' : 'Công khai' }}</span><span class="room-status">● {{ room.status === 'focus' ? 'Đang focus' : room.status === 'break' ? 'Nghỉ ngắn' : 'Sẵn sàng' }}</span><span class="theme-label">{{ themeName(room.theme) }}</span></div>
+              <div class="room-details"><h3>{{ room.name }}</h3><p class="creator">Tạo bởi: <strong>{{ room.creator }}</strong></p><div class="room-id">ID phòng: <strong>#{{ room.roomId.toUpperCase() }}</strong><button type="button" (click)="copyRoom(room)" aria-label="Sao chép ID phòng"><svg lucideCopy></svg></button></div><div class="room-meta"><span><svg lucideTag></svg>{{ room.tags[0] || room.category }}</span><span><svg lucideUsers></svg>{{ room.currentUsers }}/{{ room.maxUsers }} người</span></div><p class="room-description">{{ room.description || 'Không gian học tập và cộng tác cho nhóm của bạn.' }}</p><div class="card-actions"><button type="button" (click)="joinRoom(room)">{{ room.currentUsers >= room.maxUsers ? 'Phòng đã đầy' : room.type === 'private' ? 'Nhập mật khẩu' : 'Vào phòng' }}<svg lucideArrowRight></svg></button><button type="button" (click)="copyRoom(room, true)" aria-label="Sao chép link mời"><svg lucideLink2></svg></button></div></div>
+            </article>
+          } @empty { <div class="empty-rooms">Không tìm thấy phòng học phù hợp.</div> }
+        </div>
+      </section>
+      <aside class="lobby-sidebar">
+        <section class="match-panel"><div class="panel-heading"><span class="panel-icon"><svg lucideSearch></svg></span><div><h2>Tìm phòng phù hợp</h2><p>Để ThinkUp tìm cho bạn một phòng đang hoạt động và còn chỗ.</p></div></div><button type="button" (click)="quickJoin()"><svg lucideSparkles></svg>TÌM PHÒNG PHÙ HỢP</button></section>
+        <section class="side-card"><div class="panel-heading"><span class="panel-icon pale"><svg lucideLogIn></svg></span><div><h2>Vào phòng</h2><p>Nhập mã phòng hoặc link để tham gia. Nếu phòng có mật khẩu, hãy nhập bên dưới.</p></div></div><form (ngSubmit)="joinByCode()"><label>Mã phòng hoặc link<input name="roomCode" [(ngModel)]="roomCode" placeholder="VD: private-team hoặc link phòng" /></label><label>Mật khẩu nếu có<input name="password" type="password" [(ngModel)]="password" placeholder="Bỏ trống nếu phòng link/code/approval" /></label><button type="submit"><svg lucideLogIn></svg>Vào phòng</button></form></section>
+        <section class="side-card create-card"><div class="panel-heading"><span class="panel-icon gold"><svg lucidePlus></svg></span><div><h2>Tạo phòng học</h2><p>Tạo không gian học tập lý tưởng của riêng bạn chỉ trong vài giây.</p></div></div><button type="button" (click)="openCreate()"><svg lucideSparkles></svg>Tạo phòng học<svg lucideArrowRight></svg></button></section>
+      </aside>
+    </div>
+    @if (feedback && !modal()) { <div class="lobby-feedback" role="status">{{ feedback }}</div> }
+  </div>
+</main>
+
+@if (modal()) {
+  <div class="modal-backdrop" (click)="modal.set(null)"><div class="modal" (click)="$event.stopPropagation()">
+    <button class="modal-close" type="button" (click)="modal.set(null)" aria-label="Đóng"><svg lucideX></svg></button>
+    @if (modal() === 'create') {
+      <h2>Tạo phòng học</h2><p>Tạo không gian học tập lý tưởng của riêng bạn.</p>
+      <form (ngSubmit)="createRoom()"><label>Tên phòng học<input name="name" [(ngModel)]="newRoomName" required placeholder="Tên phòng học" /></label><label>Mô tả<textarea name="description" [(ngModel)]="newRoomDescription" rows="3" placeholder="Mục tiêu học tập của phòng"></textarea></label><div class="form-grid"><label>Chủ đề<select name="topic" [(ngModel)]="newRoomTopic">@for (topic of topics.slice(1); track topic) { <option [value]="topic">{{ topic }}</option> }</select></label><label>Số thành viên tối đa<input name="limit" type="number" min="2" max="100" [(ngModel)]="newRoomLimit" /></label></div><label>Giao diện<select name="theme" [(ngModel)]="newRoomTheme">@for (theme of previews; track theme.id) { <option [value]="theme.id">{{ theme.name }}</option> }</select></label><label>Cách tham gia<select name="mode" [(ngModel)]="newRoomMode"><option value="open">Công khai</option><option value="password">Mật khẩu</option></select></label>@if (newRoomMode === 'password') { <label>Mật khẩu<input name="newPassword" type="password" [(ngModel)]="newRoomPassword" /></label> }@if (feedback) { <p class="form-error">{{ feedback }}</p> }<button class="modal-submit" type="submit">Tạo phòng học</button></form>
+    } @else if (modal() === 'password') { <h2>Nhập mật khẩu phòng</h2><p>{{ activeRoom()?.name }}</p><form (ngSubmit)="verifyPassword()"><label>Mật khẩu<input name="joinPassword" type="password" [(ngModel)]="password" /></label>@if (feedback) { <p class="form-error">{{ feedback }}</p> }<button class="modal-submit" type="submit">Vào phòng</button></form>
+    } @else if (modal() === 'waitlist') { <h2>Phòng đã đầy</h2><p>{{ activeRoom()?.name }} hiện đã đủ thành viên. Bạn có thể tham gia danh sách chờ để được thông báo khi có chỗ.</p><button class="modal-submit" type="button" (click)="submitJoinRequest()">Tham gia danh sách chờ</button>
+    } @else if (modal() === 'approval') { <h2>Yêu cầu vào phòng</h2><p>{{ activeRoom()?.name }} cần chủ phòng phê duyệt trước khi bạn tham gia.</p><button class="modal-submit" type="button" (click)="submitJoinRequest()">Gửi yêu cầu tham gia</button>
+    } @else if (modal() === 'full') { <h2>Phòng đã đầy</h2><p>Phòng hiện không còn chỗ. Hãy chọn phòng khác.</p><button class="modal-submit" type="button" (click)="modal.set(null)">Đóng</button>
+    } @else if (modal() === 'created') { <h2>Tạo phòng thành công!</h2><p>Mã phòng: {{ activeRoom()?.roomId }}</p><button class="modal-submit" type="button" (click)="enterCreatedRoom()">Vào phòng ngay</button> }
+  </div></div>
+}

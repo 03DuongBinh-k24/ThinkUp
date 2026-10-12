@@ -1,0 +1,20 @@
+import { Component, ElementRef, effect, inject, input, model, output, signal, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { BlogIconComponent } from '../../../components/blog-icon/blog-icon.component';
+import { BlogService } from '../../../services/blog.service';
+import { countBlogWords } from '../../../utils/blog-content';
+interface FormatAction{command:string;label:string;icon:string;value?:string;}
+@Component({selector:'app-rich-text-editor',standalone:true,imports:[FormsModule,BlogIconComponent],templateUrl:'./rich-text-editor.component.html',styleUrl:'./rich-text-editor.component.css'})
+export class RichTextEditorComponent {
+  private readonly blog=inject(BlogService);
+  readonly value=model('');readonly error=input('');readonly imageUploaded=output<string>();readonly editor=viewChild<ElementRef<HTMLDivElement>>('editor');readonly prompt=signal<'link'|'image'|null>(null);readonly uploading=signal(false);readonly uploadError=signal('');url='';block='p';private savedRange:Range|null=null;
+  readonly actions:FormatAction[]=[{command:'bold',label:'In đậm',icon:'bold'},{command:'italic',label:'In nghiêng',icon:'italic'},{command:'underline',label:'Gạch chân',icon:'underline'},{command:'strikeThrough',label:'Gạch ngang',icon:'strike'},{command:'formatBlock',value:'pre',label:'Đoạn mã',icon:'basic'},{command:'createLink',label:'Chèn liên kết',icon:'link'},{command:'formatBlock',value:'blockquote',label:'Trích dẫn',icon:'quote'},{command:'insertUnorderedList',label:'Danh sách',icon:'list'},{command:'insertOrderedList',label:'Danh sách đánh số',icon:'ordered'},{command:'insertImage',label:'Chèn ảnh',icon:'image'},{command:'insertHTML',value:'<table><tbody><tr><th>Cột 1</th><th>Cột 2</th></tr><tr><td>Ô 1</td><td>Ô 2</td></tr></tbody></table><p><br></p>',label:'Chèn bảng',icon:'table'},{command:'insertHTML',value:'<blockquote>💡 Nhập nội dung ghi chú tại đây...</blockquote><p><br></p>',label:'Chèn ghi chú (Tip Box)',icon:'info'}];
+  constructor(){effect(()=>{const value=this.value();const editor=this.editor()?.nativeElement;if(editor&&document.activeElement!==editor&&editor.innerHTML!==value)editor.innerHTML=value;});}
+  words():number{return countBlogWords(this.value());}
+  inputContent():void{this.value.set(this.editor()?.nativeElement.innerHTML || '');}
+  execute(event:MouseEvent,action:FormatAction):void{event.preventDefault();this.editor()?.nativeElement.focus();if(action.command==='createLink'||action.command==='insertImage'){const selection=window.getSelection();this.savedRange=selection?.rangeCount?selection.getRangeAt(0).cloneRange():null;this.url='';this.prompt.set(action.command==='createLink'?'link':'image');return;}this.command(action.command,action.value);}
+  command(command:string,value?:string):void{this.editor()?.nativeElement.focus();document.execCommand(command,false,value);this.inputContent();}
+  changeBlock():void{this.command('formatBlock',this.block);}
+  insertUrl():void{if(!this.url.trim())return;let parsed:URL;try{parsed=new URL(this.url);}catch{this.uploadError.set('Vui lòng nhập đường dẫn hợp lệ.');return;}if(!['http:','https:','data:'].includes(parsed.protocol)){this.uploadError.set('Đường dẫn không được hỗ trợ.');return;}const kind=this.prompt();this.editor()?.nativeElement.focus();if(this.savedRange){const selection=window.getSelection();selection?.removeAllRanges();selection?.addRange(this.savedRange);}this.command(kind==='image'?'insertImage':'createLink',this.url);if(kind==='image')this.imageUploaded.emit(this.url);this.prompt.set(null);this.uploadError.set('');}
+  upload(event:Event):void{const file=(event.target as HTMLInputElement).files?.item(0);if(!file)return;if(!file.type.startsWith('image/')||file.size>5*1024*1024){this.uploadError.set('Vui lòng chọn ảnh tối đa 5MB.');return;}this.uploading.set(true);this.blog.upload(file).subscribe({next:url=>{this.url=url;this.uploading.set(false);this.insertUrl();},error:()=>{this.uploading.set(false);this.uploadError.set('Không thể tải ảnh lên.');}});}
+}

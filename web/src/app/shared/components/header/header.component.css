@@ -1,0 +1,7 @@
+:host-context(.study-room-lobby-shell) header{background:#08185a!important;border-color:#183574!important;box-shadow:none!important}
+:host-context(.study-room-lobby-shell) header nav a{color:#d8e6ff!important}
+:host-context(.study-room-lobby-shell) header nav a:hover{color:white!important}
+:host-context(.study-room-lobby-shell) header a[aria-label="ThinkUp Trang chủ"] span span:first-child{color:white!important}
+:host-context(.study-room-lobby-shell) header a[aria-label="Giỏ hàng"],:host-context(.study-room-lobby-shell) header button[aria-label="Thông báo"]{color:#e5efff!important}
+:host-context(.study-room-lobby-shell){display:block;position:sticky;top:0;z-index:50}
+:host-context(.study-room-lobby-shell) header button[aria-label="Thông báo"]{display:none}

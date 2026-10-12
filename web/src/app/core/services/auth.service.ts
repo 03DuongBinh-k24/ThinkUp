@@ -1,191 +1,91 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, retry } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthResponse } from '../models/user.model';
 
-import { INITIAL_MOCK_USERS } from '../data/mock-users';
+import { mockLogin, mockLoginWithFacebook, mockLoginWithGoogle, mockSignUp, mockForgotPassword, mockVerifyOtp, mockResendOtp, mockResetPassword } from '../data/mock/mock-auth.api';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  // --- MOCK DB LOGIC ---
-  private getMockUsers(): any[] {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem('thinkup_mock_db_users');
-      if (stored) return JSON.parse(stored);
-      
-      // Khởi tạo từ file mock nếu chưa có
-      localStorage.setItem('thinkup_mock_db_users', JSON.stringify(INITIAL_MOCK_USERS));
-    }
-    return INITIAL_MOCK_USERS;
-  }
-
-  private addMockUser(user: any): void {
-    if (typeof localStorage !== 'undefined') {
-      const users = this.getMockUsers();
-      users.push(user);
-      localStorage.setItem('thinkup_mock_db_users', JSON.stringify(users));
-    }
-  }
-  // ---------------------
-
   isAuthenticated(): boolean {
     if (typeof localStorage !== 'undefined') {
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
       const user = localStorage.getItem('user');
-      return !!(token || user);
+      // TODO(pre-deploy): Nhớ xóa cách nhận diện phiên mock khi dùng token backend thật.
+      const mockSession = localStorage.getItem('thinkup_user_logged_in') === 'true' &&
+        !!localStorage.getItem('thinkup_current_user');
+      return !!(token || user || mockSession);
     }
     return false;
   }
 
-  // TODO: Xóa các Mock này và mở lại HTTP khi Backend đã sẵn sàng
+  // TODO(pre-deploy): Nhớ thay các lời gọi mock dưới đây bằng API auth thật.
   login(credentials: { email: string; password: string; rememberMe?: boolean }): Observable<AuthResponse> {
-    return new Observable<AuthResponse>(observer => {
-      setTimeout(() => {
-        const users = this.getMockUsers();
-        const foundUser = users.find(u => u.email === credentials.email);
-
-        if (!foundUser) {
-          observer.error({ status: 401, error: { message: 'Tài khoản không tồn tại' } });
-          return;
-        }
-
-        if (foundUser.password !== credentials.password) {
-          observer.error({ status: 401, error: { message: 'Mật khẩu không đúng' } });
-          return;
-        }
-
-        observer.next({
-          success: true,
-          message: 'Đăng nhập thành công',
-          user: {
-            id: foundUser.id,
-            full_name: foundUser.full_name,
-            email: foundUser.email,
-            role: foundUser.role,
-            onboarding_completed: foundUser.onboarding_completed
-          },
-          token: 'mock-jwt-token'
-        });
-        observer.complete();
-      }, 800);
-    }).pipe(catchError(this.handleError.bind(this)));
+    return mockLogin(credentials).pipe(catchError(this.handleError.bind(this)));
   }
 
-  /**
-   * Đăng nhập thông qua Google OAuth 2.0 (G1-G3, AC-10, EX-AUTH-03)
-   */
   loginWithGoogle(): Observable<AuthResponse> {
-    return new Observable<AuthResponse>(observer => {
-      setTimeout(() => {
-        observer.next({
-          success: true,
-          message: 'Đăng nhập thành công',
-          user: {
-            id: 'mock-id-gg',
-            full_name: 'Học viên (Google)',
-            email: 'student_google@thinkup.vn',
-            role: 'student',
-            onboarding_completed: false
-          },
-          token: 'mock-jwt-token'
-        });
-        observer.complete();
-      }, 800);
-    }).pipe(catchError(this.handleError.bind(this)));
+    return mockLoginWithGoogle().pipe(catchError(this.handleError.bind(this)));
   }
 
-  /**
-   * Đăng nhập thông qua Facebook (F1-F3, AC-11, EX-AUTH-03, EX-AUTH-04)
-   */
   loginWithFacebook(additionalEmail?: string): Observable<AuthResponse> {
-    return new Observable<AuthResponse>(observer => {
-      setTimeout(() => {
-        if (!additionalEmail) {
-          // Giả lập lỗi thiếu email
-          observer.error({ status: 400, error: { errorCode: 'MISSING_EMAIL', message: 'Tài khoản Facebook chưa có email' } });
-          return;
-        }
-        observer.next({
-          success: true,
-          message: 'Đăng nhập thành công',
-          user: {
-            id: 'mock-id-fb',
-            full_name: 'Học viên (Facebook)',
-            email: additionalEmail,
-            role: 'student',
-            onboarding_completed: false
-          },
-          token: 'mock-jwt-token'
-        });
-        observer.complete();
-      }, 800);
-    }).pipe(catchError(this.handleError.bind(this)));
+    return mockLoginWithFacebook(additionalEmail).pipe(catchError(this.handleError.bind(this)));
   }
 
   signUp(data: { fullName: string; phone: string; email: string; password: string }): Observable<AuthResponse> {
-    return new Observable<AuthResponse>(observer => {
-      setTimeout(() => {
-        const users = this.getMockUsers();
-        if (users.find(u => u.email === data.email) || data.email === 'test@gmail.com') {
-          observer.error({ status: 409, error: { message: 'Email đã tồn tại' } });
-          return;
-        }
-
-        const newUser = {
-          id: 'mock-id-new-' + Date.now(),
-          full_name: data.fullName,
-          email: data.email,
-          password: data.password, // Lưu tạm mock pass để test login
-          phone: data.phone,
-          role: 'student',
-          onboarding_completed: false
-        };
-
-        this.addMockUser(newUser);
-
-        observer.next({
-          success: true,
-          message: 'Đăng ký thành công',
-          user: {
-            id: newUser.id,
-            full_name: newUser.full_name,
-            email: newUser.email,
-            role: newUser.role as any,
-            onboarding_completed: newUser.onboarding_completed
-          },
-          token: 'mock-jwt-token'
-        });
-        observer.complete();
-      }, 800);
-    }).pipe(catchError(this.handleError.bind(this)));
+    return mockSignUp(data).pipe(catchError(this.handleError.bind(this)));
   }
 
+  // TODO(pre-deploy): Nhớ xóa fallback mockForgotPassword khi kết nối backend thật.
   forgotPassword(contact: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/forgot-password`, { contact }).pipe(
-      catchError(this.handleError)
+      catchError(err => {
+        if (err.status === 0 || err.status === 404) {
+          return mockForgotPassword(contact);
+        }
+        return this.handleError(err);
+      })
     );
   }
 
+  // TODO(pre-deploy): Nhớ xóa fallback mockVerifyOtp khi kết nối backend thật.
   verifyOtp(email: string, otp: string, purpose: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/verify-otp`, { email, otp, purpose }).pipe(
-      catchError(this.handleError)
+      catchError(err => {
+        if (err.status === 0 || err.status === 404) {
+          return mockVerifyOtp(email, otp, purpose);
+        }
+        return this.handleError(err);
+      })
     );
   }
 
+  // TODO(pre-deploy): Nhớ xóa fallback mockResendOtp khi kết nối backend thật.
   resendOtp(email: string, purpose: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/resend-otp`, { email, purpose }).pipe(
-      catchError(this.handleError)
+      catchError(err => {
+        if (err.status === 0 || err.status === 404) {
+          return mockResendOtp(email, purpose);
+        }
+        return this.handleError(err);
+      })
     );
   }
 
+  // TODO(pre-deploy): Nhớ xóa fallback mockResetPassword khi kết nối backend thật.
   resetPassword(token: string, password: string, confirmPassword: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/reset-password`, { token, password, confirmPassword }).pipe(
-      catchError(this.handleError)
+      catchError(err => {
+        if (err.status === 0 || err.status === 404) {
+          return mockResetPassword(token, password, confirmPassword);
+        }
+        return this.handleError(err);
+      })
     );
   }
 
@@ -248,6 +148,8 @@ export class AuthService {
     const customErr: any = new Error(message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
     customErr.status = status;
     customErr.errorCode = errorCode;
+    customErr.code = errorCode;
+    customErr.provider = error?.error?.provider;
     customErr.retryAfter = retryAfter;
     return throwError(() => customErr);
   }

@@ -1,0 +1,10 @@
+@if (open()) {
+<div class="fixed inset-0 z-[100] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="blog-auth-title" (keydown.escape)="closed.emit()">
+  <button type="button" class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closed.emit()" aria-label="Đóng popup"></button>
+  <div class="relative w-full max-w-[420px] overflow-hidden rounded-[16px] bg-white p-6 shadow-2xl">
+    <button type="button" (click)="closed.emit()" class="absolute right-4 top-4 rounded-full p-1.5 text-[#647188] hover:bg-[#f1f5ff]" aria-label="Đóng"><app-blog-icon name="x" [size]="20" /></button>
+    <div class="flex flex-col items-center text-center"><div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#eaf2ff] text-[#1f66f2]"><app-blog-icon name="lock" [size]="24" /></div><h2 id="blog-auth-title" class="text-[20px] font-extrabold text-[#172554]">Bạn cần đăng nhập</h2><p class="mt-2 text-[14px] leading-6 font-semibold text-[#647188]">Vui lòng đăng nhập hoặc tạo tài khoản mới để tiếp tục sử dụng tính năng này.</p></div>
+    <div class="mt-8 flex flex-col gap-3 sm:flex-row"><a routerLink="/auth/sign_up" class="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-[#d5e2f8] bg-white px-4 text-[14px] font-extrabold text-[#53637d]">Đăng ký</a><a routerLink="/auth/login" class="flex h-11 flex-1 items-center justify-center rounded-[8px] bg-[#1f66f2] px-4 text-[14px] font-extrabold text-white">Đăng nhập</a></div>
+  </div>
+</div>
+}

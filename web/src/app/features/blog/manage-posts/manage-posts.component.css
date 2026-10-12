@@ -1,0 +1,4 @@
+:host{display:block;flex:1}.filter-button{border-color:#E0E5EB;background:#fff;color:#677283}.filter-button:hover{background:#F8FAFD}.filter-button.active{border-color:#1E4AD7;background:#EEF3FF;color:#1E4AD7}button{cursor:pointer}button:focus-visible,a:focus-visible{outline:2px solid #1E4AD7;outline-offset:3px}
+:host{line-height:1.6}
+
+input::placeholder{color:#9CA3AF}
