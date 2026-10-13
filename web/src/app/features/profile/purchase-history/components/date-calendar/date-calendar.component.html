@@ -1,0 +1,19 @@
+<div class="calendar" role="dialog" aria-label="Chọn ngày">
+  <div class="calendar-header">
+    <button type="button" class="calendar-nav" aria-label="Tháng trước" (click)="changeMonth(-1)"><svg lucideChevronLeft [size]="18" aria-hidden="true"></svg></button>
+    <strong>{{ monthLabel() }}</strong>
+    <button type="button" class="calendar-nav" aria-label="Tháng sau" (click)="changeMonth(1)"><svg lucideChevronRight [size]="18" aria-hidden="true"></svg></button>
+  </div>
+  <div class="calendar-grid calendar-weekdays">
+    @for (weekday of weekdays; track weekday) {<span>{{ weekday }}</span>}
+  </div>
+  <div class="calendar-grid calendar-days">
+    @for (item of days(); track item.date) {
+      <button type="button" [class.outside-month]="!item.inMonth" [class.selected-day]="value() === item.date" [class.today]="item.today" [attr.aria-label]="item.date" [attr.aria-pressed]="value() === item.date" (click)="selectDate(item.date)">{{ item.day }}</button>
+    }
+  </div>
+  <div class="calendar-footer">
+    <button type="button" (click)="clearDate()">Xóa</button>
+    <button type="button" (click)="selectToday()">Hôm nay</button>
+  </div>
+</div>

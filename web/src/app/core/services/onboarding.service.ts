@@ -1,62 +1,30 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { StudentPreferences, User } from '../models/user.model';
+import { isMockAccount, saveMockOnboarding } from '../data/mock/mock-auth.store';
 
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  private readonly PREFS_KEY = 'thinkup_student_preferences';
-  private readonly ONBOARDING_DONE_KEY = 'thinkup_onboarding_done';
   private readonly USER_KEY = 'thinkup_current_user';
 
   /**
    * Kiểm tra xem học viên hiện tại đã hoàn thành khảo sát (hoặc đã bỏ qua) hay chưa.
    */
   isOnboardingCompleted(): boolean {
-    if (typeof localStorage === 'undefined') return false;
-
-    // 1. Kiểm tra cờ trực tiếp
-    const doneFlag = localStorage.getItem(this.ONBOARDING_DONE_KEY);
-    if (doneFlag === 'true') return true;
-
-    // 2. Kiểm tra trong object user hiện tại
-    try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        if (user.onboarding_completed === true) return true;
-      }
-    } catch {
-      // Ignored
-    }
-
-    return false;
+    return this.getCurrentUser()?.onboarding_completed === true;
   }
 
   /**
    * Lấy dữ liệu sở thích đã lưu của học viên (nếu đã hoàn thành khảo sát)
    */
   getPreferences(): StudentPreferences | null {
-    if (typeof localStorage === 'undefined') return null;
-    try {
-      const raw = localStorage.getItem(this.PREFS_KEY);
-      if (raw) return JSON.parse(raw);
-
-      // Thử đọc từ thinkup_current_user
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        if (user.preferences) return user.preferences;
-      }
-    } catch {
-      // Ignored
-    }
-    return null;
+    return this.getCurrentUser()?.preferences ?? null;
   }
 
   /**
@@ -69,15 +37,14 @@ export class OnboardingService {
       currentLevel: preferences.currentLevel
     };
 
+    const user = this.getCurrentUser();
+    // TODO(pre-deploy): Nhớ xóa nhánh hoàn tất tại máy khi API onboarding thật sẵn sàng.
+    if (user && isMockAccount(user)) {
+      this.saveCompletedState(preferences);
+      return of({ success: true, message: 'Thiết lập thành công!' });
+    }
     return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/onboarding/submit`, payload).pipe(
-      tap(() => {
-        this.saveCompletedState(preferences);
-      }),
-      catchError(() => {
-        // Fallback lưu local mock khi Backend chưa sẵn sàng hoặc offline
-        this.saveCompletedState(preferences);
-        return of({ success: true, message: 'Thiết lập thành công!' });
-      })
+      tap(() => this.saveCompletedState(preferences))
     );
   }
 
@@ -85,79 +52,49 @@ export class OnboardingService {
    * Gửi yêu cầu bỏ qua khảo sát lên máy chủ (POST /api/v1/onboarding/skip)
    */
   skipOnboarding(): Observable<{ success: boolean; message: string }> {
+    const user = this.getCurrentUser();
+    // TODO(pre-deploy): Nhớ xóa nhánh bỏ qua tại máy khi API onboarding thật sẵn sàng.
+    if (user && isMockAccount(user)) {
+      this.saveSkippedState();
+      return of({ success: true, message: 'Đã bỏ qua khảo sát' });
+    }
     return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/onboarding/skip`, {}).pipe(
-      tap(() => {
-        this.saveSkippedState();
-      }),
-      catchError(() => {
-        this.saveSkippedState();
-        return of({ success: true, message: 'Đã bỏ qua khảo sát' });
-      })
+      tap(() => this.saveSkippedState())
     );
   }
 
-  /**
-   * Đặt lại trạng thái test
-   */
-  resetOnboardingState(): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(this.ONBOARDING_DONE_KEY);
-    localStorage.removeItem(this.PREFS_KEY);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
-    }
-
+  getCurrentUser(): User | null {
+    if (typeof localStorage === 'undefined') return null;
     try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        user.onboarding_completed = false;
-        delete user.preferences;
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-      }
-    } catch {}
+      const raw = localStorage.getItem(this.USER_KEY);
+      const user: User | null = raw ? JSON.parse(raw) : null;
+      return user?.id ? user : null;
+    } catch { return null; }
   }
 
   private saveCompletedState(preferences: StudentPreferences): void {
     if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(this.ONBOARDING_DONE_KEY, 'true');
-    localStorage.setItem(this.PREFS_KEY, JSON.stringify({
-      ...preferences,
-      submittedAt: new Date().toISOString()
-    }));
-
     try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
+      const user = this.getCurrentUser();
+      if (user) {
         user.onboarding_completed = true;
-        user.preferences = preferences;
+        user.preferences = { ...preferences, submittedAt: new Date().toISOString() };
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        if (isMockAccount(user)) saveMockOnboarding(user, user.preferences);
       }
     } catch {}
-
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
-    }
   }
 
   private saveSkippedState(): void {
     if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(this.ONBOARDING_DONE_KEY, 'true');
-    localStorage.removeItem(this.PREFS_KEY);
-
     try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
+      const user = this.getCurrentUser();
+      if (user) {
         user.onboarding_completed = true;
         delete user.preferences;
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        if (isMockAccount(user)) saveMockOnboarding(user);
       }
     } catch {}
-
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
-    }
   }
 }

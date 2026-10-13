@@ -1,0 +1,88 @@
+<main class="min-h-screen bg-[#F9F9FF] text-[#0F172B]">
+  <div class="mx-auto w-full max-w-[1447px] px-4 pb-16 pt-8 sm:px-6 2xl:px-0">
+    <header>
+      <h1 class="text-[24px] font-bold leading-8 text-[#0F172B]">Lịch sử mua hàng</h1>
+      <p class="mt-1 text-[14px] leading-5 text-[#62748E]">Theo dõi toàn bộ các giao dịch mua khóa học của bạn</p>
+    </header>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-3" aria-label="Tổng quan lịch sử mua hàng">
+      <article class="flex min-h-[114px] items-center gap-4 rounded-[18px] border border-[#E2E8F0] bg-white px-[21px] py-5">
+        <div class="grid h-14 w-14 shrink-0 place-items-center rounded-[14px] bg-[#EFF6FF] text-[#1677FF]">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3h16v18l-4-2-4 2-4-2-4 2z"/><path d="M8 8h8M8 12h6"/></svg>
+        </div>
+        <div><p class="text-[14px] leading-5 text-[#62748E]">Tổng số giao dịch</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ transactions().length }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">Giao dịch</p></div>
+      </article>
+      <article class="flex min-h-[114px] items-center gap-4 rounded-[18px] border border-[#E2E8F0] bg-white px-[21px] py-5">
+        <div class="grid h-14 w-14 shrink-0 place-items-center rounded-[14px] bg-[#ECFDF5] text-[#00B97C]">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20M16 15h2"/></svg>
+        </div>
+        <div><p class="text-[14px] leading-5 text-[#62748E]">Tổng số tiền đã chi tiêu</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ spending() }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">VND</p></div>
+      </article>
+      <article class="flex min-h-[114px] items-center gap-4 rounded-[18px] border border-[#E2E8F0] bg-white px-[21px] py-5">
+        <div class="grid h-14 w-14 shrink-0 place-items-center rounded-[14px] bg-[#FAF5FF] text-[#B850FF]">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 9 10-5 10 5-10 5zM6 11v5c3 3 9 3 12 0v-5M22 9v7"/></svg>
+        </div>
+        <div><p class="text-[14px] leading-5 text-[#62748E]">Số khóa học đã mua</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ courseCount() }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">Khóa học</p></div>
+      </article>
+    </section>
+
+    <section class="relative mt-5 rounded-[18px] border border-[#E2E8F0] bg-white px-[21px] py-5" aria-label="Bộ lọc lịch sử mua hàng">
+      <div class="grid gap-4 xl:grid-cols-[minmax(280px,1fr)_240px_259px]">
+        <label class="relative block"><span class="sr-only">Tìm giao dịch hoặc khóa học</span>
+          <input #searchInput type="search" [value]="query()" (input)="setQuery(searchInput.value)" placeholder="Tìm theo mã giao dịch, tên khóa học..." class="h-10 w-full rounded-[10px] border border-[#E2E8F0] bg-white px-4 pr-11 text-[14px] leading-5 text-[#314158] placeholder:text-[#8B98AA] focus:border-[#8ACDFF] focus:ring-2 focus:ring-[#DDF1FF]" />
+          <svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6F86A7]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+        </label>
+        <div class="relative">
+          <button type="button" (click)="statusOpen.set(!statusOpen()); dateOpen.set(false)" [attr.aria-expanded]="statusOpen()" class="flex h-11 w-full items-center justify-between rounded-[10px] border border-[#E2E8F0] bg-white px-4 text-left text-[14px] text-[#314158]">{{ statusLabel() }} <svg lucideChevronDown aria-hidden="true" class="h-4 w-4 shrink-0 text-[#62748E]" [size]="16" [strokeWidth]="1.8"></svg></button>
+          @if (statusOpen()) {<div role="listbox" class="absolute left-0 top-[50px] z-30 w-full overflow-hidden rounded-[8px] border border-[#E2E8F0] bg-white py-2 shadow-lg">
+            @for (option of statusOptions; track option.value) {<button type="button" role="option" [attr.aria-selected]="selectedStatus() === option.value" (click)="setStatus(option.value)" class="flex h-9 w-full items-center px-4 text-left text-[14px]" [class.bg-[#EAF4FF]]="selectedStatus() === option.value" [class.text-[#0969E8]]="selectedStatus() === option.value">{{ option.label }}</button>}
+          </div>}
+        </div>
+        <div class="relative">
+          <button type="button" (click)="dateOpen.set(!dateOpen()); activeCalendar.set(null); statusOpen.set(false)" [attr.aria-expanded]="dateOpen()" aria-haspopup="true" class="date-filter-trigger">
+            <svg lucideCalendarDays aria-hidden="true" class="date-filter-calendar" [size]="16" [strokeWidth]="1.8"></svg>
+            <span class="min-w-0 flex-1 truncate">{{ dateButtonLabel() }}</span>
+            <svg lucideChevronDown aria-hidden="true" class="date-filter-chevron" [size]="16" [strokeWidth]="1.8"></svg>
+          </button>
+          @if (dateOpen()) {
+            <div class="date-filter-menu" role="group" aria-label="Lọc theo thời gian">
+              @for (preset of datePresets; track preset) {
+                <button type="button" (click)="setDate(preset)" class="date-filter-option" [class.date-filter-option-selected]="selectedDate() === preset" [attr.aria-current]="selectedDate() === preset ? 'true' : null" [attr.aria-expanded]="preset === 'Tùy chọn khác' ? customRangeOpen() : null">
+                  <span>{{ preset }}</span>
+                  @if (preset === 'Tùy chọn khác') {<svg lucideChevronDown aria-hidden="true" class="date-filter-chevron" [class.rotate-180]="customRangeOpen()" [size]="16" [strokeWidth]="1.8"></svg>}
+                </button>
+              }
+              @if (customRangeOpen()) {
+                <div class="date-filter-range">
+                  <button type="button" class="date-filter-date" [class.date-filter-date-active]="activeCalendar() === 'from'" aria-label="Chọn từ ngày" (click)="toggleCalendar('from')"><svg lucideCalendarDays aria-hidden="true" [size]="14" [strokeWidth]="1.8"></svg><span>{{ formatDisplayDate(customFrom()) }}</span></button>
+                  <span class="date-filter-separator">-</span>
+                  <button type="button" class="date-filter-date" [class.date-filter-date-active]="activeCalendar() === 'to'" aria-label="Chọn đến ngày" (click)="toggleCalendar('to')"><svg lucideCalendarDays aria-hidden="true" [size]="14" [strokeWidth]="1.8"></svg><span>{{ formatDisplayDate(customTo()) }}</span></button>
+                  @if (activeCalendar(); as field) {<app-date-calendar [value]="field === 'from' ? customFrom() : customTo()" (dateSelected)="setCustomDate(field, $event)" />}
+                </div>
+                @if (invalidRange()) {<p class="date-filter-error">Ngày bắt đầu phải trước ngày kết thúc.</p>}
+                <div class="date-filter-actions"><button type="button" (click)="cancelCustomDate()" class="date-filter-cancel">Hủy</button><button type="button" (click)="applyCustomDate()" [disabled]="!customFrom() || !customTo() || invalidRange()" class="date-filter-apply">Áp dụng</button></div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-5 overflow-hidden rounded-[14px] border border-[#E2E8F0] bg-white" aria-label="Bảng lịch sử mua hàng">
+      <div class="overflow-x-auto"><table class="w-full min-w-[1180px] border-collapse text-left">
+        <thead><tr class="h-[49px] border-b border-[#E2E8F0] text-[12px] font-semibold uppercase leading-4 tracking-[0.025em] text-[#62748E]"><th class="px-6">Mã giao dịch</th><th class="px-6">Khóa học</th><th class="px-6">Phương thức thanh toán</th><th class="px-6">Số tiền</th><th class="px-6">Trạng thái</th><th class="px-6"><button type="button" (click)="sortAscending.set(!sortAscending())" class="inline-flex items-center gap-1 uppercase">Thời gian <span aria-hidden="true">{{ sortAscending() ? '↑' : '↓' }}</span></button></th><th class="w-[120px] px-6"><span class="sr-only">Thao tác</span></th></tr></thead>
+        <tbody>
+          @for (transaction of visible(); track transaction.id) {<tr class="border-b border-[#EEF3F8] last:border-b-0 hover:bg-[#FAFCFF]">
+            <td class="px-6 py-5 text-[14px] font-semibold text-[#0F172B]">{{ transaction.id }}</td>
+            <td class="max-w-[290px] px-6 py-5"><ul class="space-y-1 text-[14px] leading-5 text-[#293B57]">@for (course of transaction.courses; track course) {<li class="flex gap-2"><span class="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#90A1B9]"></span><span>{{ course }}</span></li>}</ul></td>
+            <td class="px-6 py-5 text-[14px] text-[#293B57]">{{ transaction.paymentMethod }}</td><td class="px-6 py-5 text-[14px] font-bold text-[#0F172B]">{{ transaction.amount }}</td>
+            <td class="px-6 py-5"><span class="inline-flex h-6 items-center rounded-[7px] border px-2.5 text-[12px] font-semibold" [class]="transaction.status === 'success' ? 'border-[#BEEFD9] bg-[#E9FBF2] text-[#00A66E]' : 'border-[#FFD1DC] bg-[#FFF0F4] text-[#FF315C]'">{{ transaction.status === 'success' ? 'Thành công' : 'Thất bại' }}</span></td>
+            <td class="px-6 py-5"><time class="block text-[14px] text-[#293B57]">{{ transaction.date }}</time><span class="mt-1 block text-[12px] text-[#6880A0]">{{ transaction.time }}</span></td>
+            <td class="px-6 py-5"><a [routerLink]="['/main/profile/billing', transaction.id]" class="ml-auto flex h-[30px] w-max items-center gap-1 rounded-[7px] border border-[#BFE4FF] bg-white px-3 text-[12px] font-semibold text-[#0088E8] hover:bg-[#F0F8FF]">Chi tiết <span aria-hidden="true">›</span></a></td>
+          </tr>} @empty {<tr><td colspan="7" class="h-[180px] px-6 text-center text-[14px] text-[#6D7F99]">Không tìm thấy giao dịch phù hợp.</td></tr>}
+        </tbody>
+      </table></div>
+      <div class="flex min-h-[65px] flex-col gap-4 border-t border-[#E2E8F0] px-6 py-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-[14px] text-[#6880A0]">Hiển thị {{ visibleStart() }} - {{ visibleEnd() }} trong {{ filtered().length }} giao dịch</p><div class="flex items-center gap-2" aria-label="Phân trang"><button type="button" aria-label="Trang trước" [disabled]="page() === 1" (click)="setPage(page() - 1)" class="grid h-8 w-8 place-items-center rounded-[7px] border border-[#E2E8F0] text-[#52637D] disabled:text-[#B4C1D1]">‹</button>@for (number of pages(); track number) {<button type="button" [attr.aria-current]="page() === number ? 'page' : null" (click)="setPage(number)" class="grid h-8 w-8 place-items-center rounded-[7px] border text-[14px]" [class]="page() === number ? 'border-[#0088E8] bg-[#0088E8] text-white' : 'border-[#E2E8F0] bg-white text-[#52637D]'">{{ number }}</button>}<button type="button" aria-label="Trang sau" [disabled]="page() === pageCount()" (click)="setPage(page() + 1)" class="grid h-8 w-8 place-items-center rounded-[7px] border border-[#E2E8F0] text-[#52637D] disabled:text-[#B4C1D1]">›</button></div></div>
+    </section>
+  </div>
+</main>

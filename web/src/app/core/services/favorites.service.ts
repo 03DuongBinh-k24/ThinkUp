@@ -4,7 +4,7 @@ import { Observable, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Course } from '../models/course.model';
-import { MOCK_COURSES } from '../data/mock-courses';
+import { MOCK_COURSES } from '../data/mock/mock-courses';
 
 @Injectable({ providedIn: 'root' })
 export class FavoritesService {
@@ -29,6 +29,7 @@ export class FavoritesService {
           return;
         }
       }
+      // TODO(pre-deploy): Nhớ xóa danh sách yêu thích mock khi có API thật.
       // Default initial mock favorites if first time
       const initialFavs = MOCK_COURSES.slice(0, 3);
       this._favorites.set(initialFavs);

@@ -1,0 +1,45 @@
+
+    <aside class="h-fit min-w-0 rounded-[18px] bg-white px-8 pb-12 pt-9 shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] lg:h-[1659px]">
+      <div class="flex flex-col items-center">
+        <!-- Avatar Preview -->
+        @if (avatarUrl) {
+          <img
+            [src]="avatarUrl"
+            [alt]="'Ảnh đại diện của ' + displayName"
+            class="h-32 w-32 rounded-full object-cover"
+          />
+        } @else {
+          <div
+            class="grid h-32 w-32 place-items-center rounded-full bg-[#E8EEFF] text-3xl font-bold text-[#155DFC]"
+            aria-label="Chưa có ảnh đại diện"
+          >
+            {{ (displayName || 'U').trim().charAt(0).toUpperCase() }}
+          </div>
+        }
+
+        <!-- Display Name -->
+        <h1 class="mt-4 text-center text-[18px] font-bold leading-7 text-[#1C1D1F]">
+          {{ displayName }}
+        </h1>
+
+        <!-- Hidden File Input -->
+        <input
+          #fileInput
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="onFileSelected($event)"
+          class="sr-only"
+          aria-label="Chọn ảnh đại diện mới"
+        />
+
+        <!-- Upload Button (Chuẩn Figma 3202:28797) -->
+        <button
+          type="button"
+          (click)="fileInput.click()"
+          [disabled]="isUploading()"
+          class="mt-7 w-full rounded-full bg-[#00A2F0] px-6 py-2 text-[13px] leading-5 text-white shadow-sm transition-colors hover:bg-[#0088E8] active:bg-[#0077CB] disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {{ isUploading() ? 'Đang lưu ảnh...' : 'Tải Ảnh Đại Diện Mới' }}
+        </button>
+      </div>
+    </aside>

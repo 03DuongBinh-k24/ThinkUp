@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
 
 /**
@@ -7,21 +7,21 @@ import { OnboardingService } from '../services/onboarding.service';
  * Nếu người dùng đã đăng nhập và chưa hoàn thành Onboarding (onboarding_completed == false),
  * tự động chuyển hướng về trang /onboarding.
  */
-export const onboardingRequiredGuard: CanActivateFn = () => {
+export const onboardingRequiredGuard: CanActivateChildFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
 
   const isLoggedIn = typeof localStorage !== 'undefined' && localStorage.getItem('thinkup_user_logged_in') === 'true';
+  const user = onboardingService.getCurrentUser();
 
   // Khách vãng lai xem bình thường (không ép buộc)
-  if (!isLoggedIn) {
+  if (!isLoggedIn || !user || user.role !== 'student') {
     return true;
   }
 
   // Học viên đã đăng nhập nhưng chưa hoàn thành khảo sát
   if (!onboardingService.isOnboardingCompleted()) {
-    router.navigate(['/onboarding']);
-    return false;
+    return router.createUrlTree(['/onboarding']);
   }
 
   return true;
@@ -36,9 +36,14 @@ export const onboardingCompletedGuard: CanActivateFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
 
-  if (onboardingService.isOnboardingCompleted()) {
-    router.navigate(['/main/home']);
-    return false;
+  const isLoggedIn = typeof localStorage !== 'undefined' && localStorage.getItem('thinkup_user_logged_in') === 'true';
+  const user = onboardingService.getCurrentUser();
+  if (!isLoggedIn || !user) {
+    return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: '/onboarding' } });
+  }
+
+  if (user.role !== 'student' || onboardingService.isOnboardingCompleted()) {
+    return router.createUrlTree(['/main/home']);
   }
 
   return true;

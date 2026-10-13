@@ -1,71 +1,34 @@
-<div class="min-h-screen bg-[#F8F9FF] flex flex-col font-['Inter']">
-  <main class="flex flex-1 relative overflow-hidden items-center justify-center py-[clamp(1.5rem,4vh,3rem)] px-4 sm:px-6 lg:px-8">
-    <div class="absolute top-[-10%] left-[-5%] w-[clamp(200px,30vw,400px)] h-[clamp(200px,30vw,400px)] rounded-full bg-[#006AB5]/5 blur-[120px] pointer-events-none" aria-hidden="true"></div>
-    <div class="absolute bottom-[-10%] right-[-5%] w-[clamp(200px,30vw,400px)] h-[clamp(200px,30vw,400px)] rounded-full bg-[#924700]/5 blur-[120px] pointer-events-none" aria-hidden="true"></div>
-
-    <section class="w-full max-w-[min(440px,calc(100vw-2rem))] bg-white border border-[#E2E8F0] rounded-xl shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1)] p-[clamp(1.25rem,4vw,3rem)] flex flex-col items-center relative z-10 gap-[clamp(1rem,2.5vh,1.5rem)]">
-
-      <!-- Header -->
-      <header class="flex flex-col gap-[clamp(6px,1vh,8px)] w-full">
-        <h1 class="text-[#191B23] text-[clamp(20px,2.5vw,24px)] font-semibold leading-[1.3] tracking-[-0.01em] text-center">
-          {{ title }}
-        </h1>
-        <div class="bg-[#F2F3FD] rounded-lg p-[clamp(12px,2vw,16px)] mt-1 flex flex-col items-center justify-center gap-1">
-          <p class="text-[#424754] text-[clamp(13px,1.2vw,14px)] leading-[1.6] font-normal text-center m-0">
-            Mã xác thực đã được gửi đến email
-            <span class="font-semibold text-[#191B23]">{{ maskedEmail }}</span>.
-            Vui lòng kiểm tra email và nhập chính xác mã vào ô dưới.
-          </p>
-        </div>
-      </header>
-
-      <!-- API Error -->
-      @if (errors().api) {
-        <div role="alert" class="w-full p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[clamp(12px,1vw,13px)] text-center font-medium">
-          {{ errors().api }}
-        </div>
-      }
-
-      <!-- Form -->
-      <form (ngSubmit)="onSubmit()" class="w-full flex flex-col gap-[clamp(12px,2vh,16px)]">
-        <fieldset class="flex flex-col gap-[clamp(4px,0.5vh,6px)]">
-          <legend class="block text-[clamp(13px,1.1vw,14px)] font-semibold text-[#424754] leading-[1.2] tracking-[0.01em] px-1 mb-1">
-            Mã xác thực
-          </legend>
-          <div class="w-full min-h-[clamp(44px,5vh,48px)] bg-[#F8FAFC] border rounded-lg grid grid-cols-6 gap-[clamp(4px,1vw,8px)] px-[clamp(8px,2vw,16px)] py-2"
-               [class.border-red-500]="errors().otp" [class.border-[#E2E8F0]]="!errors().otp">
-            @for (digit of otp(); track $index) {
-              <input #otpInput
-                type="text" inputmode="numeric" pattern="[0-9]" maxlength="1"
-                [value]="digit"
-                (input)="onInput($index, $event)"
-                (keydown)="onKeydown($index, $event)"
-                (paste)="$index === 0 ? onPaste($event) : null"
-                class="h-[clamp(32px,5vh,40px)] w-full text-center text-[#191B23] text-[clamp(14px,1.3vw,16px)] font-bold bg-transparent border-b-2 border-transparent focus:border-[#0058BE] focus:outline-none transition-colors"
-                placeholder="-"
-                [attr.aria-label]="'Chữ số ' + ($index + 1)"
-              />
-            }
-          </div>
-          @if (errors().otp) {
-            <span class="text-red-500 text-[clamp(11px,0.9vw,12px)] mt-1 px-1" role="alert">{{ errors().otp }}</span>
+<main class="otp-page">
+  <section class="otp-card" aria-label="Form xác thực mã OTP">
+    <a routerLink="/auth/login" class="otp-back" aria-label="Quay lại đăng nhập">←</a>
+    <h1>{{ title() }}</h1>
+    <div class="otp-info">Mã xác thực đã được gửi đến email <strong>{{ maskedEmail() }}</strong>.<br>Vui lòng kiểm tra email và nhập chính xác mã vào ô dưới.</div>
+    @if (errors().api) { <p class="otp-api-error" role="alert">{{ errors().api }}</p> }
+    <form (ngSubmit)="onSubmit()">
+      <fieldset>
+        <legend>Mã xác thực</legend>
+        <div class="otp-digits">
+          @for (digit of otp(); track $index) {
+            <input #otpInput type="text" inputmode="numeric" maxlength="1" [value]="digit"
+              [class.invalid]="!!errors().otp" (input)="handleChange($index, $any($event.target).value)"
+              (keydown)="handleKeyDown($index, $event)" (paste)="handlePaste($event)"
+              [attr.aria-label]="'Chữ số ' + ($index + 1)" autocomplete="one-time-code">
           }
-        </fieldset>
-
-        <button type="submit" [disabled]="loading() || !isComplete"
-          class="w-full h-[clamp(44px,5vh,48px)] bg-[#0058BE] hover:bg-[#004a9e] active:scale-[0.98] disabled:bg-[#cccccc] disabled:cursor-not-allowed text-white font-semibold text-[clamp(13px,1.1vw,14px)] leading-[1.2] tracking-[0.01em] rounded-lg transition-all duration-200 mt-[clamp(4px,0.5vh,8px)] flex items-center justify-center">
-          {{ loading() ? 'Đang xử lý...' : 'Tiếp tục' }}
-        </button>
-      </form>
-
-      <!-- Nav -->
-      <nav class="flex flex-col gap-[clamp(8px,1.5vh,12px)] mt-[clamp(4px,0.5vh,8px)] w-full items-center">
-        <a routerLink="/auth/forgot-password" class="text-[#0058BE] hover:underline font-semibold text-[clamp(13px,1.1vw,14px)] leading-[1.2] tracking-[0.01em]">Sử dụng email khác</a>
-        <a routerLink="/auth/login" class="flex items-center justify-center gap-1 text-[#565E74] hover:text-[#191B23] transition-colors group py-1">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px] group-hover:-translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-          <span class="font-semibold text-[clamp(13px,1.1vw,14px)] leading-[1.2] tracking-[0.01em]">Quay lại đăng nhập</span>
-        </a>
-      </nav>
-    </section>
-  </main>
-</div>
+        </div>
+        <div class="otp-helper">
+          @if (errors().otp) { <span class="otp-error" role="alert">{{ errors().otp }}</span> }
+          @else {
+            <span>Chưa nhận được mã?</span>
+            @if (resendSeconds() > 0) { <strong>Gửi lại sau ({{ resendSeconds() }}s)</strong> }
+            @else { <button type="button" (click)="resendCode()" [disabled]="resending()">{{ resending() ? 'Đang gửi...' : 'Gửi lại mã' }}</button> }
+          }
+        </div>
+      </fieldset>
+      <button class="otp-submit" type="submit" [disabled]="loading() || !isComplete()">{{ loading() ? 'Đang xử lý...' : 'Tiếp tục' }}</button>
+    </form>
+    <nav class="otp-nav">
+      <a routerLink="/auth/forgot-password">Sử dụng email khác</a>
+      <a routerLink="/auth/login">Quay lại đăng nhập</a>
+    </nav>
+  </section>
+</main>

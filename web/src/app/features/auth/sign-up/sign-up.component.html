@@ -1,0 +1,384 @@
+
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] w-full flex-1 relative overflow-hidden min-h-[540px] lg:min-h-[580px] font-['Inter',sans-serif]">
+      <!-- Left Section: Form Container (Theo chuẩn SPEC-REG-STU-01) -->
+      <div class="w-full bg-[#FFFFFF] px-6 sm:px-12 lg:px-16 py-8 sm:py-10 flex flex-col items-center justify-center relative z-10 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.02)]">
+        <div class="w-full max-w-[500px]">
+          <!-- Title -->
+          <h1 class="text-center text-[#090909] text-2xl sm:text-3xl font-semibold leading-tight tracking-tight mb-4">
+            Đăng ký tài khoản ThinkUp
+          </h1>
+
+          <!-- Toast Thông báo thành công / Yêu cầu kích hoạt Email (BR-AUTH-06, SPEC-REG-STU-01) -->
+          @if (successToast()) {
+            <div class="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5 font-medium animate-fadeIn">
+              <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="flex-1">
+                <p class="font-bold text-emerald-900">Đăng ký thành công!</p>
+                <p class="mt-0.5 text-emerald-700 leading-relaxed">{{ successToast() }}</p>
+              </div>
+            </div>
+          }
+
+          <!-- Network Toast Error (EX-REG-02, AC-18) -->
+          @if (networkToast()) {
+            <div class="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 font-medium animate-fadeIn">
+              <svg class="w-4 h-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{{ networkToast() }}</span>
+            </div>
+          }
+
+          <!-- Form (BR-REG-01: Inline error độc lập từng ô) -->
+          <form (ngSubmit)="handleSignUp()" class="flex flex-col" noValidate>
+            <!-- 1. Họ và tên & Số điện thoại (Song song hàng đầu) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Ô Họ và tên (BR-REG-02, AC-03) -->
+              <div class="flex flex-col gap-1">
+                <label for="fullName" class="block text-xs font-medium text-[#131927]">
+                  Họ và tên *
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  [(ngModel)]="fullName"
+                  (ngModelChange)="onFullNameChange()"
+                  (blur)="fullNameTouched.set(true)"
+                  name="fullName"
+                  placeholder="Nguyễn Văn A"
+                  [disabled]="loading()"
+                  class="w-full h-10 px-3.5 border rounded-lg bg-white text-xs text-[#090909] focus:outline-none focus:ring-2 focus:ring-[#006AB5]/40 transition-all"
+                  [ngClass]="showFullNameError() ? 'border-[#EF4444] ring-1 ring-[#EF4444]' : 'border-[#C2C6D6] focus:border-[#006AB5]'"
+                />
+                @if (showFullNameError()) {
+                  <span class="text-[#EF4444] text-[11px] font-medium animate-fadeIn">
+                    {{ fullNameErrorMessage() }}
+                  </span>
+                }
+              </div>
+
+              <!-- Ô Số điện thoại (BR-REG-03, AC-04, AC-14) -->
+              <div class="flex flex-col gap-1">
+                <label for="phone" class="block text-xs font-medium text-[#131927]">
+                  Số điện thoại *
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  [(ngModel)]="phone"
+                  (ngModelChange)="onPhoneChange()"
+                  (blur)="phoneTouched.set(true)"
+                  name="phone"
+                  placeholder="0912345678"
+                  [disabled]="loading()"
+                  class="w-full h-10 px-3.5 border rounded-lg bg-white text-xs text-[#090909] focus:outline-none focus:ring-2 focus:ring-[#006AB5]/40 transition-all"
+                  [ngClass]="showPhoneError() ? 'border-[#EF4444] ring-1 ring-[#EF4444]' : 'border-[#C2C6D6] focus:border-[#006AB5]'"
+                />
+                @if (showPhoneError()) {
+                  <span class="text-[#EF4444] text-[11px] font-medium animate-fadeIn">
+                    {{ phoneErrorMessage() }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- 2. Địa chỉ Email (BR-REG-04, AC-05, AC-14) -->
+            <div class="flex flex-col gap-1 mt-3">
+              <label for="email" class="block text-xs font-medium text-[#131927]">
+                Địa chỉ Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                [(ngModel)]="email"
+                (ngModelChange)="onEmailChange()"
+                (blur)="emailTouched.set(true)"
+                name="email"
+                placeholder="example@gmail.com"
+                [disabled]="loading()"
+                class="w-full h-10 px-3.5 border rounded-lg bg-white text-xs text-[#090909] focus:outline-none focus:ring-2 focus:ring-[#006AB5]/40 transition-all"
+                [ngClass]="showEmailError() ? 'border-[#EF4444] ring-1 ring-[#EF4444]' : 'border-[#C2C6D6] focus:border-[#006AB5]'"
+              />
+              @if (showEmailError()) {
+                <div class="flex items-center justify-between text-[#EF4444] text-[11px] font-medium animate-fadeIn">
+                  <span>{{ emailErrorMessage() }}</span>
+                  @if (serverEmailDuplicate()) {
+                    <a routerLink="/auth/login" class="text-[#006AB5] font-semibold underline hover:text-[#005fa0] ml-1">
+                      Đăng nhập ngay
+                    </a>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- 3. Mật khẩu & Xác nhận mật khẩu (Song song hàng tiếp) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <!-- Ô Mật khẩu (BR-REG-05, AC-06, AC-07, AC-12) -->
+              <div class="flex flex-col gap-1">
+                <label for="password" class="block text-xs font-medium text-[#0D1C2D]">
+                  Mật khẩu *
+                </label>
+                <div class="relative">
+                  <input
+                    [type]="showPassword() ? 'text' : 'password'"
+                    id="password"
+                    [(ngModel)]="password"
+                    (ngModelChange)="onPasswordChange()"
+                    name="password"
+                    placeholder="••••••••"
+                    [disabled]="loading()"
+                    class="w-full h-10 pl-3.5 pr-9 border rounded-lg bg-white text-xs text-[#090909] focus:outline-none focus:ring-2 focus:ring-[#006AB5]/40 transition-all"
+                    [ngClass]="passwordInputClass()"
+                  />
+                  <!-- AC-12: Icon Con mắt SVG độc lập cho ô Mật khẩu -->
+                  <button
+                    type="button"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="showPassword.update(v => !v)"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#727785] hover:text-[#090909] transition-colors p-1 rounded-md focus:outline-none cursor-pointer"
+                    [attr.aria-label]="showPassword() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                  >
+                    @if (showPassword()) {
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    } @else {
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                      </svg>
+                    }
+                  </button>
+                </div>
+
+                <!-- AC-06, AC-07: Dòng gợi ý mật khẩu Real-time -->
+                @if (password().length > 0) {
+                  @if (passwordCriteria().isValid) {
+                    <span class="text-emerald-600 text-[11px] font-semibold animate-fadeIn flex items-center gap-1">
+                      ✓ Mật khẩu hợp lệ
+                    </span>
+                  } @else {
+                    <span class="text-amber-600 text-[11px] font-medium animate-fadeIn">
+                      Còn thiếu: {{ passwordCriteria().missingText }}
+                    </span>
+                  }
+                }
+              </div>
+
+              <!-- Ô Xác nhận mật khẩu (BR-REG-06, AC-08, AC-09, AC-12) -->
+              <div class="flex flex-col gap-1">
+                <label for="confirmPassword" class="block text-xs font-medium text-[#0D1C2D]">
+                  Xác nhận mật khẩu *
+                </label>
+                <div class="relative">
+                  <input
+                    [type]="showConfirmPassword() ? 'text' : 'password'"
+                    id="confirmPassword"
+                    [(ngModel)]="confirmPassword"
+                    name="confirmPassword"
+                    placeholder="••••••••"
+                    [disabled]="loading()"
+                    class="w-full h-10 pl-3.5 pr-9 border rounded-lg bg-white text-xs text-[#090909] focus:outline-none focus:ring-2 focus:ring-[#006AB5]/40 transition-all"
+                    [ngClass]="confirmPasswordInputClass()"
+                  />
+                  <!-- AC-12: Icon Con mắt SVG độc lập cho ô Xác nhận MK -->
+                  <button
+                    type="button"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="showConfirmPassword.update(v => !v)"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#727785] hover:text-[#090909] transition-colors p-1 rounded-md focus:outline-none cursor-pointer"
+                    [attr.aria-label]="showConfirmPassword() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                  >
+                    @if (showConfirmPassword()) {
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    } @else {
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                      </svg>
+                    }
+                  </button>
+                </div>
+
+                <!-- AC-08, AC-09: Dòng so khớp chéo Real-time -->
+                @if (confirmPassword().length > 0) {
+                  @if (confirmPasswordStatus().isMatch) {
+                    <span class="text-emerald-600 text-[11px] font-semibold animate-fadeIn flex items-center gap-1">
+                      ✓ Mật khẩu trùng khớp
+                    </span>
+                  } @else {
+                    <span class="text-[#EF4444] text-[11px] font-medium animate-fadeIn">
+                      Mật khẩu xác nhận không khớp.
+                    </span>
+                  }
+                }
+              </div>
+            </div>
+
+            <!-- 4. Checkbox Điều khoản (BR-REG-07, AC-10) -->
+            <div class="flex items-start gap-2 mt-3.5 select-none">
+              <input
+                type="checkbox"
+                id="terms"
+                [(ngModel)]="agreedToTerms"
+                name="terms"
+                [disabled]="loading()"
+                class="w-4 h-4 mt-0.5 border border-[#C2C6D6] rounded cursor-pointer accent-[#006AB5] focus:ring-0"
+              />
+              <label for="terms" class="text-xs text-[#424754] leading-relaxed cursor-pointer">
+                Tôi đồng ý với
+                <a routerLink="/legal/terms" class="text-[#006AB5] hover:underline font-semibold">Điều khoản sử dụng</a>
+                và
+                <a routerLink="/legal/policy" class="text-[#006AB5] hover:underline font-semibold">Chính sách bảo mật</a>
+                của ThinkUp.
+              </label>
+            </div>
+
+            <!-- 5. Submit Button (AC-02, AC-11, AC-13) -->
+            <button
+              type="submit"
+              [disabled]="!canSubmit()"
+              class="w-full h-11 mt-4.5 flex items-center justify-center gap-2 text-white font-semibold text-sm rounded-lg transition-all shadow-md select-none"
+              [ngClass]="canSubmit() ? 'bg-[#006AB5] hover:bg-[#005fa0] active:scale-[0.98] shadow-[#006AB5]/20 cursor-pointer' : 'bg-[#C2C6D6] text-white/90 cursor-not-allowed shadow-none'"
+            >
+              @if (loading()) {
+                <!-- AC-13: Spinner xoay chuẩn khi đang submit -->
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>Đang tạo tài khoản...</span>
+              } @else {
+                <span>Đăng ký ngay</span>
+              }
+            </button>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-4 my-4">
+              <div class="flex-1 border-t border-[#E2E8F0]"></div>
+              <span class="text-center text-[#727785] text-[11px] font-semibold uppercase tracking-wider">
+                Hoặc đăng ký bằng
+              </span>
+              <div class="flex-1 border-t border-[#E2E8F0]"></div>
+            </div>
+
+            <!-- Social Buttons (AC-16, AC-17) -->
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Google Button -->
+              <button
+                type="button"
+                [disabled]="loading()"
+                (click)="handleSocialSignUp('Google')"
+                class="w-full h-10 border border-[#C2C6D6] rounded-lg bg-white hover:bg-slate-50 active:scale-[0.98] flex items-center justify-center gap-2.5 transition text-xs font-semibold text-[#090909] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>Google</span>
+              </button>
+
+              <!-- Facebook Button -->
+              <button
+                type="button"
+                [disabled]="loading()"
+                (click)="handleSocialSignUp('Facebook')"
+                class="w-full h-10 border border-[#C2C6D6] rounded-lg bg-white hover:bg-slate-50 active:scale-[0.98] flex items-center justify-center gap-2.5 transition text-xs font-semibold text-[#090909] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg class="w-4 h-4 shrink-0 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                <span>Facebook</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Secondary Links (AC-01, AC-19) -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mt-5 text-xs text-[#424754]">
+            <p>
+              Đã có tài khoản?
+              <a routerLink="/auth/login" class="font-bold text-[#006AB5] hover:underline ml-1">
+                Đăng nhập ngay
+              </a>
+            </p>
+            <a routerLink="/auth/forgot-password" class="text-xs text-[#727785] hover:text-[#006AB5] hover:underline">
+              Đặt lại mật khẩu?
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Section: Spline 3D Scene Interactive Robot (Laptop layout) -->
+      <div class="hidden lg:flex w-full h-full relative bg-[#A8C8F0] overflow-hidden items-center justify-center min-h-[580px]">
+        <div class="relative w-full h-full overflow-hidden">
+          <iframe
+            src="https://my.spline.design/googlyeyes-RQpxBuNfsOYrpbM6uR3GoPw9-nII/?v=2"
+            frameBorder="0"
+            class="absolute pointer-events-auto max-w-none"
+            style="width: 170%; height: 170%; border: none; top: -20%; left: -32%;"
+            title="Interactive Robot 3D"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- EX-REG-04: Modal Bổ sung Email khi đăng ký Facebook không có email -->
+    @if (showMissingEmailModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-4">
+          <div class="flex items-center gap-3 text-amber-600">
+            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-bold text-base text-[#090909]">Bổ sung thông tin Email</h3>
+              <p class="text-xs text-[#727785]">Tài khoản Facebook của bạn chưa cung cấp địa chỉ Email</p>
+            </div>
+          </div>
+
+          <p class="text-xs text-[#424754] leading-relaxed">
+            Vui lòng nhập Email của bạn để hoàn tất đăng ký tài khoản ThinkUp và kích hoạt khóa học.
+          </p>
+
+          <div class="flex flex-col gap-1.5">
+            <label for="missingEmail" class="text-xs font-semibold text-[#131927]">Email liên hệ</label>
+            <input
+              type="email"
+              id="missingEmail"
+              [(ngModel)]="missingEmailInput"
+              placeholder="nhap.email@example.com"
+              class="w-full h-10 px-3.5 border rounded-lg text-sm bg-white text-[#090909] focus:outline-none focus:border-[#006AB5]"
+            />
+            @if (missingEmailError()) {
+              <span class="text-xs text-red-500 font-medium">{{ missingEmailError() }}</span>
+            }
+          </div>
+
+          <div class="flex items-center justify-end gap-2.5 pt-2">
+            <button
+              type="button"
+              (click)="showMissingEmailModal.set(false)"
+              class="px-4 py-2 text-xs font-semibold text-[#727785] hover:text-[#090909] hover:bg-slate-100 rounded-lg transition"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              (click)="submitMissingEmail()"
+              [disabled]="loading()"
+              class="px-5 py-2 text-xs font-semibold text-white bg-[#006AB5] hover:bg-[#005fa0] rounded-lg transition"
+            >
+              Xác nhận và Hoàn tất
+            </button>
+          </div>
+        </div>
+      </div>
+    }

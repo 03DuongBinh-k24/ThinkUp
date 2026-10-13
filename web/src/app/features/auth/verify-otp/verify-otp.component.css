@@ -1,1 +1,25 @@
-/* Component styles */
+:host { display: flex; flex: 1 1 auto; width: 100%; font-family: Inter, sans-serif; }
+.otp-page { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 868px; padding: 32px; background: #f8f9ff; }
+.otp-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; width: min(528px, 100%); padding: 32px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1); }
+.otp-back { position: absolute; top: 22px; left: 28px; display: grid; place-items: center; width: 40px; height: 40px; color: #191b23; font-size: 24px; text-decoration: none; }
+h1 { margin: 0; color: #191b23; font-size: 24px; font-weight: 600; line-height: 32px; }
+.otp-info, form, .otp-nav { width: 376px; max-width: 100%; }
+.otp-info { padding: 12px; border-radius: 8px; background: #f2f3fd; color: #424754; font-size: 14px; line-height: 20px; }
+.otp-info strong { color: #191b23; font-weight: 600; }
+form { display: flex; flex-direction: column; gap: 18px; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+legend { width: 100%; margin-bottom: 12px; text-align: center; color: #424754; font-size: 14px; font-weight: 500; line-height: 20px; }
+.otp-digits { display: flex; gap: 8px; justify-content: center; }
+.otp-digits input { width: 56px; min-width: 0; height: 56px; border: 1px solid #c2c6d6; border-radius: 8px; outline: none; background: #f8fafc; text-align: center; color: #191b23; font-size: 16px; font-weight: 600; }
+.otp-digits input:focus { border-color: #0058be; box-shadow: 0 0 0 2px #d8e2ff; }
+.otp-digits input.invalid { border-color: #ef4444; }
+.otp-helper { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 21px; margin-top: 8px; color: #727785; font-size: 14px; line-height: 20px; white-space: nowrap; }
+.otp-helper strong { font-weight: 600; }
+.otp-helper button { padding: 0; border: 0; background: none; color: #0058be; font: inherit; font-weight: 600; cursor: pointer; }
+.otp-error, .otp-api-error { color: #ef4444; }
+.otp-api-error { width: 376px; max-width: 100%; margin: 0; text-align: center; font-size: 14px; }
+.otp-submit { width: 100%; height: 48px; border: 0; border-radius: 8px; background: #0058be; color: white; font-size: 16px; font-weight: 600; cursor: pointer; }
+.otp-submit:disabled { background: #ccc; cursor: not-allowed; }
+.otp-nav { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.otp-nav a { color: #0058be; font-size: 14px; font-weight: 600; text-decoration: none; }
+.otp-nav a:hover { text-decoration: underline; }
