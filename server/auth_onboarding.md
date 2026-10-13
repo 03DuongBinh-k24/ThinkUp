@@ -440,21 +440,60 @@
 ---
 
 ### 1.4.2. Hoàn thành & Gửi khảo sát 3 bước (Submit Onboarding)
-- **Endpoint:** `POST /api/user/onboarding/submit`
+- **Endpoint:** `POST /api/user/onboarding/submit`  
+  *(Alias tương thích FE Angular: `POST /api/v1/onboarding/submit`)*
 - **Header:** `Authorization: Bearer <accessToken>`
-- **Request Body:**
+- **Request Body — 2 format đều được chấp nhận:**
+
+  **Format A (FE Angular — slug text):**
+  ```json
+  {
+    "targetRole": "frontend",
+    "selectedSkills": ["html-css", "js-ts"],
+    "currentLevel": "beginner"
+  }
+  ```
+
+  **Format B (ID số — chuẩn DB):**
   ```json
   {
     "categoryId": "1",
-    "selectedTagIds": ["3", "4"],
+    "selectedTagIds": ["1", "2"],
     "level": "beginner"
   }
   ```
-  | Trường | Kiểu | Bắt buộc | Mô tả & Quy chuẩn kiểm tra |
+
+  > **Ghi chú:** BE tự động nhận diện và chuyển đổi cả 2 format. Có thể dùng bất kỳ format nào.
+
+  **Bảng mapping Câu hỏi 1 — Vai trò (`targetRole` → `categoryId`):**
+  | Slug FE | ID DB | Tên hiển thị |
+  | :--- | :---: | :--- |
+  | `'frontend'` | `'1'` | Frontend Developer |
+  | `'backend'` | `'2'` | Backend Developer |
+  | `'fullstack'` | `'3'` | Fullstack Developer |
+  | `'mobile'` | `'4'` | Mobile Developer |
+  | `'data-ai'` | `'13'` | Data Science & AI |
+  | `'devops-cloud'` | `'9'` | DevOps & Cloud |
+  | `'explore'` | `'1'` | Khám phá tự do (fallback → Frontend) |
+
+  **Bảng mapping Câu hỏi 2 — Công nghệ (`selectedSkills` → `selectedTagIds`):**
+  | Slug FE | ID DB | Tên công nghệ |
+  | :--- | :---: | :--- |
+  | `'html-css'` | `'1'` | HTML5 & CSS3/Tailwind |
+  | `'js-ts'` | `'2'` | JavaScript / TypeScript |
+  | `'angular'` | `'3'` | Angular Framework |
+  | `'react-next'` | `'4'` | ReactJS / Next.js |
+  | `'node-express'` | `'5'` | NodeJS & ExpressJS API |
+  | `'database'` | `'6'` | Cơ sở dữ liệu (MongoDB / MySQL) |
+  | `'dsa'` | `'7'` | Cấu trúc dữ liệu & Thuật toán |
+  | `'portfolio'` | `'8'` | Xây dựng dự án thực chiến (Portfolio) |
+
+  | Trường (cả 2 tên đều OK) | Kiểu | Bắt buộc | Mô tả & Quy chuẩn kiểm tra |
   | :--- | :--- | :---: | :--- |
-  | `categoryId` | `string` | Có | ID danh mục nghề nghiệp mục tiêu (từ `'1'` đến `'17'` theo `course_categories`). |
-  | `selectedTagIds` | `string[]` | Có | Mảng chứa từ 1 đến 3 `tag_id` từ `tags` (ví dụ: `["3", "4"]`). Tự động khử trùng lặp. |
-  | `level` | `string` | Có | Trình độ hiện tại, một trong ba giá trị: `'beginner'`, `'intermediate'`, `'advanced'`. |
+  | `categoryId` hoặc `targetRole` | `string` | Có | ID danh mục (từ `'1'` đến `'17'`) hoặc slug nghề. |
+  | `selectedTagIds` hoặc `selectedSkills` | `string[]` | Có | 1–3 tag_id hoặc slug công nghệ. Tự động khử trùng. |
+  | `level` hoặc `currentLevel` | `string` | Có | `'beginner'` / `'intermediate'` / `'advanced'`. |
+
 
 - **Thứ tự ưu tiên sắp xếp khóa học trả về:**
   - **Ưu tiên 1:** Khớp cả `category_id` + `level` + có ít nhất 1 kỹ năng nằm trong `selectedTagIds`.

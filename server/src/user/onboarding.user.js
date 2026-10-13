@@ -34,6 +34,86 @@ const VALID_CATEGORY_IDS = [
  */
 const VALID_LEVELS = ['beginner', 'intermediate', 'advanced'];
 
+// ─── Bảng Mapping FE Slug ↔ DB ID ────────────────────────────────────────────
+
+/**
+ * Mapping từ slug nghề nghiệp FE (câu hỏi 1) → category_id trong DB.
+ * FE dùng: 'frontend' | 'backend' | 'fullstack' | 'mobile' | 'data-ai' | 'devops-cloud' | 'explore'
+ * DB dùng: '1' ... '17'
+ * Khi FE gửi slug, BE tự chuyển đổi; khi FE gửi ID số, BE giữ nguyên.
+ */
+const ROLE_SLUG_TO_CATEGORY_ID = {
+  'frontend':     '1',  // Frontend Developer
+  'backend':      '2',  // Backend Developer
+  'fullstack':    '3',  // Fullstack Developer
+  'mobile':       '4',  // Mobile Developer
+  'data-ai':      '13', // AI & Machine Learning (gần nhất với Data Science & AI)
+  'devops-cloud': '9',  // DevOps Engineering
+  'explore':      '1',  // Khám phá tự do → mặc định Frontend (popular nhất)
+  // Alias tiếng Anh đầy đủ (phòng trường hợp FE gửi tên dài)
+  'frontend developer':  '1',
+  'backend developer':   '2',
+  'fullstack developer': '3',
+  'mobile developer':    '4',
+  'data science & ai':   '13',
+  'devops & cloud':      '9',
+};
+
+/**
+ * Mapping từ slug công nghệ FE (câu hỏi 2) → tag_id trong DB.
+ * FE dùng: 'html-css' | 'js-ts' | 'angular' | 'react-next' | 'node-express' | 'database' | 'dsa' | 'portfolio'
+ * DB dùng: tag_id dạng số string (ví dụ '1', '2', '3'...)
+ *
+ * ⚠️ Tag ID dựa trên dữ liệu thực trong collection 'tags'.
+ * Nếu cần cập nhật, truy vấn: db.tags.find({}, { tag_id: 1, name: 1 })
+ */
+const TECH_SLUG_TO_TAG_ID = {
+  'html-css':     '1',  // HTML5 & CSS3/Tailwind
+  'js-ts':        '2',  // JavaScript / TypeScript
+  'angular':      '3',  // Angular Framework
+  'react-next':   '4',  // ReactJS / Next.js
+  'node-express': '5',  // NodeJS & ExpressJS API
+  'database':     '6',  // Cơ sở dữ liệu (MongoDB / MySQL)
+  'dsa':          '7',  // Cấu trúc dữ liệu & Thuật toán
+  'portfolio':    '8',  // Xây dựng dự án thực chiến (Portfolio)
+};
+
+/**
+ * Chuẩn hóa đầu vào khảo sát từ FE về format nội bộ của BE.
+ *
+ * FE (Angular) gửi lên:
+ *   { targetRole: 'frontend', selectedSkills: ['html-css', 'js-ts'], currentLevel: 'beginner' }
+ *
+ * BE nội bộ cần:
+ *   { categoryId: '1', selectedTagIds: ['1', '2'], level: 'beginner' }
+ *
+ * Hàm này tự động:
+ * 1. Alias field names: targetRole→categoryId, selectedSkills→selectedTagIds, currentLevel→level
+ * 2. Map slug→id khi cần (nếu đã là số string thì giữ nguyên)
+ *
+ * @param {object} raw - Body thô từ req.body
+ * @returns {{ categoryId: string, selectedTagIds: string[], level: string }}
+ */
+function normalizeOnboardingInput(raw) {
+  // ── 1. Resolve categoryId (hỗ trợ cả targetRole và categoryId) ──────────
+  const rawRole = raw.categoryId ?? raw.targetRole ?? '';
+  const roleLower = String(rawRole).trim().toLowerCase();
+  const categoryId = ROLE_SLUG_TO_CATEGORY_ID[roleLower] ?? rawRole;
+
+  // ── 2. Resolve selectedTagIds (hỗ trợ cả selectedSkills và selectedTagIds) ─
+  const rawSkills = raw.selectedTagIds ?? raw.selectedSkills ?? [];
+  const skillsArray = Array.isArray(rawSkills) ? rawSkills : [];
+  const selectedTagIds = skillsArray.map((s) => {
+    const slug = String(s).trim().toLowerCase();
+    return TECH_SLUG_TO_TAG_ID[slug] ?? s; // Nếu không có trong map → giữ nguyên (đã là id)
+  });
+
+  // ── 3. Resolve level (hỗ trợ cả currentLevel và level) ──────────────────
+  const level = (raw.level ?? raw.currentLevel ?? '').trim().toLowerCase();
+
+  return { categoryId: String(categoryId).trim(), selectedTagIds, level };
+}
+
 // ─── Validation Helpers ───────────────────────────────────────────────────────
 
 /**
@@ -199,7 +279,8 @@ export async function submitOnboarding(userId, surveyAnswers = {}, options = {})
   const objId = parseUserId(userId);
   await findUserById(db, objId);
 
-  const { categoryId, selectedTagIds, level } = surveyAnswers;
+  // Chuẩn hóa đầu vào: chấp nhận cả format FE (slug) lẫn format DB (id)
+  const { categoryId, selectedTagIds, level } = normalizeOnboardingInput(surveyAnswers);
 
   // Validate categoryId (bước 1)
   if (!categoryId || typeof categoryId !== 'string') {

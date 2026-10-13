@@ -3,6 +3,37 @@ import { getMongoDb, signJwt, verifyJwt, sendEmail } from './db.js';
 
 const VERIFICATION_TOKEN_EXPIRE = '12h'; // BR-AUTH-06: thời hạn tối đa 12 giờ
 
+// ─── Sinh mã học viên tự động (Atomic Counter) ───────────────────────────────
+
+/**
+ * Sinh mã học viên duy nhất theo chuẩn: HV + YY + 5 chữ số thứ tự.
+ *
+ * Ví dụ: HV2600001, HV2600002, ..., HV2699999 (năm 2026)
+ *         HV2700001, HV2700002, ...           (năm 2027, reset từ 1)
+ *
+ * Cơ chế:
+ * - Dùng collection 'counters' với _id = 'student_HV{YY}' (riêng theo năm).
+ * - findOneAndUpdate + $inc là thao tác ATOMIC → không bao giờ trùng dù đăng ký đồng thời.
+ * - Nếu vượt 99999 học viên/năm → vẫn hoạt động, chỉ tăng số chữ số (HV261000001...).
+ *
+ * @param {object} db - MongoDB db instance
+ * @returns {Promise<string>} Mã học viên, ví dụ "HV2600001"
+ */
+async function generateStudentId(db) {
+  const yy = new Date().getFullYear().toString().slice(-2); // "26"
+  const counterId = `student_HV${yy}`;
+
+  const result = await db.collection('counters').findOneAndUpdate(
+    { _id: counterId },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: 'after' }
+  );
+
+  const seq = result.seq ?? result.value?.seq ?? 1;
+  const padded = String(seq).padStart(5, '0'); // 5 chữ số: 00001–99999
+  return `HV${yy}${padded}`; // HV2600001
+}
+
 
 export function validateFullName(name) {
   if (!name || typeof name !== 'string') return { valid: false, message: 'Vui lòng nhập họ và tên.' };
@@ -142,7 +173,9 @@ export async function registerUser(
 
   // 9. Băm mật khẩu (bcrypt) và tạo bản ghi Học viên (Vai trò STUDENT, onboarding_completed = false)
   const passwordHash = await bcrypt.hash(pwCheck.value, 12);
+  const studentId = await generateStudentId(db); // BR-REG-09: Sinh mã học viên HVyyXXXXX
   const newUser = {
+    student_id: studentId,              // BR-REG-09: Mã học viên duy nhất (HV2600001...)
     full_name: nameCheck.value,
     phone: phoneCheck.value,
     email: emailCheck.value,
@@ -172,8 +205,11 @@ export async function registerUser(
     VERIFICATION_TOKEN_EXPIRE
   );
 
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:4200';
-  const verificationLink = `${clientUrl}/auth/verify?token=${encodeURIComponent(verificationToken)}`;
+  const clientUrl = process.env.CLIENT_URL || 'https://think-up-edu.vercel.app';
+  const apiBase = process.env.API_URL || process.env.SERVER_URL;
+  const verificationLink = apiBase
+    ? `${apiBase}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`
+    : `${clientUrl}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
 
   // 11. Gửi email kích hoạt
   if (!options.skipEmail) {
@@ -193,6 +229,7 @@ export async function registerUser(
   return {
     message: 'Vui lòng bấm vào link xác thực được gửi qua email để kích hoạt tài khoản',
     email: emailCheck.value,
+    studentId,
     verificationToken,
     verificationLink,
   };
@@ -280,8 +317,11 @@ export async function resendVerificationLink({ email }, options = {}) {
     { sub: user._id.toString(), email: user.email, purpose: 'verify_email' },
     VERIFICATION_TOKEN_EXPIRE
   );
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:4200';
-  const verificationLink = `${clientUrl}/auth/verify?token=${encodeURIComponent(verificationToken)}`;
+  const clientUrl = process.env.CLIENT_URL || 'https://think-up-edu.vercel.app';
+  const apiBase = process.env.API_URL || process.env.SERVER_URL;
+  const verificationLink = apiBase
+    ? `${apiBase}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`
+    : `${clientUrl}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
 
   await db.collection('users').updateOne(
     { _id: user._id },
@@ -330,7 +370,9 @@ export async function registerWithGoogle({ email, name, avatar, providerId }, op
   });
 
   if (!user) {
+    const studentId = await generateStudentId(db); // BR-REG-09
     const newUser = {
+      student_id: studentId,
       full_name: name || 'Học viên Google',
       phone: null,
       email: normalizedEmail,
@@ -361,9 +403,11 @@ export async function registerWithGoogle({ email, name, avatar, providerId }, op
 
   return {
     message: 'Đăng ký Google thành công!',
+    accessToken: token,
     token,
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       role: user.role,
@@ -401,7 +445,9 @@ export async function registerWithFacebook({ providerId, email, name, avatar }, 
   });
 
   if (!user) {
+    const studentId = await generateStudentId(db); // BR-REG-09
     const newUser = {
+      student_id: studentId,
       full_name: name || 'Học viên Facebook',
       phone: null,
       email: normalizedEmail,
@@ -432,9 +478,11 @@ export async function registerWithFacebook({ providerId, email, name, avatar }, 
 
   return {
     message: 'Đăng ký Facebook thành công!',
+    accessToken: token,
     token,
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       role: user.role,
