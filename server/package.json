@@ -4,6 +4,8 @@
   "type": "module",
   "description": "ThinkUp Backend API Services",
   "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
     "test": "node --test src/user/test/*.user.test.js",
     "test:signup": "node --test src/user/test/signup.user.test.js",
     "test:signin": "node --test src/user/test/signin.user.test.js",
