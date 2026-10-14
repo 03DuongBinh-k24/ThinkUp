@@ -19,3 +19,8 @@
 
 .role-badge,.user-role{display:inline-flex;align-items:center;gap:4px}.role-badge svg,.user-role svg{width:12px;height:12px}.avatar span svg{width:15px;height:15px}.timer-icon svg{width:21px;height:21px}.timer-actions svg{width:18px;height:18px}
 .timer-progress span{min-width:4%}.timer-actions button:first-child{display:grid;place-items:center;border:0;background:#714cb6;color:#fff;cursor:pointer}.timer-actions button:not(:first-child){display:grid;place-items:center;border:0;cursor:pointer}.timer-value{font-weight:700;letter-spacing:-.04em}
+
+/* Desktop room controls sit over the canvas in translucent panels. */
+.floating-dock,.navigator{background:#ffffffb8;backdrop-filter:blur(18px)}.top-bar .room-identity,.top-bar .control-button{background:#ffffffb8;backdrop-filter:blur(18px)}
+
+.canvas-items-layer{position:absolute;inset:0;z-index:2;transform-origin:center center;pointer-events:none}.canvas-items-layer app-canvas-item{pointer-events:auto}

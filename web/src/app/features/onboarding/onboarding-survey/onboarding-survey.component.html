@@ -307,15 +307,16 @@
 
             <!-- Skip & Next/Submit buttons -->
             <div class="flex items-center gap-3">
-              <button
-                (click)="openSkipModal()"
-                [disabled]="submitting()"
-                type="button"
-                class="h-10 rounded-xl border border-[#DEE5EF] px-5 font-sans text-xs font-semibold text-[#667383] transition-colors hover:bg-[#F8FAFD] hover:text-[#0D182B] disabled:opacity-50"
-              >
-                Bỏ qua khảo sát
-              </button>
-
+              @if (currentStep() < 2) {
+                <button
+                  (click)="openSkipModal()"
+                  [disabled]="submitting()"
+                  type="button"
+                  class="h-10 rounded-xl border border-[#DEE5EF] px-5 font-sans text-xs font-semibold text-[#667383] transition-colors hover:bg-[#F8FAFD] hover:text-[#0D182B] disabled:opacity-50"
+                >
+                  Bỏ qua khảo sát
+                </button>
+              }
               <!-- Primary Button (Tiếp tục / Hoàn tất khảo sát kèm trạng thái Disabled mặc định) -->
               <button
                 (click)="handlePrimaryAction()"
@@ -344,7 +345,6 @@
         </div>
       </main>
 
-      <!-- POPUP XÁC NHẬN BỎ QUA KHẢO SÁT CHUẨN 100% FIGMA NODE 3671:16778 -->
       @if (showSkipConfirm()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div class="absolute inset-0" (click)="closeSkipModal()"></div>
@@ -378,4 +378,5 @@
           </div>
         </div>
       }
+
     </div>

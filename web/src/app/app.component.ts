@@ -23,18 +23,20 @@ export class AppComponent {
   readonly isStudyLobby = signal(false);
 
   constructor() {
+    this.updateShell(this.router.url);
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: any) => {
-      const url = event.urlAfterRedirects || event.url || '';
-      this.isAuthPage.set(url.startsWith('/auth'));
-      this.isOnboardingPage.set(url.includes('onboarding'));
-      this.isStudyLobby.set(url.startsWith('/learning/study-room') && !/^\/learning\/study-room\/[^/]+/.test(url));
-      let activeRoute = this.router.routerState.snapshot.root;
-      while (activeRoute.firstChild) activeRoute = activeRoute.firstChild;
-      this.hideShell.set(activeRoute.data['hideShell'] === true);
-      this.hideFooter.set(activeRoute.data['hideFooter'] === true);
-    });
+    ).subscribe(event => this.updateShell(event.urlAfterRedirects));
+  }
+
+  private updateShell(url: string): void {
+    this.isAuthPage.set(url.startsWith('/auth'));
+    this.isOnboardingPage.set(url.startsWith('/onboarding'));
+    this.isStudyLobby.set(url.startsWith('/learning/study-room') && !/^\/learning\/study-room\/[^/]+/.test(url));
+    let activeRoute = this.router.routerState.snapshot.root;
+    while (activeRoute.firstChild) activeRoute = activeRoute.firstChild;
+    this.hideShell.set(activeRoute.data['hideShell'] === true);
+    this.hideFooter.set(activeRoute.data['hideFooter'] === true);
   }
 }
 

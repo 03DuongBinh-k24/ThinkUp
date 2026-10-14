@@ -5,11 +5,11 @@ import { AuthService } from '../../../core/services/auth.service';
 import { StudyRoomItem } from '../models/study-room.model';
 import { StudyRoomService } from '../services/study-room.service';
 import { PIXEL_DREAMLAND_MEDIA } from '../data/study-room-media';
-import { LucideArrowRight, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideEye, LucideLink2, LucideLogIn, LucidePlus, LucideRotateCcw, LucideSearch, LucideSparkles, LucideTag, LucideUsers, LucideX, LucidePlay } from '@lucide/angular';
+import { LucideArrowRight, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideEye, LucideUserPlus, LucideLogIn, LucidePlus, LucideRotateCcw, LucideSearch, LucideSparkles, LucideTag, LucideUsers, LucideX, LucidePlay } from '@lucide/angular';
 
 interface ThemePreview { id: string; name: string; src: string; type?: 'video'; }
 
-@Component({ selector: 'app-study-room-lobby', standalone: true, imports: [FormsModule, LucideArrowRight, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideEye, LucideLink2, LucideLogIn, LucidePlus, LucideRotateCcw, LucideSearch, LucideSparkles, LucideTag, LucideUsers, LucideX, LucidePlay], templateUrl: './study-room-lobby.component.html', styleUrl: './study-room-lobby.component.css' })
+@Component({ selector: 'app-study-room-lobby', standalone: true, imports: [FormsModule, LucideArrowRight, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideEye, LucideUserPlus, LucideLogIn, LucidePlus, LucideRotateCcw, LucideSearch, LucideSparkles, LucideTag, LucideUsers, LucideX, LucidePlay], templateUrl: './study-room-lobby.component.html', styleUrl: './study-room-lobby.component.css' })
 export class StudyRoomLobbyComponent {
   private readonly roomsService = inject(StudyRoomService);
   private readonly auth = inject(AuthService);
@@ -26,6 +26,18 @@ export class StudyRoomLobbyComponent {
     { id: 'anime-room', name: 'Anime Room', src: '/assets/study-room/lobby-hero-reference.gif' },
     { id: 'cozy-rainy-window', name: 'Cửa sổ mưa lofi', src: 'https://i.pinimg.com/originals/cc/95/db/cc95db51995bf889d8f2217955c2ec1e.gif' },
     { id: 'cherry-blossom-tree', name: 'Cherry Blossom Tree', type: 'video', src: 'https://motionbgs.com/media/9121/large-cherry-blossom-tree.960x540.mp4' },
+  ];
+  readonly roomThemes = [
+    { id: 'white', name: 'Trắng mặc định' },
+    { id: 'minimal', name: 'Minimal' },
+    { id: 'coffee', name: 'Coffee Shop' },
+    { id: 'library', name: 'Library' },
+    { id: 'night', name: 'Night Owl' },
+    { id: 'nature', name: 'Zen Garden' },
+    { id: 'space', name: 'Space Lab' },
+    ...this.previews,
+    { id: 'pixel-dreamland', name: 'Pixel Dreamland', src: PIXEL_DREAMLAND_MEDIA },
+    { id: 'genshin-impact', name: 'Genshin Impact' },
   ];
   readonly previewPage = signal(0);
   readonly visiblePreviews = computed(() => this.previews.slice(this.previewPage() * 3, this.previewPage() * 3 + 3));
@@ -54,8 +66,9 @@ export class StudyRoomLobbyComponent {
   feedback = '';
   newRoomName = '';
   newRoomDescription = '';
+  newRoomTags = '';
   newRoomTopic = 'Lập trình';
-  newRoomTheme = 'lofi-night';
+  newRoomTheme = 'white';
   newRoomPassword = '';
   newRoomMode: 'open' | 'password' = 'open';
   newRoomLimit = 20;
@@ -93,9 +106,10 @@ export class StudyRoomLobbyComponent {
   createRoom(): void {
     if (this.newRoomName.trim().length < 2) { this.feedback = 'Tên phòng cần ít nhất 2 ký tự.'; return; }
     if (this.newRoomMode === 'password' && this.newRoomPassword.length < 4) { this.feedback = 'Mật khẩu cần ít nhất 4 ký tự.'; return; }
+    if (!Number.isInteger(Number(this.newRoomLimit)) || Number(this.newRoomLimit) < 2 || Number(this.newRoomLimit) > 100) { this.feedback = 'Sức chứa phải từ 2 đến 100 người.'; return; }
     const room = this.roomsService.createRoom({ roomId: 'room-' + Date.now(), name: this.newRoomName.trim(), description: this.newRoomDescription.trim(),
       type: this.newRoomMode === 'open' ? 'public' : 'private', maxUsers: Number(this.newRoomLimit), currentUsers: 1,
-      status: 'idle', tags: [this.newRoomTopic], category: this.newRoomTopic, theme: this.newRoomTheme,
+      status: 'idle', tags: [this.newRoomTopic, ...this.newRoomTags.split(',').map(tag=>tag.trim()).filter(Boolean)], category: this.newRoomTopic, theme: this.newRoomTheme,
       creator: 'Tôi', password: this.newRoomMode === 'password' ? this.newRoomPassword : undefined });
     this.activeRoom.set(room); this.feedback = ''; this.modal.set('created');
   }

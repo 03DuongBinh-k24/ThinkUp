@@ -69,6 +69,7 @@ export class HomeComponent implements OnInit {
   }
 
   private loadCourses(): void {
+    // TODO(pre-deploy): Nhớ nối GET /api/user/onboarding/courses để Home hiển thị khóa học theo thuật toán sau khảo sát; thay danh sách mock hiện tại khi triển khai trang Home.
     this.courseService.getCourses().subscribe({
       next: (res) => {
         if (res.success && res.data) {

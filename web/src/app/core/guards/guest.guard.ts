@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 /**
  * Guard ngăn chặn học viên đã đăng nhập truy cập vào các trang xác thực (login, sign-up...).
@@ -8,11 +9,7 @@ import { CanActivateFn, Router } from '@angular/router';
 export const guestGuard: CanActivateFn = () => {
   const router = inject(Router);
 
-  if (typeof localStorage === 'undefined') return true;
-
-  const isLoggedIn = localStorage.getItem('thinkup_user_logged_in') === 'true' ||
-                     !!localStorage.getItem('access_token') ||
-                     !!localStorage.getItem('token');
+  const isLoggedIn = inject(AuthService).isAuthenticated();
 
   if (isLoggedIn) {
     // Đã đăng nhập -> Điều hướng về /main/courses hoặc /

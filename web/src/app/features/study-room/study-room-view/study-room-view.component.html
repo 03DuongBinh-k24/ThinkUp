@@ -3,9 +3,11 @@
   @if (activeTheme().type === 'video') { <video class="room-video" [src]="activeTheme().src" autoplay muted loop playsinline></video> }
   <app-ink-layer [enabled]="penMode()" />
   <video #screenVideo class="shared-screen" [hidden]="!sharingScreen()" autoplay muted playsinline></video>
-  @for (item of canvasItems(); track item.id) {
-    <app-canvas-item [item]="item" (itemChange)="updateCanvasItem(item.id, $event)" (remove)="removeCanvasItem(item.id)" />
-  }
+  <div class="canvas-items-layer" [style.transform]="'scale(' + zoom() / 100 + ')'">
+    @for (item of canvasItems(); track item.id) {
+      <app-canvas-item [item]="item" [scale]="zoom() / 100" (itemChange)="updateCanvasItem(item.id, $event)" (remove)="removeCanvasItem(item.id)" />
+    }
+  </div>
   <div class="top-bar" [class.dark]="isDarkTheme()"><div class="room-identity"><strong>Phòng {{ roomId() }}</strong><span class="role-badge"><svg lucideCrown></svg> Owner</span><button type="button" (click)="copyLink()" aria-label="Sao chép link phòng"><svg lucideCopy></svg></button></div><button type="button" class="control-button" (click)="controlOpen.set(true)"><svg lucidePanelRight></svg> Điều khiển</button></div>
   <div class="navigator"><div class="zoom-controls"><button type="button" (click)="changeZoom(10)" aria-label="Phóng to"><svg lucidePlus></svg></button><span>{{ zoom() }}%</span><button type="button" (click)="changeZoom(-10)" aria-label="Thu nhỏ"><svg lucideMinus></svg></button></div><div class="mini-map"><span class="map-viewport"></span></div><button class="center-view" type="button" (click)="zoom.set(100)" title="Reset view"><svg lucideLocateFixed></svg> Reset</button></div>
   <!-- TODO(pre-deploy): Nhớ xóa avatar mock này khi thay bằng thành viên thật từ phiên phòng. -->

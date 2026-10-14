@@ -286,9 +286,9 @@ export class OnboardingSurveyComponent implements OnInit {
     this.submitting.set(true);
 
     const prefs: StudentPreferences = {
-      targetRole: this.answers.targetRole || 'frontend',
+      targetRole: this.answers.targetRole!,
       selectedSkills: this.answers.selectedSkills,
-      currentLevel: this.answers.currentLevel || 'beginner'
+      currentLevel: this.answers.currentLevel!
     };
 
     this.onboardingService.submitOnboarding(prefs).subscribe({
@@ -310,7 +310,7 @@ export class OnboardingSurveyComponent implements OnInit {
   }
 
   openSkipModal(): void {
-    this.showSkipConfirm.set(true);
+    if (this.currentStep() < 2 && !this.submitting()) this.showSkipConfirm.set(true);
   }
 
   closeSkipModal(): void {
@@ -318,7 +318,7 @@ export class OnboardingSurveyComponent implements OnInit {
   }
 
   confirmSkipSurvey(): void {
-    if (this.submitting()) return;
+    if (this.submitting() || this.currentStep() === 2) return;
     this.showSkipConfirm.set(false);
     this.submitting.set(true);
     this.onboardingService.skipOnboarding().subscribe({

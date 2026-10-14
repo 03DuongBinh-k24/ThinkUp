@@ -175,7 +175,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     const sizes: Record<CanvasItemKind, [number, number]> = { text: [240, 80], note: [200, 180], image: [280, 180], gif: [280, 180], youtube: [480, 300], whiteboard: [360, 240] };
     const [width, height] = sizes[kind];
     const colors = ['#fff4a8', '#ffd6e8', '#d2f5df', '#d8eaff', '#e8dcff'];
-    const item: CanvasItem = { id: crypto.randomUUID(), kind, content: kind === 'text' ? 'Headline' : '', x: Math.round(window.innerWidth / 2 - width / 2), y: Math.round(window.innerHeight / 2 - height / 2), width, height, color: colors[Math.floor(Math.random() * colors.length)], url: kind === 'gif' ? 'https://media.giphy.com/media/3o7TKsQ8gqVrxZZkly/giphy.gif' : undefined, strokes: kind === 'whiteboard' ? [] : undefined };
+    const item: CanvasItem = { id: crypto.randomUUID(), kind, content: kind === 'text' ? 'Headline' : '', x: Math.round(window.innerWidth / 2 - width / 2), y: Math.round(window.innerHeight / 2 - height / 2), width, height, color: colors[Math.floor(Math.random() * colors.length)], url: undefined, strokes: kind === 'whiteboard' ? [] : undefined };
     this.canvasItems.update(items => [...items, item]);
   }
   updateCanvasItem(id: string, change: Partial<CanvasItem>): void { this.canvasItems.update(items => items.map(item => item.id === id ? { ...item, ...change } : item)); }
