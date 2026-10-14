@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { getMongoDb, signJwt, verifyJwt, maskEmail, sendEmail } from './db.js';
+import { getMongoDb, signJwt, verifyJwt, maskEmail, sendEmail } from '../db.js';
+import { renderForgotPasswordOtpEmail } from '../email/email-templates.js';
 
 const OTP_EXPIRE_DURATION_MS = 5 * 60 * 1000;       // BR-FGT-02: Hạn 5 phút
 const RESEND_COOLDOWN_MS = 60 * 1000;               // BR-FGT-02: Cooldown 60s
@@ -59,12 +60,11 @@ export async function sendForgotPasswordOtp({ email }, options = {}) {
       await sendEmail({
         to: normalizedEmail,
         subject: '[ThinkUp] Mã xác thực đặt lại mật khẩu',
-        html: `
-          <h3>Yêu cầu đặt lại mật khẩu ThinkUp</h3>
-          <p>Mã xác thực của bạn gồm 6 chữ số: <b style="font-size:20px;letter-spacing:4px;">${otpCode}</b></p>
-          <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng không cung cấp mã này cho người khác.</p>
-        `,
-        text: `Mã xác thực đặt lại mật khẩu của bạn là: ${otpCode}. Hiệu lực 5 phút.`,
+        html: renderForgotPasswordOtpEmail({
+          otpCode,
+          expireMinutes: 5,
+        }),
+        text: `Mã xác thực đặt lại mật khẩu ThinkUp của bạn là: ${otpCode}. Mã có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho người khác.`,
       }).catch((e) => console.error('[SMTP Send Error]:', e.message));
     }
   }

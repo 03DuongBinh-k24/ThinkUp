@@ -1,13 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import bcrypt from 'bcryptjs';
-import { getMongoDb, closeMongoDb } from '../db.js';
+import { getMongoDb, closeMongoDb, maskEmail } from '../../db.js';
 import {
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
   resetPasswordWithToken,
 } from '../forgot-password.user.js';
-import { maskEmail } from '../db.js';
 
 test('TestSuite: Quên Mật Khẩu & Đặt Lại Mật Khẩu với Database Thật (MongoDB Atlas)', async (t) => {
   let db;

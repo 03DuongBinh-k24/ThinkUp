@@ -93,6 +93,6 @@ export async function sendEmail({ to, subject, html, text }) {
     auth: { user, pass },
   });
 
-  const from = process.env.SMTP_FROM || '"ThinkUp" <noreply@thinkup.vn>';
+  const from = process.env.SMTP_FROM || (user ? `"ThinkUp" <${user}>` : '"ThinkUp" <noreply@thinkup.vn>');
   return await transporter.sendMail({ from, to, subject, html, text });
 }

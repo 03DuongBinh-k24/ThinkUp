@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { getMongoDb, closeMongoDb } from '../db.js';
+import { getMongoDb, closeMongoDb } from '../../db.js';
 import {
   skipOnboarding,
   submitOnboarding,

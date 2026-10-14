@@ -6,7 +6,7 @@
  * - forgot-password.user.js: Quên mật khẩu qua OTP 6 số (5 phút, Cooldown 60s, hủy sau 5 lần sai)
  */
 
-export * from './db.js';
+export * from '../db.js';
 export * from './signup.user.js';
 export * from './signin.user.js';
 export * from './forgot-password.user.js';
