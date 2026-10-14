@@ -125,6 +125,7 @@ export async function loginWithCredentials({ email, password, rememberMe = false
     token: accessToken,
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       phone: user.phone || null,
@@ -213,6 +214,7 @@ export async function loginWithGoogle({ email, name, avatar, providerId }, optio
     token: accessToken,
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       phone: user.phone || null,
@@ -308,6 +310,7 @@ export async function loginWithFacebook({ providerId, email, name, avatar }, opt
     token: accessToken,
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       phone: user.phone || null,
@@ -350,6 +353,7 @@ export async function getCurrentUser(userId, options = {}) {
   return {
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       phone: user.phone || null,
@@ -406,6 +410,7 @@ export async function verifyAuthSession(token, options = {}) {
     isAuthenticated: true,
     user: {
       id: user._id.toString(),
+      studentId: user.student_id || null,
       name: user.full_name,
       email: user.email,
       phone: user.phone || null,

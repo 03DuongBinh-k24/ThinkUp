@@ -4,3 +4,4 @@ node_modules/
 !.env.example
 writing-block.md
 !auth_onboarding.md
+recheck/

@@ -19,7 +19,7 @@ export async function getMongoDb(customUri, customDbName) {
   if (_mongoDb) return _mongoDb;
 
   const uri = customUri || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/thinkup_db';
-  const dbName = customDbName || process.env.MONGODB_DB_NAME || 'ThinkUp';
+  const dbName = customDbName || process.env.MONGODB_DB_NAME || 'Thinkup';
 
   _mongoClient = new MongoClient(uri);
   await _mongoClient.connect();
