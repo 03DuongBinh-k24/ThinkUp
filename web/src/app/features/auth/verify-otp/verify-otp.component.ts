@@ -35,7 +35,6 @@ export class VerifyOtpComponent implements OnInit, OnDestroy {
   readonly otpInputs = viewChildren<ElementRef<HTMLInputElement>>('otpInput');
 
   readonly email = signal('');
-  readonly purpose = signal('reset_password');
   readonly otp = signal<string[]>(['', '', '', '', '', '']);
   readonly loading = signal(false);
   readonly errors = signal<VerifyOtpErrors>({});
@@ -54,16 +53,12 @@ export class VerifyOtpComponent implements OnInit, OnDestroy {
     return `${name.slice(0, 2)}***@${domain}`;
   });
 
-  readonly title = computed(() => {
-    return this.purpose() === 'register' ? 'Xác thực tài khoản' : 'Lấy lại mật khẩu';
-  });
+  readonly title = computed(() => 'Lấy lại mật khẩu');
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       const emailParam = params['email'] || '';
-      const purposeParam = params['purpose'] || 'reset_password';
       this.email.set(emailParam);
-      this.purpose.set(purposeParam);
     });
     this.startCountdown();
   }
@@ -87,7 +82,7 @@ export class VerifyOtpComponent implements OnInit, OnDestroy {
   resendCode(): void {
     if (this.resendSeconds() > 0 || this.resending() || !this.email()) return;
     this.resending.set(true);
-    this.authService.resendOtp(this.email(), this.purpose()).subscribe({
+    this.authService.resendOtp(this.email()).subscribe({
       next: () => {
         this.otp.set(['', '', '', '', '', '']);
         this.errors.set({});
@@ -159,24 +154,20 @@ export class VerifyOtpComponent implements OnInit, OnDestroy {
     this.verificationInFlight = true;
     this.loading.set(true);
 
-    this.authService.verifyOtp(emailVal, otpVal, this.purpose()).subscribe({
+    this.authService.verifyOtp(emailVal, otpVal).subscribe({
       next: (result) => {
         this.verificationInFlight = false;
         this.toastService.showToast({ type: 'success', message: 'Xác thực thành công!' });
 
-        if (this.purpose() === 'register') {
-          this.router.navigate(['/auth/login'], { queryParams: { verified: 1 } });
-        } else {
-          const resetToken = result?.resetToken;
-          if (!resetToken) {
-            this.loading.set(false);
-            this.errors.set({ api: 'Không nhận được phiên đặt lại mật khẩu. Vui lòng yêu cầu mã mới.' });
-            return;
-          }
-          this.router.navigate(['/auth/reset-password'], {
-            queryParams: { token: resetToken }
-          });
+        const resetToken = result?.resetToken;
+        if (!resetToken) {
+          this.loading.set(false);
+          this.errors.set({ api: 'Không nhận được phiên đặt lại mật khẩu. Vui lòng yêu cầu mã mới.' });
+          return;
         }
+        this.router.navigate(['/auth/reset-password'], {
+          queryParams: { token: resetToken }
+        });
       },
       error: (err) => {
         this.verificationInFlight = false;

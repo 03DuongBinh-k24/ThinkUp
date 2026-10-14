@@ -1,156 +1,238 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse } from '../models/user.model';
+import { AuthApiError, AuthResponse, User } from '../models/user.model';
 
-import { mockLogin, mockLoginWithFacebook, mockLoginWithGoogle, mockSignUp, mockForgotPassword, mockVerifyOtp, mockResendOtp, mockResetPassword } from '../data/mock/mock-auth.api';
+interface BackendUser {
+  id: string;
+  name?: string;
+  full_name?: string;
+  email: string;
+  phone?: string | null;
+  avatar?: string | null;
+  role: User['role'];
+  onboarding_completed?: boolean;
+  email_verified?: boolean;
+}
+
+interface BackendLoginResponse {
+  message: string;
+  accessToken: string;
+  user: BackendUser;
+}
+
+interface BackendMessageResponse {
+  message: string;
+  email?: string;
+  resetToken?: string;
+}
+
+interface BackendSessionResponse {
+  isAuthenticated: boolean;
+  user: BackendUser | null;
+}
+
+const TOKEN_KEY = 'access_token';
+const USER_KEY = 'thinkup_current_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private http = inject(HttpClient);
-  private apiUrl = environment.apiUrl;
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl;
+  private readonly userState = signal<User | null>(null);
+  readonly currentUser = this.userState.asReadonly();
+
+  constructor() {
+    this.restoreSession();
+  }
 
   isAuthenticated(): boolean {
-    if (typeof localStorage !== 'undefined') {
-      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-      // TODO(pre-deploy): Nhớ xóa cách nhận diện phiên mock khi dùng token backend thật.
-      const mockSession = localStorage.getItem('thinkup_user_logged_in') === 'true' &&
-        !!localStorage.getItem('thinkup_current_user');
-      return !!(token || user || mockSession);
-    }
-    return false;
+    return !!this.getToken() && !!this.userState();
   }
 
-  // TODO(pre-deploy): Nhớ thay các lời gọi mock dưới đây bằng API auth thật.
+  getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+  }
+
   login(credentials: { email: string; password: string; rememberMe?: boolean }): Observable<AuthResponse> {
-    return mockLogin(credentials).pipe(catchError(this.handleError.bind(this)));
+    return this.http.post<BackendLoginResponse>(`${this.apiUrl}/auth/login`, credentials).pipe(
+      map(response => this.mapLoginResponse(response)),
+      tap(response => this.saveSession(response, !!credentials.rememberMe)),
+      catchError(error => this.handleError(error))
+    );
   }
 
-  loginWithGoogle(): Observable<AuthResponse> {
-    return mockLoginWithGoogle().pipe(catchError(this.handleError.bind(this)));
+  signUp(data: { fullName: string; phone: string; email: string; password: string; confirmPassword: string; termsAccepted: boolean }): Observable<AuthResponse> {
+    return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/register`, data).pipe(
+      map(response => ({ success: true, message: response.message, email: response.email })),
+      catchError(error => this.handleError(error))
+    );
   }
 
-  loginWithFacebook(additionalEmail?: string): Observable<AuthResponse> {
-    return mockLoginWithFacebook(additionalEmail).pipe(catchError(this.handleError.bind(this)));
+  resendVerification(email: string): Observable<AuthResponse> {
+    return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/resend-verification`, { email }).pipe(
+      map(response => ({ success: true, message: response.message, email })),
+      catchError(error => this.handleError(error))
+    );
   }
 
-  signUp(data: { fullName: string; phone: string; email: string; password: string }): Observable<AuthResponse> {
-    return mockSignUp(data).pipe(catchError(this.handleError.bind(this)));
+  forgotPassword(email: string): Observable<AuthResponse> {
+    return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/forgot-password`, { email }).pipe(
+      map(response => ({ success: true, message: response.message, email: response.email || email })),
+      catchError(error => this.handleError(error))
+    );
   }
 
-  // TODO(pre-deploy): Nhớ xóa fallback mockForgotPassword khi kết nối backend thật.
-  forgotPassword(contact: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/forgot-password`, { contact }).pipe(
-      catchError(err => {
-        if (err.status === 0 || err.status === 404) {
-          return mockForgotPassword(contact);
+  verifyOtp(email: string, otp: string): Observable<AuthResponse> {
+    return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/verify-forgot-otp`, { email, otp }).pipe(
+      map(response => ({ success: true, message: response.message, resetToken: response.resetToken })),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  resendOtp(email: string): Observable<AuthResponse> {
+    return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/resend-forgot-otp`, { email }).pipe(
+      map(response => ({ success: true, message: response.message })),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  resetPassword(resetToken: string, newPassword: string, confirmPassword: string): Observable<AuthResponse> {
+    return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/reset-password`, { resetToken, newPassword, confirmPassword }).pipe(
+      map(response => ({ success: true, message: response.message })),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  getMe(): Observable<User> {
+    return this.http.get<{ user: BackendUser }>(`${this.apiUrl}/auth/me`).pipe(
+      map(response => this.mapUser(response.user)),
+      tap(user => this.updateUser(user)),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  validateSession(): Observable<boolean> {
+    if (!this.getToken()) {
+      this.clearSession();
+      return of(false);
+    }
+    return this.http.get<BackendSessionResponse>(`${this.apiUrl}/auth/session`).pipe(
+      map(response => {
+        if (!response.isAuthenticated || !response.user) {
+          this.clearSession();
+          return false;
         }
-        return this.handleError(err);
+        this.updateUser(this.mapUser(response.user));
+        return true;
+      }),
+      catchError(error => {
+        if (error instanceof HttpErrorResponse && error.status === 401) this.clearSession();
+        return this.handleError(error);
       })
     );
   }
 
-  // TODO(pre-deploy): Nhớ xóa fallback mockVerifyOtp khi kết nối backend thật.
-  verifyOtp(email: string, otp: string, purpose: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/verify-otp`, { email, otp, purpose }).pipe(
-      catchError(err => {
-        if (err.status === 0 || err.status === 404) {
-          return mockVerifyOtp(email, otp, purpose);
-        }
-        return this.handleError(err);
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/auth/logout`, {}).pipe(
+      tap(() => this.clearSession()),
+      catchError(error => {
+        this.clearSession();
+        return this.handleError(error);
       })
     );
   }
 
-  // TODO(pre-deploy): Nhớ xóa fallback mockResendOtp khi kết nối backend thật.
-  resendOtp(email: string, purpose: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/resend-otp`, { email, purpose }).pipe(
-      catchError(err => {
-        if (err.status === 0 || err.status === 404) {
-          return mockResendOtp(email, purpose);
-        }
-        return this.handleError(err);
-      })
-    );
+  updateUser(user: User): void {
+    this.userState.set(user);
+    if (typeof localStorage !== 'undefined') localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
-  // TODO(pre-deploy): Nhớ xóa fallback mockResetPassword khi kết nối backend thật.
-  resetPassword(token: string, password: string, confirmPassword: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/reset-password`, { token, password, confirmPassword }).pipe(
-      catchError(err => {
-        if (err.status === 0 || err.status === 404) {
-          return mockResetPassword(token, password, confirmPassword);
-        }
-        return this.handleError(err);
-      })
-    );
-  }
-
-  getMe(): Observable<AuthResponse> {
-    return this.http.get<AuthResponse>(`${this.apiUrl}/auth/me`, { withCredentials: true }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  logout(): Observable<any> {
-    this.clearSession();
-    return this.http.post(`${this.apiUrl}/auth/logout`, {}, { withCredentials: true });
+  syncFromStorage(): void {
+    this.restoreSession();
   }
 
   clearSession(): void {
+    this.userState.set(null);
     if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('thinkup_user_logged_in');
-      localStorage.removeItem('thinkup_current_user');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      for (const key of [TOKEN_KEY, USER_KEY, 'thinkup_user_logged_in', 'thinkup_token', 'token', 'user', 'thinkup_mock_db_users', 'thinkup_mock_social_users']) {
+        localStorage.removeItem(key);
+      }
     }
     if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
+      sessionStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem('thinkup_login_lock_until');
       sessionStorage.removeItem('thinkup_post_onboarding_return');
     }
   }
 
-  private handleError(error: any) {
-    const status = error?.status;
-    let errorCode: string = error?.error?.errorCode || error?.error?.code || '';
-    let message = error?.error?.message || '';
-    const retryAfter = error?.error?.retryAfter || (status === 429 ? 900 : undefined);
-
-    if (status === 0) {
-      errorCode = 'NETWORK_ERROR';
-      message = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền mạng!';
-    } else if (status === 429) {
-      errorCode = 'BRUTE_FORCE';
-    } else if (status === 403) {
-      errorCode = 'ACCOUNT_LOCKED';
-      message = 'Tài khoản của bạn đang bị tạm khóa. Vui lòng liên hệ support@thinkup.vn để được hỗ trợ';
-    } else if (status === 401) {
-      errorCode = 'INVALID_CREDENTIALS';
-      message = 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!';
-    } else if (status === 409) {
-      const errDetail = (error?.error?.message || '').toLowerCase();
-      if (errDetail.includes('email')) {
-        errorCode = 'DUPLICATE_EMAIL';
-        message = 'Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác để đăng ký!';
-      } else if (errDetail.includes('phone') || errDetail.includes('thoại') || errDetail.includes('sđt')) {
-        errorCode = 'DUPLICATE_PHONE';
-        message = 'Số điện thoại này đã được đăng ký!';
-      } else {
-        errorCode = error?.error?.errorCode || 'DUPLICATE_DATA';
-      }
+  private restoreSession(): void {
+    if (typeof localStorage === 'undefined') return;
+    if (!this.getToken()) {
+      // Một tab mới không có sessionStorage riêng; đừng xóa hồ sơ dùng chung của tab đã đăng nhập.
+      this.userState.set(null);
+      return;
     }
+    try {
+      const raw = localStorage.getItem(USER_KEY);
+      const user = raw ? JSON.parse(raw) as User : null;
+      if (!user?.id) {
+        this.clearSession();
+        return;
+      }
+      this.userState.set(user);
+    } catch {
+      this.clearSession();
+    }
+  }
 
-    const customErr: any = new Error(message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
-    customErr.status = status;
-    customErr.errorCode = errorCode;
-    customErr.code = errorCode;
-    customErr.provider = error?.error?.provider;
-    customErr.retryAfter = retryAfter;
-    return throwError(() => customErr);
+  private saveSession(response: AuthResponse, rememberMe: boolean): void {
+    if (!response.token || !response.user || typeof window === 'undefined') return;
+    this.clearSession();
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(TOKEN_KEY, response.token);
+    this.updateUser(response.user);
+  }
+
+  private mapLoginResponse(response: BackendLoginResponse): AuthResponse {
+    if (!response.accessToken || !response.user?.id) throw new Error('Phản hồi đăng nhập không hợp lệ.');
+    return { success: true, message: response.message, token: response.accessToken, user: this.mapUser(response.user) };
+  }
+
+  private mapUser(user: BackendUser): User {
+    return {
+      id: user.id,
+      full_name: user.full_name || user.name || '',
+      email: user.email,
+      phone: user.phone || undefined,
+      avatar: user.avatar || undefined,
+      role: user.role,
+      onboarding_completed: !!user.onboarding_completed,
+      email_verified: user.email_verified,
+    };
+  }
+
+  private handleError(error: unknown): Observable<never> {
+    if (!(error instanceof HttpErrorResponse)) {
+      return throwError(() => error);
+    }
+    const backend = error.error && typeof error.error === 'object' ? error.error as Record<string, unknown> : {};
+    const originalCode = typeof backend['code'] === 'string' ? backend['code'] : '';
+    const field = typeof backend['field'] === 'string' ? backend['field'] : undefined;
+    const authError = new Error(
+      error.status === 0
+        ? 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền mạng!'
+        : typeof backend['message'] === 'string' ? backend['message'] : 'Đã xảy ra lỗi. Vui lòng thử lại.'
+    ) as AuthApiError;
+    authError.status = error.status;
+    authError.field = field;
+    authError.errorCode = originalCode === 'EMAIL_EXISTS' ? 'DUPLICATE_EMAIL'
+      : originalCode === 'PHONE_EXISTS' ? 'DUPLICATE_PHONE'
+      : originalCode || (error.status === 0 ? 'NETWORK_ERROR' : '');
+    authError.retryAfter = typeof backend['retryAfter'] === 'number' ? backend['retryAfter'] : undefined;
+    authError.provider = typeof backend['provider'] === 'string' ? backend['provider'] : undefined;
+    return throwError(() => authError);
   }
 }

@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -14,7 +15,7 @@ export interface ForgotPasswordErrors {
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './forgot-password.component.html',
   styleUrl: './forgot-password.component.css',
 })
@@ -70,7 +71,7 @@ export class ForgotPasswordComponent implements OnInit {
         this.toastService.showToast({ type: 'success', message: 'Mã xác thực đã được gửi!' });
         const emailToVerify = result?.email || emailVal;
         this.router.navigate(['/auth/verify-otp'], {
-          queryParams: { email: emailToVerify, purpose: 'reset_password' }
+          queryParams: { email: emailToVerify }
         });
       },
       error: (err) => {

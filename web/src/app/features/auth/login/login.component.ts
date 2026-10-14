@@ -4,10 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { OnboardingService } from '../../../core/services/onboarding.service';
-import { User } from '../../../core/models/user.model';
-import { MOCK_GOOGLE_USER, createMockFacebookUser } from '../../../core/data/mock/mock-users';
-import { getMockSocialUser } from '../../../core/data/mock/mock-auth.store';
-import { openMockOAuthPopup } from '../../../core/data/mock/mock-oauth-popup';
+import { AuthApiError } from '../../../core/models/user.model';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -21,6 +19,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly onboardingService = inject(OnboardingService);
+  private readonly toastService = inject(ToastService);
 
   readonly email = signal('');
   readonly password = signal('');
@@ -38,10 +37,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   readonly lockoutRemainingSeconds = signal(0);
   private timerInterval: any = null;
 
-  // EX-AUTH-04 & AC-13: Quản lý Facebook thiếu email
-  readonly showMissingEmailModal = signal(false);
-  missingEmailInput = '';
-  readonly missingEmailError = signal('');
+  readonly pendingEmail = signal('');
+  readonly resendingVerification = signal(false);
 
   // BR-AUTH-01, AC-02, AC-03: Realtime computed checking
   readonly isEmailValid = computed(() => {
@@ -72,10 +69,12 @@ export class LoginComponent implements OnInit, OnDestroy {
     const qParams = this.route.snapshot.queryParams;
     if (qParams['activated'] === 'true') {
       this.activatedToast.set('Kích hoạt tài khoản thành công! Vui lòng đăng nhập để bắt đầu học tập.');
-      if (qParams['email']) {
-        this.email.set(qParams['email']);
-      }
     }
+    if (qParams['registered'] === 'true') {
+      this.activatedToast.set('Đăng ký thành công. Vui lòng kiểm tra email và bấm liên kết kích hoạt trước khi đăng nhập.');
+    }
+    if (qParams['email']) this.email.set(String(qParams['email']));
+    if (qParams['error']) this.networkToast.set(String(qParams['error']));
 
     // Phục hồi lockout timer nếu trước đó đã bị khóa (lưu trong sessionStorage)
     if (typeof sessionStorage !== 'undefined') {
@@ -98,6 +97,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onInputChange(): void {
+    this.pendingEmail.set('');
     // BR-AUTH-01: Không hiện lỗi khi đang gõ. Nếu trước đó có viền đỏ submit sai, người dùng gõ lại thì reset viền đỏ.
     if (this.hasAuthError()) {
       this.hasAuthError.set(false);
@@ -132,10 +132,10 @@ export class LoginComponent implements OnInit, OnDestroy {
       password: cleanPassword,
       rememberMe: this.rememberMe()
     }).subscribe({
-      next: (res) => {
+      next: () => {
         this.loading.set(false);
         this.failedAttempts.set(0);
-        this.handleLoginSuccess(res.user);
+        this.handleLoginSuccess();
       },
       error: (err) => {
         this.loading.set(false);
@@ -144,47 +144,42 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
-  private handleLoginSuccess(apiUser?: User): void {
-    if (!apiUser) {
+  private handleLoginSuccess(): void {
+    if (!this.authService.isAuthenticated()) {
       this.hasAuthError.set(true);
       this.errorMessage.set('Không thể xác định tài khoản đăng nhập. Vui lòng thử lại.');
       return;
     }
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('thinkup_user_logged_in', 'true');
-      localStorage.setItem('thinkup_current_user', JSON.stringify(apiUser));
-    }
-
     this.navigateAfterLogin();
   }
 
-  private handleLoginFailure(err: any): void {
-    // BR-AUTH-08 & AC-17: Tài khoản bị khóa (is_active = false / 403)
-    if (err?.errorCode === 'ACCOUNT_LOCKED' || err?.status === 403) {
+  private handleLoginFailure(err: AuthApiError): void {
+    if (err.errorCode === 'ACCOUNT_PENDING') {
+      this.pendingEmail.set(this.email().trim());
       this.hasAuthError.set(true);
-      this.errorMessage.set('Tài khoản của bạn đang bị tạm khóa. Vui lòng liên hệ support@thinkup.vn để được hỗ trợ');
+      this.errorMessage.set(err.message);
+      return;
+    }
+    if (err.errorCode === 'BRUTE_FORCE_LOCKED') {
+      this.startLockoutTimer(err.retryAfter || 900);
+      this.hasAuthError.set(true);
+      this.errorMessage.set(err.message);
+      return;
+    }
+    if (err.errorCode === 'ACCOUNT_SUSPENDED') {
+      this.hasAuthError.set(true);
+      this.errorMessage.set(err.message);
       return;
     }
 
     // EX-AUTH-01 & AC-16: Mất mạng hoặc Server Timeout
-    if (err?.errorCode === 'NETWORK_ERROR' || err?.status === 0 || err?.status >= 500) {
+    if (err.errorCode === 'NETWORK_ERROR' || err.status === 0 || (err.status || 0) >= 500) {
       // Giữ nguyên form, không xóa dữ liệu
       this.networkToast.set('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền mạng!');
       return;
     }
 
     // BR-AUTH-03 & AC-09: Tăng số lần đăng nhập sai
-    const attempts = this.failedAttempts() + 1;
-    this.failedAttempts.set(attempts);
-
-    if (attempts >= 5 || err?.errorCode === 'BRUTE_FORCE' || err?.status === 429) {
-      const lockSeconds = err?.retryAfter || 900; // 15 phút
-      this.startLockoutTimer(lockSeconds);
-      this.hasAuthError.set(true);
-      this.errorMessage.set('Bạn đã nhập sai 5 lần. Vui lòng thử lại sau 15 phút hoặc sử dụng Quên mật khẩu!');
-      return;
-    }
-
     // BR-AUTH-02, AC-07, AC-08: Thông báo trung tính an toàn, viền đỏ cả 2 ô
     this.hasAuthError.set(true);
     this.errorMessage.set('Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!');
@@ -215,76 +210,23 @@ export class LoginComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  /**
-   * AC-10, AC-11, AC-12: Xử lý Đăng nhập mạng xã hội (Google / Facebook)
-   */
   handleSocialLogin(provider: 'Google' | 'Facebook'): void {
-    if (this.loading() || this.isLockedOut()) return;
-
-    this.loading.set(true);
-    this.clearErrors();
-
-    // TODO(pre-deploy): Nhớ xóa popup thử nghiệm khi có OAuth thật.
-    const popup = openMockOAuthPopup(provider, 'Login');
-
-    // Gọi API hoặc xử lý callback từ popup
-    const socialCall = provider === 'Google'
-      ? this.authService.loginWithGoogle()
-      : this.authService.loginWithFacebook();
-
-    socialCall.subscribe({
-      next: (res) => {
-        if (popup && !popup.closed) popup.close();
-        this.loading.set(false);
-        this.handleLoginSuccess(res.user);
-      },
-      error: (err) => {
-        if (popup && !popup.closed) popup.close();
-        this.loading.set(false);
-
-        // EX-AUTH-03 & AC-12: Người dùng tự đóng popup hoặc hủy ủy quyền -> KHÔNG hiện lỗi đỏ
-        if (err?.code === 'OAUTH_CANCELLED' || err?.message?.includes('closed')) {
-          return;
-        }
-
-        // EX-AUTH-04 & AC-13: Facebook thiếu email
-        if (provider === 'Facebook' && (err?.errorCode === 'MISSING_EMAIL' || err?.message?.includes('email'))) {
-          this.showMissingEmailModal.set(true);
-          return;
-        }
-
-        // TODO(pre-deploy): Nhớ xóa tài khoản mạng xã hội mock khi có OAuth thật.
-        // Fallback demo cho dev khi chưa có OAuth Server client_id
-        const fallback = provider === 'Google'
-          ? MOCK_GOOGLE_USER
-          : createMockFacebookUser(`student_${provider.toLowerCase()}@thinkup.vn`);
-        this.handleLoginSuccess(getMockSocialUser(fallback));
-      }
-    });
+    // TODO(pre-deploy): Nhớ thay thông báo này bằng OAuth Google/Facebook có xác minh danh tính thật trước khi mở tính năng.
+    this.toastService.showToast({ type: 'info', message: `Đăng nhập bằng ${provider} sẽ được hỗ trợ sau.` });
   }
 
-  submitMissingEmail(): void {
-    const trimmed = this.missingEmailInput.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      this.missingEmailError.set('Vui lòng nhập địa chỉ email hợp lệ');
-      return;
-    }
-
-    this.missingEmailError.set('');
-    this.loading.set(true);
-
-    this.authService.loginWithFacebook(trimmed).subscribe({
+  resendVerification(): void {
+    const email = this.pendingEmail();
+    if (!email || this.resendingVerification()) return;
+    this.resendingVerification.set(true);
+    this.authService.resendVerification(email).subscribe({
       next: (res) => {
-        this.loading.set(false);
-        this.showMissingEmailModal.set(false);
-        this.handleLoginSuccess(res.user);
+        this.resendingVerification.set(false);
+        this.toastService.showToast({ type: 'success', message: res.message });
       },
-      error: () => {
-        // TODO(pre-deploy): Nhớ xóa fallback đăng nhập Facebook mock khi có OAuth thật.
-        // Fallback demo
-        this.loading.set(false);
-        this.showMissingEmailModal.set(false);
-        this.handleLoginSuccess(getMockSocialUser(createMockFacebookUser(trimmed)));
+      error: (err: AuthApiError) => {
+        this.resendingVerification.set(false);
+        this.networkToast.set(err.message);
       }
     });
   }

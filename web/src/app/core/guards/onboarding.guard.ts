@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
+import { AuthService } from '../services/auth.service';
 
 /**
  * Route Guard ép buộc hoàn thành khảo sát (AC-ONB-01):
@@ -11,7 +12,7 @@ export const onboardingRequiredGuard: CanActivateChildFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
 
-  const isLoggedIn = typeof localStorage !== 'undefined' && localStorage.getItem('thinkup_user_logged_in') === 'true';
+  const isLoggedIn = inject(AuthService).isAuthenticated();
   const user = onboardingService.getCurrentUser();
 
   // Khách vãng lai xem bình thường (không ép buộc)
@@ -36,7 +37,7 @@ export const onboardingCompletedGuard: CanActivateFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
 
-  const isLoggedIn = typeof localStorage !== 'undefined' && localStorage.getItem('thinkup_user_logged_in') === 'true';
+  const isLoggedIn = inject(AuthService).isAuthenticated();
   const user = onboardingService.getCurrentUser();
   if (!isLoggedIn || !user) {
     return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: '/onboarding' } });

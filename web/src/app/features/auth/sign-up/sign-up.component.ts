@@ -3,10 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { User } from '../../../core/models/user.model';
-import { MOCK_GOOGLE_USER, createMockFacebookUser } from '../../../core/data/mock/mock-users';
-import { getMockSocialUser } from '../../../core/data/mock/mock-auth.store';
-import { openMockOAuthPopup } from '../../../core/data/mock/mock-oauth-popup';
+import { AuthApiError, AuthResponse } from '../../../core/models/user.model';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-sign-up',
@@ -18,6 +16,7 @@ import { openMockOAuthPopup } from '../../../core/data/mock/mock-oauth-popup';
 export class SignUpComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
 
   // Form Fields as Signals for 100% reactive computed tracking
   readonly fullName = signal('');
@@ -42,11 +41,6 @@ export class SignUpComponent implements OnInit {
   readonly loading = signal(false);
   readonly networkToast = signal('');
   readonly successToast = signal('');
-
-  // Social OAuth Exception (EX-REG-04)
-  readonly showMissingEmailModal = signal(false);
-  missingEmailInput = '';
-  readonly missingEmailError = signal('');
 
   ngOnInit(): void {
     // Khởi tạo component
@@ -215,7 +209,9 @@ export class SignUpComponent implements OnInit {
       fullName: this.fullName().trim(),
       phone: this.phone().trim().replace(/\s/g, ''),
       email: this.email().trim(),
-      password: this.password().trim()
+      password: this.password().trim(),
+      confirmPassword: this.confirmPassword().trim(),
+      termsAccepted: this.agreedToTerms()
     };
 
     this.authService.signUp(payload).subscribe({
@@ -230,29 +226,20 @@ export class SignUpComponent implements OnInit {
     });
   }
 
-  private handleSignUpSuccess(res: any): void {
-    // 1. Hiển thị thông báo thành công
-    const successMsg = 'Đăng ký thành công! Vui lòng đăng nhập để bắt đầu học tập và làm khảo sát.';
-    this.successToast.set(successMsg);
+  private handleSignUpSuccess(res: AuthResponse): void {
+    this.successToast.set(res.message || 'Đăng ký thành công. Vui lòng kiểm tra email để kích hoạt tài khoản.');
 
-    /**
-     * GHI CHÚ QUAN TRỌNG (THEO YÊU CẦU DỰ ÁN):
-     * Tạm thời khi đăng ký thì KHÔNG tự động lưu phiên làm việc (session/user data) vào local.
-     * Mai mốt khi Backend code xong API /api/v1/auth/register và CSDL thì sẽ lưu tài khoản
-     * từ Backend trả về sau.
-     */
-
-    // 2. Chuyển hướng sang màn hình Đăng nhập kèm điền sẵn email vừa đăng ký
+    // Chỉ liên kết trong email mới kích hoạt tài khoản; chưa tạo phiên đăng nhập.
     setTimeout(() => {
       this.router.navigate(['/auth/login'], {
-        queryParams: { activated: 'true', email: this.email().trim() }
+        queryParams: { registered: 'true', email: res.email || this.email().trim() }
       });
     }, 1500);
   }
 
-  private handleSignUpFailure(err: any): void {
+  private handleSignUpFailure(err: AuthApiError): void {
     // EX-REG-02 & AC-18: Mất kết nối mạng
-    if (err?.errorCode === 'NETWORK_ERROR' || err?.status === 0 || err?.status >= 500) {
+    if (err.errorCode === 'NETWORK_ERROR' || err.status === 0 || (err.status || 0) >= 500) {
       this.networkToast.set('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng Internet!');
       return;
     }
@@ -271,85 +258,12 @@ export class SignUpComponent implements OnInit {
       return;
     }
 
-    // TODO(pre-deploy): Nhớ xóa đăng ký mock khi backend hoạt động ổn định.
-    // Fallback demo cho môi trường dev khi backend offline
-    this.handleSignUpSuccess({});
+    this.networkToast.set(err.message || 'Không thể đăng ký. Vui lòng thử lại.');
   }
 
-  // --- AC-16, AC-17: Đăng ký một chạm qua Google / Facebook OAuth ---
   handleSocialSignUp(provider: 'Google' | 'Facebook'): void {
-    if (this.loading()) return;
-    this.loading.set(true);
-    this.networkToast.set('');
-
-    // TODO(pre-deploy): Nhớ xóa popup thử nghiệm khi có OAuth thật.
-    const popup = openMockOAuthPopup(provider, 'SignUp');
-
-    const socialCall = provider === 'Google'
-      ? this.authService.loginWithGoogle()
-      : this.authService.loginWithFacebook();
-
-    socialCall.subscribe({
-      next: (res) => {
-        if (popup && !popup.closed) popup.close();
-        this.loading.set(false);
-        this.handleSocialSuccess(res.user ?? getMockSocialUser(MOCK_GOOGLE_USER));
-      },
-      error: (err) => {
-        if (popup && !popup.closed) popup.close();
-        this.loading.set(false);
-
-        // EX-REG-05: Đóng ngang popup không báo lỗi
-        if (err?.code === 'OAUTH_CANCELLED' || err?.message?.includes('closed')) {
-          return;
-        }
-
-        // EX-REG-04: Facebook không có email
-        if (provider === 'Facebook' && (err?.errorCode === 'MISSING_EMAIL' || err?.message?.includes('email'))) {
-          this.showMissingEmailModal.set(true);
-          return;
-        }
-
-        // TODO(pre-deploy): Nhớ xóa fallback đăng ký mock khi backend hoạt động ổn định.
-        // Fallback demo dev
-        const fallback = provider === 'Google'
-          ? MOCK_GOOGLE_USER
-          : createMockFacebookUser(`new_${provider.toLowerCase()}@thinkup.vn`);
-        this.handleSocialSuccess(getMockSocialUser(fallback));
-      }
-    });
+    // TODO(pre-deploy): Nhớ thay thông báo này bằng OAuth Google/Facebook có xác minh danh tính thật trước khi mở tính năng.
+    this.toastService.showToast({ type: 'info', message: `Đăng ký bằng ${provider} sẽ được hỗ trợ sau.` });
   }
 
-  submitMissingEmail(): void {
-    const trimmed = this.missingEmailInput.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      this.missingEmailError.set('Vui lòng nhập địa chỉ email hợp lệ');
-      return;
-    }
-
-    this.missingEmailError.set('');
-    this.loading.set(true);
-
-    this.authService.loginWithFacebook(trimmed).subscribe({
-      next: (res) => {
-        this.loading.set(false);
-        this.showMissingEmailModal.set(false);
-        this.handleSocialSuccess(res.user ?? getMockSocialUser(createMockFacebookUser(trimmed)));
-      },
-      error: () => {
-        this.loading.set(false);
-        this.showMissingEmailModal.set(false);
-        this.handleSocialSuccess(getMockSocialUser(createMockFacebookUser(trimmed)));
-      }
-    });
-  }
-
-  private handleSocialSuccess(userObj: User): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('thinkup_user_logged_in', 'true');
-      localStorage.setItem('thinkup_current_user', JSON.stringify(userObj));
-    }
-    // Tài khoản mới vào khảo sát; tài khoản đã hoàn tất không khảo sát lại.
-    this.router.navigate([userObj.onboarding_completed ? '/main/home' : '/onboarding']);
-  }
 }
