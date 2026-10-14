@@ -20,7 +20,6 @@ function getCleanClientUrl(url) {
  */
 export function renderBaseEmailLayout({
   previewText = '',
-  badge = '',
   title = '',
   contentHtml = '',
   clientUrl = '',
@@ -111,14 +110,6 @@ export function renderBaseEmailLayout({
           <tr>
             <td style="padding: 28px 36px 36px 36px;" class="content-padding">
 
-              ${badge ? `
-              <!-- Pill Badge -->
-              <div style="margin-bottom: 16px; text-align: left;">
-                <span style="display: inline-block; padding: 4px 12px; background-color: #EEF7FF; color: #006AB5; border: 1px solid #B7E1FF; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">
-                  ${badge}
-                </span>
-              </div>` : ''}
-
               ${title ? `
               <!-- Main Email Title -->
               <h1 style="color: #0F172A; font-size: 22px; font-weight: 700; line-height: 1.35; margin-top: 0; margin-bottom: 18px; letter-spacing: -0.3px;">
@@ -134,7 +125,6 @@ export function renderBaseEmailLayout({
           <!-- Footer Section -->
           <tr>
             <td style="background-color: #F8FAFC; border-top: 1px solid #F1F5F9; padding: 24px 32px 28px 32px; text-align: center;" class="content-padding">
-
               <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748B; line-height: 1.5;">
                 Bạn nhận được email này vì địa chỉ của bạn đã được đăng ký trên hệ thống ThinkUp Education.
               </p>
@@ -291,7 +281,7 @@ export function renderForgotPasswordOtpEmail({ otpCode, expireMinutes = 5, clien
         ${otpCode}
       </div>
       <div style="margin-top: 10px; font-size: 13px; color: #475569; font-weight: 500;">
-        ⏱️ Mã có hiệu lực trong vòng <strong>${expireMinutes} phút</strong>
+         Mã có hiệu lực trong vòng <strong>${expireMinutes} phút</strong>
       </div>
     </div>
 
