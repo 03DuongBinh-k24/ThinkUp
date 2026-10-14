@@ -20,7 +20,6 @@ function getCleanClientUrl(url) {
  */
 export function renderBaseEmailLayout({
   previewText = '',
-  badge = '',
   title = '',
   contentHtml = '',
   clientUrl = '',
@@ -111,13 +110,7 @@ export function renderBaseEmailLayout({
           <tr>
             <td style="padding: 28px 36px 36px 36px;" class="content-padding">
 
-              ${badge ? `
-              <!-- Pill Badge -->
-              <div style="margin-bottom: 16px; text-align: left;">
-                <span style="display: inline-block; padding: 4px 12px; background-color: #EEF7FF; color: #006AB5; border: 1px solid #B7E1FF; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">
-                  ${badge}
-                </span>
-              </div>` : ''}
+
 
               ${title ? `
               <!-- Main Email Title -->
@@ -143,6 +136,7 @@ export function renderBaseEmailLayout({
               </p>
             </td>
           </tr>
+
 
         </table>
         <!-- End Main Card -->
@@ -262,7 +256,6 @@ export function renderResendVerificationEmail({ name, verificationLink, expireHo
 
   return renderBaseEmailLayout({
     previewText: `Liên kết kích hoạt tài khoản ThinkUp mới của bạn (hiệu lực ${expireHours} giờ).`,
-    badge: 'GỬI LẠI XÁC THỰC',
     title: 'Liên kết kích hoạt tài khoản ThinkUp',
     contentHtml,
     clientUrl,
@@ -308,7 +301,6 @@ export function renderForgotPasswordOtpEmail({ otpCode, expireMinutes = 5, clien
 
   return renderBaseEmailLayout({
     previewText: `Mã xác thực OTP ThinkUp của bạn là: ${otpCode} (hiệu lực ${expireMinutes} phút).`,
-    badge: 'BẢO MẬT TÀI KHOẢN',
     title: 'Mã xác thực đặt lại mật khẩu',
     contentHtml,
     clientUrl,
@@ -373,7 +365,6 @@ export function renderNewsletterWelcomeEmail({ email = '', clientUrl = '' }) {
 
   return renderBaseEmailLayout({
     previewText: 'Chào mừng bạn đến với Bản tin ThinkUp! Cập nhật kiến thức lập trình & công nghệ mới nhất.',
-    badge: 'THINKUP NEWSLETTER',
     title: 'Chào mừng bạn đến với ThinkUp Blog!',
     contentHtml,
     clientUrl,
@@ -427,7 +418,6 @@ export function renderNewBlogPostEmail({
 
   return renderBaseEmailLayout({
     previewText: `Bài viết mới: ${title} | ${category} (${readTime})`,
-    badge: 'BÀI VIẾT MỚI',
     title: title,
     contentHtml,
     clientUrl,
