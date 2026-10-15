@@ -26,7 +26,9 @@ import {
   leaveStudyRoom,
   sendRoomMessage,
   getRoomSessionMessages,
-  cleanupExpiredEmptyRooms
+  cleanupExpiredEmptyRooms,
+  getRoomParticipants,
+  updateParticipantCanvasPosition
 } from '../studyroom.user.js';
 import { getMongoDb, closeMongoDb } from '../../db.js';
 
@@ -419,6 +421,123 @@ test('Study Room Backend Service Test Suite', async (t) => {
     // Xác nhận phòng không còn tồn tại trong CSDL
     const checkDeleted = await roomsColl.findOne({ _id: idleRoom._id });
     assert.equal(checkDeleted, null);
+  });
+
+  await t.test('21. Truy xuất thông tin avatar hiển thị: avatar, tên (Bạn) và chức danh (Chủ phòng, Moderator, Thành viên)', async () => {
+    // Tạo phòng với chủ phòng Minh Khoa
+    const avatarRoom = await createStudyRoom('user_host_1', {
+      name: 'Phòng học trải nghiệm Avatar Canvas',
+      type: 'public',
+      creatorName: 'Minh Khoa',
+      creatorAvatar: 'https://cdn.thinkup.edu.vn/avatars/minh-khoa.png'
+    });
+
+    // Thêm một Moderator vào phòng
+    await generateLiveKitToken({
+      roomId: avatarRoom.roomId,
+      userId: 'user_mod_2',
+      userName: 'Hoàng Long',
+      userAvatar: 'https://cdn.thinkup.edu.vn/avatars/hoang-long.png',
+      role: 'moderator'
+    });
+
+    // Thêm một Thành viên thường vào phòng
+    await generateLiveKitToken({
+      roomId: avatarRoom.roomId,
+      userId: 'user_member_3',
+      userName: 'Thùy Chi',
+      role: 'member'
+    });
+
+    // Case 1: Người dùng hiện tại là 'user_host_1' (Chủ phòng)
+    const hostView = await getRoomParticipants(avatarRoom.roomId, 'user_host_1');
+    assert.equal(hostView.total, 3);
+
+    const selfHost = hostView.participants.find(p => p.userId === 'user_host_1');
+    assert.ok(selfHost);
+    assert.equal(selfHost.isSelf, true);
+    assert.equal(selfHost.displayName, 'Minh Khoa (Bạn)');
+    assert.equal(selfHost.role, 'owner');
+    assert.equal(selfHost.roleLabel, 'Chủ phòng');
+    assert.equal(selfHost.avatar, 'https://cdn.thinkup.edu.vn/avatars/minh-khoa.png');
+    assert.equal(selfHost.initials, 'MK');
+
+    const otherMod = hostView.participants.find(p => p.userId === 'user_mod_2');
+    assert.ok(otherMod);
+    assert.equal(otherMod.isSelf, false);
+    assert.equal(otherMod.displayName, 'Hoàng Long'); // Không có chữ (Bạn)
+    assert.equal(otherMod.role, 'moderator');
+    assert.equal(otherMod.roleLabel, 'Moderator');
+    assert.equal(otherMod.avatar, 'https://cdn.thinkup.edu.vn/avatars/hoang-long.png');
+
+    const otherMember = hostView.participants.find(p => p.userId === 'user_member_3');
+    assert.ok(otherMember);
+    assert.equal(otherMember.isSelf, false);
+    assert.equal(otherMember.displayName, 'Thùy Chi');
+    assert.equal(otherMember.role, 'member');
+    assert.equal(otherMember.roleLabel, 'Thành viên');
+    assert.equal(otherMember.initials, 'TC');
+
+    // Case 2: Khi 'user_mod_2' vào xem phòng
+    const modView = await getRoomParticipants(avatarRoom.roomId, 'user_mod_2');
+    const selfMod = modView.participants.find(p => p.userId === 'user_mod_2');
+    assert.equal(selfMod.isSelf, true);
+    assert.equal(selfMod.displayName, 'Hoàng Long (Bạn)');
+    assert.equal(selfMod.roleLabel, 'Moderator');
+  });
+
+  await t.test('22. Cập nhật tọa độ kéo thả avatar trên canvas', async () => {
+    // Di chuyển avatar của Minh Khoa tới tọa độ (450, 600)
+    const updateRes = await updateParticipantCanvasPosition('user_test_idle', 'user_host_1', { x: 450, y: 600 }).catch(() => null);
+    
+    // Test với phòng hợp lệ
+    const moveRoom = await createStudyRoom('user_mover', {
+      name: 'Phòng học test di chuyển avatar',
+      type: 'public'
+    });
+
+    const moveRes = await updateParticipantCanvasPosition(moveRoom.roomId, 'user_mover', { x: 520, y: 380 });
+    assert.equal(moveRes.success, true);
+    assert.equal(moveRes.data.position.x, 520);
+    assert.equal(moveRes.data.position.y, 380);
+
+    // Kiểm tra dữ liệu được lưu vào DB
+    const participantsData = await getRoomParticipants(moveRoom.roomId, 'user_mover');
+    const mover = participantsData.participants.find(p => p.userId === 'user_mover');
+    assert.equal(mover.position.x, 520);
+    assert.equal(mover.position.y, 380);
+  });
+
+  await t.test('23. Tự động liên kết và truy xuất Avatar Cloudinary từ CSDL users', async () => {
+    const usersColl = db.collection('users');
+    const cloudinaryUserId = 'user_cloudinary_test_' + Date.now();
+    const cloudinaryAvatarUrl = 'https://res.cloudinary.com/x7v2ofnh/image/upload/v1728000000/avatars/student_khoa.jpg';
+
+    // Tạo giả lập user trong collection users với avatar lưu trên Cloudinary
+    await usersColl.insertOne({
+      id: cloudinaryUserId,
+      full_name: 'Nguyễn Khoa',
+      avatar_url: cloudinaryAvatarUrl,
+      role: 'student',
+      testRun: true
+    });
+
+    // 1. Khi tạo phòng mà không truyền creatorAvatar
+    const autoRoom = await createStudyRoom(cloudinaryUserId, {
+      name: 'Phòng học tự động nhận Cloudinary Avatar',
+      type: 'public'
+    });
+
+    // Xác nhận avatar chủ phòng được tự động gán URL từ Cloudinary
+    const participantsList = await getRoomParticipants(autoRoom.roomId, cloudinaryUserId);
+    const selfUser = participantsList.participants.find(p => p.userId === cloudinaryUserId);
+    assert.ok(selfUser);
+    assert.equal(selfUser.avatar, cloudinaryAvatarUrl);
+    assert.equal(selfUser.name, 'Nguyễn Khoa');
+    assert.equal(selfUser.displayName, 'Nguyễn Khoa (Bạn)');
+
+    // Dọn dẹp user mẫu
+    await usersColl.deleteMany({ testRun: true });
   });
 
   // Dọn dẹp dữ liệu test

@@ -37,6 +37,29 @@ export function generateRoomLink(roomCode, baseUrl = process.env.CLIENT_URL || '
 }
 
 /**
+ * Lấy nhãn chức danh hiển thị theo vai trò (Chủ phòng, Moderator, Thành viên)
+ * @param {'owner'|'moderator'|'member'} role
+ * @returns {'Chủ phòng'|'Moderator'|'Thành viên'}
+ */
+export function getRoleLabel(role) {
+  if (role === 'owner') return 'Chủ phòng';
+  if (role === 'moderator') return 'Moderator';
+  return 'Thành viên';
+}
+
+/**
+ * Lấy 2 ký tự viết tắt đại diện tên (ví dụ: "Minh Khoa" -> "MK")
+ * @param {string} name
+ * @returns {string}
+ */
+export function getInitials(name = '') {
+  if (!name || typeof name !== 'string') return 'TU';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
  * 1. Hàm tạo phòng học ảo
  * Lưu các trường:
  * - type: 'public' | 'private'
@@ -63,7 +86,8 @@ export async function createStudyRoom(creatorId, payload = {}) {
     capacity = 20,
     roomTheme = '',
     password = '',
-    creatorName = 'Tôi'
+    creatorName = 'Tôi',
+    creatorAvatar = ''
   } = payload;
 
   // Validation
@@ -133,6 +157,29 @@ export async function createStudyRoom(creatorId, payload = {}) {
     ? tags.map(t => String(t).trim()).filter(Boolean)
     : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : []);
 
+  // Tự động đối chiếu avatar người dùng từ CSDL users (Cloudinary URL) nếu chưa được truyền
+  let resolvedCreatorAvatar = creatorAvatar || '';
+  let resolvedCreatorName = creatorName || 'Chủ phòng';
+  if (creatorId && (!resolvedCreatorAvatar || resolvedCreatorName === 'Tôi')) {
+    try {
+      const usersColl = db.collection('users');
+      const { ObjectId } = await import('mongodb');
+      const userDoc = ObjectId.isValid(creatorId)
+        ? await usersColl.findOne({ _id: new ObjectId(creatorId) })
+        : await usersColl.findOne({ id: String(creatorId) });
+      if (userDoc) {
+        if (!resolvedCreatorAvatar) {
+          resolvedCreatorAvatar = userDoc.avatar_url || userDoc.avatar || '';
+        }
+        if (resolvedCreatorName === 'Tôi' || !resolvedCreatorName) {
+          resolvedCreatorName = userDoc.full_name || userDoc.name || 'Chủ phòng';
+        }
+      }
+    } catch {
+      // Bỏ qua lỗi tra cứu nếu user không tồn tại
+    }
+  }
+
   const newRoom = {
     roomId: roomCode.toLowerCase(),
     roomCode: roomCode.toUpperCase(),
@@ -169,8 +216,11 @@ export async function createStudyRoom(creatorId, payload = {}) {
     participants: [
       {
         userId: creatorId || 'owner_' + Date.now(),
-        name: creatorName || 'Chủ phòng',
+        name: resolvedCreatorName,
+        avatar: resolvedCreatorAvatar,
+        initials: getInitials(resolvedCreatorName),
         role: 'owner', // 'owner' | 'moderator' | 'member'
+        roleLabel: getRoleLabel('owner'), // 'Chủ phòng'
         position: { x: 300, y: 250 },
         joinedAt: new Date()
       }
@@ -883,6 +933,41 @@ export function createStudyRoomRouter(express, requireAuth) {
   });
 
   /**
+   * GET /api/study-room/:roomId/participants
+   * Truy xuất danh sách avatar thành viên kèm tên (tự động gắn "(Bạn)" nếu là người dùng hiện tại),
+   * chức danh người dùng (Chủ phòng, Moderator, Thành viên) và tọa độ canvas.
+   */
+  router.get('/:roomId/participants', async (req, res, next) => {
+    try {
+      const { roomId } = req.params;
+      const currentUserId = req.userId || req.query.userId;
+      const result = await getRoomParticipants(roomId, currentUserId);
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * PUT /api/study-room/:roomId/position
+   * Cập nhật vị trí kéo thả avatar của người dùng trên canvas
+   */
+  router.put('/:roomId/position', async (req, res, next) => {
+    try {
+      const { roomId } = req.params;
+      const userId = req.userId || req.body.userId;
+      const { x, y } = req.body;
+      const result = await updateParticipantCanvasPosition(roomId, userId, { x, y });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
    * GET /api/study-room/:roomId/permissions
    * Lấy ma trận quyền (Permission Matrix) và quyền thực tế của người dùng trong phòng
    */
@@ -1124,9 +1209,11 @@ export function calculateNonOverlappingCanvasPosition(existingParticipants = [],
  * @param {string} params.roomId - Mã phòng học
  * @param {string} params.userId - ID người dùng
  * @param {string} [params.userName] - Tên hiển thị người dùng
+ * @param {string} [params.userAvatar] - URL ảnh avatar đại diện
+ * @param {string} [params.avatar] - URL ảnh avatar (alias)
  * @param {'owner'|'moderator'|'member'} [params.role] - Vai trò
  */
-export async function generateLiveKitToken({ roomId, userId, userName = 'Học viên', role = 'member' }) {
+export async function generateLiveKitToken({ roomId, userId, userName = 'Học viên', userAvatar = '', avatar = '', role = 'member' }) {
   if (!roomId) {
     const error = new Error('Thiếu roomId để sinh LiveKit token.');
     error.status = 400;
@@ -1170,11 +1257,39 @@ export async function generateLiveKitToken({ roomId, userId, userName = 'Học v
   // Tính toán tọa độ canvas không bị đè lên người khác
   const position = calculateNonOverlappingCanvasPosition(room.participants || []);
 
+  let effectiveAvatar = userAvatar || avatar || '';
+  let effectiveUserName = userName || 'Học viên';
+  if (userId && (!effectiveAvatar || effectiveUserName === 'Học viên')) {
+    try {
+      const usersColl = db.collection('users');
+      const { ObjectId } = await import('mongodb');
+      const userDoc = ObjectId.isValid(userId)
+        ? await usersColl.findOne({ _id: new ObjectId(userId) })
+        : await usersColl.findOne({ id: String(userId) });
+      if (userDoc) {
+        if (!effectiveAvatar) {
+          effectiveAvatar = userDoc.avatar_url || userDoc.avatar || '';
+        }
+        if (effectiveUserName === 'Học viên') {
+          effectiveUserName = userDoc.full_name || userDoc.name || 'Học viên';
+        }
+      }
+    } catch {
+      // Bỏ qua lỗi tra cứu
+    }
+  }
+
+  const roleLabel = getRoleLabel(userRole);
+  const initials = getInitials(effectiveUserName);
+
   // Cập nhật người dùng vào danh sách participants của phòng trong DB
   const participantDoc = {
     userId: String(userId),
-    name: userName,
+    name: effectiveUserName,
+    avatar: effectiveAvatar,
+    initials,
     role: userRole,
+    roleLabel,
     position,
     joinedAt: new Date()
   };
@@ -1200,6 +1315,9 @@ export async function generateLiveKitToken({ roomId, userId, userName = 'Học v
     name: userName,
     metadata: JSON.stringify({
       role: userRole,
+      roleLabel,
+      avatar: effectiveAvatar,
+      initials,
       position,
       roomId: room.roomId
     })
@@ -1815,6 +1933,166 @@ export async function cleanupExpiredEmptyRooms(maxIdleMs = ROOM_IDLE_TIMEOUT_MS)
   return {
     deletedCount: deleteResult.deletedCount || 0,
     roomIds: expiredRoomCodes
+  };
+}
+
+/**
+ * 25. Hàm truy xuất danh sách avatar và thông tin người dùng đang có mặt trong phòng học ảo
+ * Trả về:
+ * - userId: ID tài khoản
+ * - name: Tên gốc của người dùng
+ * - displayName: Tên hiển thị (Tự động thêm "(Bạn)" nếu avatar này là của đúng tài khoản người dùng đang dùng)
+ * - isSelf: Boolean xác định có phải tài khoản của chính mình không
+ * - avatar: URL ảnh đại diện người dùng
+ * - initials: Ký tự viết tắt đại diện tên (nếu chưa có avatar)
+ * - role: Vai trò ('owner' | 'moderator' | 'member')
+ * - roleLabel: Chức danh hiển thị tiếng Việt ('Chủ phòng' | 'Moderator' | 'Thành viên')
+ * - position: { x, y } Tọa độ vị trí trên canvas để kéo thả
+ * - joinedAt: Thời gian vào phòng
+ * 
+ * @param {string} roomId
+ * @param {string} [currentUserId] - ID người dùng hiện tại đang gửi request
+ */
+export async function getRoomParticipants(roomId, currentUserId = null) {
+  if (!roomId) {
+    const error = new Error('Thiếu roomId để lấy danh sách thành viên.');
+    error.status = 400;
+    throw error;
+  }
+
+  const db = await getMongoDb();
+  const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
+
+  const room = await roomsColl.findOne({
+    $or: [{ roomId: roomId.toLowerCase() }, { roomCode: roomId.toUpperCase() }],
+    isActive: { $ne: false }
+  });
+
+  if (!room) {
+    const error = new Error('Không tìm thấy phòng học ảo.');
+    error.status = 404;
+    throw error;
+  }
+
+  const rawParticipants = Array.isArray(room.participants) ? room.participants : [];
+
+  // Tự động đối chiếu avatar người dùng từ CSDL users (Cloudinary URL) nếu chưa có sẵn trong participant
+  const userIdsNeedLookup = rawParticipants
+    .filter(p => !p.avatar && p.userId)
+    .map(p => p.userId);
+
+  const userAvatarMap = {};
+  if (userIdsNeedLookup.length > 0) {
+    try {
+      const { ObjectId } = await import('mongodb');
+      const objectIds = userIdsNeedLookup
+        .filter(id => ObjectId.isValid(id))
+        .map(id => new ObjectId(id));
+      const usersColl = db.collection('users');
+      const userDocs = await usersColl.find({
+        $or: [
+          { _id: { $in: objectIds } },
+          { id: { $in: userIdsNeedLookup } }
+        ]
+      }).toArray();
+      for (const u of userDocs) {
+        const key = u._id ? u._id.toString() : u.id;
+        userAvatarMap[key] = u.avatar_url || u.avatar || '';
+      }
+    } catch {
+      // Bỏ qua lỗi tra cứu
+    }
+  }
+
+  const participants = rawParticipants.map(p => {
+    const isSelf = Boolean(currentUserId && String(p.userId) === String(currentUserId));
+    const role = p.role || (String(room.creatorId) === String(p.userId) ? 'owner' : 'member');
+    const roleLabel = p.roleLabel || getRoleLabel(role);
+    const rawName = p.name || 'Thành viên';
+    const displayName = isSelf ? `${rawName} (Bạn)` : rawName;
+    const avatar = p.avatar || userAvatarMap[String(p.userId)] || '';
+    const initials = p.initials || getInitials(rawName);
+
+    return {
+      userId: p.userId,
+      name: rawName,
+      displayName,
+      isSelf,
+      avatar,
+      initials,
+      role,
+      roleLabel,
+      position: p.position || { x: 300, y: 250 },
+      joinedAt: p.joinedAt || room.createdAt
+    };
+  });
+
+  return {
+    roomId: room.roomId,
+    roomName: room.name,
+    total: participants.length,
+    currentUserId: currentUserId ? String(currentUserId) : null,
+    participants
+  };
+}
+
+/**
+ * 26. Hàm cập nhật tọa độ kéo thả avatar trên canvas phòng học ảo
+ * Khi người dùng kéo thả avatar của mình trên canvas, gọi hàm này để lưu vị trí mới { x, y }
+ * 
+ * @param {string} roomId
+ * @param {string} userId - ID người dùng kéo avatar
+ * @param {object} position - { x, y }
+ */
+export async function updateParticipantCanvasPosition(roomId, userId, position = {}) {
+  if (!roomId || !userId) {
+    const error = new Error('Thiếu roomId hoặc userId để cập nhật vị trí canvas.');
+    error.status = 400;
+    throw error;
+  }
+
+  const x = Number(position.x);
+  const y = Number(position.y);
+  if (isNaN(x) || isNaN(y)) {
+    const error = new Error('Tọa độ canvas (x, y) phải là số hợp lệ.');
+    error.status = 400;
+    throw error;
+  }
+
+  const db = await getMongoDb();
+  const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
+
+  const room = await roomsColl.findOne({
+    $or: [{ roomId: roomId.toLowerCase() }, { roomCode: roomId.toUpperCase() }],
+    isActive: { $ne: false }
+  });
+
+  if (!room) {
+    const error = new Error('Không tìm thấy phòng học ảo.');
+    error.status = 404;
+    throw error;
+  }
+
+  const updateResult = await roomsColl.updateOne(
+    { _id: room._id, 'participants.userId': String(userId) },
+    {
+      $set: {
+        'participants.$.position': { x, y },
+        updatedAt: new Date()
+      }
+    }
+  );
+
+  return {
+    success: true,
+    message: 'Đã cập nhật vị trí avatar trên canvas thành công.',
+    data: {
+      roomId: room.roomId,
+      userId: String(userId),
+      position: { x, y },
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    }
   };
 }
 
