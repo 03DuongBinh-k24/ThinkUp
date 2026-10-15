@@ -1,0 +1,426 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  createStudyRoom,
+  getRandomAvailablePublicRoom,
+  getStudyRoomCards,
+  searchAndJoinRoom,
+  generateRoomCode,
+  generateRoomLink,
+  maskRoomId,
+  formatStudyRoomDisplayInfo,
+  searchStudyRoomsByNameAndTopic,
+  filterStudyRoomsByTagOrStatus,
+  getTopPopularTagsAndAllRooms,
+  filterRoomsByUserTags,
+  getStudyRoomDisplayList,
+  calculateNonOverlappingCanvasPosition,
+  generateLiveKitToken,
+  getPermissionMatrix,
+  getMemberEffectivePermissions,
+  updateRoomPermissions,
+  changeRoomTheme,
+  inviteUserToRoom,
+  requestJoinApproval,
+  handleJoinApprovalRequest,
+  leaveStudyRoom,
+  sendRoomMessage,
+  getRoomSessionMessages,
+  cleanupExpiredEmptyRooms
+} from '../studyroom.user.js';
+import { getMongoDb, closeMongoDb } from '../../db.js';
+
+test('Study Room Backend Service Test Suite', async (t) => {
+  const db = await getMongoDb();
+  const roomsColl = db.collection('study_rooms');
+
+  // Dọn dẹp data test trước
+  await roomsColl.deleteMany({ testRun: true });
+
+  await t.test('1. Validation tạo phòng học', async () => {
+    // Tên phòng dưới 5 ký tự
+    await assert.rejects(
+      async () => {
+        await createStudyRoom('user_123', {
+          name: '1234',
+          topic: 'Lập trình',
+          capacity: 10
+        });
+      },
+      { code: 'INVALID_ROOM_NAME' }
+    );
+
+    // Chủ đề dài hơn 20 ký tự
+    await assert.rejects(
+      async () => {
+        await createStudyRoom('user_123', {
+          name: 'Phòng học thuật toán nâng cao',
+          topic: 'Chủ đề này quá dài vượt hơn 20 ký tự quy định',
+          capacity: 10
+        });
+      },
+      { code: 'INVALID_ROOM_TOPIC' }
+    );
+
+    // Phòng riêng tư nhưng không có mật khẩu hoặc mật khẩu ngắn
+    await assert.rejects(
+      async () => {
+        await createStudyRoom('user_123', {
+          name: 'Phòng học riêng tư bí mật',
+          type: 'private',
+          password: '12'
+        });
+      },
+      { code: 'INVALID_ROOM_PASSWORD' }
+    );
+  });
+
+  let createdPublicRoom = null;
+  let createdPrivateRoom = null;
+
+  await t.test('2. Tạo thành công phòng học công khai (Public Room)', async () => {
+    const payload = {
+      name: 'Luyện thi chứng chỉ AWS Cloud',
+      type: 'public',
+      goal: 'Hoàn thành 3 đề thi thử và ghi chú lỗi',
+      topic: 'Cloud Computing',
+      tags: ['AWS', 'DevOps', 'Cert'],
+      capacity: 5,
+      roomTheme: 'https://i.pinimg.com/originals/55/fc/4b/55fc4bee7c31f0850262da53fa1e3180.gif',
+      creatorName: 'Anh Dev'
+    };
+
+    createdPublicRoom = await createStudyRoom('user_test_1', payload);
+
+    assert.ok(createdPublicRoom._id);
+    assert.ok(createdPublicRoom.roomCode);
+    assert.ok(createdPublicRoom.roomLink);
+    assert.equal(createdPublicRoom.name, payload.name);
+    assert.equal(createdPublicRoom.type, 'public');
+    assert.equal(createdPublicRoom.capacity, 5);
+    assert.equal(createdPublicRoom.hasPassword, false);
+    assert.equal(createdPublicRoom.password, undefined); // Không leak password
+
+    // Đánh dấu để dọn dẹp sau test
+    await roomsColl.updateOne({ _id: createdPublicRoom._id }, { $set: { testRun: true } });
+  });
+
+  await t.test('3. Tạo thành công phòng học riêng tư (Private Room có Password)', async () => {
+    const payload = {
+      name: 'Nhóm đồ án bí mật K21',
+      type: 'private',
+      goal: 'Review lại code backend sprint 2',
+      topic: 'Đồ án nhóm',
+      tags: ['NodeJS', 'Angular'],
+      capacity: 4,
+      roomTheme: 'https://motionbgs.com/media/9514/pragmata-horizon.960x540.mp4',
+      password: 'mypassword123',
+      creatorName: 'Leader'
+    };
+
+    createdPrivateRoom = await createStudyRoom('user_test_2', payload);
+
+    assert.ok(createdPrivateRoom._id);
+    assert.equal(createdPrivateRoom.type, 'private');
+    assert.equal(createdPrivateRoom.hasPassword, true);
+    assert.equal(createdPrivateRoom.password, undefined); // Không leak password ra client
+
+    // Đánh dấu để dọn dẹp sau test
+    await roomsColl.updateOne({ _id: createdPrivateRoom._id }, { $set: { testRun: true } });
+  });
+
+  await t.test('4. Tìm phòng công khai còn chỗ để spawn ngẫu nhiên (Random Spawn)', async () => {
+    const spawnRoom = await getRandomAvailablePublicRoom();
+    assert.ok(spawnRoom);
+    assert.equal(spawnRoom.type, 'public');
+    assert.ok(spawnRoom.currentUsers < spawnRoom.capacity);
+  });
+
+  await t.test('5. Load danh sách thẻ phòng học ảo (Lobby Cards)', async () => {
+    const result = await getStudyRoomCards({ search: 'AWS', tab: 'trending' });
+    assert.ok(Array.isArray(result.rooms));
+    assert.ok(result.rooms.length >= 1);
+    const found = result.rooms.find(r => r.roomId === createdPublicRoom.roomId);
+    assert.ok(found);
+    assert.equal(found.type, 'public');
+    assert.equal(found.password, undefined);
+  });
+
+  await t.test('6. Tìm kiếm phòng bằng mã phòng hoặc link và xác thực mật khẩu', async () => {
+    // 6a. Vào phòng công khai bằng mã phòng
+    const publicJoinByCode = await searchAndJoinRoom(createdPublicRoom.roomCode);
+    assert.equal(publicJoinByCode.success, true);
+    assert.equal(publicJoinByCode.room.roomId, createdPublicRoom.roomId);
+
+    // 6b. Vào phòng công khai bằng link phòng
+    const publicJoinByLink = await searchAndJoinRoom(createdPublicRoom.roomLink);
+    assert.equal(publicJoinByLink.success, true);
+    assert.equal(publicJoinByLink.room.roomId, createdPublicRoom.roomId);
+
+    // 6c. Vào phòng riêng tư nhưng không nhập mật khẩu -> Lỗi 401 PASSWORD_REQUIRED
+    await assert.rejects(
+      async () => {
+        await searchAndJoinRoom(createdPrivateRoom.roomCode, '');
+      },
+      { code: 'PASSWORD_REQUIRED' }
+    );
+
+    // 6d. Vào phòng riêng tư nhập sai mật khẩu -> Lỗi 403 INVALID_PASSWORD
+    await assert.rejects(
+      async () => {
+        await searchAndJoinRoom(createdPrivateRoom.roomCode, 'sai_mat_khau');
+      },
+      { code: 'INVALID_PASSWORD' }
+    );
+
+    // 6e. Vào phòng riêng tư nhập đúng mật khẩu -> Thành công
+    const privateJoinSuccess = await searchAndJoinRoom(createdPrivateRoom.roomCode, 'mypassword123');
+    assert.equal(privateJoinSuccess.success, true);
+    assert.equal(privateJoinSuccess.room.roomId, createdPrivateRoom.roomId);
+    assert.equal(privateJoinSuccess.room.theme, createdPrivateRoom.theme);
+  });
+
+  await t.test('7. Tìm kiếm phòng theo chủ đề và tên phòng', async () => {
+    // Tìm theo tên
+    const byName = await searchStudyRoomsByNameAndTopic({ name: 'AWS Cloud' });
+    assert.ok(byName.length >= 1);
+    assert.ok(byName.some(r => r.roomName.includes('AWS')));
+
+    // Tìm theo chủ đề
+    const byTopic = await searchStudyRoomsByNameAndTopic({ topic: 'Đồ án nhóm' });
+    assert.ok(byTopic.length >= 1);
+    assert.ok(byTopic.some(r => r.topic.includes('Đồ án')));
+  });
+
+  await t.test('8. Lọc phòng theo tag kỹ năng và theo trạng thái (new, available, active)', async () => {
+    // Lọc theo tag kỹ năng
+    const byTag = await filterStudyRoomsByTagOrStatus({ tag: 'DevOps' });
+    assert.ok(byTag.length >= 1);
+    assert.ok(byTag.some(r => r.tags.includes('DevOps')));
+
+    // Lọc theo trạng thái còn chỗ (available)
+    const byAvailable = await filterStudyRoomsByTagOrStatus({ status: 'available' });
+    assert.ok(byAvailable.length >= 1);
+    assert.ok(byAvailable.every(r => r.currentUsers < r.capacity));
+
+    // Lọc theo trạng thái mới mở (new)
+    const byNew = await filterStudyRoomsByTagOrStatus({ status: 'new' });
+    assert.ok(byNew.length >= 1);
+  });
+
+  await t.test('9. Lọc 6 tag phổ biến nhất và nút "Tất cả" hiển thị mọi phòng', async () => {
+    const res = await getTopPopularTagsAndAllRooms({ fetchAllRooms: true });
+    assert.ok(Array.isArray(res.topTags));
+    assert.ok(res.topTags.length <= 6);
+    assert.ok(Array.isArray(res.allRooms));
+    // Đảm bảo chứa cả phòng công khai và riêng tư
+    const hasPublic = res.allRooms.some(r => r.statusType === 'công khai');
+    const hasPrivate = res.allRooms.some(r => r.statusType === 'riêng tư');
+    assert.ok(hasPublic);
+    assert.ok(hasPrivate);
+  });
+
+  await t.test('10. Lọc phòng học có tag do người dùng chọn', async () => {
+    const userSelectedTags = ['AWS', 'NodeJS'];
+    const matchedRooms = await filterRoomsByUserTags(userSelectedTags);
+    assert.ok(matchedRooms.length >= 2);
+  });
+
+  await t.test('11. Truy xuất thông tin chuẩn hóa & Quy tắc che ID phòng riêng tư', async () => {
+    const displayList = await getStudyRoomDisplayList();
+    assert.ok(displayList.length >= 2);
+
+    const publicItem = displayList.find(r => r.statusType === 'công khai');
+    const privateItem = displayList.find(r => r.statusType === 'riêng tư');
+
+    assert.ok(publicItem);
+    assert.ok(privateItem);
+
+    // Phòng công khai: ID đầy đủ, không có dấu *
+    assert.ok(!publicItem.roomId.includes('*'));
+    assert.equal(publicItem.statusType, 'công khai');
+    assert.ok(publicItem.roomName);
+    assert.ok(publicItem.capacity);
+
+    // Phòng riêng tư: 3 số/ký tự đầu giữ nguyên, còn lại hiển thị *
+    assert.ok(privateItem.roomId.includes('*'));
+    assert.equal(privateItem.statusType, 'riêng tư');
+    assert.equal(privateItem.rawId, undefined); // Không bao giờ gửi rawId thật
+    assert.equal(privateItem.roomId.slice(0, 3), createdPrivateRoom.roomId.slice(0, 3));
+    assert.equal(privateItem.roomId.length, createdPrivateRoom.roomId.length);
+  });
+
+  await t.test('12. Tính toán tọa độ canvas không chèn lên nhau', () => {
+    const existing = [
+      { position: { x: 300, y: 200 } },
+      { position: { x: 450, y: 200 } }
+    ];
+    const newPos = calculateNonOverlappingCanvasPosition(existing, { minDistance: 100 });
+    assert.ok(typeof newPos.x === 'number' && typeof newPos.y === 'number');
+    // Khoảng cách tới điểm đầu tiên phải >= 100px
+    const dist1 = Math.sqrt((newPos.x - 300) ** 2 + (newPos.y - 200) ** 2);
+    assert.ok(dist1 >= 90);
+  });
+
+  await t.test('13. Sinh LiveKit token an toàn từ backend', async () => {
+    const tokenResult = await generateLiveKitToken({
+      roomId: createdPublicRoom.roomId,
+      userId: 'user_livekit_test',
+      userName: 'Văn Test',
+      role: 'member'
+    });
+    assert.ok(tokenResult.token);
+    assert.ok(typeof tokenResult.token === 'string');
+    assert.equal(tokenResult.roomId, createdPublicRoom.roomId);
+    assert.ok(tokenResult.position);
+    assert.ok(tokenResult.livekitUrl);
+  });
+
+  await t.test('14. Tra cứu Permission Matrix & Quyền thực tế thành viên', async () => {
+    const matrix = getPermissionMatrix();
+    assert.ok(Array.isArray(matrix));
+    assert.ok(matrix.some(f => f.feature === 'voice'));
+    assert.ok(matrix.some(f => f.feature === 'camera'));
+    assert.ok(matrix.some(f => f.feature === 'shareScreen'));
+
+    // Tra cứu quyền cho thành viên thường
+    const perm = await getMemberEffectivePermissions(createdPublicRoom.roomId, 'user_member_1');
+    assert.equal(perm.role, 'member');
+    assert.ok(perm.effectivePermissions);
+    assert.equal(typeof perm.effectivePermissions.canVoice, 'boolean');
+  });
+
+  await t.test('15. Cấp quyền toàn phòng (Chỉ áp dụng với Chủ phòng)', async () => {
+    // Thành viên thường cố đổi quyền -> Bị từ chối 403
+    await assert.rejects(
+      async () => {
+        await updateRoomPermissions(createdPublicRoom.roomId, 'stranger_user', { voiceEnabled: false });
+      },
+      { code: 'OWNER_PERMISSION_REQUIRED' }
+    );
+
+    // Chủ phòng đổi quyền khóa bảng vẽ và tắt mic
+    const updated = await updateRoomPermissions(createdPublicRoom.roomId, 'user_test_1', {
+      voiceEnabled: false,
+      whiteboardLocked: true
+    });
+    assert.equal(updated.voiceEnabled, false);
+    assert.equal(updated.whiteboardLocked, true);
+  });
+
+  await t.test('16. Thay đổi nền phòng (Room Theme)', async () => {
+    const themeRes = await changeRoomTheme(createdPublicRoom.roomId, 'user_test_1', 'sky-room');
+    assert.equal(themeRes.theme, 'sky-room');
+  });
+
+  await t.test('17. Mời người dùng vào phòng & Duyệt yêu cầu vào phòng', async () => {
+    // Mời qua Email / SĐT
+    const inviteRes = await inviteUserToRoom(createdPublicRoom.roomId, 'friend@thinkup.vn', 'Anh Dev');
+    assert.equal(inviteRes.success, true);
+    assert.ok(inviteRes.inviteLink);
+
+    // Gửi yêu cầu xin vào phòng
+    const reqRes = await requestJoinApproval(createdPublicRoom.roomId, 'joiner_123', 'Người xin vào');
+    assert.equal(reqRes.success, true);
+
+    // Chủ phòng duyệt
+    const handleRes = await handleJoinApprovalRequest(createdPublicRoom.roomId, 'user_test_1', 'joiner_123', 'approve');
+    assert.equal(handleRes.success, true);
+    assert.equal(handleRes.action, 'approve');
+  });
+
+  await t.test('18. Xử lý nhiều người dùng cùng vào phòng và rời phòng (Multi-user concurrency & Leave)', async () => {
+    // Giả lập 3 người dùng cùng vào phòng qua token
+    await generateLiveKitToken({ roomId: createdPublicRoom.roomId, userId: 'user_alice', userName: 'Alice' });
+    await generateLiveKitToken({ roomId: createdPublicRoom.roomId, userId: 'user_bob', userName: 'Bob' });
+    await generateLiveKitToken({ roomId: createdPublicRoom.roomId, userId: 'user_charlie', userName: 'Charlie' });
+
+    const roomAfterJoin = await roomsColl.findOne({ roomId: createdPublicRoom.roomId });
+    assert.ok(roomAfterJoin.currentUsers >= 3);
+    assert.ok(roomAfterJoin.participants.some(p => p.userId === 'user_alice'));
+    assert.ok(roomAfterJoin.participants.some(p => p.userId === 'user_bob'));
+    assert.ok(roomAfterJoin.participants.some(p => p.userId === 'user_charlie'));
+
+    // Alice rời phòng
+    const leaveRes = await leaveStudyRoom(createdPublicRoom.roomId, 'user_alice');
+    assert.equal(leaveRes.success, true);
+
+    const roomAfterLeave = await roomsColl.findOne({ roomId: createdPublicRoom.roomId });
+    assert.ok(!roomAfterLeave.participants.some(p => p.userId === 'user_alice'));
+  });
+
+  await t.test('19. Bảo mật phiên Chat: Người mới vào chỉ thấy tin nhắn KỂ TỪ KHI VÀO PHÒNG', async () => {
+    // Bước 1: Alice và Bob đang ở trong phòng từ trước
+    await generateLiveKitToken({ roomId: createdPublicRoom.roomId, userId: 'user_alice_chat', userName: 'Alice' });
+    await generateLiveKitToken({ roomId: createdPublicRoom.roomId, userId: 'user_bob_chat', userName: 'Bob' });
+
+    // Bước 2: Alice gửi 2 tin nhắn trước khi Charlie vào phòng
+    await sendRoomMessage(createdPublicRoom.roomId, {
+      userId: 'user_alice_chat',
+      senderName: 'Alice',
+      content: 'Tin nhắn 1: Chào Bob nhé!'
+    });
+    await sendRoomMessage(createdPublicRoom.roomId, {
+      userId: 'user_alice_chat',
+      senderName: 'Alice',
+      content: 'Tin nhắn 2: Chúng ta ôn tập câu hỏi 1-10 trước.'
+    });
+
+    // Đợi 10ms để mốc thời gian chênh lệch rõ ràng
+    await new Promise(r => setTimeout(r, 15));
+
+    // Bước 3: Charlie mới vào phòng học sau
+    await generateLiveKitToken({ roomId: createdPublicRoom.roomId, userId: 'user_charlie_chat', userName: 'Charlie' });
+
+    // Bước 4: Bob gửi thêm tin nhắn sau khi Charlie đã vào
+    await sendRoomMessage(createdPublicRoom.roomId, {
+      userId: 'user_bob_chat',
+      senderName: 'Bob',
+      content: 'Tin nhắn 3: Chào cả phòng, chào Charlie!'
+    });
+
+    // Bước 5: Kiểm tra danh sách tin nhắn của Charlie
+    // Charlie CHỈ ĐƯỢC THẤY "Tin nhắn 3" (được gửi sau khi Charlie vào), KHÔNG THẤY Tin nhắn 1 & 2!
+    const charlieMessages = await getRoomSessionMessages(createdPublicRoom.roomId, 'user_charlie_chat');
+    assert.equal(charlieMessages.length, 1);
+    assert.equal(charlieMessages[0].content, 'Tin nhắn 3: Chào cả phòng, chào Charlie!');
+
+    // Bước 6: Kiểm tra danh sách tin nhắn của Alice (ở trong phòng từ đầu)
+    // Alice VẪN THẤY TOÀN BỘ 3 tin nhắn
+    const aliceMessages = await getRoomSessionMessages(createdPublicRoom.roomId, 'user_alice_chat');
+    assert.equal(aliceMessages.length, 3);
+    assert.equal(aliceMessages[0].content, 'Tin nhắn 1: Chào Bob nhé!');
+    assert.equal(aliceMessages[2].content, 'Tin nhắn 3: Chào cả phòng, chào Charlie!');
+  });
+
+  await t.test('20. Xóa phòng học trống quá 1 tiếng (không có người dùng, kể cả chủ phòng)', async () => {
+    // Tạo một phòng riêng thử nghiệm xóa
+    const idleRoom = await createStudyRoom('user_test_idle', {
+      name: 'Phòng học tạm thời thử xóa idle',
+      type: 'public',
+      topic: 'Test Auto Cleanup'
+    });
+
+    // Giả lập tất cả mọi người rời phòng -> phòng trống
+    await leaveStudyRoom(idleRoom.roomId, 'user_test_idle');
+
+    // Giả lập thời gian trống đã trôi qua 65 phút (> 1 tiếng = 60 phút)
+    const sixtyFiveMinutesAgo = new Date(Date.now() - 65 * 60 * 1000);
+    await roomsColl.updateOne(
+      { _id: idleRoom._id },
+      { $set: { emptySince: sixtyFiveMinutesAgo, currentUsers: 0, participants: [] } }
+    );
+
+    // Chạy dọn dẹp phòng trống quá hạn
+    const cleanupResult = await cleanupExpiredEmptyRooms();
+    assert.ok(cleanupResult.deletedCount >= 1);
+    assert.ok(cleanupResult.roomIds.includes(idleRoom.roomId));
+
+    // Xác nhận phòng không còn tồn tại trong CSDL
+    const checkDeleted = await roomsColl.findOne({ _id: idleRoom._id });
+    assert.equal(checkDeleted, null);
+  });
+
+  // Dọn dẹp dữ liệu test
+  await roomsColl.deleteMany({ testRun: true });
+});
