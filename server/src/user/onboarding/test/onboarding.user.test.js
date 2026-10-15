@@ -20,6 +20,9 @@ describe('Khảo Sát Onboarding với Database Thật (MongoDB Atlas)', () => {
     testUserId = new ObjectId();
     testUserIdStr = testUserId.toString();
 
+    // Đảm bảo không còn bản ghi cũ nếu test trước đó bị gián đoạn
+    await db.collection('users').deleteMany({ email: 'test_onboarding_runner@thinkup.vn' });
+
     // Tạo học viên kiểm thử tạm thời trong collection users
     await db.collection('users').insertOne({
       _id: testUserId,

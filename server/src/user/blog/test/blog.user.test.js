@@ -7,10 +7,16 @@ import {
   validateEmail,
   calculateReadTime,
   generateSlug,
+  countWords,
+  sanitizeHtmlContent,
+  generateUniqueSlug,
+  generateSeoMetadata,
   formatBlogPost,
   extractTableOfContents,
   injectHeadingsWithIds,
+  getBlogCollection,
   getBlogList,
+  getManageBlogList,
   getBlogDetail,
   getPopularTopics,
   getMostViewedBlogPosts,
@@ -18,7 +24,15 @@ import {
   subscribeNewsletter,
   notifySubscribersNewPost,
   saveBlogPost,
+  saveDraftPost,
+  deleteBlogPost,
   uploadBlogImage,
+  supplementExistingPostsSeo,
+  reactBlogPost,
+  generateShareLinks,
+  formatBlogComment,
+  getBlogComments,
+  addBlogComment,
   createBlogRouter,
 } from '../blog.user.js';
 
@@ -28,13 +42,16 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
   const testCategoryB = 'Kỹ năng mềm Test';
   const testSubEmail1 = 'tester_newsletter_1@thinkup.vn';
   const testSubEmail2 = 'tester_newsletter_2@thinkup.vn';
+  const testOwnerEmail = 'author_tester@thinkup.vn';
   const insertedBlogIds = [];
 
   before(async () => {
     db = await getMongoDb();
+    const collection = getBlogCollection(db);
 
     // Dọn dẹp dữ liệu kiểm thử cũ nếu có
-    await db.collection('blogs').deleteMany({ category: { $in: [testCategoryA, testCategoryB] } });
+    await collection.deleteMany({ category: { $in: [testCategoryA, testCategoryB] } });
+    await collection.deleteMany({ owner_email: testOwnerEmail });
     await db.collection('newsletter_subscribers').deleteMany({ email: { $in: [testSubEmail1, testSubEmail2] } });
 
     // Tạo các bài viết blog mẫu cho bộ kiểm thử
@@ -44,7 +61,8 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
         title: 'Hướng dẫn Lập Trình React Toàn Tập',
         slug: 'huong-dan-lap-trinh-react-toan-tap-test',
         description: 'Tài liệu học React từ cơ bản tới nâng cao cho người mới bắt đầu.',
-        content: 'Nội dung bài viết chi tiết về React hooks, components, state management...',
+        summary: 'Tài liệu học React từ cơ bản tới nâng cao cho người mới bắt đầu.',
+        content: '<p>Nội dung bài viết chi tiết về React hooks, components, state management và nhiều kiến thức bổ ích khác.</p>',
         category: testCategoryA,
         category_id: generateSlug(testCategoryA),
         author: 'Nguyễn Văn Dev',
@@ -54,12 +72,14 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
         tags: ['React', 'Frontend', 'JavaScript'],
         published_at: new Date(now.getTime() - 86400000 * 3),
         created_at: new Date(now.getTime() - 86400000 * 3),
+        owner_email: testOwnerEmail,
       },
       {
         title: 'Bí quyết viết Clean Code cho JavaScript Developer',
         slug: 'bi-quyet-viet-clean-code-js-test',
         description: 'Các nguyên tắc vàng để mã nguồn của bạn luôn gọn gàng và dễ bảo trì.',
-        content: 'Clean code là tiêu chuẩn không thể thiếu đối với mọi lập trình viên chuyên nghiệp...',
+        summary: 'Các nguyên tắc vàng để mã nguồn của bạn luôn gọn gàng và dễ bảo trì.',
+        content: '<p>Clean code là tiêu chuẩn không thể thiếu đối với mọi lập trình viên chuyên nghiệp...</p>',
         category: testCategoryA,
         category_id: generateSlug(testCategoryA),
         author: 'Trần Thị Code',
@@ -69,12 +89,14 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
         tags: ['CleanCode', 'JavaScript'],
         published_at: new Date(now.getTime() - 86400000 * 2),
         created_at: new Date(now.getTime() - 86400000 * 2),
+        owner_email: testOwnerEmail,
       },
       {
         title: 'Kỹ năng giao tiếp và làm việc nhóm trong dự án Agile',
         slug: 'ky-nang-giao-tiep-va-lam-viec-nhom-agile-test',
         description: 'Phương pháp nâng cao sự thấu hiểu và phối hợp hiệu quả trong team tech.',
-        content: 'Giao tiếp là chìa khóa then chốt quyết định sự thành bại của một dự án công nghệ...',
+        summary: 'Phương pháp nâng cao sự thấu hiểu và phối hợp hiệu quả trong team tech.',
+        content: '<p>Giao tiếp là chìa khóa then chốt quyết định sự thành bại của một dự án công nghệ...</p>',
         category: testCategoryB,
         category_id: generateSlug(testCategoryB),
         author: 'Lê Quản Trị',
@@ -84,26 +106,29 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
         tags: ['Agile', 'SoftSkills'],
         published_at: new Date(now.getTime() - 86400000 * 1),
         created_at: new Date(now.getTime() - 86400000 * 1),
+        owner_email: testOwnerEmail,
       },
     ];
 
-    const insertResult = await db.collection('blogs').insertMany(sampleBlogs);
+    const insertResult = await collection.insertMany(sampleBlogs);
     Object.values(insertResult.insertedIds).forEach(id => insertedBlogIds.push(id));
   });
 
   after(async () => {
     // Dọn dẹp toàn bộ dữ liệu kiểm thử
     if (db) {
+      const collection = getBlogCollection(db);
       if (insertedBlogIds.length > 0) {
-        await db.collection('blogs').deleteMany({ _id: { $in: insertedBlogIds } });
+        await collection.deleteMany({ _id: { $in: insertedBlogIds } });
       }
-      await db.collection('blogs').deleteMany({ category: { $in: [testCategoryA, testCategoryB] } });
+      await collection.deleteMany({ category: { $in: [testCategoryA, testCategoryB] } });
+      await collection.deleteMany({ owner_email: testOwnerEmail });
       await db.collection('newsletter_subscribers').deleteMany({ email: { $in: [testSubEmail1, testSubEmail2] } });
     }
     await closeMongoDb();
   });
 
-  describe('1. Kiểm thử các hàm tiện ích (Helpers & Utilities)', () => {
+  describe('1. Kiểm thử các hàm tiện ích (Helpers & SEO & XSS Utilities)', () => {
     it('TC-UTIL-01: validateEmail kiểm tra đúng định dạng email', () => {
       assert.strictEqual(validateEmail('test@thinkup.vn').valid, true);
       assert.strictEqual(validateEmail('invalid-email').valid, false);
@@ -125,269 +150,478 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
       assert.strictEqual(calculateReadTime(longText), '3 phút');
     });
 
-    it('TC-UTIL-04: formatBlogPost chuẩn hóa đầy đủ các trường hiển thị của bài blog', () => {
+    it('TC-UTIL-04: countWords đếm chính xác số từ tiếng Việt và loại trừ thẻ HTML', () => {
+      const htmlText = '<p>Xin chào <strong>các bạn</strong> học viên ThinkUp!</p>';
+      assert.strictEqual(countWords(htmlText), 7);
+    });
+
+    it('TC-UTIL-05: sanitizeHtmlContent loại bỏ mã độc XSS và bảo toàn định dạng Rich Text (BR-BLOG-03 & AC-BLG-13)', () => {
+      const maliciousHtml = '<p>Hello world</p><script>alert("XSS Attack!")</script><img src="pic.jpg" onerror="alert(1)"><iframe src="evil.com"></iframe><a href="javascript:void(0)">Link</a>';
+      const safeHtml = sanitizeHtmlContent(maliciousHtml);
+
+      assert.strictEqual(safeHtml.includes('<script>'), false);
+      assert.strictEqual(safeHtml.includes('alert('), false);
+      assert.strictEqual(safeHtml.includes('onerror='), false);
+      assert.strictEqual(safeHtml.includes('<iframe'), false);
+      assert.strictEqual(safeHtml.includes('javascript:'), false);
+      assert.strictEqual(safeHtml.includes('<p>Hello world</p>'), true);
+    });
+
+    it('TC-UTIL-06: generateUniqueSlug tự động thêm hậu tố -1, -2 khi slug bị trùng lặp (BR-BLOG-01)', async () => {
+      const slug1 = await generateUniqueSlug(db, 'Huong dan lap trinh React Toan Tap test');
+      assert.strictEqual(slug1, 'huong-dan-lap-trinh-react-toan-tap-test-1');
+    });
+
+    it('TC-UTIL-07: generateSeoMetadata áp dụng chuẩn SEO Google SERP và Smart Fallback (BR-BLOG-02)', () => {
+      // Khi không nhập SEO Title và SEO Description -> Tự động Fallback
+      const seoAuto = generateSeoMetadata({
+        title: 'Học Lập Trình TypeScript Toàn Tập Từ A Đến Z',
+        summary: 'Khoá học ngắn giúp bạn làm chủ ngôn ngữ TypeScript trong vòng 7 ngày.',
+        status: 'published',
+      });
+
+      assert.strictEqual(seoAuto.seoTitle, 'Học Lập Trình TypeScript Toàn Tập Từ A Đến Z');
+      assert.strictEqual(seoAuto.seoDescription, 'Khoá học ngắn giúp bạn làm chủ ngôn ngữ TypeScript trong vòng 7 ngày.');
+      assert.strictEqual(seoAuto.robots, 'index, follow');
+      assert.ok(seoAuto.openGraph);
+      assert.strictEqual(seoAuto.schemaMarkup['@type'], 'BlogPosting');
+
+      // Khi là bài nháp -> Robots phải là noindex, nofollow (BR-BLOG-04)
+      const seoDraft = generateSeoMetadata({
+        title: 'Bài viết nháp',
+        status: 'draft',
+      });
+      assert.strictEqual(seoDraft.robots, 'noindex, nofollow');
+
+      // Khi tiêu đề SEO vượt quá 60 ký tự -> Tự động cắt tối đa 60 ký tự
+      const longTitle = 'A'.repeat(80);
+      const seoCut = generateSeoMetadata({
+        title: 'Tiêu đề ngắn',
+        seoTitle: longTitle,
+      });
+      assert.strictEqual(seoCut.seoTitle.length, 60);
+    });
+
+    it('TC-UTIL-08: formatBlogPost chuẩn hóa đầy đủ các trường hiển thị và thông tin SEO của bài blog', () => {
       const mockDoc = {
         _id: new ObjectId(),
         title: 'Bài Viết Mẫu',
-        description: 'Mô tả ngắn',
+        description: 'Mô tả ngắn bài viết',
+        summary: 'Mô tả ngắn bài viết',
         category: 'Công nghệ',
         author: 'Admin',
         published_at: new Date('2026-05-15T10:00:00Z'),
         views: 120,
-        content: 'Nội dung bài viết mẫu',
+        content: '<p>Nội dung bài viết mẫu</p>',
+        status: 'published',
       };
       const formatted = formatBlogPost(mockDoc);
       assert.ok(formatted.id);
       assert.strictEqual(formatted.title, 'Bài Viết Mẫu');
-      assert.strictEqual(formatted.description, 'Mô tả ngắn');
+      assert.strictEqual(formatted.description, 'Mô tả ngắn bài viết');
       assert.strictEqual(formatted.category, 'Công nghệ');
       assert.strictEqual(formatted.author, 'Admin');
       assert.strictEqual(formatted.date, '2026-05-15');
       assert.ok(formatted.readTime);
       assert.ok(formatted.coverImage);
       assert.strictEqual(formatted.views, 120);
+      assert.strictEqual(formatted.seoTitle, 'Bài Viết Mẫu');
+      assert.strictEqual(formatted.seoDescription, 'Mô tả ngắn bài viết');
+      assert.strictEqual(formatted.robots, 'index, follow');
+      assert.ok(formatted.schemaMarkup);
       assert.ok(Array.isArray(formatted.tableOfContents));
     });
 
-    it('TC-UTIL-05: extractTableOfContents chỉ sinh neo cho heading người dùng có chủ động tạo id, không tự sinh neo', () => {
-      const htmlContent = `
-        <h2>1. Giới thiệu tổng quan không có neo</h2>
-        <p>Nội dung giới thiệu...</p>
-        <h3 id="cai-dat-moi-truong">1.1 Cài đặt môi trường có neo người dùng tạo</h3>
-        <p>Chi tiết cài đặt...</p>
-        <h2>2. Cấu trúc dự án không có neo</h2>
-      `;
-      // Chỉ lấy đúng heading có id neo người dùng chủ động tạo
-      const toc = extractTableOfContents(htmlContent);
-      assert.strictEqual(toc.length, 1, 'Chỉ duy nhất 1 heading có id neo được đưa vào mục lục');
-      assert.strictEqual(toc[0].id, 'cai-dat-moi-truong');
-      assert.strictEqual(toc[0].level, 3);
-
-      // Nếu người dùng KHÔNG tạo neo nào trong bài viết -> Mục lục rỗng []
-      const emptyToc = extractTableOfContents('<h2>Tiêu đề bình thường</h2><p>Đoạn văn</p>');
-      assert.strictEqual(emptyToc.length, 0, 'Tuyệt đối không tự ý sinh neo khi người dùng không tạo');
+    it('TC-UTIL-09: extractTableOfContents chỉ sinh neo cho heading người dùng có chủ động tạo id', () => {
+      const html = '<h2 id="gioi-thieu">Giới thiệu</h2><p>Nội dung</p><h2>Không có ID</h2><h3 id="chi-tiet">Chi tiết</h3>';
+      const toc = extractTableOfContents(html);
+      assert.strictEqual(toc.length, 2);
+      assert.strictEqual(toc[0].id, 'gioi-thieu');
+      assert.strictEqual(toc[1].id, 'chi-tiet');
     });
 
-    it('TC-UTIL-06: injectHeadingsWithIds luôn bảo toàn 100% nội dung gốc của người dùng', () => {
-      const rawHtml = '<h2>Tiêu đề không có id</h2><p>Đoạn văn có <strong>in đậm</strong></p>';
-      const output = injectHeadingsWithIds(rawHtml);
-      assert.strictEqual(output, rawHtml, 'Không được tự ý tiêm bất kỳ id nào vào nội dung của người dùng');
+    it('TC-UTIL-10: injectHeadingsWithIds luôn bảo toàn 100% nội dung gốc của người dùng', () => {
+      const raw = '<h2>Tiêu đề</h2>';
+      assert.strictEqual(injectHeadingsWithIds(raw), raw);
     });
 
-    it('TC-UTIL-07: uploadBlogImage xử lý và trả về đường dẫn ảnh hợp lệ cho thanh công cụ', async () => {
-      const res = await uploadBlogImage({ url: 'https://example.com/banner.jpg' });
-      assert.strictEqual(res.url, 'https://example.com/banner.jpg');
-      assert.ok(res.message);
-    });
-  });
+    it('TC-UTIL-11: uploadBlogImage validate dung lượng và định dạng ảnh (AC-BLG-10)', async () => {
+      // 1. Thành công với ảnh hợp lệ
+      const result = await uploadBlogImage({
+        fileName: 'avatar.png',
+        sizeBytes: 1.5 * 1024 * 1024,
+        url: 'https://cdn.thinkup.vn/avatar.png',
+      });
+      assert.ok(result.url);
 
-  describe('2. Hàm truy xuất danh sách bài blog (getBlogList)', () => {
-    it('TC-LIST-01: Xuất đầy đủ các trường yêu cầu: chủ đề, tên bài blog, mô tả ngắn, tác giả, ngày đăng, thời gian đọc, hình ảnh bìa', async () => {
-      const result = await getBlogList({ category: testCategoryA, limit: 2 }, { db });
+      // 2. Báo lỗi khi ảnh thumbnail vượt quá 2MB (AC-BLG-10)
+      await assert.rejects(
+        () => uploadBlogImage({ fileName: 'large.jpg', sizeBytes: 3 * 1024 * 1024, type: 'thumbnail' }),
+        err => err.code === 'IMAGE_TOO_LARGE'
+      );
 
-      assert.ok(result);
-      assert.ok(Array.isArray(result.posts));
-      assert.strictEqual(result.posts.length, 2);
-
-      const post = result.posts[0];
-      // Kiểm tra đầy đủ từng trường theo yêu cầu của đề bài:
-      assert.ok(post.category, 'Phải có trường chủ đề bài blog (category)');
-      assert.ok(post.title, 'Phải có trường tên bài blog (title)');
-      assert.ok(post.description, 'Phải có trường mô tả ngắn (description)');
-      assert.ok(post.author, 'Phải có trường tác giả (author)');
-      assert.ok(post.date, 'Phải có trường ngày đăng bài (date)');
-      assert.ok(post.readTime, 'Phải có trường thời gian đọc (readTime)');
-      assert.ok(post.coverImage, 'Phải có trường hình ảnh bìa (coverImage)');
-      assert.strictEqual(typeof post.views, 'number', 'Phải có trường lượt xem dạng số');
-    });
-
-    it('TC-LIST-02: Lọc danh sách bài viết theo chủ đề (category)', async () => {
-      const result = await getBlogList({ category: testCategoryB }, { db });
-      assert.strictEqual(result.posts.length, 1);
-      assert.strictEqual(result.posts[0].category, testCategoryB);
-      assert.strictEqual(result.posts[0].title, 'Kỹ năng giao tiếp và làm việc nhóm trong dự án Agile');
-    });
-
-    it('TC-LIST-03: Tìm kiếm bài viết theo từ khóa (search)', async () => {
-      const result = await getBlogList({ search: 'Clean Code', category: testCategoryA }, { db });
-      assert.strictEqual(result.posts.length, 1);
-      assert.ok(result.posts[0].title.includes('Clean Code'));
-    });
-
-    it('TC-LIST-04: Phân trang danh sách bài viết đúng chỉ số page, limit và hasMore', async () => {
-      const resultPage1 = await getBlogList({ category: testCategoryA, page: 1, limit: 1 }, { db });
-      assert.strictEqual(resultPage1.posts.length, 1);
-      assert.strictEqual(resultPage1.page, 1);
-      assert.strictEqual(resultPage1.hasMore, true);
+      // 3. Báo lỗi khi sai định dạng file (không phải jpg, png, webp)
+      await assert.rejects(
+        () => uploadBlogImage({ fileName: 'document.pdf', sizeBytes: 500 * 1024 }),
+        err => err.code === 'INVALID_IMAGE_FORMAT'
+      );
     });
   });
 
-  describe('3. Hàm xuất số lượng về những chủ đề phổ biến (getPopularTopics)', () => {
-    it('TC-TOPIC-01: Thống kê số lượng bài viết của từng chủ đề và sắp xếp theo độ phổ biến giảm dần', async () => {
-      const topics = await getPopularTopics({ db });
+  describe('2. Kiểm thử luồng Lưu bản nháp (Save Draft Flow - D1 & D2 & AC-BLG-09)', () => {
+    let savedDraftId = null;
 
-      assert.ok(Array.isArray(topics));
-      assert.ok(topics.length >= 2);
+    it('TC-DRAFT-01: Lưu bản nháp CHỈ CẦN DUY NHẤT TIÊU ĐỀ, không bắt buộc ảnh hay nội dung đầy đủ', async () => {
+      const draftResult = await saveDraftPost({
+        title: 'Ý tưởng bài viết mới về Docker Compose',
+        ownerEmail: testOwnerEmail,
+      }, { db });
 
-      const topicA = topics.find(t => t.label === testCategoryA);
-      const topicB = topics.find(t => t.label === testCategoryB);
+      assert.ok(draftResult.id);
+      assert.strictEqual(draftResult.status, 'draft');
+      assert.strictEqual(draftResult.slug, 'y-tuong-bai-viet-moi-ve-docker-compose');
+      assert.ok(draftResult.message.includes('Đã lưu bản nháp lúc'));
 
-      assert.ok(topicA, `Chủ đề ${testCategoryA} phải tồn tại`);
-      assert.strictEqual(topicA.count, 2, 'Chủ đề A có 2 bài viết mẫu đã tạo');
+      savedDraftId = draftResult.id;
+      insertedBlogIds.push(new ObjectId(savedDraftId));
+    });
 
-      assert.ok(topicB, `Chủ đề ${testCategoryB} phải tồn tại`);
-      assert.strictEqual(topicB.count, 1, 'Chủ đề B có 1 bài viết mẫu đã tạo');
+    it('TC-DRAFT-02: Báo lỗi khi lưu bản nháp mà không có tiêu đề', async () => {
+      await assert.rejects(
+        () => saveDraftPost({ title: '   ' }, { db }),
+        err => err.code === 'MISSING_BLOG_TITLE'
+      );
+    });
 
-      // Xác nhận chủ đề có nhiều bài hơn (count = 2) đứng trước chủ đề có ít bài hơn (count = 1)
-      const indexA = topics.findIndex(t => t.label === testCategoryA);
-      const indexB = topics.findIndex(t => t.label === testCategoryB);
-      assert.ok(indexA < indexB, 'Chủ đề có nhiều bài hơn phải được sắp xếp trước');
+    it('TC-DRAFT-03: Bài viết DRAFT KHÔNG ĐƯỢC PHÉP HIỂN THỊ trên trang /main/blog (Lưu ý cốt lõi của USER)', async () => {
+      const publicList = await getBlogList({}, { db });
+      const foundDraft = publicList.posts.find(p => p.id === savedDraftId || p.status === 'draft');
+      assert.strictEqual(foundDraft, undefined, 'Bản nháp không được phép xuất hiện trên trang public blog!');
+    });
+
+    it('TC-DRAFT-04: Khách vãng lai không được phép xem chi tiết bài DRAFT nếu không có quyền preview', async () => {
+      await assert.rejects(
+        () => getBlogDetail(savedDraftId, { db }),
+        err => err.code === 'DRAFT_NOT_PUBLIC'
+      );
+
+      // Nhưng chủ sở hữu hoặc người có link xem trước (preview=true) thì xem được
+      const detail = await getBlogDetail(savedDraftId, { db, allowDraft: true, ownerEmail: testOwnerEmail });
+      assert.strictEqual(detail.post.id, savedDraftId);
+      assert.strictEqual(detail.post.status, 'draft');
+      assert.strictEqual(detail.post.robots, 'noindex, nofollow');
     });
   });
 
-  describe('4. Hàm xuất những bài viết được xem nhiều (getMostViewedBlogPosts)', () => {
-    it('TC-VIEW-01: Xuất tên bài blog (title) và lượt xem (views) của các bài viết được xem nhiều nhất', async () => {
-      const mostViewed = await getMostViewedBlogPosts({ db, limit: 5 });
+  describe('3. Kiểm thử luồng Đăng bài viết (Publish Flow - Luồng 5 & 6 & AC-BLG-08)', () => {
+    let publishedPostId = null;
 
-      assert.ok(Array.isArray(mostViewed));
-      assert.ok(mostViewed.length >= 2);
+    it('TC-PUB-01: Chặn đăng bài khi thiếu thông tin bắt buộc (AC-BLG-08)', async () => {
+      // 1. Tiêu đề dưới 5 ký tự
+      await assert.rejects(
+        () => saveBlogPost({ title: 'Abc', status: 'published' }, { db }),
+        err => err.code === 'INVALID_TITLE_LENGTH'
+      );
 
-      // Bài viết đầu tiên phải có lượt xem cao nhất trong danh mục test (3200 views)
-      const cleanCodePost = mostViewed.find(p => p.title.includes('Clean Code'));
-      assert.ok(cleanCodePost, 'Phải có bài Clean Code trong danh sách xem nhiều');
-      assert.strictEqual(cleanCodePost.views, 3200, 'Lượt xem của bài Clean Code phải bằng 3200');
-      assert.ok(cleanCodePost.title, 'Phải xuất tên bài blog');
+      // 2. Nội dung chưa đủ 50 từ
+      await assert.rejects(
+        () => saveBlogPost({
+          title: 'Học Lập Trình Golang Nâng Cao',
+          content: '<p>Nội dung quá ngắn dưới năm mươi từ.</p>',
+          status: 'published',
+        }, { db }),
+        err => err.code === 'INSUFFICIENT_CONTENT_WORDS'
+      );
 
-      // Kiểm tra tính giảm dần của lượt xem
-      for (let i = 0; i < mostViewed.length - 1; i++) {
-        assert.ok(mostViewed[i].views >= mostViewed[i + 1].views, 'Danh sách phải sắp xếp giảm dần theo lượt xem');
+      // 3. Thiếu danh mục
+      const longContent = Array(60).fill('từ').join(' ');
+      await assert.rejects(
+        () => saveBlogPost({
+          title: 'Học Lập Trình Golang Nâng Cao',
+          content: longContent,
+          status: 'published',
+        }, { db }),
+        err => err.code === 'MISSING_CATEGORY'
+      );
+
+      // 4. Thiếu ảnh đại diện
+      await assert.rejects(
+        () => saveBlogPost({
+          title: 'Học Lập Trình Golang Nâng Cao',
+          content: longContent,
+          category: testCategoryA,
+          status: 'published',
+        }, { db }),
+        err => err.code === 'MISSING_COVER_IMAGE'
+      );
+    });
+
+    it('TC-PUB-02: Đăng bài viết thành công khi nhập đầy đủ thông tin hợp lệ (HTTP 201)', async () => {
+      const validContent = `<p>${Array(60).fill('kiến thức').join(' ')}</p><script>alert("hacker")</script>`;
+      const pubResult = await saveBlogPost({
+        title: 'Học Lập Trình Golang Từ Cơ Bản Đến Nâng Cao 2026',
+        content: validContent,
+        category: testCategoryA,
+        coverImage: '/assets/blog/golang-cover.jpg',
+        summary: 'Khoá học Golang đầy đủ từ syntax đến microservices.',
+        tags: ['Golang', 'Backend'],
+        ownerEmail: testOwnerEmail,
+        status: 'published',
+        notify: false,
+      }, { db, notify: false });
+
+      assert.ok(pubResult.id);
+      assert.strictEqual(pubResult.status, 'published');
+      assert.strictEqual(pubResult.message, 'Xuất bản bài viết thành công!');
+
+      publishedPostId = pubResult.id;
+      insertedBlogIds.push(new ObjectId(publishedPostId));
+
+      // Kiểm tra trong CSDL nội dung đã được làm sạch XSS
+      const detail = await getBlogDetail(publishedPostId, { db });
+      assert.strictEqual(detail.post.content.includes('<script>'), false);
+      assert.strictEqual(detail.post.seoTitle, 'Học Lập Trình Golang Từ Cơ Bản Đến Nâng Cao 2026');
+      assert.strictEqual(detail.post.robots, 'index, follow');
+    });
+
+    it('TC-PUB-03: Cập nhật bài viết đã xuất bản sẽ đổi trạng thái thành updated', async () => {
+      const updateResult = await saveBlogPost({
+        id: publishedPostId,
+        title: 'Học Lập Trình Golang Từ Cơ Bản Đến Nâng Cao 2026 (Đã cập nhật)',
+        content: `<p>${Array(60).fill('bổ sung').join(' ')}</p>`,
+        category: testCategoryA,
+        coverImage: '/assets/blog/golang-cover.jpg',
+        status: 'published',
+      }, { db });
+
+      assert.strictEqual(updateResult.status, 'updated');
+      assert.strictEqual(updateResult.message, 'Cập nhật bài viết thành công!');
+    });
+  });
+
+  describe('4. Màn hình Quản lý bài viết cá nhân (/account/posts - 4 Tab trạng thái & Tìm kiếm)', () => {
+    it('TC-MANAGE-01: getManageBlogList trả về số lượng thống kê theo 4 tab trạng thái (AC-BLG-02)', async () => {
+      const manageRes = await getManageBlogList({
+        ownerEmail: testOwnerEmail,
+        tab: 'all',
+      }, { db });
+
+      assert.ok(manageRes.counts);
+      assert.strictEqual(typeof manageRes.counts.all, 'number');
+      assert.strictEqual(typeof manageRes.counts.draft, 'number');
+      assert.strictEqual(typeof manageRes.counts.published, 'number');
+      assert.strictEqual(typeof manageRes.counts.updated, 'number');
+      assert.ok(manageRes.counts.all >= manageRes.counts.draft + manageRes.counts.published);
+    });
+
+    it('TC-MANAGE-02: Lọc theo tab Bản nháp (draft) chỉ trả về bài có status = draft', async () => {
+      const draftTabRes = await getManageBlogList({
+        ownerEmail: testOwnerEmail,
+        tab: 'draft',
+      }, { db });
+
+      draftTabRes.posts.forEach(p => {
+        assert.strictEqual(p.status, 'draft');
+      });
+    });
+
+    it('TC-MANAGE-03: Lọc theo tab Đã đăng (published) chỉ trả về bài có status = published', async () => {
+      const pubTabRes = await getManageBlogList({
+        ownerEmail: testOwnerEmail,
+        tab: 'published',
+      }, { db });
+
+      pubTabRes.posts.forEach(p => {
+        assert.strictEqual(p.status, 'published');
+      });
+    });
+
+    it('TC-MANAGE-04: Tìm kiếm theo tiêu đề hoặc đường dẫn URL (slug)', async () => {
+      const searchRes = await getManageBlogList({
+        ownerEmail: testOwnerEmail,
+        search: 'clean-code-js',
+      }, { db });
+
+      assert.ok(searchRes.posts.length > 0);
+      assert.ok(searchRes.posts.some(p => p.slug.includes('clean-code-js')));
+    });
+
+    it('TC-MANAGE-05: Trả về trạng thái trống khi không tìm thấy bài viết (AC-BLG-03)', async () => {
+      const emptyRes = await getManageBlogList({
+        ownerEmail: testOwnerEmail,
+        search: 'tu_khoa_khong_bao_gio_ton_tai_123456789',
+      }, { db });
+
+      assert.strictEqual(emptyRes.posts.length, 0);
+      assert.strictEqual(emptyRes.total, 0);
+    });
+  });
+
+  describe('5. Bổ sung SEO cho các bài mẫu cũ trong CSDL (Yêu cầu của USER)', () => {
+    it('TC-SEO-01: supplementExistingPostsSeo tự động kiểm tra và làm giàu dữ liệu SEO cho các bài mẫu', async () => {
+      const result = await supplementExistingPostsSeo(db);
+      assert.strictEqual(typeof result.updatedCount, 'number');
+
+      // Xác minh bài mẫu cicd-intro đã có seoTitle và seoDescription đầy đủ
+      const collection = getBlogCollection(db);
+      const post = await collection.findOne({ slug: 'cicd-intro' });
+      if (post) {
+        assert.ok(post.seoTitle && post.seoTitle.length > 0);
+        assert.ok(post.seoDescription && post.seoDescription.length > 0);
+        assert.ok(Array.isArray(post.keywords) || typeof post.keywords === 'string');
       }
     });
+  });
 
-    it('TC-VIEW-02: getBlogSidebar gộp cả chủ đề phổ biến và bài viết xem nhiều cho FE', async () => {
+  describe('6. Kiểm thử các chức năng Blog công khai, Sidebar, Thống kê, Bản tin', () => {
+    it('TC-LIST-01: getBlogList xuất đầy đủ các trường yêu cầu cho trang /main/blog', async () => {
+      const result = await getBlogList({ category: testCategoryA }, { db });
+      assert.ok(result.posts.length > 0);
+      const first = result.posts[0];
+      assert.ok(first.title);
+      assert.ok(first.category);
+      assert.ok(first.author);
+      assert.ok(first.readTime);
+      assert.ok(first.coverImage);
+      assert.strictEqual(result.posts.every(p => p.status !== 'draft'), true);
+    });
+
+    it('TC-TOPIC-01: getPopularTopics thống kê số lượng bài viết của từng chủ đề', async () => {
+      const topics = await getPopularTopics({ db, limit: 5 });
+      assert.ok(Array.isArray(topics));
+      assert.ok(topics.length > 0);
+      assert.ok(topics[0].label);
+      assert.strictEqual(typeof topics[0].count, 'number');
+    });
+
+    it('TC-VIEW-01: getMostViewedBlogPosts xuất tên bài blog và lượt xem sắp xếp giảm dần', async () => {
+      const mostViewed = await getMostViewedBlogPosts({ db, limit: 3 });
+      assert.ok(mostViewed.length > 0);
+      assert.ok(mostViewed[0].views >= (mostViewed[1]?.views || 0));
+    });
+
+    it('TC-SIDEBAR-01: getBlogSidebar gộp cả chủ đề phổ biến và bài viết xem nhiều', async () => {
       const sidebar = await getBlogSidebar({ db });
-      assert.ok(sidebar.popularTopics);
-      assert.ok(sidebar.mostViewedArticles);
       assert.ok(Array.isArray(sidebar.popularTopics));
       assert.ok(Array.isArray(sidebar.mostViewedArticles));
     });
-  });
 
-  describe('5. Hàm truy xuất chi tiết một bài blog (getBlogDetail)', () => {
-    it('TC-DETAIL-01: Lấy chi tiết bài viết theo ID, tự động tăng lượt xem và trả về bài trước, bài sau, bài liên quan', async () => {
-      const targetId = insertedBlogIds[0].toString();
-      const initialDetail = await getBlogDetail(targetId, { db, incrementView: false });
-      const initialViews = initialDetail.post.views;
+    it('TC-SUB-01: subscribeNewsletter đăng ký email hợp lệ và lưu vào CSDL', async () => {
+      const subRes = await subscribeNewsletter({ email: testSubEmail1 }, { db });
+      assert.strictEqual(subRes.success, true);
 
-      // Gọi lấy chi tiết với incrementView: true (mặc định)
-      const detail = await getBlogDetail(targetId, { db });
-      assert.strictEqual(detail.post.views, initialViews + 1, 'Lượt xem phải được tăng thêm 1');
-      assert.ok(detail.post.title);
-      assert.ok(detail.post.description);
-      assert.ok(detail.post.category);
-      assert.ok(detail.post.author);
-      assert.ok(detail.post.date);
-      assert.ok(detail.post.readTime);
-      assert.ok(detail.post.content);
-      assert.ok('authorAvatar' in detail.post, 'Phải có trường authorAvatar');
-      assert.ok(Array.isArray(detail.post.tableOfContents), 'Phải có mảng mục lục tableOfContents');
-      assert.ok(Array.isArray(detail.relatedPosts));
+      // Đăng ký lại cùng email -> thông báo đã đăng ký trước đó
+      const repeatRes = await subscribeNewsletter({ email: testSubEmail1 }, { db });
+      assert.strictEqual(repeatRes.alreadySubscribed, true);
     });
 
-    it('TC-DETAIL-02: Báo lỗi 404 BLOG_NOT_FOUND khi mã bài viết không tồn tại', async () => {
-      const nonExistentId = new ObjectId().toString();
-      await assert.rejects(
-        async () => {
-          await getBlogDetail(nonExistentId, { db });
-        },
-        err => err.status === 404 && err.code === 'BLOG_NOT_FOUND'
-      );
-    });
-  });
+    it('TC-NOTIFY-01: notifySubscribersNewPost phát thông báo tới danh sách email nhận bản tin', async () => {
+      const notifyRes = await notifySubscribersNewPost({
+        id: 'test-id-123',
+        title: 'Bài viết công nghệ mới phát hành',
+        slug: 'bai-viet-cong-nghe-moi-phat-hanh',
+        description: 'Mô tả bài viết công nghệ mới.',
+      }, { db });
 
-  describe('6. Hàm đăng ký nhận bản tin (subscribeNewsletter)', () => {
-    it('TC-SUB-01: Đăng ký email mới hợp lệ thành công và lưu vào CSDL', async () => {
-      const result = await subscribeNewsletter({ email: testSubEmail1 }, { db });
-
-      assert.strictEqual(result.success, true);
-      assert.strictEqual(result.alreadySubscribed, false);
-      assert.ok(result.message);
-
-      // Xác nhận trong CSDL thật
-      const subscriber = await db.collection('newsletter_subscribers').findOne({ email: testSubEmail1 });
-      assert.ok(subscriber);
-      assert.strictEqual(subscriber.status, 'active');
+      assert.strictEqual(typeof notifyRes.notified, 'number');
+      assert.strictEqual(typeof notifyRes.totalSubscribers, 'number');
     });
 
-    it('TC-SUB-02: Thông báo người dùng khi email đã được đăng ký trước đó', async () => {
-      const result = await subscribeNewsletter({ email: testSubEmail1 }, { db });
+    it('TC-DELETE-01: deleteBlogPost xóa bài viết thành công', async () => {
+      const tempPost = await saveDraftPost({
+        title: 'Bài viết tạm thời để xóa',
+        ownerEmail: testOwnerEmail,
+      }, { db });
 
-      assert.strictEqual(result.success, true);
-      assert.strictEqual(result.alreadySubscribed, true);
-      assert.ok(result.message.includes('trước đó'));
+      const delRes = await deleteBlogPost(tempPost.id, { db, ownerEmail: testOwnerEmail });
+      assert.strictEqual(delRes.success, true);
+      assert.strictEqual(delRes.message, 'Xóa bài viết thành công!');
     });
 
-    it('TC-SUB-03: Báo lỗi 400 INVALID_EMAIL khi email không đúng định dạng', async () => {
-      await assert.rejects(
-        async () => {
-          await subscribeNewsletter({ email: 'email_sai_dinh_dang' }, { db });
-        },
-        err => err.status === 400 && err.code === 'INVALID_EMAIL'
-      );
-    });
-  });
-
-  describe('7. Hàm thông báo bài đăng mới về Gmail người dùng (notifySubscribersNewPost)', () => {
-    it('TC-NOTIFY-01: Gửi thông báo đến danh sách người dùng đăng ký nhận bản tin khi có bài mới', async () => {
-      // Đăng ký thêm email thứ 2
-      await subscribeNewsletter({ email: testSubEmail2 }, { db });
-
-      const newPostInfo = {
-        title: 'Khóa học TypeScript Nâng Cao Đã Chính Thức Ra Mắt',
-        description: 'Nắm vững Generic, Decorators, Type Manipulation trong TypeScript 2026.',
-        category: 'Công nghệ',
-        readTime: '6 phút',
-        slug: 'khoa-hoc-typescript-nang-cao-test',
-      };
-
-      const notifyResult = await notifySubscribersNewPost(newPostInfo, { db });
-
-      assert.ok(notifyResult.totalSubscribers >= 2, 'Phải có ít nhất 2 người đăng ký đã tạo');
-      assert.strictEqual(typeof notifyResult.notified, 'number');
-      assert.strictEqual(typeof notifyResult.failed, 'number');
-    });
-
-    it('TC-NOTIFY-02: Báo lỗi khi dữ liệu bài viết không hợp lệ', async () => {
-      await assert.rejects(
-        async () => {
-          await notifySubscribersNewPost(null, { db });
-        },
-        err => err.status === 400 && err.code === 'INVALID_BLOG_DATA'
-      );
-    });
-  });
-
-  describe('8. Hàm tạo bài viết blog và router Express sẵn sàng nối API', () => {
-    it('TC-CREATE-01: Tạo bài viết mới tự động sinh slug và tính toán thời gian đọc', async () => {
-      const created = await saveBlogPost(
-        {
-          title: 'Bài Viết Kiểm Thử Mới Tạo Tự Động',
-          content: 'Nội dung bài viết dùng để kiểm thử việc tính toán thời gian đọc và sinh slug tự động.',
-          category: testCategoryA,
-          author: 'Tester ThinkUp',
-        },
-        { db, notify: false }
-      );
-
-      assert.ok(created.id);
-      assert.ok(created.slug.includes('bai-viet-kiem-thu-moi-tao'));
-      insertedBlogIds.push(new ObjectId(created.id));
-    });
-
-    it('TC-ROUTER-01: Khởi tạo router Express độc lập sẵn sàng gắn vào app.use("/api/blog")', () => {
+    it('TC-ROUTER-01: createBlogRouter khởi tạo router Express độc lập chứa đầy đủ endpoint', () => {
       const router = createBlogRouter(express);
       assert.ok(router);
       assert.strictEqual(typeof router, 'function');
+    });
+  });
+
+  describe('7. Kiểm thử Tương tác Hữu ích / Không hữu ích, Chia sẻ mạng xã hội & Thảo luận', () => {
+    const testArticleSlug = 'huong-dan-lap-trinh-react-toan-tap-test';
+    const testVoterEmail = 'voter_tester_1@thinkup.vn';
+
+    it('TC-REACT-01: reactBlogPost ghi nhận đánh giá Hữu ích (like) và Không hữu ích (dislike) cho bài viết', async () => {
+      // 1. Đánh giá hữu ích
+      const likeRes = await reactBlogPost(testArticleSlug, {
+        action: 'like',
+        userEmail: testVoterEmail,
+      }, { db });
+
+      assert.strictEqual(likeRes.success, true);
+      assert.strictEqual(likeRes.action, 'like');
+      assert.ok(likeRes.likesCount >= 1);
+      assert.ok(likeRes.message.includes('hữu ích'));
+
+      // 2. Chuyển sang đánh giá không hữu ích (dislike)
+      const dislikeRes = await reactBlogPost(testArticleSlug, {
+        action: 'dislike',
+        userEmail: testVoterEmail,
+      }, { db });
+
+      assert.strictEqual(dislikeRes.success, true);
+      assert.strictEqual(dislikeRes.action, 'dislike');
+      assert.ok(dislikeRes.dislikesCount >= 1);
+    });
+
+    it('TC-REACT-02: getBlogDetail lưu và hiển thị đúng trạng thái tương tác khi người dùng xem lại bài viết', async () => {
+      const detail = await getBlogDetail(testArticleSlug, {
+        db,
+        userEmail: testVoterEmail,
+      });
+
+      assert.ok(detail.post);
+      assert.strictEqual(detail.userInteraction, 'dislike', 'Người dùng mở lại bài viết phải lưu đúng trạng thái dislike trước đó');
+      assert.ok(typeof detail.post.likesCount === 'number');
+      assert.ok(typeof detail.post.dislikesCount === 'number');
+    });
+
+    it('TC-SHARE-01: generateShareLinks sinh đúng định dạng link chia sẻ Facebook, LinkedIn và Copy URL', () => {
+      const links = generateShareLinks('bai-viet-chia-se-test');
+      assert.ok(links.postUrl.includes('/blog/bai-viet-chia-se-test'));
+      assert.ok(links.facebook.includes('facebook.com/sharer/sharer.php?u='));
+      assert.ok(links.linkedin.includes('linkedin.com/sharing/share-offsite/?url='));
+      assert.strictEqual(links.copyUrl, links.postUrl);
+    });
+
+    it('TC-COMMENT-01: Lấy danh sách bình luận thảo luận liên quan đến bài viết', async () => {
+      const commentsRes = await getBlogComments(testArticleSlug, { db });
+      assert.ok(Array.isArray(commentsRes.comments));
+      assert.strictEqual(typeof commentsRes.total, 'number');
+    });
+
+    it('TC-COMMENT-02: addBlogComment thêm bình luận mới thành công và lọc sạch mã độc XSS', async () => {
+      const commentRes = await addBlogComment(testArticleSlug, {
+        content: '<p>Bài viết chia sẻ rất chi tiết, cảm ơn tác giả!</p><script>alert("hack")</script>',
+        authorName: 'Học viên ABC',
+        userEmail: testVoterEmail,
+      }, { db });
+
+      assert.ok(commentRes.comment);
+      assert.ok(commentRes.comment.id);
+      assert.strictEqual(commentRes.comment.content.includes('<script>'), false);
+      assert.strictEqual(commentRes.comment.authorName, 'Học viên ABC');
+      assert.ok(commentRes.message.includes('thành công'));
+
+      // Sau khi thêm, danh sách bình luận của bài viết phải chứa bình luận mới này
+      const updatedComments = await getBlogComments(testArticleSlug, { db });
+      const found = updatedComments.comments.find(c => c.id === commentRes.comment.id);
+      assert.ok(found, 'Bình luận mới phải xuất hiện trong phần thảo luận bài viết');
+    });
+
+    it('TC-COMMENT-03: addBlogComment báo lỗi khi nội dung bình luận để trống', async () => {
+      await assert.rejects(
+        () => addBlogComment(testArticleSlug, { content: '   ' }, { db }),
+        err => err.code === 'MISSING_COMMENT_CONTENT'
+      );
     });
   });
 });

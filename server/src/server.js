@@ -26,6 +26,9 @@ import {
   getOnboardingCourseList,
 } from './user/onboarding/onboarding.user.js';
 import { createBlogRouter } from './user/blog/blog.user.js';
+import { createPurchaseRouter } from './user/purchase/purchase.user.js';
+import { createBillingRouter } from './user/purchase/billing.user.js';
+import { createStudyRoomRouter } from './user/studyroom/studyroom.user.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -324,8 +327,23 @@ app.use('/api/v1/onboarding', onboardingRouter);
 const blogRouter = createBlogRouter(express);
 app.use('/api/blog', blogRouter);
 app.use('/api/v1/blog', blogRouter); // Hỗ trợ tiền tố v1 nếu FE gọi
+app.use('/api/v1/posts', blogRouter); // Hỗ trợ endpoint chuẩn theo đặc tả: /api/v1/posts & /api/v1/posts/draft
 app.use('/api/newsletter', blogRouter); // Hỗ trợ endpoint đăng ký nhận bản tin trực tiếp
 app.use('/api/upload', blogRouter); // Hỗ trợ endpoint upload ảnh cho thanh công cụ soạn thảo bài viết
+
+// ─── 5d. Router Lịch Sử Mua Hàng & Hóa Đơn: /api/user/purchase & /api/user/billing ──
+const purchaseRouter = createPurchaseRouter(express, requireAuth);
+app.use('/api/user/purchase', purchaseRouter);
+app.use('/api/v1/purchase', purchaseRouter); // Hỗ trợ tiền tố v1
+
+const billingRouter = createBillingRouter(express, requireAuth);
+app.use('/api/user/billing', billingRouter);
+app.use('/api/v1/billing', billingRouter); // Hỗ trợ tiền tố v1
+
+// ─── 5e. Router Phòng Học Ảo (Study Room): /api/study-room ───────────────────
+const studyRoomRouter = createStudyRoomRouter(express, requireAuth);
+app.use('/api/study-room', studyRoomRouter);
+app.use('/api/v1/study-room', studyRoomRouter); // Hỗ trợ tiền tố v1
 
 // ─── 6. Bộ Xử Lý Lỗi Tập Trung (Tương thích quy tắc bảo mật writing-block) ──
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars

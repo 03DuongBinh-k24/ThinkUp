@@ -12,6 +12,10 @@
     "test:forgot": "node --test src/user/auth/test/forgot-password.user.test.js",
     "test:onboarding": "node --test src/user/onboarding/test/onboarding.user.test.js",
     "test:blog": "node --test src/user/blog/test/blog.user.test.js",
+    "test:purchase": "node --test src/user/purchase/test/purchase.user.test.js",
+    "test:billing": "node --test src/user/purchase/test/billing.user.test.js",
+    "test:studyroom": "node --test src/user/studyroom/test/studyroom.user.test.js",
+    "seed:purchase": "node recheck/seed-purchase-history.js",
     "recheck": "node recheck/recheck-auth.js",
     "recheck:signup": "node recheck/test-signup.js",
     "recheck:signin": "node recheck/test-signin.js",
@@ -24,6 +28,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.3.0",
     "jsonwebtoken": "^9.0.3",
+    "livekit-server-sdk": "^2.19.1",
     "mongodb": "^7.1.0",
     "nodemailer": "^7.0.13"
   }
