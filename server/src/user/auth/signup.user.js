@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { getMongoDb, signJwt, verifyJwt, sendEmail } from './db.js';
+import { getMongoDb, signJwt, verifyJwt, sendEmail } from '../db.js';
+import { renderSignupVerificationEmail, renderResendVerificationEmail } from '../email/email-templates.js';
 
 const VERIFICATION_TOKEN_EXPIRE = '12h'; // BR-AUTH-06: thời hạn tối đa 12 giờ
 
@@ -216,13 +217,13 @@ export async function registerUser(
     await sendEmail({
       to: emailCheck.value,
       subject: '[ThinkUp] Xác thực tài khoản học viên của bạn',
-      html: `
-        <h3>Chào mừng ${nameCheck.value} đến với ThinkUp!</h3>
-        <p>Vui lòng bấm vào liên kết bên dưới để kích hoạt tài khoản của bạn (liên kết có hiệu lực trong vòng 12 giờ):</p>
-        <p><a href="${verificationLink}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Kích hoạt tài khoản</a></p>
-        <p>Hoặc truy cập liên kết: ${verificationLink}</p>
-      `,
-      text: `Vui lòng truy cập đường link sau để kích hoạt tài khoản ThinkUp: ${verificationLink}`,
+      html: renderSignupVerificationEmail({
+        name: nameCheck.value,
+        verificationLink,
+        expireHours: 12,
+        clientUrl,
+      }),
+      text: `Xin chào ${nameCheck.value}! Vui lòng truy cập đường link sau để kích hoạt tài khoản ThinkUp: ${verificationLink}`,
     }).catch((e) => console.error('[SMTP Send Error]:', e.message));
   }
 
@@ -332,13 +333,13 @@ export async function resendVerificationLink({ email }, options = {}) {
     await sendEmail({
       to: user.email,
       subject: '[ThinkUp] Gửi lại liên kết kích hoạt tài khoản',
-      html: `
-        <p>Xin chào ${user.full_name},</p>
-        <p>Bạn đã yêu cầu gửi lại liên kết kích hoạt tài khoản ThinkUp:</p>
-        <p><a href="${verificationLink}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Kích hoạt tài khoản</a></p>
-        <p>Liên kết có hiệu lực trong vòng 12 giờ.</p>
-      `,
-      text: `Truy cập liên kết sau để kích hoạt tài khoản ThinkUp: ${verificationLink}`,
+      html: renderResendVerificationEmail({
+        name: user.full_name,
+        verificationLink,
+        expireHours: 12,
+        clientUrl,
+      }),
+      text: `Xin chào ${user.full_name}! Truy cập liên kết sau để kích hoạt tài khoản ThinkUp: ${verificationLink}`,
     }).catch((e) => console.error('[SMTP Send Error]:', e.message));
   }
 

@@ -5,16 +5,18 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test src/user/test/*.test.js",
+    "test": "node --test src/user/**/test/*.test.js src/user/test/*.test.js",
     "test:routes": "node --test src/user/test/server.routes.test.js",
-    "test:signup": "node --test src/user/test/signup.user.test.js",
-    "test:signin": "node --test src/user/test/signin.user.test.js",
-    "test:forgot": "node --test src/user/test/forgot-password.user.test.js",
-    "test:onboarding": "node --test src/user/test/onboarding.user.test.js",
+    "test:signup": "node --test src/user/auth/test/signup.user.test.js",
+    "test:signin": "node --test src/user/auth/test/signin.user.test.js",
+    "test:forgot": "node --test src/user/auth/test/forgot-password.user.test.js",
+    "test:onboarding": "node --test src/user/onboarding/test/onboarding.user.test.js",
+    "test:blog": "node --test src/user/blog/test/blog.user.test.js",
     "recheck": "node recheck/recheck-auth.js",
     "recheck:signup": "node recheck/test-signup.js",
     "recheck:signin": "node recheck/test-signin.js",
-    "recheck:forgot": "node recheck/test-forgot.js"
+    "recheck:forgot": "node recheck/test-forgot.js",
+    "recheck:email": "node recheck/test-email-templates.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

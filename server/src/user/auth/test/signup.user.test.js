@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getMongoDb, closeMongoDb } from '../db.js';
+import { getMongoDb, closeMongoDb } from '../../db.js';
 import {
   registerUser,
   verifyEmailVerificationToken,

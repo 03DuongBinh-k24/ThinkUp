@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
-import { getMongoDb, signJwt, verifyJwt } from './db.js';
+import { getMongoDb, signJwt, verifyJwt } from '../db.js';
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 phút (BR-AUTH-03)

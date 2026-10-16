@@ -19,16 +19,18 @@ import {
   resendForgotPasswordOtp,
   resetPasswordWithToken,
   verifyJwt,
-} from './user/auth.user.js';
+} from './user/auth/auth.user.js';
 import {
   skipOnboarding,
   submitOnboarding,
   getOnboardingCourseList,
-} from './user/onboarding.user.js';
+} from './user/onboarding/onboarding.user.js';
+import { createBlogRouter } from './user/blog/blog.user.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'https://think-up-edu.vercel.app';
+const rawClientUrl = process.env.CLIENT_URL || 'http://localhost:4200';
+const CLIENT_URL = rawClientUrl.split(',')[0].trim().replace(/\/+$/, '');
 
 // ─── 1. Cấu hình CORS ────────────────────────────────────────────────────────
 const defaultOrigins = [
@@ -123,8 +125,9 @@ authRouter.get('/verify', async (req, res, next) => {
     }
     const result = await verifyEmailVerificationToken({ token });
 
-    // Nếu người dùng mở trực tiếp từ trình duyệt (click link trong email): Điều hướng về trang login kèm thông báo thành công
-    const isBrowserNavigation = req.accepts('html') && !req.xhr;
+    // Nếu người dùng mở trực tiếp từ trình duyệt (click link trong email): Điều hướng về trang login kèm thông báo
+    const acceptsHtml = req.accepts('html') && !req.accepts('json');
+    const isBrowserNavigation = (req.headers['sec-fetch-dest'] === 'document' || acceptsHtml) && !req.xhr;
     if (isBrowserNavigation) {
       const redirectUrl = `${CLIENT_URL}/auth/login?activated=true&email=${encodeURIComponent(result.email)}`;
       return res.redirect(redirectUrl);
@@ -132,7 +135,8 @@ authRouter.get('/verify', async (req, res, next) => {
 
     res.json(result);
   } catch (err) {
-    const isBrowserNavigation = req.accepts('html') && !req.xhr;
+    const acceptsHtml = req.accepts('html') && !req.accepts('json');
+    const isBrowserNavigation = (req.headers['sec-fetch-dest'] === 'document' || acceptsHtml) && !req.xhr;
     if (isBrowserNavigation) {
       const redirectUrl = `${CLIENT_URL}/auth/login?error=${encodeURIComponent(err.message || 'Xác thực thất bại')}`;
       return res.redirect(redirectUrl);
@@ -315,6 +319,13 @@ app.use('/api/user/onboarding', onboardingRouter);
 // FE Angular đang gọi /api/v1/onboarding/submit và /api/v1/onboarding/skip
 // Alias này đảm bảo FE không cần thay đổi code, BE tự route về cùng handler.
 app.use('/api/v1/onboarding', onboardingRouter);
+
+// ─── 5c. Router Blog & Bản Tin (Newsletter): /api/blog & /api/newsletter ──────
+const blogRouter = createBlogRouter(express);
+app.use('/api/blog', blogRouter);
+app.use('/api/v1/blog', blogRouter); // Hỗ trợ tiền tố v1 nếu FE gọi
+app.use('/api/newsletter', blogRouter); // Hỗ trợ endpoint đăng ký nhận bản tin trực tiếp
+app.use('/api/upload', blogRouter); // Hỗ trợ endpoint upload ảnh cho thanh công cụ soạn thảo bài viết
 
 // ─── 6. Bộ Xử Lý Lỗi Tập Trung (Tương thích quy tắc bảo mật writing-block) ──
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars

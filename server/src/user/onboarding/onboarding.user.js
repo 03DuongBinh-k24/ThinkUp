@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { getMongoDb } from './db.js';
+import { getMongoDb } from '../db.js';
 
 // ─── Dữ liệu tham chiếu (lấy từ database thật) ──────────────────────────────
 
