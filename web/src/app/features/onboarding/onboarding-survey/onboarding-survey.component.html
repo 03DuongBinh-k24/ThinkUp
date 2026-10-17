@@ -1,26 +1,4 @@
 
-    <!-- HEADER KHẢO SÁT CHUẨN FIGMA (LOGO + TIẾN ĐỘ + NÚT BỎ QUA GÓC TRÊN) -->
-    <header class="bg-white border-b border-[#E2E8F0] h-[68px] px-6 lg:px-12 flex items-center justify-between shrink-0 sticky top-0 z-40 select-none">
-      <a routerLink="/main" class="flex items-center gap-2.5" aria-label="ThinkUp Trang chủ">
-        <svg width="32" height="32" viewBox="0 0 33 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
-          <g clip-path="url(#clip0_thinkup_onboard)">
-            <path d="M8.11094 14.2222C12.1978 14.2222 15.5109 11.0385 15.5109 7.11111C15.5109 3.18375 12.1978 0 8.11094 0C4.02403 0 0.710938 3.18375 0.710938 7.11111C0.710938 11.0385 4.02403 14.2222 8.11094 14.2222Z" fill="#3898EC"/>
-            <path d="M32.0891 0H17.2891V14.2222H32.0891V0Z" fill="#090909"/>
-            <path d="M0.710938 15.6445H15.5109V32.0001L0.710938 15.6445Z" fill="#9BD1FF"/>
-            <path d="M32.0891 22.9137V15.6445H24.6891H17.2891V32.0001H24.2996C28.6015 32.0001 32.0891 27.9319 32.0891 22.9137Z" fill="#257FE6"/>
-          </g>
-          <defs>
-            <clipPath id="clip0_thinkup_onboard"><rect width="32.8" height="32" fill="white"/></clipPath>
-          </defs>
-        </svg>
-        <span class="font-semibold font-['Inter'] tracking-tight text-[26px] leading-none">
-          <span class="text-[#090909]">THINK</span>
-          <span class="text-[#0088E8]">UP</span>
-        </span>
-      </a>
-
-    </header>
-
     <!-- TOAST THÔNG BÁO LỖI NGOẠI LỆ / THÀNH CÔNG (EX-ONB-01) -->
     @if (toastMessage()) {
       <div
@@ -33,11 +11,11 @@
     }
 
     <!-- MAIN ONBOARDING VIEW CONTAINER (MAX-W 1240PX CHUẨN FIGMA) -->
-    <div class="min-h-[calc(100vh-68px)] bg-[#F8FAFD] text-[#0D182B] flex flex-col font-sans select-none">
-      <main class="mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-start gap-3 px-4 py-3 md:px-6 md:py-4">
+    <div class="survey-page min-h-[calc(100vh-68px)] bg-[#F8FAFD] text-[#0D182B] flex flex-col font-sans select-none">
+      <main class="survey-main mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-start gap-3 px-4 py-3 md:px-6 md:py-4">
 
         <!-- TOP: STEP TRACKER TIMELINE (ĐÚNG 3 BƯỚC FIGMA NODE 1840:14676) -->
-        <section class="w-full shrink-0 rounded-2xl border border-[#DEE5EF] bg-white px-6 py-2.5 md:px-12 shadow-xs">
+        <section class="survey-progress w-full shrink-0 rounded-2xl border border-[#DEE5EF] bg-white px-6 py-2.5 md:px-12 shadow-xs">
           <ol class="relative mx-auto flex w-full max-w-[1020px] items-start justify-between list-none p-0 m-0">
             @for (step of questions; track step.id; let idx = $index; let isLast = $last) {
               <li class="relative flex flex-1 flex-col items-center">
@@ -85,8 +63,8 @@
         </section>
 
         <!-- BOTTOM: MAIN SECTION CARD (SPLIT-SCREEN 2 CỘT) -->
-        <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#DEE5EF] bg-white shadow-xs">
-          <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-4 md:flex-row md:gap-8 md:px-10 lg:gap-10">
+        <div class="survey-card flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#DEE5EF] bg-white shadow-xs" [class.flex-1]="currentQuestion.type !== 'single-level'">
+          <div class="survey-card-body flex min-h-0 flex-col overflow-hidden px-6 py-4 md:flex-row md:gap-8 md:px-10 lg:gap-10" [class.flex-1]="currentQuestion.type !== 'single-level'">
 
             <!-- LEFT COLUMN: NỘI DUNG CÂU HỎI -->
             <div class="flex flex-col min-h-0 flex-1">
@@ -99,16 +77,16 @@
 
               <!-- Title & Subtitle -->
               <div class="mt-2 flex shrink-0 flex-col gap-1">
-                <h1 class="font-sans text-xl md:text-2xl font-bold leading-tight text-[#0D182B]">
+                <h1 class="survey-title font-sans text-xl md:text-2xl font-bold leading-tight text-[#0D182B]">
                   {{ currentQuestion.title }}
                 </h1>
-                <p class="font-sans text-sm font-normal text-[#667383]">
+                <p class="survey-subtitle font-sans text-sm font-normal text-[#667383]">
                   {{ currentQuestion.subtitle }}
                 </p>
               </div>
 
               <!-- Options container -->
-              <div class="mt-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-2 pb-2">
+              <div class="survey-options mt-3 min-h-0 overflow-x-hidden pr-2 pb-2" [class.flex-1]="currentQuestion.type !== 'single-level'" [class.overflow-y-auto]="currentQuestion.type !== 'single-level'">
 
                 <!-- BƯỚC 1: VỊ TRÍ CÔNG NGHỆ (Figma Node 3654:16887 - Icon bên trái, Nội dung ở giữa, Radio bên phải) -->
                 @if (currentQuestion.type === 'single-role') {
@@ -219,27 +197,27 @@
 
                 <!-- BƯỚC 3: TRÌNH ĐỘ CÔNG NGHỆ HIỆN TẠI (Figma Node 1840:13225 - 3 Thẻ lớn có Emoji 🌱 🌿 🌳) -->
                 @if (currentQuestion.type === 'single-level') {
-                  <div class="flex max-w-[700px] flex-col gap-3.5 pt-1">
+                  <div class="survey-level-list flex max-w-[700px] flex-col gap-3.5 pt-1">
                     @for (opt of currentQuestion.options; track opt.id) {
                       <button
                         (click)="selectLevel(opt.id)"
                         type="button"
-                        class="group flex min-h-[64px] items-center gap-4 rounded-[20px] p-3 text-left font-sans transition-all duration-200 border"
+                        class="survey-level-option group flex min-h-[64px] items-center gap-4 rounded-[20px] p-3 text-left font-sans transition-all duration-200 border"
                         [ngClass]="answers.currentLevel === opt.id
                           ? 'border-[#0766EE] bg-white shadow-[0_0_0_1px_rgba(19,104,233,0.4)] ring-2 ring-[#0766EE]/20'
                           : 'border-[#DEE5EF] bg-[#EFF6FD] hover:bg-[#E5F1FC] hover:border-[#B0BAC9]'"
                       >
                         <!-- Big Emoji box -->
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-xs text-2xl">
+                        <div class="survey-level-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-xs text-2xl">
                           <span>{{ opt.emoji }}</span>
                         </div>
 
                         <!-- Level text details -->
                         <div class="flex-1 min-w-0">
-                          <h3 class="font-sans text-[16px] font-bold leading-snug text-[#0D182B]" [ngClass]="answers.currentLevel === opt.id ? 'text-[#0766EE]' : ''">
+                          <h3 class="survey-level-title font-sans text-[16px] font-bold leading-snug text-[#0D182B]" [ngClass]="answers.currentLevel === opt.id ? 'text-[#0766EE]' : ''">
                             {{ opt.title }}
                           </h3>
-                          <p class="mt-1 font-sans text-[13px] font-normal leading-relaxed text-[#667383]">
+                          <p class="survey-level-desc mt-1 font-sans text-[13px] font-normal leading-relaxed text-[#667383]">
                             {{ opt.desc }}
                           </p>
                         </div>
@@ -271,25 +249,29 @@
 
             <!-- RIGHT COLUMN: ASIDE PANEL (Xuất nguyên khung Figma - Chỉ hiện trên màn hình laptop/desktop lg:flex) -->
             @if (currentQuestion.asideImage) {
-              <div class="hidden lg:flex w-[340px] xl:w-[380px] shrink-0 flex-col items-center justify-center p-2">
-                <img
-                  [src]="currentQuestion.asideImage"
-                  [alt]="currentQuestion.asideTitle"
-                  class="w-full h-auto max-h-[500px] object-contain select-none"
-                />
-                @if (currentQuestion.id === 2) {
-                  <div class="mt-6 flex flex-col items-center text-center px-4">
-                    <h3 class="text-[20px] font-bold text-[#0D182B] mb-2">{{ currentQuestion.asideTitle }}</h3>
-                    <p class="text-[14px] text-[#667383] leading-relaxed">{{ currentQuestion.asideDesc }}</p>
-                  </div>
-                }
+              <div class="survey-aside hidden lg:flex w-[340px] xl:w-[380px] shrink-0 flex-col items-center justify-center p-2">
+                <div
+                  class="survey-aside-art w-full"
+                  [class.survey-aside-art-goal]="currentQuestion.id === 1"
+                  [class.survey-aside-art-level]="currentQuestion.id === 3"
+                >
+                  <img
+                    [src]="currentQuestion.asideImage"
+                    [alt]="currentQuestion.asideTitle"
+                    class="survey-aside-image block w-full select-none"
+                  />
+                </div>
+                <div class="survey-aside-copy mt-6 flex flex-col items-center text-center px-4">
+                  <h3 class="survey-aside-title text-[20px] font-bold text-[#0D182B] mb-2">{{ currentQuestion.asideTitle }}</h3>
+                  <p class="survey-aside-desc text-[14px] text-[#667383] leading-relaxed">{{ currentQuestion.asideDesc }}</p>
+                </div>
               </div>
             }
 
           </div>
 
           <!-- FOOTER ACTIONS BAR (QUAY LẠI, BỎ QUA, TIẾP THEO / HOÀN TẤT) -->
-          <div class="flex shrink-0 items-center justify-between border-t border-[#DEE5EF] bg-white px-6 py-2.5 md:px-10">
+          <div class="survey-footer flex shrink-0 items-center justify-between border-t border-[#DEE5EF] bg-white px-6 py-2.5 md:px-10">
             <!-- Back button (Ẩn ở Bước 1, hiện ở Bước 2 & 3 theo SPEC-ONB-STU-01) -->
             @if (currentStep() > 0) {
               <button

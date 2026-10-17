@@ -32,8 +32,11 @@
         <div class="discover-controls">
           <div class="discover-heading"><h2>Khám phá không gian học</h2><label class="search-box"><svg lucideSearch></svg><input type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Tìm theo tên phòng, chủ đề hoặc kỹ năng..." /></label></div>
           <div class="tabs">@for (tab of tabs; track tab.key) { <button type="button" [class.selected]="selectedTab() === tab.key" (click)="selectedTab.set(tab.key)">{{ tab.label }}</button> }</div>
-          <div class="topics"><div>@for (topic of topics; track topic) { <button type="button" [class.selected]="selectedTopic() === topic" (click)="selectedTopic.set(topic)">{{ topic }}</button> }</div><button type="button" class="refresh" (click)="search.set(''); selectedTopic.set('Tất cả'); selectedTab.set('trending')"><svg lucideRotateCcw></svg>Làm mới</button></div>
+          <div class="topics"><div>@for (topic of topics; track topic) { <button type="button" [class.selected]="selectedTopic() === topic" (click)="selectedTopic.set(topic)">{{ topic }}</button> }</div><button type="button" class="refresh" (click)="search.set(''); selectedTopic.set('Tất cả'); selectedTab.set('trending'); loadRooms()"><svg lucideRotateCcw></svg>Làm mới</button></div>
         </div>
+        @if (loading()) { <p class="empty-rooms" role="status">Đang tải phòng học...</p> }
+        @else if (loadError()) { <div class="empty-rooms" role="alert">{{ loadError() }} <button type="button" (click)="loadRooms()">Thử lại</button></div> }
+        @else {
         <div class="rooms-grid">
           @for (room of filteredRooms(); track room.roomId) {
             <article class="room-card">
@@ -42,6 +45,7 @@
             </article>
           } @empty { <div class="empty-rooms">Không tìm thấy phòng học phù hợp.</div> }
         </div>
+        }
       </section>
       <aside class="lobby-sidebar">
         <section class="match-panel"><div class="panel-heading"><span class="panel-icon"><svg lucideSearch></svg></span><div><h2>Tìm phòng phù hợp</h2><p>Để ThinkUp tìm cho bạn một phòng đang hoạt động và còn chỗ.</p></div></div><button type="button" (click)="quickJoin()"><svg lucideSparkles></svg>TÌM PHÒNG PHÙ HỢP</button></section>

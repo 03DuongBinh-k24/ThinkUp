@@ -78,6 +78,15 @@ export class AuthService {
     );
   }
 
+  verifyEmail(token: string): Observable<AuthResponse> {
+    return this.http.get<BackendMessageResponse>(`${this.apiUrl}/auth/verify`, {
+      params: { token },
+    }).pipe(
+      map(response => ({ success: true, message: response.message, email: response.email })),
+      catchError(error => this.handleError(error))
+    );
+  }
+
   forgotPassword(email: string): Observable<AuthResponse> {
     return this.http.post<BackendMessageResponse>(`${this.apiUrl}/auth/forgot-password`, { email }).pipe(
       map(response => ({ success: true, message: response.message, email: response.email || email })),

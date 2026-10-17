@@ -5,12 +5,16 @@
       <p class="mt-1 text-[14px] leading-5 text-[#62748E]">Theo dõi toàn bộ các giao dịch mua khóa học của bạn</p>
     </header>
 
+    @if (loading()) {<p class="mt-8 text-[14px] text-[#62748E]" role="status">Đang tải lịch sử mua hàng...</p>}
+    @else if (error()) {<div class="mt-8 rounded-[14px] border border-[#FFD1DC] bg-white p-6 text-[14px] text-[#B42346]" role="alert">{{ error() }} <button type="button" (click)="load()" class="ml-3 font-semibold underline">Thử lại</button></div>}
+    @else {
+
     <section class="mt-6 grid gap-4 lg:grid-cols-3" aria-label="Tổng quan lịch sử mua hàng">
       <article class="flex min-h-[114px] items-center gap-4 rounded-[18px] border border-[#E2E8F0] bg-white px-[21px] py-5">
         <div class="grid h-14 w-14 shrink-0 place-items-center rounded-[14px] bg-[#EFF6FF] text-[#1677FF]">
           <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3h16v18l-4-2-4 2-4-2-4 2z"/><path d="M8 8h8M8 12h6"/></svg>
         </div>
-        <div><p class="text-[14px] leading-5 text-[#62748E]">Tổng số giao dịch</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ transactions().length }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">Giao dịch</p></div>
+        <div><p class="text-[14px] leading-5 text-[#62748E]">Tổng số giao dịch</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ totalTransactions() }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">Giao dịch</p></div>
       </article>
       <article class="flex min-h-[114px] items-center gap-4 rounded-[18px] border border-[#E2E8F0] bg-white px-[21px] py-5">
         <div class="grid h-14 w-14 shrink-0 place-items-center rounded-[14px] bg-[#ECFDF5] text-[#00B97C]">
@@ -22,7 +26,7 @@
         <div class="grid h-14 w-14 shrink-0 place-items-center rounded-[14px] bg-[#FAF5FF] text-[#B850FF]">
           <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 9 10-5 10 5-10 5zM6 11v5c3 3 9 3 12 0v-5M22 9v7"/></svg>
         </div>
-        <div><p class="text-[14px] leading-5 text-[#62748E]">Số khóa học đã mua</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ courseCount() }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">Khóa học</p></div>
+        <div><p class="text-[14px] leading-5 text-[#62748E]">Số khóa học đã mua</p><p class="mt-0.5 text-[24px] font-bold leading-8">{{ totalCoursesPurchased() }}</p><p class="mt-0.5 text-[12px] leading-4 text-[#90A1B9]">Khóa học</p></div>
       </article>
     </section>
 
@@ -76,7 +80,7 @@
             <td class="px-6 py-5 text-[14px] font-semibold text-[#0F172B]">{{ transaction.id }}</td>
             <td class="max-w-[290px] px-6 py-5"><ul class="space-y-1 text-[14px] leading-5 text-[#293B57]">@for (course of transaction.courses; track course) {<li class="flex gap-2"><span class="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#90A1B9]"></span><span>{{ course }}</span></li>}</ul></td>
             <td class="px-6 py-5 text-[14px] text-[#293B57]">{{ transaction.paymentMethod }}</td><td class="px-6 py-5 text-[14px] font-bold text-[#0F172B]">{{ transaction.amount }}</td>
-            <td class="px-6 py-5"><span class="inline-flex h-6 items-center rounded-[7px] border px-2.5 text-[12px] font-semibold" [class]="transaction.status === 'success' ? 'border-[#BEEFD9] bg-[#E9FBF2] text-[#00A66E]' : 'border-[#FFD1DC] bg-[#FFF0F4] text-[#FF315C]'">{{ transaction.status === 'success' ? 'Thành công' : 'Thất bại' }}</span></td>
+            <td class="px-6 py-5"><span class="inline-flex h-6 items-center rounded-[7px] border px-2.5 text-[12px] font-semibold" [class]="statusClassFor(transaction.status)">{{ statusLabelFor(transaction.status) }}</span></td>
             <td class="px-6 py-5"><time class="block text-[14px] text-[#293B57]">{{ transaction.date }}</time><span class="mt-1 block text-[12px] text-[#6880A0]">{{ transaction.time }}</span></td>
             <td class="px-6 py-5"><a [routerLink]="['/main/profile/billing', transaction.id]" class="ml-auto flex h-[30px] w-max items-center gap-1 rounded-[7px] border border-[#BFE4FF] bg-white px-3 text-[12px] font-semibold text-[#0088E8] hover:bg-[#F0F8FF]">Chi tiết <span aria-hidden="true">›</span></a></td>
           </tr>} @empty {<tr><td colspan="7" class="h-[180px] px-6 text-center text-[14px] text-[#6D7F99]">Không tìm thấy giao dịch phù hợp.</td></tr>}
@@ -84,5 +88,6 @@
       </table></div>
       <div class="flex min-h-[65px] flex-col gap-4 border-t border-[#E2E8F0] px-6 py-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-[14px] text-[#6880A0]">Hiển thị {{ visibleStart() }} - {{ visibleEnd() }} trong {{ filtered().length }} giao dịch</p><div class="flex items-center gap-2" aria-label="Phân trang"><button type="button" aria-label="Trang trước" [disabled]="page() === 1" (click)="setPage(page() - 1)" class="grid h-8 w-8 place-items-center rounded-[7px] border border-[#E2E8F0] text-[#52637D] disabled:text-[#B4C1D1]">‹</button>@for (number of pages(); track number) {<button type="button" [attr.aria-current]="page() === number ? 'page' : null" (click)="setPage(number)" class="grid h-8 w-8 place-items-center rounded-[7px] border text-[14px]" [class]="page() === number ? 'border-[#0088E8] bg-[#0088E8] text-white' : 'border-[#E2E8F0] bg-white text-[#52637D]'">{{ number }}</button>}<button type="button" aria-label="Trang sau" [disabled]="page() === pageCount()" (click)="setPage(page() + 1)" class="grid h-8 w-8 place-items-center rounded-[7px] border border-[#E2E8F0] text-[#52637D] disabled:text-[#B4C1D1]">›</button></div></div>
     </section>
+    }
   </div>
 </main>

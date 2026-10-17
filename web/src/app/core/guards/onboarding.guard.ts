@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
 import { AuthService } from '../services/auth.service';
+import { catchError, map, of } from 'rxjs';
 
 /**
  * Route Guard ép buộc hoàn thành khảo sát (AC-ONB-01):
@@ -11,21 +12,13 @@ import { AuthService } from '../services/auth.service';
 export const onboardingRequiredGuard: CanActivateChildFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
-
-  const isLoggedIn = inject(AuthService).isAuthenticated();
-  const user = onboardingService.getCurrentUser();
-
-  // Khách vãng lai xem bình thường (không ép buộc)
-  if (!isLoggedIn || !user || user.role !== 'student') {
-    return true;
-  }
-
-  // Học viên đã đăng nhập nhưng chưa hoàn thành khảo sát
-  if (!onboardingService.isOnboardingCompleted()) {
-    return router.createUrlTree(['/onboarding']);
-  }
-
-  return true;
+  const auth = inject(AuthService);
+  if (!auth.getToken()) return true;
+  return auth.validateSession().pipe(
+    map(valid => valid && onboardingService.getCurrentUser()?.role === 'student' && !onboardingService.isOnboardingCompleted()
+      ? router.createUrlTree(['/onboarding']) : true),
+    catchError(() => of(true))
+  );
 };
 
 /**
@@ -36,16 +29,17 @@ export const onboardingRequiredGuard: CanActivateChildFn = () => {
 export const onboardingCompletedGuard: CanActivateFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
-
-  const isLoggedIn = inject(AuthService).isAuthenticated();
-  const user = onboardingService.getCurrentUser();
-  if (!isLoggedIn || !user) {
-    return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: '/onboarding' } });
-  }
-
-  if (user.role !== 'student' || onboardingService.isOnboardingCompleted()) {
-    return router.createUrlTree(['/main/home']);
-  }
-
-  return true;
+  const auth = inject(AuthService);
+  const loginUrl = router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: '/onboarding' } });
+  if (!auth.getToken()) return loginUrl;
+  return auth.validateSession().pipe(
+    map(valid => {
+      if (!valid || !onboardingService.getCurrentUser()) return loginUrl;
+      if (onboardingService.getCurrentUser()?.role !== 'student' || onboardingService.isOnboardingCompleted()) {
+        return router.createUrlTree(['/main/home']);
+      }
+      return true;
+    }),
+    catchError(() => of(auth.isAuthenticated() ? true : loginUrl))
+  );
 };

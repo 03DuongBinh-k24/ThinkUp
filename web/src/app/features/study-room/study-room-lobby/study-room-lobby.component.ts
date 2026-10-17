@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -10,7 +11,7 @@ import { LucideArrowRight, LucideChevronLeft, LucideChevronRight, LucideCopy, Lu
 interface ThemePreview { id: string; name: string; src: string; type?: 'video'; }
 
 @Component({ selector: 'app-study-room-lobby', standalone: true, imports: [FormsModule, LucideArrowRight, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideEye, LucideUserPlus, LucideLogIn, LucidePlus, LucideRotateCcw, LucideSearch, LucideSparkles, LucideTag, LucideUsers, LucideX, LucidePlay], templateUrl: './study-room-lobby.component.html', styleUrl: './study-room-lobby.component.css' })
-export class StudyRoomLobbyComponent {
+export class StudyRoomLobbyComponent implements OnInit {
   private readonly roomsService = inject(StudyRoomService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -47,6 +48,8 @@ export class StudyRoomLobbyComponent {
   readonly modal = signal<'create' | 'password' | 'full' | 'waitlist' | 'approval' | 'created' | null>(null);
   readonly activeRoom = signal<StudyRoomItem | null>(null);
   readonly rooms = this.roomsService.rooms;
+  readonly loading = signal(true);
+  readonly loadError = signal('');
   readonly filteredRooms = computed(() => {
     const query = this.search().trim().toLowerCase();
     const topic = this.selectedTopic();
@@ -62,6 +65,7 @@ export class StudyRoomLobbyComponent {
     return rooms;
   });
   roomCode = '';
+  private pendingJoinCode = '';
   password = '';
   feedback = '';
   newRoomName = '';
@@ -72,6 +76,17 @@ export class StudyRoomLobbyComponent {
   newRoomPassword = '';
   newRoomMode: 'open' | 'password' = 'open';
   newRoomLimit = 20;
+
+  ngOnInit(): void { this.loadRooms(); }
+
+  loadRooms(): void {
+    this.loading.set(true);
+    this.loadError.set('');
+    this.roomsService.loadRooms().subscribe({
+      next: () => this.loading.set(false),
+      error: () => { this.loading.set(false); this.loadError.set('Không thể tải danh sách phòng học.'); },
+    });
+  }
 
   setPreviewPage(direction: number): void { this.previewPage.set((this.previewPage() + direction + 3) % 3); }
   selectTheme(theme: ThemePreview): void { this.newRoomTheme = theme.id; this.openCreate(); }
@@ -86,36 +101,61 @@ export class StudyRoomLobbyComponent {
   joinRoom(room: StudyRoomItem): void {
     if (!this.auth.isAuthenticated()) { this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/learning/study-room/' + room.roomId } }); return; }
     this.activeRoom.set(room);
-    if (room.currentUsers >= room.maxUsers) { this.modal.set('waitlist'); return; }
+    if (room.currentUsers >= room.maxUsers) { this.modal.set('full'); return; }
     if (room.inviteMode === 'approval' || room.approvalRequired) { this.modal.set('approval'); return; }
     if (room.type === 'private') { this.password = ''; this.feedback = ''; this.modal.set('password'); return; }
-    this.router.navigate(['/learning/study-room', room.roomId]);
+    this.attemptJoin(room.roomId);
   }
   joinByCode(): void {
-    const code = this.roomCode.trim().split('/').filter(Boolean).pop()?.toLowerCase();
-    const room = this.rooms().find(item => item.roomId.toLowerCase() === code);
-    if (!room) { this.feedback = 'Không tìm thấy phòng với mã này.'; return; }
-    this.feedback = ''; this.joinRoom(room);
+    if (!this.auth.isAuthenticated()) { this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/learning/study-room' } }); return; }
+    if (!this.roomCode.trim()) { this.feedback = 'Vui lòng nhập mã hoặc link phòng.'; return; }
+    this.attemptJoin(this.roomCode.trim(), this.password);
   }
   verifyPassword(): void {
     const room = this.activeRoom();
-    if (!room) return;
-    if (room.password && room.password !== this.password) { this.feedback = 'Mật khẩu không đúng.'; return; }
-    this.modal.set(null); this.router.navigate(['/learning/study-room', room.roomId]);
+    const code = room?.roomId || this.pendingJoinCode;
+    if (!code) return;
+    this.attemptJoin(code, this.password);
+  }
+  private attemptJoin(codeOrLink: string, password = ''): void {
+    this.pendingJoinCode = codeOrLink;
+    this.feedback = '';
+    this.roomsService.joinRoom(codeOrLink, password).subscribe({
+      next: room => { this.pendingJoinCode = ''; this.activeRoom.set(room); this.modal.set(null); void this.router.navigate(['/learning/study-room', room.roomId]); },
+      error: (error: HttpErrorResponse) => {
+        const body = error.error as { code?: string; message?: string; room?: { roomId?: string; name?: string } } | null;
+        if (body?.code === 'PASSWORD_REQUIRED') {
+          const room = this.roomsService.getRoomById(body.room?.roomId || codeOrLink);
+          if (room) this.activeRoom.set(room);
+          this.modal.set('password');
+        } else if (body?.code === 'ROOM_FULL') this.modal.set('full');
+        this.feedback = body?.message || 'Không thể vào phòng. Vui lòng thử lại.';
+      },
+    });
   }
   createRoom(): void {
-    if (this.newRoomName.trim().length < 2) { this.feedback = 'Tên phòng cần ít nhất 2 ký tự.'; return; }
+    if (this.newRoomName.trim().length < 5) { this.feedback = 'Tên phòng cần ít nhất 5 ký tự.'; return; }
     if (this.newRoomMode === 'password' && this.newRoomPassword.length < 4) { this.feedback = 'Mật khẩu cần ít nhất 4 ký tự.'; return; }
     if (!Number.isInteger(Number(this.newRoomLimit)) || Number(this.newRoomLimit) < 2 || Number(this.newRoomLimit) > 100) { this.feedback = 'Sức chứa phải từ 2 đến 100 người.'; return; }
-    const room = this.roomsService.createRoom({ roomId: 'room-' + Date.now(), name: this.newRoomName.trim(), description: this.newRoomDescription.trim(),
-      type: this.newRoomMode === 'open' ? 'public' : 'private', maxUsers: Number(this.newRoomLimit), currentUsers: 1,
-      status: 'idle', tags: [this.newRoomTopic, ...this.newRoomTags.split(',').map(tag=>tag.trim()).filter(Boolean)], category: this.newRoomTopic, theme: this.newRoomTheme,
-      creator: 'Tôi', password: this.newRoomMode === 'password' ? this.newRoomPassword : undefined });
-    this.activeRoom.set(room); this.feedback = ''; this.modal.set('created');
+    this.roomsService.createRoom({ name: this.newRoomName.trim(), goal: this.newRoomDescription.trim(),
+      type: this.newRoomMode === 'open' ? 'public' : 'private', capacity: Number(this.newRoomLimit),
+      tags: [this.newRoomTopic, ...this.newRoomTags.split(',').map(tag=>tag.trim()).filter(Boolean)], topic: this.newRoomTopic,
+      roomTheme: this.newRoomTheme, creatorName: this.auth.currentUser()?.full_name || 'Tôi',
+      password: this.newRoomMode === 'password' ? this.newRoomPassword : undefined }).subscribe({
+      next: room => { this.activeRoom.set(room); this.feedback = ''; this.modal.set('created'); },
+      error: (error: HttpErrorResponse) => { this.feedback = (error.error as { message?: string } | null)?.message || 'Không thể tạo phòng. Vui lòng thử lại.'; },
+    });
   }
   enterCreatedRoom(): void { const room = this.activeRoom(); if (room) { sessionStorage.setItem('study_room_theme', room.theme); this.router.navigate(['/learning/study-room', room.roomId]); } }
-  // TODO(pre-deploy): Nhớ xóa phản hồi duyệt/chờ mock này khi thay bằng API yêu cầu vào phòng và hàng chờ.
-  submitJoinRequest(): void { this.feedback = this.modal() === 'approval' ? 'Đã gửi yêu cầu vào phòng. Chủ phòng sẽ duyệt bạn.' : 'Đã thêm bạn vào danh sách chờ.'; this.modal.set(null); }
+  submitJoinRequest(): void {
+    const room = this.activeRoom();
+    const user = this.auth.currentUser();
+    if (!room || !user) return;
+    this.roomsService.requestJoin(room.roomId, user.id, user.full_name).subscribe({
+      next: response => { this.feedback = response.message; this.modal.set(null); },
+      error: (error: HttpErrorResponse) => { this.feedback = (error.error as { message?: string } | null)?.message || 'Không thể gửi yêu cầu vào phòng.'; },
+    });
+  }
   async copyRoom(room: StudyRoomItem, link = false): Promise<void> {
     await navigator.clipboard.writeText(link ? `${location.origin}/learning/study-room/${room.roomId}` : room.roomId);
     this.feedback = link ? 'Đã sao chép link mời.' : 'Đã sao chép mã phòng.';
