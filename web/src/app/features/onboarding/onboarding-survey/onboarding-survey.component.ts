@@ -8,8 +8,9 @@
 
 import { Component, OnInit, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { OnboardingService } from '../../../core/services/onboarding.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { StudentPreferences } from '../../../core/models/user.model';
 
 interface SurveyOption {
@@ -38,13 +39,14 @@ interface SurveyQuestion {
 @Component({
   selector: 'app-onboarding-survey',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './onboarding-survey.component.html',
   styleUrl: './onboarding-survey.component.css'
 })
 export class OnboardingSurveyComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly onboardingService = inject(OnboardingService);
+  private readonly notificationService = inject(NotificationService);
 
   private readonly draftPrefix = 'thinkup_onboarding_draft:';
 
@@ -286,15 +288,25 @@ export class OnboardingSurveyComponent implements OnInit {
     this.submitting.set(true);
 
     const prefs: StudentPreferences = {
-      targetRole: this.answers.targetRole || 'frontend',
+      targetRole: this.answers.targetRole!,
       selectedSkills: this.answers.selectedSkills,
-      currentLevel: this.answers.currentLevel || 'beginner'
+      currentLevel: this.answers.currentLevel!
     };
 
     this.onboardingService.submitOnboarding(prefs).subscribe({
       next: () => {
         this.submitting.set(false);
         this.clearSessionStorage();
+        const userId = this.onboardingService.getCurrentUser()?.id;
+        if (userId) {
+          this.notificationService.addForUser(userId, {
+            id: 'onboarding-completed',
+            title: 'Khảo sát đã hoàn tất',
+            message: 'Lộ trình học tập của bạn đã được cá nhân hóa.',
+            createdAt: new Date().toISOString(),
+            href: '/main/home',
+          });
+        }
         this.showToast('Thiết lập thành công!', 'success');
         // Điều hướng học viên vào Dashboard có bộ lọc cá nhân hóa
         setTimeout(() => {
@@ -310,7 +322,7 @@ export class OnboardingSurveyComponent implements OnInit {
   }
 
   openSkipModal(): void {
-    this.showSkipConfirm.set(true);
+    if (this.currentStep() < 2 && !this.submitting()) this.showSkipConfirm.set(true);
   }
 
   closeSkipModal(): void {
@@ -318,7 +330,7 @@ export class OnboardingSurveyComponent implements OnInit {
   }
 
   confirmSkipSurvey(): void {
-    if (this.submitting()) return;
+    if (this.submitting() || this.currentStep() === 2) return;
     this.showSkipConfirm.set(false);
     this.submitting.set(true);
     this.onboardingService.skipOnboarding().subscribe({

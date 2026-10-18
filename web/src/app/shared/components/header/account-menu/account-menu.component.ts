@@ -23,10 +23,9 @@ export class AccountMenuComponent {
   private el = inject(ElementRef);
   private authService = inject(AuthService);
 
-  // TODO(pre-deploy): Nhớ xóa thông tin tài khoản mặc định mock khi có phiên người dùng thật.
-  @Input() displayName = 'Nguyễn An Nhiên';
-  @Input() email = 'annhien.nguyen@thinkup.edu.vn';
-  @Input() avatarUrl = '/assets/profile/overview-avatar.png';
+  @Input() displayName = 'Học viên';
+  @Input() email = '';
+  @Input() avatarUrl = '';
   @Input() roleLabel = 'Học viên';
 
   readonly isOpen = signal(false);
@@ -67,7 +66,9 @@ export class AccountMenuComponent {
 
   onLogout(): void {
     this.closeMenu();
-    this.authService.clearSession();
-    this.router.navigate(['/auth/login']);
+    this.authService.logout().subscribe({
+      next: () => this.router.navigate(['/auth/login']),
+      error: () => this.router.navigate(['/auth/login'])
+    });
   }
 }

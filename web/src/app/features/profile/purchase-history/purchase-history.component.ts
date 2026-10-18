@@ -1,11 +1,12 @@
-import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideCalendarDays, LucideChevronDown } from '@lucide/angular';
-import { CommerceService } from '../../../core/services/commerce.service';
 import { TransactionRow } from '../../../core/models/commerce.model';
+import { PurchaseHistoryService } from '../services/purchase-history.service';
 import { DateCalendarComponent } from './components/date-calendar/date-calendar.component';
+import { forkJoin } from 'rxjs';
 
-type StatusFilter = 'all' | 'success' | 'failed';
+type StatusFilter = 'all' | 'success' | 'pending' | 'failed' | 'cancelled';
 
 @Component({
   selector: 'app-purchase-history',
@@ -14,8 +15,14 @@ type StatusFilter = 'all' | 'success' | 'failed';
   templateUrl: './purchase-history.component.html',
   styleUrl: './purchase-history.component.css',
 })
-export class PurchaseHistoryComponent {
-  private readonly commerce = inject(CommerceService);
+export class PurchaseHistoryComponent implements OnInit {
+  private readonly purchaseHistory = inject(PurchaseHistoryService);
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly transactions = signal<TransactionRow[]>([]);
+  readonly totalTransactions = signal(0);
+  readonly totalSpent = signal(0);
+  readonly totalCoursesPurchased = signal(0);
   readonly query = signal('');
   readonly selectedStatus = signal<StatusFilter>('all');
   readonly selectedDate = signal('Tất cả thời gian');
@@ -29,7 +36,9 @@ export class PurchaseHistoryComponent {
   readonly statusOptions: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Tất cả trạng thái' },
     { value: 'success', label: 'Thành công' },
+    { value: 'pending', label: 'Đang xử lý' },
     { value: 'failed', label: 'Thất bại' },
+    { value: 'cancelled', label: 'Đã hủy' },
   ];
   readonly datePresets = ['Hôm nay', 'Hôm qua', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Tùy chọn khác'];
   readonly customFrom = signal('');
@@ -42,10 +51,7 @@ export class PurchaseHistoryComponent {
       ? `${this.formatDisplayDate(range.from)} - ${this.formatDisplayDate(range.to)}`
       : this.selectedDate();
   });
-  readonly transactions = this.commerce.transactions;
-  readonly successful = computed(() => this.transactions().filter(row => row.status === 'success'));
-  readonly spending = computed(() => `${new Intl.NumberFormat('vi-VN').format(this.successful().reduce((sum, row) => sum + Number(row.amount.replace(/\D/g, '')), 0))}đ`);
-  readonly courseCount = computed(() => this.successful().reduce((sum, row) => sum + row.courses.length, 0));
+  readonly spending = computed(() => `${new Intl.NumberFormat('vi-VN').format(this.totalSpent())}đ`);
   readonly filtered = computed(() => {
     const query = this.query().trim().toLocaleLowerCase('vi-VN');
     const status = this.selectedStatus();
@@ -79,6 +85,39 @@ export class PurchaseHistoryComponent {
   readonly visibleStart = computed(() => this.filtered().length ? (Math.min(this.page(), this.pageCount()) - 1) * this.pageSize + 1 : 0);
   readonly visibleEnd = computed(() => Math.min(Math.min(this.page(), this.pageCount()) * this.pageSize, this.filtered().length));
   readonly pages = computed(() => Array.from({ length: this.pageCount() }, (_, index) => index + 1));
+
+  ngOnInit(): void { this.load(); }
+
+  statusLabelFor(status: string): string {
+    switch (status) {
+      case 'success': return 'Thành công';
+      case 'pending': return 'Đang xử lý';
+      case 'failed': return 'Thất bại';
+      case 'cancelled': return 'Đã hủy';
+      default: return status || 'Không rõ';
+    }
+  }
+
+  statusClassFor(status: string): string {
+    if (status === 'success') return 'border-[#BEEFD9] bg-[#E9FBF2] text-[#00A66E]';
+    if (status === 'pending') return 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]';
+    return 'border-[#FFD1DC] bg-[#FFF0F4] text-[#FF315C]';
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set('');
+    forkJoin({ rows: this.purchaseHistory.list(), summary: this.purchaseHistory.summary() }).subscribe({
+      next: ({ rows, summary }) => {
+        this.transactions.set(rows);
+        this.totalTransactions.set(summary.totalTransactions);
+        this.totalSpent.set(summary.totalSpent);
+        this.totalCoursesPurchased.set(summary.totalCoursesPurchased);
+        this.loading.set(false);
+      },
+      error: () => { this.loading.set(false); this.error.set('Không thể tải lịch sử mua hàng. Vui lòng thử lại.'); },
+    });
+  }
 
   setQuery(value: string): void { this.query.set(value); this.page.set(1); }
   setStatus(value: StatusFilter): void { this.selectedStatus.set(value); this.statusOpen.set(false); this.page.set(1); }

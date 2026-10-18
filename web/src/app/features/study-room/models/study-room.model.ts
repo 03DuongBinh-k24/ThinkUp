@@ -16,6 +16,14 @@ export interface StudyRoomItem {
   requiresPassword?: boolean;
   inviteMode?: 'open' | 'password' | 'approval';
   approvalRequired?: boolean;
+  joinRequests?: StudyRoomJoinRequest[];
+}
+
+export interface StudyRoomJoinRequest {
+  userId: string;
+  userName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
 }
 
 export interface PomodoroConfig {

@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { CourseService } from '../../core/services/course.service';
 import { CommerceService } from '../../core/services/commerce.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
@@ -26,7 +25,6 @@ import {
   styleUrl: './home.component.css'
 })
 export class HomeComponent implements OnInit {
-  private courseService = inject(CourseService);
   private commerceService = inject(CommerceService);
   private favoritesService = inject(FavoritesService);
   private onboardingService = inject(OnboardingService);
@@ -35,6 +33,8 @@ export class HomeComponent implements OnInit {
   myLearning = signal<MyLearningItem[]>(MY_LEARNING_COURSES);
   benefits = signal<BenefitItem[]>(BENEFITS);
   featuredCourses = signal<Course[]>([]);
+  featuredLoading = signal(true);
+  featuredError = signal('');
   roadmap = signal(ROADMAP_BANNER);
   streakDays = signal(STREAK_DAYS);
   stats = signal(HEATMAP_STATS);
@@ -69,16 +69,15 @@ export class HomeComponent implements OnInit {
   }
 
   private loadCourses(): void {
-    this.courseService.getCourses().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          const preferences = this.onboardingService.getPreferences();
-          const recommended = this.courseService.filterByPreferences(res.data, preferences);
-          this.featuredCourses.set(recommended.slice(0, 4));
-        }
-      }
+    this.featuredLoading.set(true);
+    this.featuredError.set('');
+    this.onboardingService.getRecommendedCourses().subscribe({
+      next: courses => { this.featuredCourses.set(courses.slice(0, 4)); this.featuredLoading.set(false); },
+      error: () => { this.featuredLoading.set(false); this.featuredError.set('Không thể tải khóa học gợi ý.'); },
     });
   }
+
+  retryCourses(): void { this.loadCourses(); }
 
   addToCart(course: Course): void {
     this.commerceService.addToCart(course.id).subscribe({

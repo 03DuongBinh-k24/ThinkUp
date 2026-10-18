@@ -5,6 +5,11 @@ import { BlogService } from './features/blog/services/blog.service';
 import { BLOG_PROVIDERS } from './features/blog/services/blog.providers';
 
 export const routes: Routes = [
+  // Email links may point to the client origin when the backend public URL is not configured.
+  {
+    path: 'api/auth/verify',
+    loadComponent: () => import('./features/auth/verify-email/verify-email.component').then(m => m.VerifyEmailComponent)
+  },
   // Khảo sát Onboarding chính thức (CanActivate: chặn học viên đã hoàn thành)
   {
     path: 'onboarding',
@@ -26,6 +31,7 @@ export const routes: Routes = [
         loadComponent: () => import('./features/auth/sign-up/sign-up.component').then(m => m.SignUpComponent)
       },
       { path: 'sign-up', redirectTo: 'sign_up', pathMatch: 'full' },
+      { path: 'verify', loadComponent: () => import('./features/auth/verify-email/verify-email.component').then(m => m.VerifyEmailComponent) },
       { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent) },
       { path: 'verify-otp', loadComponent: () => import('./features/auth/verify-otp/verify-otp.component').then(m => m.VerifyOtpComponent) },
       { path: 'reset-password', loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent) },

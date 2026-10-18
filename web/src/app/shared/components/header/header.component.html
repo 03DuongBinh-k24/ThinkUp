@@ -26,6 +26,7 @@
             <a
               [routerLink]="item.href"
               routerLinkActive="border-[#8ACEFF] text-[#0088E8]"
+              ariaCurrentWhenActive="page"
               class="flex h-[26px] items-start border-b-2 pb-1 font-['Inter'] text-[16px] font-semibold leading-5 transition-all duration-200 border-transparent text-[#4B5563] hover:border-[#8ACEFF] hover:text-[#0088E8]"
             >
               {{ item.label }}
@@ -65,41 +66,55 @@
             }
           </a>
 
-          <!-- Chuông thông báo (Bell with red dot popup) -->
-          <div class="relative">
+          <!-- Chuông chỉ thuộc header của thành viên. -->
+          @if (isLoggedIn()) {
+          <div class="relative" data-notification-root>
             <button
               type="button"
-              (click)="isNotificationOpen.update(v => !v)"
+              (click)="toggleNotifications()"
               class="relative flex h-11 w-11 items-center justify-center rounded-full text-[#5B657A] hover:bg-slate-100 hover:text-[#131927] transition-all duration-200"
               aria-label="Thông báo"
+              aria-controls="header-notifications"
+              aria-haspopup="dialog"
+              [attr.aria-expanded]="isNotificationOpen()"
             >
-              <svg class="h-[26px] w-[26px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-              </svg>
-              <!-- Chấm đỏ thông báo chưa đọc -->
-              <span class="absolute right-[7px] top-[10px] h-2 w-2 rounded-full bg-[#EF4444]"></span>
+              <img src="/assets/header/notification-bell.svg" alt="" width="26" height="26" />
+              @if (notifications.unreadCount() > 0) {
+                <span class="absolute right-[5px] top-[18px] h-2 w-2 rounded-full bg-[#EF4444]" aria-hidden="true"></span>
+              }
             </button>
 
-            <!-- Popup Thông báo -->
+            <!-- Danh sách thông báo của tài khoản hiện tại. -->
             @if (isNotificationOpen()) {
-              <div class="absolute right-0 top-full z-[100] mt-2 w-[340px] rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-xl">
+              <div id="header-notifications" role="dialog" aria-label="Thông báo" class="absolute right-0 top-full z-[100] mt-2 w-[340px] rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-xl">
                 <div class="flex items-center justify-between border-b border-[#F1F5F9] pb-2">
                   <h3 class="font-bold text-[15px] text-[#191B23]">Thông báo</h3>
-                  <span class="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-[#006AB5]">3 mới</span>
+                  @if (notifications.unreadCount() > 0) {
+                    <span class="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-[#006AB5]">{{ notifications.unreadCount() }} mới</span>
+                  }
                 </div>
-                <div class="mt-3 space-y-2 max-h-[280px] overflow-y-auto">
-                  <div class="p-2.5 rounded-lg bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer">
-                    <p class="text-[13px] font-semibold text-[#0F172B]">Chào mừng bạn đến với ThinkUp!</p>
-                    <p class="text-[11px] text-[#64748B] mt-0.5">Khám phá các khóa học công nghệ mới nhất hôm nay.</p>
+                @if (notifications.unreadCount() > 0) {
+                  <button type="button" (click)="notifications.markAllRead()" class="mt-2 text-xs font-semibold text-[#006AB5] hover:underline">Đánh dấu tất cả đã đọc</button>
+                }
+                @if (notifications.items().length === 0) {
+                  <p class="py-5 text-center text-[13px] text-[#64748B]">Bạn chưa có thông báo nào.</p>
+                } @else {
+                  <div class="mt-3 max-h-[280px] space-y-2 overflow-y-auto">
+                    @for (item of notifications.items(); track item.id) {
+                      <button type="button" (click)="openNotification(item)" class="block w-full rounded-lg p-2.5 text-left transition hover:bg-blue-50" [class.bg-blue-50]="!item.readAt">
+                        <span class="flex items-start justify-between gap-2">
+                          <span class="text-[13px] font-semibold text-[#0F172B]">{{ item.title }}</span>
+                          @if (!item.readAt) { <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#EF4444]" aria-label="Chưa đọc"></span> }
+                        </span>
+                        <span class="mt-0.5 block text-[11px] text-[#64748B]">{{ item.message }}</span>
+                      </button>
+                    }
                   </div>
-                  <div class="p-2.5 rounded-lg hover:bg-slate-50 transition cursor-pointer">
-                    <p class="text-[13px] font-semibold text-[#0F172B]">Cập nhật bài học mới</p>
-                    <p class="text-[11px] text-[#64748B] mt-0.5">Khóa Lập trình Web vừa cập nhật Chương 8.</p>
-                  </div>
-                </div>
+                }
               </div>
             }
           </div>
+          }
 
           @if (isLoggedIn()) {
             <!-- Avatar AccountMenu (Khớp 100% Figma node 3202:29398) -->
@@ -149,15 +164,21 @@
       <!-- 5. Mobile Drawer Menu -->
       @if (isMobileMenuOpen()) {
         <div class="lg:hidden border-t border-[#F1F5F9] bg-white px-6 py-4 flex flex-col gap-4 shadow-inner">
+          @if (isLoggedIn()) {
           <div class="flex items-center gap-3 pb-3 border-b border-[#F1F5F9]">
             <span class="h-10 w-10 grid shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[#3898EC]">
-              <img [src]="userAvatar()" alt="Ảnh đại diện" class="h-full w-full object-cover" />
+              @if (userAvatar()) {
+                <img [src]="userAvatar()" alt="Ảnh đại diện" class="h-full w-full object-cover" />
+              } @else {
+                <svg class="h-10 w-10 text-[#3898EC]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Ảnh đại diện mặc định"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
+              }
             </span>
             <div class="min-w-0">
               <p class="font-bold text-[15px] text-[#191B23] truncate">{{ userName() }}</p>
               <p class="text-[12px] text-[#64748B]">{{ userEmail() }}</p>
             </div>
           </div>
+          }
 
           <nav class="flex flex-col gap-3">
             @for (item of navItems; track item.label) {
@@ -170,12 +191,10 @@
                 {{ item.label }}
               </a>
             }
-            <a routerLink="/main/profile" (click)="isMobileMenuOpen.set(false)" class="border-l-2 border-transparent py-1.5 pl-3 font-['Inter'] text-[15px] font-semibold text-[#4B5563] hover:text-[#0088E8]">
-              Hồ sơ học viên
-            </a>
-            <a routerLink="/main/favorites" (click)="isMobileMenuOpen.set(false)" class="border-l-2 border-transparent py-1.5 pl-3 font-['Inter'] text-[15px] font-semibold text-[#4B5563] hover:text-[#0088E8]">
-              Khóa học yêu thích
-            </a>
+            @if (isLoggedIn()) {
+              <a routerLink="/main/profile" (click)="isMobileMenuOpen.set(false)" class="border-l-2 border-transparent py-1.5 pl-3 font-['Inter'] text-[15px] font-semibold text-[#4B5563] hover:text-[#0088E8]">Hồ sơ học viên</a>
+              <a routerLink="/main/favorites" (click)="isMobileMenuOpen.set(false)" class="border-l-2 border-transparent py-1.5 pl-3 font-['Inter'] text-[15px] font-semibold text-[#4B5563] hover:text-[#0088E8]">Khóa học yêu thích</a>
+            }
           </nav>
 
           <div class="flex flex-col gap-2 pt-2 border-t border-[#F1F5F9]">
@@ -189,9 +208,12 @@
             </a>
             -->
 
-            <button (click)="logout()" class="w-full h-[40px] flex items-center justify-center rounded-full bg-red-50 text-red-600 font-semibold text-[14px]">
-              Đăng xuất
-            </button>
+            @if (isLoggedIn()) {
+              <button (click)="logout()" class="w-full h-[40px] flex items-center justify-center rounded-full bg-red-50 text-red-600 font-semibold text-[14px]">Đăng xuất</button>
+            } @else {
+              <a routerLink="/auth/login" (click)="isMobileMenuOpen.set(false)" class="flex h-10 items-center justify-center rounded-full bg-[#FFAA00] font-semibold text-[#191B23]">Đăng nhập</a>
+              <a routerLink="/auth/sign-up" (click)="isMobileMenuOpen.set(false)" class="flex h-10 items-center justify-center rounded-full bg-[#006AB5] font-semibold text-white">Đăng ký</a>
+            }
           </div>
         </div>
       }

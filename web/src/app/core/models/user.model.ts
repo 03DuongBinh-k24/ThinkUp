@@ -16,6 +16,7 @@ export interface User {
   email_locked?: boolean;
   onboarding_completed?: boolean;
   preferences?: StudentPreferences;
+  email_verified?: boolean;
 }
 
 export interface AuthResponse {
@@ -30,4 +31,12 @@ export interface AuthResponse {
   resetToken?: string;
   autoLoginToken?: string;
   retryAfter?: number; // seconds
+}
+
+export interface AuthApiError extends Error {
+  status?: number;
+  errorCode?: string;
+  field?: string;
+  retryAfter?: number;
+  provider?: string;
 }
