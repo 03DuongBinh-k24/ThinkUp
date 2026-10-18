@@ -77,22 +77,56 @@ export function maskEmail(email) {
 }
 
 export async function sendEmail({ to, subject, html, text }) {
+  const user = process.env.SMTP_USER;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+  // 1. Ưu tiên: Sử dụng Google OAuth2 nếu có đầy đủ thông số
+  if (user && clientId && clientSecret && refreshToken) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user,
+        clientId,
+        clientSecret,
+        refreshToken,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 15000,
+    });
+
+    const from = process.env.SMTP_FROM || `"ThinkUp" <${user}>`;
+    return await transporter.sendMail({ from, to, subject, html, text });
+  }
+
+  // 2. Dự phòng: Sử dụng SMTP truyền thống (Gmail App Password, Brevo, Resend...)
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
   if (!user || !pass) {
-    return { sent: false, reason: 'SMTP not configured' };
+    return { sent: false, reason: 'Email transport not configured (missing OAuth2 or SMTP credentials)' };
   }
 
+  const isGmail = host.includes('gmail');
   const transporter = nodemailer.createTransport({
-    host,
-    port,
+    ...(isGmail ? { service: 'gmail' } : { host, port }),
     secure: port === 465,
     auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 15000,
   });
 
-  const from = process.env.SMTP_FROM || (user ? `"ThinkUp" <${user}>` : '"ThinkUp" <noreply@thinkup.vn>');
+  const from = process.env.SMTP_FROM || `"ThinkUp" <${user}>`;
   return await transporter.sendMail({ from, to, subject, html, text });
 }
