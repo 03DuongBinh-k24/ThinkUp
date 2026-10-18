@@ -77,10 +77,10 @@ export function maskEmail(email) {
 }
 
 export async function sendEmail({ to, subject, html, text }) {
-  const user = process.env.SMTP_USER;
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const user = process.env.GMAIL_USER || process.env.SMTP_USER;
+  const clientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN;
 
   // 1. Ưu tiên: Sử dụng Google OAuth2 nếu có đầy đủ thông số
   if (user && clientId && clientSecret && refreshToken) {
