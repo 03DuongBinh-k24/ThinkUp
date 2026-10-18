@@ -86,11 +86,17 @@ export async function sendEmail({ to, subject, html, text }) {
     return { sent: false, reason: 'SMTP not configured' };
   }
 
+  const isGmail = host.includes('gmail');
   const transporter = nodemailer.createTransport({
-    host,
-    port,
+    ...(isGmail ? { service: 'gmail' } : { host, port }),
     secure: port === 465,
     auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 15000,
   });
 
   const from = process.env.SMTP_FROM || (user ? `"ThinkUp" <${user}>` : '"ThinkUp" <noreply@thinkup.vn>');
