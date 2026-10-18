@@ -69,7 +69,7 @@ export class CanvasItemComponent {
   startStroke(event: PointerEvent): void { if (!this.canManage() || !this.drawMode()) return; this.drawing.set(true); this.pendingChange = null; this.priorStrokes = this.item().strokes || []; this.points = [this.point(event)]; this.preview({ strokes: [...this.priorStrokes, this.points.join(' ')] }); (event.target as Element).setPointerCapture(event.pointerId); }
   moveStroke(event: PointerEvent): void { if (!this.drawing()) return; this.points.push(this.point(event)); this.preview({ strokes: [...this.priorStrokes, this.points.join(' ')] }); }
   endStroke(): void { if (!this.drawing()) return; this.drawing.set(false); this.points = []; this.commitPending(); }
-  commit(change: Partial<CanvasItem>): void { this.pendingChange = null; this.itemChange.emit(change); this.itemCommit.emit(change); }
+  commit(change: Partial<CanvasItem>): void { this.pendingChange = null; this.itemCommit.emit(change); }
   private preview(change: Partial<CanvasItem>): void { this.pendingChange = { ...(this.pendingChange || {}), ...change }; this.itemChange.emit(change); }
   private commitPending(): void { if (!this.pendingChange) return; const change = this.pendingChange; this.pendingChange = null; this.itemCommit.emit(change); }
   private point(event: PointerEvent): string { const rect = (event.currentTarget as Element).getBoundingClientRect(); return `${((event.clientX - rect.left) / rect.width * 100).toFixed(2)},${((event.clientY - rect.top) / rect.height * 100).toFixed(2)}`; }

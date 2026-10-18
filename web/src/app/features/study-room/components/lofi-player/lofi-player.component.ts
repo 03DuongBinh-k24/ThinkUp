@@ -7,6 +7,7 @@ interface Track { name: string; src: string; collection: 'lofi' | 'instrumental'
 @Component({ selector: 'app-lofi-player', standalone: true, imports: [DecimalPipe, LucideHeart, LucidePlay, LucidePause, LucideShuffle, LucideVolume2], templateUrl: './lofi-player.component.html', styleUrl: './lofi-player.component.css' })
 export class LofiPlayerComponent {
   readonly close = output<void>();
+  readonly playingChange = output<boolean>();
   readonly audio = viewChild<ElementRef<HTMLAudioElement>>('audio');
   readonly ambientAudio = viewChild<ElementRef<HTMLAudioElement>>('ambientAudio');
   readonly playing = signal(false);
@@ -50,14 +51,14 @@ export class LofiPlayerComponent {
     const music = this.audio()?.nativeElement;
     const ambient = this.ambientAudio()?.nativeElement;
     if (!music || !ambient) return;
-    if (this.playing()) { music.pause(); ambient.pause(); this.playing.set(false); return; }
+    if (this.playing()) { music.pause(); ambient.pause(); this.setPlaying(false); return; }
     this.applyVolumes();
     try {
       await music.play();
       if (this.ambientTrack()) await ambient.play();
       this.audioError.set('');
-      this.playing.set(true);
-    } catch { music.pause(); ambient.pause(); this.playing.set(false); this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.'); }
+      this.setPlaying(true);
+    } catch { music.pause(); ambient.pause(); this.setPlaying(false); this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.'); }
   }
   async choose(index: number): Promise<void> {
     const ambientChoice = this.tracks[index].collection === 'nature' || this.tracks[index].collection === 'noise';
@@ -68,15 +69,14 @@ export class LofiPlayerComponent {
     }
     if (!ambientChoice && this.selected() === index) { await this.toggle(); return; }
     if (ambientChoice) this.selectedAmbient.set(index); else this.selected.set(index);
-    const music = this.audio()?.nativeElement;
-    const ambient = this.ambientAudio()?.nativeElement;
-    music?.load(); ambient?.load(); this.applyVolumes();
-    this.playing.set(true);
+    const { music, ambient } = this.loadSelectedTracks();
+    this.applyVolumes();
+    this.setPlaying(true);
     try {
       await music?.play();
       if (this.ambientTrack()) await ambient?.play();
       this.audioError.set('');
-    } catch { this.playing.set(false); this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.'); }
+    } catch { this.setPlaying(false); this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.'); }
   }
   async chooseCollection(collection: Track['collection']): Promise<void> {
     this.collection.set(collection);
@@ -84,15 +84,14 @@ export class LofiPlayerComponent {
     if (first < 0) return;
     if (collection === 'lofi' || collection === 'instrumental') this.selected.set(first);
     else this.selectedAmbient.set(first);
-    const music = this.audio()?.nativeElement;
-    const ambient = this.ambientAudio()?.nativeElement;
-    music?.load(); ambient?.load(); this.applyVolumes();
+    const { music, ambient } = this.loadSelectedTracks();
+    this.applyVolumes();
     try {
       await music?.play();
       if (this.ambientTrack()) await ambient?.play();
       this.audioError.set('');
-      this.playing.set(true);
-    } catch { this.playing.set(false); this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.'); }
+      this.setPlaying(true);
+    } catch { this.setPlaying(false); this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.'); }
   }
   async shuffle(): Promise<void> {
     const activeIndex = this.collection() === 'lofi' || this.collection() === 'instrumental' ? this.selected() : this.selectedAmbient();
@@ -104,4 +103,12 @@ export class LofiPlayerComponent {
   toggleFavorite(index: number): void { this.favorites.update(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; }); }
   setVolume(event: Event): void { this.volume.set(Number((event.target as HTMLInputElement).value)); this.applyVolumes(); }
   setAmbientMix(event: Event): void { this.ambientMix.set(Number((event.target as HTMLInputElement).value)); this.applyVolumes(); }
+  private loadSelectedTracks(): { music?: HTMLAudioElement; ambient?: HTMLAudioElement } {
+    const music = this.audio()?.nativeElement;
+    const ambient = this.ambientAudio()?.nativeElement;
+    if (music) { music.src = this.musicTrack().src; music.load(); }
+    if (ambient) { ambient.src = this.ambientTrack()?.src || ''; ambient.load(); }
+    return { music, ambient };
+  }
+  private setPlaying(value: boolean): void { this.playing.set(value); this.playingChange.emit(value); }
 }

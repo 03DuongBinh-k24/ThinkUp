@@ -1,7 +1,7 @@
 import { Component, ElementRef, afterNextRender, computed, effect, input, output, signal, viewChild } from '@angular/core';
 import { LucideClock3, LucideMessageCircle, LucideSend, LucideUsers, LucideX } from '@lucide/angular';
 
-export interface RoomChatMessage { id: string; sender: string; text: string; time: string; initials: string; color: string; isMe?: boolean; }
+export interface RoomChatMessage { id: string; senderId: string; sender: string; text: string; time: string; initials: string; color: string; isMe?: boolean; }
 
 @Component({ selector: 'app-chat-panel', standalone: true, imports: [LucideClock3, LucideMessageCircle, LucideSend, LucideUsers, LucideX], templateUrl: './chat-panel.component.html', styleUrl: './chat-panel.component.css' })
 export class ChatPanelComponent {

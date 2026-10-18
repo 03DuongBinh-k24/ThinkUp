@@ -76,6 +76,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   readonly emojiOpen = signal(false);
   readonly reactions = signal<FloatingReaction[]>([]);
   readonly lofiOpen = signal(false);
+  readonly lofiPlaying = signal(false);
   readonly sharingScreen = this.media.sharingScreen;
   readonly remoteScreens = this.media.remoteScreens;
   readonly mediaError = this.media.error;
@@ -92,7 +93,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   readonly viewportSize = signal({ width: window.innerWidth, height: window.innerHeight });
   readonly roomPermissions = signal<RoomPermissions>({
     voiceEnabled: true, cameraEnabled: true, chatEnabled: true,
-    whiteboardLocked: false, participantShareScreen: true,
+    whiteboardLocked: false, participantShareScreen: false,
     participantUpload: true, approvalRequired: false,
   });
   readonly focusLocked = computed(() => this.timerMode() === 'focus' && this.isRunning());
@@ -143,6 +144,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   private lastScreenStateSentAt = 0;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
   private miniMapDragging = false;
+  private roomTransition = 0;
   private readonly disconnectedParticipantIds = new Set<string>();
 
   readonly room = computed(() => {
@@ -176,25 +178,70 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
       this.disconnectedParticipantIds.add(participantId);
       this.removeParticipantState(participantId);
     });
-    this.media.setParticipantConnectedHandler(participantId => this.disconnectedParticipantIds.delete(participantId));
+    this.media.setParticipantConnectedHandler(participantId => {
+      this.disconnectedParticipantIds.delete(participantId);
+      if (this.hasJoined) this.refreshRoomData();
+    });
     this.media.setReconnectedHandler(() => {
       this.disconnectedParticipantIds.clear();
-      this.refreshRoomData();
+      this.refreshRoomData(() => this.requestRoomSync());
       this.loadPermissions();
       this.broadcastMediaState();
       if (this.sharingScreen()) this.broadcastScreenState(true);
-      void this.media.sendRealtime({ type: 'sync-request', payload: null });
     });
     this.timerPosition.set({ x: 50, y: Math.min(600, Math.max(280, this.viewportSize().height - 280)) });
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('roomId') || '';
-      if (this.roomPollInterval) clearInterval(this.roomPollInterval);
-      this.roomPollInterval = null;
-      this.roomId.set(id);
-      const storedTheme = sessionStorage.getItem('study_room_theme');
-      if (storedTheme && this.themes.some(theme => theme.id === storedTheme)) this.selectedTheme.set(storedTheme);
-      this.openRoom(id);
+      void this.transitionToRoom(id);
     });
+  }
+
+  private async transitionToRoom(id: string): Promise<void> {
+    if (id && id === this.roomId() && this.hasJoined) return;
+    const transition = ++this.roomTransition;
+    if (this.roomPollInterval) clearInterval(this.roomPollInterval);
+    this.roomPollInterval = null;
+    const previousId = this.roomId();
+    if (previousId && previousId !== id && this.hasJoined) {
+      const userId = this.auth.currentUser()?.id;
+      this.hasJoined = false;
+      this.studyRoomService.clearJoinedRoom(previousId);
+      if (userId) this.studyRoomService.leaveRoom(previousId, userId).subscribe({ error: () => { /* Continue switching rooms even if cleanup fails. */ } });
+      await this.media.dispose();
+      if (transition !== this.roomTransition) return;
+      this.resetRoomState();
+    }
+    this.leaving = false;
+    this.roomId.set(id);
+    const storedTheme = sessionStorage.getItem('study_room_theme');
+    if (storedTheme && this.themes.some(theme => theme.id === storedTheme)) this.selectedTheme.set(storedTheme);
+    this.openRoom(id, transition);
+  }
+
+  private resetRoomState(): void {
+    this.stopTimer();
+    this.sessionError.set('');
+    this.notice.set('');
+    this.timerMode.set('focus');
+    this.timeLeft.set(25 * 60);
+    this.pan.set({ x: 0, y: 0 });
+    this.zoom.set(100);
+    this.participants.set([]);
+    this.messages.set([]);
+    this.canvasItems.set([]);
+    this.inkStrokes.set([]);
+    this.remoteCursors.set({});
+    this.remoteMediaStates.set({});
+    this.remoteScreenLayouts.set({});
+    this.selectedItemId.set(null);
+    this.selectedParticipantId.set(null);
+    this.chatOpen.set(false);
+    this.controlOpen.set(false);
+    this.addOpen.set(false);
+    this.emojiOpen.set(false);
+    this.leaveOpen.set(false);
+    this.selectPointerTool();
+    this.disconnectedParticipantIds.clear();
   }
 
   @HostListener('window:resize')
@@ -202,13 +249,22 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     this.viewportSize.set({ width: window.innerWidth, height: window.innerHeight });
   }
 
-  private openRoom(id: string): void {
+  private openRoom(id: string, transition: number): void {
     if (!id) { this.sessionError.set('Mã phòng không hợp lệ.'); return; }
     const joinedRoom = this.studyRoomService.getJoinedRoom(id);
-    if (joinedRoom) { this.applyRoomTheme(joinedRoom); this.connectRoom(id); return; }
+    if (joinedRoom) { this.applyRoomTheme(joinedRoom); this.connectRoom(id, transition); return; }
     this.studyRoomService.joinRoom(id).subscribe({
-      next: room => { this.applyRoomTheme(room); this.connectRoom(id); },
-      error: () => this.sessionError.set('Không thể xác thực phòng này. Vui lòng quay lại sảnh và vào phòng bằng mã hoặc mật khẩu.'),
+      next: room => {
+        if (!this.isCurrentRoomTransition(id, transition)) {
+          if (this.roomId() !== id) this.studyRoomService.clearJoinedRoom(id);
+          return;
+        }
+        this.applyRoomTheme(room);
+        this.connectRoom(id, transition);
+      },
+      error: () => {
+        if (this.isCurrentRoomTransition(id, transition)) this.sessionError.set('Không thể xác thực phòng này. Vui lòng quay lại sảnh và vào phòng bằng mã hoặc mật khẩu.');
+      },
     });
   }
 
@@ -216,61 +272,87 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     if (this.themes.some(theme => theme.id === room.theme)) this.selectedTheme.set(room.theme);
   }
 
-  private connectRoom(id: string): void {
+  private connectRoom(id: string, transition: number): void {
     const user = this.auth.currentUser();
     if (!user) { this.sessionError.set('Vui lòng đăng nhập để vào phòng học.'); return; }
     this.studyRoomService.connection(id, user.id, user.full_name).subscribe({
       next: async connection => {
+        if (!this.isCurrentRoomTransition(id, transition)) { this.cleanupStaleConnection(id, user.id); return; }
         try {
           await this.media.connect(connection);
+          if (!this.isCurrentRoomTransition(id, transition)) {
+            await this.media.dispose();
+            this.cleanupStaleConnection(id, user.id);
+            return;
+          }
           this.hasJoined = true;
           this.roleLabel.set(connection.role === 'owner' ? 'Chủ phòng' : connection.role === 'moderator' ? 'Moderator' : 'Thành viên');
           this.currentRole.set(connection.role);
           this.memberPosition.set(connection.position);
           this.sessionError.set('');
-          this.refreshRoomData();
+          this.refreshRoomData(() => this.requestRoomSync());
           this.loadPermissions();
           this.roomPollInterval = setInterval(() => this.refreshRoomData(), 5000);
-          void this.media.sendRealtime({ type: 'sync-request', payload: null });
         } catch {
-          this.studyRoomService.leaveRoom(id, user.id).subscribe();
+          if (!this.isCurrentRoomTransition(id, transition)) return;
+          this.studyRoomService.leaveRoom(id, user.id).subscribe({ error: () => { /* The connection error remains the actionable message. */ } });
           this.sessionError.set(this.media.error());
         }
       },
-      error: () => this.sessionError.set('Không thể tạo phiên phòng học. Vui lòng thử lại.'),
+      error: () => {
+        if (this.isCurrentRoomTransition(id, transition)) this.sessionError.set('Không thể tạo phiên phòng học. Vui lòng thử lại.');
+      },
     });
   }
 
-  private refreshRoomData(): void {
+  private isCurrentRoomTransition(id: string, transition: number): boolean {
+    return transition === this.roomTransition && id === this.roomId();
+  }
+
+  private cleanupStaleConnection(roomId: string, userId: string): void {
+    if (this.roomId() === roomId) return;
+    this.studyRoomService.clearJoinedRoom(roomId);
+    this.studyRoomService.leaveRoom(roomId, userId).subscribe({ error: () => { /* A stale room must not affect the active room. */ } });
+  }
+
+  private refreshRoomData(afterParticipants?: () => void): void {
     const id = this.roomId();
     const userId = this.auth.currentUser()?.id;
     if (!id || !userId) return;
     this.studyRoomService.participants(id, userId).subscribe({
       next: members => {
+        if (id !== this.roomId()) return;
         const connectedMembers = members.filter(member => !this.disconnectedParticipantIds.has(member.userId));
         this.participants.set(connectedMembers);
         const activeIds = new Set(connectedMembers.map(member => member.userId));
         this.remoteCursors.update(cursors => Object.fromEntries(Object.entries(cursors).filter(([memberId]) => activeIds.has(memberId))));
         this.remoteMediaStates.update(states => Object.fromEntries(Object.entries(states).filter(([memberId]) => activeIds.has(memberId))));
         this.remoteScreenLayouts.update(layouts => Object.fromEntries(Object.entries(layouts).filter(([memberId]) => activeIds.has(memberId))));
+        afterParticipants?.();
       },
-      error: () => this.showNotice('Không thể đồng bộ thành viên phòng.'),
+      error: () => { if (id === this.roomId()) this.showNotice('Không thể đồng bộ thành viên phòng.'); },
     });
     this.studyRoomService.messages(id, userId).subscribe({
       next: messages => {
+        if (id !== this.roomId()) return;
         const incoming = messages.map(message => this.mapMessage(message, userId));
         this.messages.update(current => this.mergeMessages(incoming, current));
       },
-      error: () => this.showNotice('Không thể đồng bộ tin nhắn phòng.'),
+      error: () => { if (id === this.roomId()) this.showNotice('Không thể đồng bộ tin nhắn phòng.'); },
     });
+  }
+
+  private requestRoomSync(): void {
+    void this.media.sendRealtime({ type: 'sync-request', payload: null });
   }
 
   private loadPermissions(): void {
     const userId = this.auth.currentUser()?.id;
     if (!userId) return;
-    this.studyRoomService.permissions(this.roomId(), userId).subscribe({
-      next: result => this.roomPermissions.set(result.roomPermissions),
-      error: () => this.showNotice('Không thể đồng bộ quyền tương tác trong phòng.'),
+    const roomId = this.roomId();
+    this.studyRoomService.permissions(roomId, userId).subscribe({
+      next: result => { if (roomId === this.roomId()) this.applyLoadedPermissions(result.roomPermissions); },
+      error: () => { if (roomId === this.roomId()) this.showNotice('Không thể đồng bộ quyền tương tác trong phòng.'); },
     });
   }
 
@@ -279,7 +361,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     const sender = message.senderName || 'Thành viên';
     const palette = ['#64748b', '#714cb6', '#3559b8', '#2daa6e', '#e05297', '#b45309'];
     const colorIndex = [...sender].reduce((total, character) => total + character.charCodeAt(0), 0) % palette.length;
-    return { id: message.id, sender, text: message.content,
+    return { id: message.id, senderId: message.senderId, sender, text: message.content,
       time: Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       initials: sender.split(' ').filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'U', color: palette[colorIndex],
       isMe: message.senderId === userId };
@@ -292,7 +374,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     void this.media.dispose();
     if (this.hasJoined && !this.leaving) {
       const userId = this.auth.currentUser()?.id;
-      if (userId) this.studyRoomService.leaveRoom(this.roomId(), userId).subscribe();
+      if (userId) this.studyRoomService.leaveRoom(this.roomId(), userId).subscribe({ error: () => { /* Component teardown must remain silent. */ } });
     }
   }
 
@@ -348,10 +430,12 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     if (!text.trim() || this.focusLocked() || !this.canUseCapability('chat')) return;
     const user = this.auth.currentUser();
     if (!user) return;
+    const roomId = this.roomId();
     const pendingId = `pending-${crypto.randomUUID()}`;
     const now = new Date();
     const pending: RoomChatMessage = {
       id: pendingId,
+      senderId: user.id,
       sender: user.full_name,
       text: text.trim(),
       time: now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
@@ -360,13 +444,15 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
       isMe: true,
     };
     this.messages.update(messages => [...messages, pending]);
-    this.studyRoomService.sendMessage(this.roomId(), user.id, user.full_name, text.trim()).subscribe({
+    this.studyRoomService.sendMessage(roomId, user.id, user.full_name, text.trim()).subscribe({
       next: message => {
+        if (roomId !== this.roomId()) return;
         const mapped = this.mapMessage(message, user.id);
         this.messages.update(messages => [...messages.filter(item => item.id !== pendingId && item.id !== mapped.id), mapped]);
         void this.media.sendRealtime({ type: 'chat', payload: mapped });
       },
       error: () => {
+        if (roomId !== this.roomId()) return;
         this.messages.update(messages => messages.filter(item => item.id !== pendingId));
         this.showNotice('Không thể gửi tin nhắn. Vui lòng thử lại.');
       },
@@ -421,13 +507,15 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     return this.remoteScreenLayouts()[screen.participantId] || { active: true, x: 400 + index * 36, y: 205 + index * 36, width: 640, height: 360 };
   }
   selectTheme(themeId: string): void {
-    this.studyRoomService.changeTheme(this.roomId(), themeId).subscribe({
+    const roomId = this.roomId();
+    this.studyRoomService.changeTheme(roomId, themeId).subscribe({
       next: () => {
+        if (roomId !== this.roomId()) return;
         this.selectedTheme.set(themeId);
         sessionStorage.setItem('study_room_theme', themeId);
         void this.media.sendRealtime({ type: 'theme', payload: { themeId } });
       },
-      error: () => this.showNotice('Bạn không có quyền đổi giao diện phòng.'),
+      error: () => { if (roomId === this.roomId()) this.showNotice('Bạn không có quyền đổi giao diện phòng.'); },
     });
   }
   addCanvasItem(kind: CanvasItemKind): void {
@@ -520,6 +608,11 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     if (!this.canUseCapability('whiteboard')) this.selectPointerTool();
     void this.media.sendRealtime({ type: 'permissions', payload: permissions });
   }
+  applyLoadedPermissions(permissions: RoomPermissions): void {
+    this.roomPermissions.set(permissions);
+    if (!this.canUseCapability('chat')) this.chatOpen.set(false);
+    if (!this.canUseCapability('whiteboard')) this.selectPointerTool();
+  }
   beginCanvasGesture(event: PointerEvent, kind: 'pan' | 'member' | 'timer' | 'screen' | 'screen-resize'): void {
     if ((this.focusLocked() && (kind === 'member' || kind === 'screen' || kind === 'screen-resize')) || (this.penMode() && (kind === 'pan' || kind === 'member' || kind === 'screen')) || event.button !== 0) return;
     const target = event.target as HTMLElement;
@@ -588,9 +681,10 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     this.broadcastParticipantPosition(this.memberPosition());
     const userId = this.auth.currentUser()?.id;
     if (!userId) return;
-    this.studyRoomService.updatePosition(this.roomId(), userId, this.memberPosition()).subscribe({
-      next: position => this.memberPosition.set(position),
-      error: () => this.showNotice('Không thể lưu vị trí trên canvas.'),
+    const roomId = this.roomId();
+    this.studyRoomService.updatePosition(roomId, userId, this.memberPosition()).subscribe({
+      next: position => { if (roomId === this.roomId()) this.memberPosition.set(position); },
+      error: () => { if (roomId === this.roomId()) this.showNotice('Không thể lưu vị trí trên canvas.'); },
     });
   }
   handleWheel(event: WheelEvent): void {
@@ -675,23 +769,25 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
       return;
     }
     if (event.type === 'canvas-upsert') {
-      const item = event.payload as CanvasItem;
-      if (!item?.id || !item.kind) return;
+      if (!this.isCanvasItem(event.payload)) return;
+      const item = event.payload;
+      if (!this.canPeerManageCanvasItem(senderId, item)) return;
       this.canvasItems.update(items => [...items.filter(current => current.id !== item.id), item]);
       return;
     }
     if (event.type === 'canvas-remove') {
       const payload = event.payload as { id?: string };
-      if (payload.id) this.canvasItems.update(items => items.filter(item => item.id !== payload.id));
+      const item = payload.id ? this.canvasItems().find(current => current.id === payload.id) : undefined;
+      if (item && this.canPeerManageCanvasItem(senderId, item)) this.canvasItems.update(items => items.filter(current => current.id !== payload.id));
       return;
     }
     if (event.type === 'ink') {
-      if (Array.isArray(event.payload)) this.inkStrokes.set(event.payload as InkStroke[]);
+      if (this.isInkSnapshot(event.payload) && this.canPeerUseWhiteboard(senderId)) this.inkStrokes.set(event.payload);
       return;
     }
     if (event.type === 'reaction') {
       const payload = event.payload as { emoji?: string; userId?: string; x?: number; y?: number };
-      if (payload.emoji) {
+      if (payload.emoji && payload.userId === senderId) {
         const participant = payload.userId ? this.participants().find(person => person.userId === payload.userId) : undefined;
         const worldX = typeof payload.x === 'number' ? payload.x : (participant?.position.x ?? 300) + 48;
         const worldY = typeof payload.y === 'number' ? payload.y : participant?.position.y ?? 250;
@@ -702,58 +798,106 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     }
     if (event.type === 'theme') {
       const payload = event.payload as { themeId?: string };
-      if (payload.themeId && this.themes.some(theme => theme.id === payload.themeId)) {
+      const senderRole = this.participants().find(person => person.userId === senderId)?.role;
+      if ((senderRole === 'owner' || senderRole === 'moderator') && payload.themeId && this.themes.some(theme => theme.id === payload.themeId)) {
         this.selectedTheme.set(payload.themeId);
+        this.studyRoomService.cacheTheme(this.roomId(), payload.themeId);
         sessionStorage.setItem('study_room_theme', payload.themeId);
       }
       return;
     }
     if (event.type === 'permissions') {
       const permissions = event.payload as RoomPermissions;
-      if (typeof permissions?.chatEnabled === 'boolean') {
-        this.roomPermissions.set(permissions);
-        if (!this.canUseCapability('chat')) this.chatOpen.set(false);
-        if (!this.canUseCapability('whiteboard')) this.selectPointerTool();
-      }
+      const senderRole = this.participants().find(person => person.userId === senderId)?.role;
+      if (senderRole === 'owner' && typeof permissions?.chatEnabled === 'boolean') this.applyLoadedPermissions(permissions);
       return;
     }
     if (event.type === 'chat') {
       const message = event.payload as RoomChatMessage;
-      if (message?.id && message.text) this.messages.update(messages => [...messages.filter(item => item.id !== message.id), message]);
+      if (message?.id && message.text && message.senderId === senderId) {
+        const received = { ...message, isMe: message.senderId === this.auth.currentUser()?.id };
+        this.messages.update(messages => [...messages.filter(item => item.id !== message.id), received]);
+      }
       return;
     }
     if (event.type === 'cursor') {
       const cursor = event.payload as { userId?: string; name?: string; x?: number; y?: number; color?: string };
-      if (!cursor.userId || typeof cursor.x !== 'number' || typeof cursor.y !== 'number') return;
+      if (!cursor.userId || cursor.userId !== senderId || typeof cursor.x !== 'number' || typeof cursor.y !== 'number') return;
       this.remoteCursors.update(cursors => ({ ...cursors, [cursor.userId as string]: {
         x: cursor.x as number, y: cursor.y as number, name: cursor.name || 'Thành viên', color: cursor.color || '#64748b',
       } }));
       return;
     }
     if (event.type === 'media-state') {
-      this.applyRemoteMediaState(event.payload);
+      const state = event.payload as { userId?: string };
+      if (state.userId === senderId) this.applyRemoteMediaState(event.payload);
       return;
     }
     if (event.type === 'participant-position') {
       const payload = event.payload as { userId?: string; position?: { x?: number; y?: number } };
-      if (!payload.userId || typeof payload.position?.x !== 'number' || typeof payload.position.y !== 'number') return;
+      if (!payload.userId || payload.userId !== senderId || typeof payload.position?.x !== 'number' || typeof payload.position.y !== 'number') return;
       this.participants.update(participants => participants.map(person => person.userId === payload.userId ? { ...person, position: { x: payload.position!.x as number, y: payload.position!.y as number } } : person));
       return;
     }
     if (event.type === 'screen-state') {
       const layout = event.payload as { userId?: string; active?: boolean; x?: number; y?: number; width?: number; height?: number };
-      if (!layout.userId || typeof layout.active !== 'boolean' || typeof layout.x !== 'number' || typeof layout.y !== 'number' || typeof layout.width !== 'number' || typeof layout.height !== 'number') return;
+      if (!layout.userId || layout.userId !== senderId || typeof layout.active !== 'boolean' || typeof layout.x !== 'number' || typeof layout.y !== 'number' || typeof layout.width !== 'number' || typeof layout.height !== 'number') return;
       this.remoteScreenLayouts.update(layouts => ({ ...layouts, [layout.userId as string]: { active: layout.active as boolean, x: layout.x as number, y: layout.y as number, width: Math.max(320, layout.width as number), height: Math.max(180, layout.height as number) } }));
       return;
     }
     if (event.type === 'timer') { this.applyRemoteTimer(event.payload); return; }
     if (event.type === 'canvas-snapshot') {
       const payload = event.payload as { items?: CanvasItem[]; ink?: InkStroke[]; timer?: unknown; mediaState?: unknown };
-      if (Array.isArray(payload.items)) this.canvasItems.set(payload.items);
-      if (Array.isArray(payload.ink)) this.inkStrokes.set(payload.ink);
+      if (!this.isAuthoritativeSnapshotSender(senderId)) return;
+      if (Array.isArray(payload.items)) this.canvasItems.set(payload.items.filter(item => this.isCanvasItem(item)));
+      if (this.isInkSnapshot(payload.ink)) this.inkStrokes.set(payload.ink);
       if (payload.timer) this.applyRemoteTimer(payload.timer);
       if (payload.mediaState) this.applyRemoteMediaState(payload.mediaState);
     }
+  }
+  private peerRole(senderId: string): RoomParticipant['role'] | undefined {
+    return this.participants().find(person => person.userId === senderId)?.role;
+  }
+  private isCanvasItem(value: unknown): value is CanvasItem {
+    if (!value || typeof value !== 'object') return false;
+    const item = value as Partial<CanvasItem>;
+    const kinds: CanvasItemKind[] = ['text', 'note', 'image', 'gif', 'youtube', 'whiteboard'];
+    return typeof item.id === 'string' && item.id.length > 0
+      && !!item.kind && kinds.includes(item.kind)
+      && typeof item.x === 'number' && Number.isFinite(item.x)
+      && typeof item.y === 'number' && Number.isFinite(item.y)
+      && typeof item.width === 'number' && Number.isFinite(item.width) && item.width > 0
+      && typeof item.height === 'number' && Number.isFinite(item.height) && item.height > 0;
+  }
+  private isInkSnapshot(value: unknown): value is InkStroke[] {
+    return Array.isArray(value) && value.every(stroke => {
+      if (!stroke || typeof stroke !== 'object') return false;
+      const candidate = stroke as Partial<InkStroke>;
+      return typeof candidate.id === 'string' && typeof candidate.color === 'string'
+        && typeof candidate.width === 'number' && Number.isFinite(candidate.width) && candidate.width > 0
+        && Array.isArray(candidate.points) && candidate.points.every(point =>
+          !!point && typeof point.x === 'number' && Number.isFinite(point.x)
+          && typeof point.y === 'number' && Number.isFinite(point.y));
+    });
+  }
+  private canPeerUseWhiteboard(senderId: string): boolean {
+    const role = this.peerRole(senderId);
+    return role === 'owner' || role === 'moderator' || (role === 'member' && !this.roomPermissions().whiteboardLocked);
+  }
+  private canPeerManageCanvasItem(senderId: string, item: CanvasItem): boolean {
+    const role = this.peerRole(senderId);
+    if (role === 'owner' || role === 'moderator') return true;
+    if (role !== 'member' || item.ownerId !== senderId) return false;
+    const existing = this.canvasItems().find(current => current.id === item.id);
+    if (existing && existing.ownerId !== senderId) return false;
+    const mediaItem = item.kind === 'image' || item.kind === 'gif' || item.kind === 'youtube';
+    if (existing && mediaItem) return true;
+    return mediaItem ? this.roomPermissions().participantUpload : !this.roomPermissions().whiteboardLocked;
+  }
+  private isAuthoritativeSnapshotSender(senderId: string): boolean {
+    const role = this.peerRole(senderId);
+    if (role === 'owner') return true;
+    return role === 'moderator' && this.currentRole() !== 'owner' && !this.participants().some(person => person.role === 'owner');
   }
   private applyRemoteMediaState(value: unknown): void {
     if (!value || typeof value !== 'object') return;
