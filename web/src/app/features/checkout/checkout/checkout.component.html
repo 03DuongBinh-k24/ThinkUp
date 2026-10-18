@@ -138,6 +138,7 @@
               </div>
             </div>
 
+            @if (paymentError()) {<p class="mb-3 text-sm text-[#B42346]" role="alert">{{ paymentError() }}</p>}
             <button
               type="button"
               (click)="confirmPayment()"

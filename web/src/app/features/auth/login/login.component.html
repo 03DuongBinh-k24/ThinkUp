@@ -102,10 +102,10 @@
                   <span>{{ errorMessage() }}</span>
                 </div>
               }
-              @if (pendingEmail()) {
-                <button type="button" (click)="resendVerification()" [disabled]="resendingVerification()"
+              @if (showVerificationResend()) {
+                <button type="button" (click)="resendVerification()" [disabled]="resendingVerification() || verificationCooldownSeconds() > 0 || !isEmailValid()"
                   class="mt-2 text-xs font-semibold text-[#006AB5] hover:underline disabled:opacity-50">
-                  {{ resendingVerification() ? 'Đang gửi...' : 'Gửi lại email kích hoạt' }}
+                  {{ resendingVerification() ? 'Đang gửi...' : verificationCooldownSeconds() > 0 ? 'Gửi lại sau ' + verificationCooldownSeconds() + ' giây' : 'Gửi lại email kích hoạt' }}
                 </button>
               }
 

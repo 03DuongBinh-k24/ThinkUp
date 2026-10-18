@@ -1,0 +1,18 @@
+<main class="verify-email">
+  <section class="verify-email__card" aria-live="polite">
+    <h1>Xác thực tài khoản</h1>
+    @if (verifying()) {
+      <p>Đang kiểm tra liên kết kích hoạt...</p>
+    } @else {
+      <p>{{ message() }}</p>
+      <form (ngSubmit)="resend()">
+        <label for="verification-email">Địa chỉ email đăng ký</label>
+        <input id="verification-email" type="email" name="verificationEmail" [(ngModel)]="email" autocomplete="email" required />
+        <button type="submit" [disabled]="resending() || cooldownSeconds() > 0">
+          {{ resending() ? 'Đang gửi...' : cooldownSeconds() > 0 ? 'Gửi lại sau ' + cooldownSeconds() + ' giây' : 'Gửi lại liên kết kích hoạt' }}
+        </button>
+      </form>
+      <a routerLink="/auth/login">Quay về đăng nhập</a>
+    }
+  </section>
+</main>

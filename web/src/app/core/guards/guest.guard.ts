@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { catchError, map, of } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -8,14 +9,12 @@ import { AuthService } from '../services/auth.service';
  */
 export const guestGuard: CanActivateFn = () => {
   const router = inject(Router);
-
-  const isLoggedIn = inject(AuthService).isAuthenticated();
-
-  if (isLoggedIn) {
-    // Đã đăng nhập -> Điều hướng về /main/courses hoặc /
-    router.navigate(['/main/courses']);
-    return false;
-  }
-
-  return true;
+  const auth = inject(AuthService);
+  if (!auth.getToken()) return true;
+  return auth.validateSession().pipe(
+    map(valid => valid
+      ? router.createUrlTree([auth.currentUser()?.role === 'student' && !auth.currentUser()?.onboarding_completed ? '/onboarding' : '/main/home'])
+      : true),
+    catchError(() => of(true))
+  );
 };

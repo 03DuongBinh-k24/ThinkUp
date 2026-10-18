@@ -1,4 +1,4 @@
 import { Provider } from '@angular/core';
 
-// Production uses HttpBlogDataSource; the development build replaces this configuration.
+// BlogService uses HttpBlogDataSource in every build configuration.
 export const BLOG_PROVIDERS: Provider[] = [];

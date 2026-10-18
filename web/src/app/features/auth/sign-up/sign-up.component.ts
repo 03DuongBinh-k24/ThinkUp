@@ -34,6 +34,7 @@ export class SignUpComponent implements OnInit {
   // Server error overrides (EX-REG-01, AC-14)
   readonly serverEmailDuplicate = signal(false);
   readonly serverPhoneDuplicate = signal(false);
+  readonly serverFieldErrors = signal<Partial<Record<'fullName' | 'phone' | 'email' | 'password' | 'confirmPassword' | 'terms', string>>>({});
 
   // UI States
   readonly showPassword = signal(false);
@@ -66,11 +67,11 @@ export class SignUpComponent implements OnInit {
   });
 
   readonly showFullNameError = computed(() => {
-    return this.fullNameTouched() && !this.fullNameValidation().valid;
+    return !!this.serverFieldErrors().fullName || (this.fullNameTouched() && !this.fullNameValidation().valid);
   });
 
   readonly fullNameErrorMessage = computed(() => {
-    return this.fullNameValidation().message;
+    return this.serverFieldErrors().fullName || this.fullNameValidation().message;
   });
 
   // BR-REG-03: Số điện thoại (Đúng 10 số, bắt đầu bằng 03, 05, 07, 08, 09)
@@ -83,7 +84,7 @@ export class SignUpComponent implements OnInit {
       return { valid: false, message: 'Vui lòng nhập số điện thoại.' };
     }
     if (!/^[0-9]+$/.test(cleanPhone) || cleanPhone.length !== 10) {
-      return { valid: false, message: 'Số điện thoại không hợp lệ (phải gồm 10 số).' };
+      return { valid: false, message: 'Số điện thoại không hợp lệ' };
     }
     if (!/^(03|05|07|08|09)/.test(cleanPhone)) {
       return { valid: false, message: 'Số điện thoại phải bắt đầu bằng đầu số di động Việt Nam (03, 05, 07, 08, 09).' };
@@ -92,11 +93,11 @@ export class SignUpComponent implements OnInit {
   });
 
   readonly showPhoneError = computed(() => {
-    return (this.phoneTouched() || this.serverPhoneDuplicate()) && !this.phoneValidation().valid;
+    return !!this.serverFieldErrors().phone || ((this.phoneTouched() || this.serverPhoneDuplicate()) && !this.phoneValidation().valid);
   });
 
   readonly phoneErrorMessage = computed(() => {
-    return this.phoneValidation().message;
+    return this.serverFieldErrors().phone || this.phoneValidation().message;
   });
 
   // BR-REG-04: Email (RFC 5322, kiểm tra trùng lặp)
@@ -115,11 +116,11 @@ export class SignUpComponent implements OnInit {
   });
 
   readonly showEmailError = computed(() => {
-    return (this.emailTouched() || this.serverEmailDuplicate()) && !this.emailValidation().valid;
+    return !!this.serverFieldErrors().email || ((this.emailTouched() || this.serverEmailDuplicate()) && !this.emailValidation().valid);
   });
 
   readonly emailErrorMessage = computed(() => {
-    return this.emailValidation().message;
+    return this.serverFieldErrors().email || this.emailValidation().message;
   });
 
   // BR-REG-05: Mật khẩu Real-time Checklist (8-64 ký tự, hoa, thường, số, ký tự đặc biệt)
@@ -160,9 +161,8 @@ export class SignUpComponent implements OnInit {
   });
 
   readonly confirmPasswordInputClass = computed(() => {
-    if (this.confirmPassword().length === 0) return 'border-[#C2C6D6] focus:border-[#006AB5]';
-    return this.confirmPasswordStatus().isMatch
-      ? 'border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/20'
+    return this.confirmPassword().length === 0 || this.confirmPasswordStatus().isMatch
+      ? 'border-[#C2C6D6] focus:border-[#006AB5]'
       : 'border-[#EF4444] focus:border-[#EF4444] focus:ring-[#EF4444]/20';
   });
 
@@ -180,21 +180,30 @@ export class SignUpComponent implements OnInit {
 
   // Reset Server Error khi người dùng gõ lại
   onFullNameChange(): void {
+    this.clearFieldError('fullName');
     if (this.networkToast()) this.networkToast.set('');
   }
 
   onPhoneChange(): void {
     if (this.serverPhoneDuplicate()) this.serverPhoneDuplicate.set(false);
+    this.clearFieldError('phone');
     if (this.networkToast()) this.networkToast.set('');
   }
 
   onEmailChange(): void {
     if (this.serverEmailDuplicate()) this.serverEmailDuplicate.set(false);
+    this.clearFieldError('email');
     if (this.networkToast()) this.networkToast.set('');
   }
 
   onPasswordChange(): void {
+    this.clearFieldError('password');
+    this.clearFieldError('confirmPassword');
     if (this.networkToast()) this.networkToast.set('');
+  }
+
+  clearFieldError(field: 'fullName' | 'phone' | 'email' | 'password' | 'confirmPassword' | 'terms'): void {
+    this.serverFieldErrors.update(errors => ({ ...errors, [field]: undefined }));
   }
 
   // --- Submit Luồng Đăng Ký (AC-13, AC-14, AC-15, EX-REG-01, EX-REG-02) ---
@@ -204,6 +213,7 @@ export class SignUpComponent implements OnInit {
     this.loading.set(true);
     this.networkToast.set('');
     this.successToast.set('');
+    this.serverFieldErrors.set({});
 
     const payload = {
       fullName: this.fullName().trim(),
@@ -255,6 +265,14 @@ export class SignUpComponent implements OnInit {
     if (err?.errorCode === 'DUPLICATE_PHONE') {
       this.phoneTouched.set(true);
       this.serverPhoneDuplicate.set(true);
+      return;
+    }
+
+    if (err.field && ['fullName', 'phone', 'email', 'password', 'confirmPassword', 'terms'].includes(err.field)) {
+      this.serverFieldErrors.set({ [err.field]: err.message });
+      if (err.field === 'fullName') this.fullNameTouched.set(true);
+      if (err.field === 'phone') this.phoneTouched.set(true);
+      if (err.field === 'email') this.emailTouched.set(true);
       return;
     }
 

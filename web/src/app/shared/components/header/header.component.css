@@ -1,7 +1,70 @@
-:host-context(.study-room-lobby-shell) header{background:#08185a!important;border-color:#183574!important;box-shadow:none!important}
-:host-context(.study-room-lobby-shell) header nav a{color:#d8e6ff!important}
-:host-context(.study-room-lobby-shell) header nav a:hover{color:white!important}
-:host-context(.study-room-lobby-shell) header a[aria-label="ThinkUp Trang chủ"] span span:first-child{color:white!important}
-:host-context(.study-room-lobby-shell) header a[aria-label="Giỏ hàng"],:host-context(.study-room-lobby-shell) header button[aria-label="Thông báo"]{color:#e5efff!important}
-:host-context(.study-room-lobby-shell){display:block;position:sticky;top:0;z-index:50}
-:host-context(.study-room-lobby-shell) header button[aria-label="Thông báo"]{display:none}
+:host(.liquid-glass) {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+:host(.liquid-glass) header {
+  background: rgba(2, 6, 23, 0.15) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 16px 48px -28px rgba(0, 106, 181, 0.3) !important;
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+}
+
+:host(.liquid-glass) header nav a {
+  color: rgba(255, 255, 255, 0.9) !important;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+:host(.liquid-glass) header nav a:hover {
+  color: #fff !important;
+  border-bottom-color: rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.95);
+}
+
+:host(.liquid-glass) header nav a[aria-current='page'] {
+  color: #8aceff !important;
+  border-bottom-color: #8aceff !important;
+  text-shadow: 0 0 8px rgba(138, 206, 255, 0.8);
+}
+
+:host(.liquid-glass) header a[aria-label='ThinkUp Trang chủ'] span span:first-child {
+  color: #fff !important;
+}
+
+:host(.liquid-glass) header a[aria-label='ThinkUp Trang chủ'] svg g path:nth-child(2) {
+  fill: #fff;
+}
+
+:host(.liquid-glass) header a[aria-label='Giỏ hàng'],
+:host(.liquid-glass) header button[aria-label='Thông báo'] {
+  color: #fff !important;
+}
+
+:host(.liquid-glass) header button[aria-label='Thông báo'] img {
+  filter: brightness(0) invert(1);
+}
+
+:host(.liquid-glass) header a[aria-label='Giỏ hàng']:hover,
+:host(.liquid-glass) header button[aria-label='Thông báo']:hover {
+  background: rgba(255, 255, 255, 0.1);
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+}
+
+:host(.liquid-glass) header a[href='/auth/login'],
+:host(.liquid-glass) header a[href='/auth/sign-up'] {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+:host(.liquid-glass) header a[href='/auth/login'] {
+  background: rgba(255, 255, 255, 0.13) !important;
+}
+
+:host(.liquid-glass) header a[href='/auth/sign-up'] {
+  background: rgba(0, 136, 232, 0.3) !important;
+}

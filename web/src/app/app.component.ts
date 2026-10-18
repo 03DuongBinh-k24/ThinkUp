@@ -1,21 +1,26 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
-import { HeaderComponent } from './shared/components/header/header.component';
-import { AuthHeaderComponent } from './shared/components/auth-header/auth-header.component';
+import { AuthService } from './core/services/auth.service';
+import { BrandOnlyHeaderComponent } from './shared/components/brand-only-header/brand-only-header.component';
+import { GuestHeaderComponent } from './shared/components/guest-header/guest-header.component';
+import { MemberHeaderComponent } from './shared/components/member-header/member-header.component';
+import { StudyRoomHeaderComponent } from './shared/components/study-room-header/study-room-header.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, HeaderComponent, AuthHeaderComponent, FooterComponent, ToastComponent],
+  imports: [CommonModule, RouterOutlet, BrandOnlyHeaderComponent, GuestHeaderComponent, MemberHeaderComponent, StudyRoomHeaderComponent, FooterComponent, ToastComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent {
   private router = inject(Router);
+  private authService = inject(AuthService);
+  readonly isMember = computed(() => this.authService.isAuthenticated());
   readonly isAuthPage = signal(false);
   readonly isOnboardingPage = signal(false);
   readonly hideFooter = signal(false);
@@ -30,7 +35,7 @@ export class AppComponent {
   }
 
   private updateShell(url: string): void {
-    this.isAuthPage.set(url.startsWith('/auth'));
+    this.isAuthPage.set(url.startsWith('/auth') || url.startsWith('/api/auth/verify'));
     this.isOnboardingPage.set(url.startsWith('/onboarding'));
     this.isStudyLobby.set(url.startsWith('/learning/study-room') && !/^\/learning\/study-room\/[^/]+/.test(url));
     let activeRoute = this.router.routerState.snapshot.root;

@@ -37,8 +37,10 @@ export class LoginComponent implements OnInit, OnDestroy {
   readonly lockoutRemainingSeconds = signal(0);
   private timerInterval: any = null;
 
-  readonly pendingEmail = signal('');
+  readonly showVerificationResend = signal(false);
   readonly resendingVerification = signal(false);
+  readonly verificationCooldownSeconds = signal(0);
+  private verificationTimer: ReturnType<typeof setInterval> | null = null;
 
   // BR-AUTH-01, AC-02, AC-03: Realtime computed checking
   readonly isEmailValid = computed(() => {
@@ -72,9 +74,14 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
     if (qParams['registered'] === 'true') {
       this.activatedToast.set('Đăng ký thành công. Vui lòng kiểm tra email và bấm liên kết kích hoạt trước khi đăng nhập.');
+      this.showVerificationResend.set(true);
+      this.startVerificationCooldown(60);
     }
     if (qParams['email']) this.email.set(String(qParams['email']));
-    if (qParams['error']) this.networkToast.set(String(qParams['error']));
+    if (qParams['error']) {
+      this.networkToast.set(String(qParams['error']));
+      this.showVerificationResend.set(true);
+    }
 
     // Phục hồi lockout timer nếu trước đó đã bị khóa (lưu trong sessionStorage)
     if (typeof sessionStorage !== 'undefined') {
@@ -94,10 +101,10 @@ export class LoginComponent implements OnInit, OnDestroy {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
     }
+    if (this.verificationTimer) clearInterval(this.verificationTimer);
   }
 
   onInputChange(): void {
-    this.pendingEmail.set('');
     // BR-AUTH-01: Không hiện lỗi khi đang gõ. Nếu trước đó có viền đỏ submit sai, người dùng gõ lại thì reset viền đỏ.
     if (this.hasAuthError()) {
       this.hasAuthError.set(false);
@@ -125,7 +132,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.clearErrors();
 
     const cleanEmail = this.email().trim();
-    const cleanPassword = this.password().trim();
+    const cleanPassword = this.password();
 
     this.authService.login({
       email: cleanEmail,
@@ -155,7 +162,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   private handleLoginFailure(err: AuthApiError): void {
     if (err.errorCode === 'ACCOUNT_PENDING') {
-      this.pendingEmail.set(this.email().trim());
+      this.showVerificationResend.set(true);
       this.hasAuthError.set(true);
       this.errorMessage.set(err.message);
       return;
@@ -216,27 +223,46 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   resendVerification(): void {
-    const email = this.pendingEmail();
-    if (!email || this.resendingVerification()) return;
+    const email = this.email().trim();
+    if (!this.isEmailValid() || this.resendingVerification() || this.verificationCooldownSeconds() > 0) return;
     this.resendingVerification.set(true);
     this.authService.resendVerification(email).subscribe({
       next: (res) => {
         this.resendingVerification.set(false);
+        this.startVerificationCooldown(60);
         this.toastService.showToast({ type: 'success', message: res.message });
       },
       error: (err: AuthApiError) => {
         this.resendingVerification.set(false);
         this.networkToast.set(err.message);
+        if (err.status === 429) {
+          const seconds = Number(err.message.match(/(\d+)\s*giây/)?.[1]);
+          this.startVerificationCooldown(Number.isFinite(seconds) && seconds > 0 ? seconds : 60);
+        }
       }
     });
   }
 
+  private startVerificationCooldown(seconds: number): void {
+    if (this.verificationTimer) clearInterval(this.verificationTimer);
+    this.verificationCooldownSeconds.set(seconds);
+    this.verificationTimer = setInterval(() => {
+      this.verificationCooldownSeconds.update(remaining => Math.max(0, remaining - 1));
+      if (this.verificationCooldownSeconds() === 0 && this.verificationTimer) {
+        clearInterval(this.verificationTimer);
+        this.verificationTimer = null;
+      }
+    }, 1000);
+  }
+
   private navigateAfterLogin(): void {
     // BR-AUTH-05 & AC-15: Ưu tiên Return URL (hoặc queryParam 'next')
-    const queryReturn = this.route.snapshot.queryParams['returnUrl'] || this.route.snapshot.queryParams['next'];
+    const requested = this.route.snapshot.queryParams['returnUrl'] || this.route.snapshot.queryParams['next'];
+    const queryReturn = typeof requested === 'string' && requested.startsWith('/') && !requested.startsWith('//') && !requested.startsWith('/auth/')
+      ? requested : null;
 
     // Nếu học viên chưa hoàn thành khảo sát Onboarding: Ép chuyển hướng về /onboarding
-    if (!this.onboardingService.isOnboardingCompleted()) {
+    if (this.authService.currentUser()?.role === 'student' && !this.onboardingService.isOnboardingCompleted()) {
       // Bảo lưu returnUrl sau khi hoàn tất khảo sát
       if (queryReturn && typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem('thinkup_post_onboarding_return', queryReturn);

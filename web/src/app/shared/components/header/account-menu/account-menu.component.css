@@ -1,0 +1,12 @@
+:host-context(.study-room-lobby-shell) button[aria-haspopup='menu'] {
+  color: #fff;
+}
+
+:host-context(.study-room-lobby-shell) button[aria-haspopup='menu']:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+}
+
+:host-context(.study-room-lobby-shell) button[aria-haspopup='menu'] > svg {
+  color: #fff;
+}

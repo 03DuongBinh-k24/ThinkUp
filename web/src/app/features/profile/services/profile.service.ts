@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
 import { UserProfile, LearningStat, CurrentCourse, Achievement, RecentActivity, ProfileOverviewData } from '../../../core/models/profile.model';
 import { MOCK_PROFILE, MOCK_LEARNING_STATS, MOCK_CURRENT_COURSES, MOCK_ACHIEVEMENTS, MOCK_RECENT_ACTIVITIES, MOCK_ROADMAP_PROGRESS, MOCK_TOTAL_AWARDS } from '../../../core/data/mock/mock-profile';
 
@@ -12,10 +13,11 @@ const CURRENT_USER_KEY = 'thinkup_current_user';
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
   private http = inject(HttpClient);
+  private authService = inject(AuthService);
   private apiUrl = environment.apiUrl;
 
   // Reactive State Signals
-  readonly profile = signal<UserProfile>(MOCK_PROFILE);
+  readonly profile = signal<UserProfile>(this.initialProfile());
   readonly learningStats = signal<LearningStat[]>(MOCK_LEARNING_STATS);
   readonly roadmapProgress = signal<number>(MOCK_ROADMAP_PROGRESS);
   readonly currentCourses = signal<CurrentCourse[]>(MOCK_CURRENT_COURSES);
@@ -27,16 +29,26 @@ export class ProfileService {
     this.loadFromStorage();
   }
 
+  private initialProfile(): UserProfile {
+    const user = this.authService.currentUser();
+    return user
+      ? { ...MOCK_PROFILE, name: user.full_name, email: user.email, avatarUrl: user.avatar || '' }
+      : MOCK_PROFILE;
+  }
+
   private loadFromStorage(): void {
     try {
       const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
       if (stored) {
+        const user = this.authService.currentUser();
+        const parsed = JSON.parse(stored) as Partial<UserProfile>;
+        if (user && parsed.email !== user.email) return;
         if (stored.includes('Nguyễn Văn An')) {
           localStorage.removeItem(PROFILE_STORAGE_KEY);
-          this.profile.set(MOCK_PROFILE);
+          this.profile.set(this.initialProfile());
         } else {
-          const parsed = JSON.parse(stored);
-          this.profile.set({ ...MOCK_PROFILE, ...parsed });
+          this.profile.set({ ...this.initialProfile(), ...parsed,
+            avatarUrl: parsed.avatarUrl === MOCK_PROFILE.avatarUrl && user ? '' : parsed.avatarUrl || '' });
         }
       }
     } catch {}

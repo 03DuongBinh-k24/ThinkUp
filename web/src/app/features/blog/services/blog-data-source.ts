@@ -10,7 +10,7 @@ export interface BlogDataSource {
   addComment(id: string, authorName: string, content: string): Observable<BlogComment>;
   react(id: string, action: BlogReaction): Observable<unknown>;
   save(request: BlogSaveRequest): Observable<BlogSaveResponse>;
-  upload(file: File): Observable<string>;
+  upload(file: File, type?: 'thumbnail' | 'content'): Observable<string>;
   subscribe(email: string): Observable<NewsletterResponse>;
 }
 export const BLOG_DATA_SOURCE = new InjectionToken<BlogDataSource>('BLOG_DATA_SOURCE');

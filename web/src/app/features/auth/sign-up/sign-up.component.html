@@ -38,7 +38,7 @@
               <!-- Ô Họ và tên (BR-REG-02, AC-03) -->
               <div class="flex flex-col gap-1">
                 <label for="fullName" class="block text-xs font-medium text-[#131927]">
-                  Họ và tên *
+                  Họ và tên
                 </label>
                 <input
                   type="text"
@@ -62,7 +62,7 @@
               <!-- Ô Số điện thoại (BR-REG-03, AC-04, AC-14) -->
               <div class="flex flex-col gap-1">
                 <label for="phone" class="block text-xs font-medium text-[#131927]">
-                  Số điện thoại *
+                  Số điện thoại
                 </label>
                 <input
                   type="tel"
@@ -87,7 +87,7 @@
             <!-- 2. Địa chỉ Email (BR-REG-04, AC-05, AC-14) -->
             <div class="flex flex-col gap-1 mt-3">
               <label for="email" class="block text-xs font-medium text-[#131927]">
-                Địa chỉ Email *
+                Địa chỉ Email
               </label>
               <input
                 type="email"
@@ -102,14 +102,9 @@
                 [ngClass]="showEmailError() ? 'border-[#EF4444] ring-1 ring-[#EF4444]' : 'border-[#C2C6D6] focus:border-[#006AB5]'"
               />
               @if (showEmailError()) {
-                <div class="flex items-center justify-between text-[#EF4444] text-[11px] font-medium animate-fadeIn">
-                  <span>{{ emailErrorMessage() }}</span>
-                  @if (serverEmailDuplicate()) {
-                    <a routerLink="/auth/login" class="text-[#006AB5] font-semibold underline hover:text-[#005fa0] ml-1">
-                      Đăng nhập ngay
-                    </a>
-                  }
-                </div>
+                <span class="text-[#EF4444] text-[11px] font-medium animate-fadeIn">
+                  {{ emailErrorMessage() }}
+                </span>
               }
             </div>
 
@@ -118,7 +113,7 @@
               <!-- Ô Mật khẩu (BR-REG-05, AC-06, AC-07, AC-12) -->
               <div class="flex flex-col gap-1">
                 <label for="password" class="block text-xs font-medium text-[#0D1C2D]">
-                  Mật khẩu *
+                  Mật khẩu
                 </label>
                 <div class="relative">
                   <input
@@ -165,18 +160,22 @@
                     </span>
                   }
                 }
+                @if (serverFieldErrors().password) {
+                  <span class="text-[#EF4444] text-[11px] font-medium">{{ serverFieldErrors().password }}</span>
+                }
               </div>
 
               <!-- Ô Xác nhận mật khẩu (BR-REG-06, AC-08, AC-09, AC-12) -->
               <div class="flex flex-col gap-1">
                 <label for="confirmPassword" class="block text-xs font-medium text-[#0D1C2D]">
-                  Xác nhận mật khẩu *
+                  Xác nhận mật khẩu
                 </label>
                 <div class="relative">
                   <input
                     [type]="showConfirmPassword() ? 'text' : 'password'"
                     id="confirmPassword"
                     [(ngModel)]="confirmPassword"
+                    (ngModelChange)="clearFieldError('confirmPassword')"
                     name="confirmPassword"
                     placeholder="••••••••"
                     [disabled]="loading()"
@@ -204,17 +203,14 @@
                   </button>
                 </div>
 
-                <!-- AC-08, AC-09: Dòng so khớp chéo Real-time -->
-                @if (confirmPassword().length > 0) {
-                  @if (confirmPasswordStatus().isMatch) {
-                    <span class="text-emerald-600 text-[11px] font-semibold animate-fadeIn flex items-center gap-1">
-                      ✓ Mật khẩu trùng khớp
-                    </span>
-                  } @else {
-                    <span class="text-[#EF4444] text-[11px] font-medium animate-fadeIn">
-                      Mật khẩu xác nhận không khớp.
-                    </span>
-                  }
+                <!-- AC-08, AC-09: Chỉ cảnh báo khi mật khẩu xác nhận không khớp -->
+                @if (confirmPassword().length > 0 && !confirmPasswordStatus().isMatch) {
+                  <span class="text-[#EF4444] text-[11px] font-medium animate-fadeIn">
+                    Mật khẩu xác nhận không khớp.
+                  </span>
+                }
+                @if (serverFieldErrors().confirmPassword) {
+                  <span class="text-[#EF4444] text-[11px] font-medium">{{ serverFieldErrors().confirmPassword }}</span>
                 }
               </div>
             </div>
@@ -225,6 +221,7 @@
                 type="checkbox"
                 id="terms"
                 [(ngModel)]="agreedToTerms"
+                (ngModelChange)="clearFieldError('terms')"
                 name="terms"
                 [disabled]="loading()"
                 class="w-4 h-4 mt-0.5 border border-[#C2C6D6] rounded cursor-pointer accent-[#006AB5] focus:ring-0"
@@ -237,6 +234,9 @@
                 của ThinkUp.
               </label>
             </div>
+            @if (serverFieldErrors().terms) {
+              <span class="text-[#EF4444] text-[11px] font-medium">{{ serverFieldErrors().terms }}</span>
+            }
 
             <!-- 5. Submit Button (AC-02, AC-11, AC-13) -->
             <button

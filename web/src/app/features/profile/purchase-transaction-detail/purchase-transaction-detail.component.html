@@ -2,7 +2,9 @@
   <div class="mx-auto w-full max-w-[1492px] px-4 pb-16 pt-10 sm:px-6 2xl:px-0">
     <nav class="flex items-center gap-2 text-[14px] text-[#0F172A]" aria-label="Breadcrumb"><a routerLink="/main/profile/billing" class="hover:text-[#2563EB]">Lịch sử mua hàng</a><span aria-hidden="true">›</span><span>Chi tiết giao dịch</span></nav>
     <h1 class="mt-6 text-[26px] font-bold leading-[39px]">Chi tiết giao dịch</h1>
-    @if (detail; as transaction) {
+    @if (loading()) {<p class="mt-8 text-[14px] text-[#64748B]" role="status">Đang tải chi tiết giao dịch...</p>}
+    @else if (error()) {<div class="mt-8 rounded-[14px] border border-[#FFD1DC] bg-white p-6 text-[14px] text-[#B42346]" role="alert">{{ error() }} <button type="button" (click)="load()" class="ml-3 font-semibold underline">Thử lại</button></div>}
+    @else if (detail(); as transaction) {
       <div class="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1064px)_360px]">
         <div class="min-w-0 space-y-5">
           <section class="flex flex-col gap-4 rounded-[14px] border px-5 py-5 sm:flex-row sm:items-start sm:justify-between" [class]="transaction.status === 'success' ? 'border-[#BBF7D0] bg-[#F0FDF4]' : 'border-[#FFD1DC] bg-[#FFF0F4]'">

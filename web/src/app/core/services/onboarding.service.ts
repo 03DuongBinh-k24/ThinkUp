@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { StudentPreferences, User } from '../models/user.model';
+import { Course } from '../models/course.model';
 import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
@@ -10,6 +11,36 @@ export class OnboardingService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private apiUrl = environment.apiUrl;
+
+  getRecommendedCourses(): Observable<Course[]> {
+    interface BackendCourse {
+      id: string; course_id?: string | null; title: string; description?: string | null;
+      short_description?: string | null; category_id?: string | null; level?: string | null;
+      rating?: number | null; total_reviews?: number | null; total_students?: number | null;
+      price?: number | null; original_price?: number | null; thumbnail_url?: string | null;
+      instructor_id?: string | null; badge?: string | null; tag_ids?: string[];
+    }
+    return this.http.get<{ courses: BackendCourse[] }>(`${this.apiUrl}/user/onboarding/courses`).pipe(
+      map(response => response.courses.map(course => ({
+        id: course.id,
+        courseId: course.course_id || undefined,
+        title: course.title,
+        description: course.description || undefined,
+        shortDescription: course.short_description || undefined,
+        instructor: 'Giảng viên ThinkUp',
+        category: course.category_id || undefined,
+        level: course.level || undefined,
+        rating: course.rating ?? 0,
+        ratingCount: course.total_reviews ?? 0,
+        studentsCount: course.total_students ?? 0,
+        originalPrice: course.original_price ?? course.price ?? 0,
+        salePrice: course.price ?? 0,
+        thumbnailUrl: course.thumbnail_url || undefined,
+        badge: course.badge || undefined,
+        tags: course.tag_ids || [],
+      })))
+    );
+  }
 
   /**
    * Kiểm tra xem học viên hiện tại đã hoàn thành khảo sát (hoặc đã bỏ qua) hay chưa.

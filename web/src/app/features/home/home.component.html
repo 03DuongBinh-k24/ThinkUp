@@ -190,6 +190,9 @@
             </a>
           </div>
 
+          @if (featuredLoading()) { <p role="status" class="text-sm text-[#62748E]">Đang tải khóa học gợi ý...</p> }
+          @else if (featuredError()) { <p role="alert" class="text-sm text-[#B42346]">{{ featuredError() }} <button type="button" (click)="retryCourses()" class="underline">Thử lại</button></p> }
+          @else if (!featuredCourses().length) { <p class="text-sm text-[#62748E]">Chưa có khóa học gợi ý.</p> }
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             @for (c of featuredCourses(); track c.id) {
               <div class="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
