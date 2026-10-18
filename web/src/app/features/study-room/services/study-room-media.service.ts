@@ -28,6 +28,7 @@ export class StudyRoomMediaService {
   private participantConnectedHandler: ((participantId: string) => void) | null = null;
   private reconnectedHandler: (() => void) | null = null;
   private intentionalDisconnect = false;
+  private connectionRequest = 0;
 
   get localVideo(): MediaStream | null {
     const track = this.room?.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack;
@@ -48,11 +49,15 @@ export class StudyRoomMediaService {
   cameraStream(participantId: string): MediaStream | null { return this.remoteCameras()[participantId] || null; }
 
   async connect(connection: RoomConnection): Promise<void> {
-    await this.dispose();
+    const request = ++this.connectionRequest;
+    await this.disposeCurrentRoom();
+    if (request !== this.connectionRequest) throw new Error('STALE_ROOM_CONNECTION');
     this.intentionalDisconnect = false;
     this.error.set('');
     const room = new Room({ adaptiveStream: true, dynacast: true });
+    this.room = room;
     room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      if (room !== this.room) return;
       const stream = new MediaStream([track.mediaStreamTrack]);
       if (track.kind === Track.Kind.Video && publication.source === Track.Source.Camera) {
         this.remoteCameras.update(cameras => ({ ...cameras, [participant.identity]: stream }));
@@ -71,6 +76,7 @@ export class StudyRoomMediaService {
     });
     room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
       track.detach().forEach(element => element.remove());
+      if (room !== this.room) return;
       if (publication.source === Track.Source.Camera) {
         this.remoteCameras.update(cameras => {
           const next = { ...cameras };
@@ -80,9 +86,10 @@ export class StudyRoomMediaService {
       }
       if (publication.source === Track.Source.ScreenShare) this.remoteScreens.update(screens => screens.filter(screen => screen.participantId !== participant.identity));
     });
-    room.on(RoomEvent.TrackMuted, (publication, participant) => this.applyPublicationState(participant.identity, publication.source, false));
-    room.on(RoomEvent.TrackUnmuted, (publication, participant) => this.applyPublicationState(participant.identity, publication.source, true));
+    room.on(RoomEvent.TrackMuted, (publication, participant) => { if (room === this.room) this.applyPublicationState(participant.identity, publication.source, false); });
+    room.on(RoomEvent.TrackUnmuted, (publication, participant) => { if (room === this.room) this.applyPublicationState(participant.identity, publication.source, true); });
     room.on(RoomEvent.LocalTrackUnpublished, publication => {
+      if (room !== this.room) return;
       this.applyPublicationState(room.localParticipant.identity, publication.source, false);
       if (publication.source === Track.Source.ScreenShare && this.sharingScreen()) {
         this.sharingScreen.set(false);
@@ -90,6 +97,7 @@ export class StudyRoomMediaService {
       }
     });
     room.on(RoomEvent.ParticipantDisconnected, participant => {
+      if (room !== this.room) return;
       this.remoteCameras.update(cameras => {
         const next = { ...cameras };
         delete next[participant.identity];
@@ -104,37 +112,47 @@ export class StudyRoomMediaService {
       this.trackStateHandler?.(participant.identity, { micOn: false, camOn: false });
       this.participantDisconnectedHandler?.(participant.identity);
     });
-    room.on(RoomEvent.ParticipantConnected, participant => this.participantConnectedHandler?.(participant.identity));
+    room.on(RoomEvent.ParticipantConnected, participant => { if (room === this.room) this.participantConnectedHandler?.(participant.identity); });
     room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-      if (topic !== 'thinkup-room-state') return;
+      if (room !== this.room || topic !== 'thinkup-room-state') return;
       try {
         const parsed: unknown = JSON.parse(new TextDecoder().decode(payload));
         if (!parsed || typeof parsed !== 'object' || !('type' in parsed) || !('payload' in parsed)) return;
         this.realtimeHandler?.(parsed as RoomRealtimeEnvelope, participant?.identity || '');
       } catch { /* Ignore malformed peer data. */ }
     });
-    room.on(RoomEvent.ActiveSpeakersChanged, speakers => this.activeSpeakerIds.set(new Set(speakers.map(speaker => speaker.identity))));
+    room.on(RoomEvent.ActiveSpeakersChanged, speakers => { if (room === this.room) this.activeSpeakerIds.set(new Set(speakers.map(speaker => speaker.identity))); });
     room.on(RoomEvent.Reconnecting, () => {
+      if (room !== this.room) return;
       this.connected.set(false);
       this.error.set('Đang kết nối lại phòng học...');
     });
     room.on(RoomEvent.Reconnected, () => {
+      if (room !== this.room) return;
       this.connected.set(true);
       this.error.set('');
       this.reconnectedHandler?.();
     });
     room.on(RoomEvent.Disconnected, () => {
+      if (room !== this.room) return;
       this.connected.set(false);
       if (!this.intentionalDisconnect) this.error.set('Đã mất kết nối phòng học. Vui lòng kiểm tra mạng và thử lại.');
     });
     try {
       await room.connect(connection.livekitUrl, connection.token);
-      this.room = room;
+      if (request !== this.connectionRequest || room !== this.room) {
+        await room.disconnect();
+        throw new Error('STALE_ROOM_CONNECTION');
+      }
       this.connected.set(true);
-    } catch {
+    } catch (error) {
+      if (this.room === room) this.room = null;
       await room.disconnect();
-      this.error.set('Không thể kết nối phòng học trực tuyến. Vui lòng thử lại.');
-      throw new Error('Không thể kết nối LiveKit.');
+      if (request === this.connectionRequest) {
+        this.connected.set(false);
+        this.error.set('Không thể kết nối phòng học trực tuyến. Vui lòng thử lại.');
+      }
+      throw error;
     }
   }
 
@@ -194,8 +212,15 @@ export class StudyRoomMediaService {
   }
 
   async dispose(): Promise<void> {
+    this.connectionRequest += 1;
+    await this.disposeCurrentRoom();
+  }
+
+  private async disposeCurrentRoom(): Promise<void> {
     this.intentionalDisconnect = true;
-    await this.room?.disconnect();
+    const room = this.room;
+    await room?.disconnect();
+    if (this.room !== room) return;
     this.room = null;
     this.remoteHost?.replaceChildren();
     this.remoteCameras.set({});

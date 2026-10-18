@@ -67,6 +67,7 @@ function mapRoom(room: RoomPayload): StudyRoomItem {
     requiresPassword: room.requiresPassword ?? room.hasPassword,
     inviteMode: room.inviteMode,
     approvalRequired: room.approvalRequired,
+    joinRequests: (room.joinRequests ?? []).filter(request => request.status === 'pending'),
   };
 }
 
@@ -131,6 +132,16 @@ export class StudyRoomService {
     return this.http.post<{ message: string }>(`${this.base}/${encodeURIComponent(roomId)}/request-join`, { userId, userName });
   }
 
+  handleJoinRequest(roomId: string, targetUserId: string, action: 'approve' | 'reject'): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/${encodeURIComponent(roomId)}/handle-request`, { targetUserId, action }).pipe(
+      tap(() => {
+        const room = this.getJoinedRoom(roomId);
+        if (!room) return;
+        this.rememberJoinedRoom({ ...room, joinRequests: (room.joinRequests ?? []).filter(request => request.userId !== targetUserId) });
+      })
+    );
+  }
+
   leaveRoom(roomId: string, userId: string): Observable<unknown> {
     return this.http.post(`${this.base}/${encodeURIComponent(roomId)}/leave`, { userId });
   }
@@ -166,7 +177,14 @@ export class StudyRoomService {
   }
 
   changeTheme(roomId: string, theme: string): Observable<unknown> {
-    return this.http.put(`${this.base}/${encodeURIComponent(roomId)}/theme`, { theme });
+    return this.http.put(`${this.base}/${encodeURIComponent(roomId)}/theme`, { theme }).pipe(
+      tap(() => this.cacheTheme(roomId, theme))
+    );
+  }
+
+  cacheTheme(roomId: string, theme: string): void {
+    const room = this.getJoinedRoom(roomId);
+    if (room) this.rememberJoinedRoom({ ...room, theme });
   }
 
   permissions(roomId: string, userId: string): Observable<EffectiveRoomPermissions> {

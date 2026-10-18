@@ -1,11 +1,12 @@
 import { Component, inject, input, OnInit, output, signal } from '@angular/core';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RoomParticipant, RoomPermissions, StudyRoomService } from '../../services/study-room.service';
-import { LucideSettings, LucideCrown, LucideX, LucideUserPlus, LucideCheck, LucideShieldCheck, LucideUserRound, LucideCircleX } from '@lucide/angular';
+import { StudyRoomJoinRequest } from '../../models/study-room.model';
+import { LucideSettings, LucideCrown, LucideX, LucideUserPlus, LucideCheck, LucideShieldCheck, LucideUserRound, LucideCircleX, LucideMinus } from '@lucide/angular';
 
 export interface RoomTheme { id: string; name: string; src: string; background?: string; grid?: string; type?: string; fit?: string; ambient?: string; }
 
-@Component({ selector: 'app-room-control-panel', standalone: true, imports: [LucideSettings, LucideCrown, LucideX, LucideUserPlus, LucideCheck, LucideShieldCheck, LucideUserRound, LucideCircleX], templateUrl: './room-control-panel.component.html', styleUrl: './room-control-panel.component.css' })
+@Component({ selector: 'app-room-control-panel', standalone: true, imports: [LucideSettings, LucideCrown, LucideX, LucideUserPlus, LucideCheck, LucideShieldCheck, LucideUserRound, LucideCircleX, LucideMinus], templateUrl: './room-control-panel.component.html', styleUrl: './room-control-panel.component.css' })
 export class RoomControlPanelComponent implements OnInit {
   private readonly rooms = inject(StudyRoomService);
   private readonly auth = inject(AuthService);
@@ -13,6 +14,7 @@ export class RoomControlPanelComponent implements OnInit {
   readonly roomName = input.required<string>();
   readonly memberCount = input.required<number>();
   readonly members = input<RoomParticipant[]>([]);
+  readonly joinRequests = input<StudyRoomJoinRequest[]>([]);
   readonly memberName = input.required<string>();
   readonly memberInitials = input.required<string>();
   readonly themes = input.required<readonly RoomTheme[]>();
@@ -21,6 +23,7 @@ export class RoomControlPanelComponent implements OnInit {
   readonly close = output<void>();
   readonly copyLink = output<void>();
   readonly removeMember = output<RoomParticipant>();
+  readonly permissionsLoaded = output<RoomPermissions>();
   readonly permissionsChange = output<RoomPermissions>();
   readonly permissions = signal<RoomPermissions>({
     voiceEnabled: false, cameraEnabled: false, chatEnabled: false,
@@ -33,6 +36,7 @@ export class RoomControlPanelComponent implements OnInit {
   readonly canChangeTheme = signal(false);
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly handlingRequest = signal<string | null>(null);
   readonly error = signal('');
   readonly matrix = signal<{ feature: string; label: string; owner: boolean; moderator: boolean; member: boolean | string }[]>([]);
 
@@ -45,7 +49,7 @@ export class RoomControlPanelComponent implements OnInit {
     this.rooms.permissions(this.roomId(), userId).subscribe({
       next: result => {
         this.permissions.set(result.roomPermissions);
-        this.permissionsChange.emit(result.roomPermissions);
+        this.permissionsLoaded.emit(result.roomPermissions);
         this.role.set(result.role === 'owner' ? 'Chủ phòng' : result.role === 'moderator' ? 'Moderator' : 'Thành viên');
         this.roleKey.set(result.role);
         this.canManage.set(result.effectivePermissions.canManagePermissions);
@@ -64,6 +68,19 @@ export class RoomControlPanelComponent implements OnInit {
     this.rooms.updatePermissions(this.roomId(), { [key]: !this.permissions()[key] }).subscribe({
       next: updated => { this.permissions.set(updated); this.permissionsChange.emit(updated); this.saving.set(false); },
       error: () => { this.saving.set(false); this.error.set('Không thể cập nhật quyền phòng. Vui lòng thử lại.'); },
+    });
+  }
+
+  decideRequest(request: StudyRoomJoinRequest, action: 'approve' | 'reject'): void {
+    if (this.roleKey() !== 'owner' || this.handlingRequest()) return;
+    this.handlingRequest.set(request.userId);
+    this.error.set('');
+    this.rooms.handleJoinRequest(this.roomId(), request.userId, action).subscribe({
+      next: () => this.handlingRequest.set(null),
+      error: () => {
+        this.handlingRequest.set(null);
+        this.error.set(action === 'approve' ? 'Không thể duyệt yêu cầu vào phòng.' : 'Không thể từ chối yêu cầu vào phòng.');
+      },
     });
   }
 }
