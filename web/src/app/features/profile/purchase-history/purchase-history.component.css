@@ -1,0 +1,93 @@
+.date-filter-trigger {
+  display: flex;
+  width: 100%;
+  height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #314158;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+
+.date-filter-calendar { flex: none; color: #62748e; }
+.date-filter-chevron { flex: none; color: #90a1b9; }
+
+.date-filter-menu {
+  position: absolute;
+  z-index: 30;
+  top: 50px;
+  right: 0;
+  width: 256px;
+  padding: 9px 1px;
+  overflow: visible;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%);
+}
+
+.date-filter-option {
+  display: flex;
+  width: 100%;
+  height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  color: #314158;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+
+.date-filter-option:hover { background: #f4f8fc; }
+.date-filter-option-selected,
+.date-filter-option-selected:hover { background: #eff6ff; color: #155dfc; font-weight: 500; }
+
+.date-filter-range {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.date-filter-date {
+  display: flex;
+  width: 103px;
+  height: 36px;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #314158;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.date-filter-date svg { flex: none; color: #7b94b4; }
+.date-filter-date-active,
+.date-filter-date:focus-visible { outline: 2px solid #b9dcff; outline-offset: 1px; }
+.date-filter-separator { color: #90a1b9; font-size: 16px; line-height: 24px; }
+.date-filter-error { padding: 0 16px 8px; color: #c52b50; font-size: 11px; }
+
+.date-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.date-filter-cancel,
+.date-filter-apply { height: 32px; padding: 0 12px; border-radius: 8px; font-size: 14px; line-height: 20px; }
+.date-filter-cancel { color: #45556c; }
+.date-filter-apply { background: #2b7fff; color: #fff; font-weight: 500; }
+.date-filter-apply:disabled { opacity: .45; cursor: not-allowed; }

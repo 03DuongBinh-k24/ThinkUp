@@ -1,0 +1,9 @@
+<div class="menu-backdrop" (click)="close.emit()"></div>
+<section class="add-menu">
+  <header><h3>Thêm vào canvas</h3><p>Chọn một phần tử để thả vào phòng</p></header>
+  <div class="item-grid">
+    @for (item of items; track item.key) {
+      <button type="button" (click)="select(item.key)"><strong>{{ item.label }}</strong><small>{{ item.desc }}</small></button>
+    }
+  </div>
+</section>

@@ -1,109 +1,180 @@
-import { Component, inject, signal, ViewChildren, QueryList, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  OnInit,
+  ElementRef,
+  viewChildren,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
-function maskEmail(email: string): string {
-  if (!email) return '***';
-  const parts = email.split('@');
-  if (parts.length < 2) return '***';
-  return `${parts[0].slice(0, 2)}***@${parts[1]}`;
+export interface VerifyOtpErrors {
+  otp?: string;
+  api?: string;
 }
 
 @Component({
   selector: 'app-verify-otp',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './verify-otp.component.html',
-  styleUrl: './verify-otp.component.css',
+  styleUrl: './verify-otp.component.css'
 })
-export class VerifyOtpComponent {
-  private authService = inject(AuthService);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
+export class VerifyOtpComponent implements OnInit, OnDestroy {
+  private readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  email = '';
-  purpose = '';
-  maskedEmail = '';
-  otp = signal<string[]>(['', '', '', '', '', '']);
-  loading = signal(false);
-  errors = signal<{ otp?: string; api?: string }>({});
+  readonly otpInputs = viewChildren<ElementRef<HTMLInputElement>>('otpInput');
 
-  @ViewChildren('otpInput') otpInputs!: QueryList<ElementRef<HTMLInputElement>>;
+  readonly email = signal('');
+  readonly otp = signal<string[]>(['', '', '', '', '', '']);
+  readonly loading = signal(false);
+  readonly errors = signal<VerifyOtpErrors>({});
+  readonly resendSeconds = signal(59);
+  readonly resending = signal(false);
+  private countdown: ReturnType<typeof setInterval> | null = null;
 
-  constructor() {
+  private verificationInFlight = false;
+
+  readonly isComplete = computed(() => this.otp().join('').length === 6);
+
+  readonly maskedEmail = computed(() => {
+    const raw = this.email().trim();
+    if (!raw || !raw.includes('@')) return '***';
+    const [name, domain] = raw.split('@');
+    return `${name.slice(0, 2)}***@${domain}`;
+  });
+
+  readonly title = computed(() => 'Lấy lại mật khẩu');
+
+  ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
-      this.email = params['email'] || '';
-      this.purpose = params['purpose'] || '';
-      this.maskedEmail = maskEmail(this.email);
+      const emailParam = params['email'] || '';
+      this.email.set(emailParam);
+    });
+    this.startCountdown();
+  }
+
+  ngOnDestroy(): void {
+    if (this.countdown) clearInterval(this.countdown);
+  }
+
+  private startCountdown(): void {
+    if (this.countdown) clearInterval(this.countdown);
+    this.resendSeconds.set(59);
+    this.countdown = setInterval(() => {
+      this.resendSeconds.update(seconds => Math.max(0, seconds - 1));
+      if (this.resendSeconds() === 0 && this.countdown) {
+        clearInterval(this.countdown);
+        this.countdown = null;
+      }
+    }, 1000);
+  }
+
+  resendCode(): void {
+    if (this.resendSeconds() > 0 || this.resending() || !this.email()) return;
+    this.resending.set(true);
+    this.authService.resendOtp(this.email()).subscribe({
+      next: () => {
+        this.otp.set(['', '', '', '', '', '']);
+        this.errors.set({});
+        this.resending.set(false);
+        this.startCountdown();
+        this.toastService.showToast({ type: 'success', message: 'Mã OTP mới đã được gửi!' });
+      },
+      error: (err) => {
+        this.resending.set(false);
+        this.errors.set({ api: err.message || 'Không thể gửi lại mã. Vui lòng thử lại.' });
+      }
     });
   }
 
-  get title(): string {
-    return this.purpose === 'register' ? 'Xác thực tài khoản' : 'Lấy lại mật khẩu';
-  }
-
-  get isComplete(): boolean {
-    return this.otp().join('').length === 6;
-  }
-
-  onInput(index: number, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const value = input.value;
-    if (isNaN(Number(value))) { input.value = ''; return; }
+  handleChange(index: number, rawValue: string): void {
+    const cleanValue = rawValue.replace(/\D/g, '');
+    const char = cleanValue ? cleanValue.slice(-1) : '';
 
     const newOtp = [...this.otp()];
-    newOtp[index] = value;
+    newOtp[index] = char;
     this.otp.set(newOtp);
-    this.errors.update(e => ({ ...e, otp: undefined }));
 
-    if (value && index < 5) {
-      const inputs = this.otpInputs.toArray();
-      inputs[index + 1]?.nativeElement.focus();
+    if (this.errors().otp || this.errors().api) this.errors.set({});
+
+    const inputElements = this.otpInputs();
+    if (char && index < 5 && inputElements[index + 1]) {
+      inputElements[index + 1].nativeElement.focus();
     }
   }
 
-  onKeydown(index: number, event: KeyboardEvent): void {
-    if (event.key === 'Backspace' && index > 0 && !this.otp()[index]) {
-      const inputs = this.otpInputs.toArray();
-      inputs[index - 1]?.nativeElement.focus();
+  handleKeyDown(index: number, event: KeyboardEvent): void {
+    const inputElements = this.otpInputs();
+    if (event.key === 'Backspace') {
+      if (!this.otp()[index] && index > 0 && inputElements[index - 1]) {
+        inputElements[index - 1].nativeElement.focus();
+      }
     }
   }
 
-  onPaste(event: ClipboardEvent): void {
+  handlePaste(event: ClipboardEvent): void {
     event.preventDefault();
     const pasted = event.clipboardData?.getData('text')?.trim() || '';
     if (!/^\d{6}$/.test(pasted)) return;
+
     this.otp.set(pasted.split(''));
-    const inputs = this.otpInputs.toArray();
-    inputs[5]?.nativeElement.focus();
+    this.errors.set({});
+
+    const inputElements = this.otpInputs();
+    if (inputElements[5]) {
+      inputElements[5].nativeElement.focus();
+    }
   }
 
   onSubmit(): void {
-    const otpValue = this.otp().join('');
-    if (otpValue.length < 6) {
+    if (this.verificationInFlight) return;
+
+    const otpVal = this.otp().join('');
+    if (otpVal.length < 6) {
       this.errors.set({ otp: 'Vui lòng nhập đầy đủ 6 chữ số' });
       return;
     }
-    if (!this.email) {
+
+    const emailVal = this.email();
+    if (!emailVal) {
       this.errors.set({ api: 'Không tìm thấy email. Vui lòng thử lại từ đầu.' });
       return;
     }
 
+    this.verificationInFlight = true;
     this.loading.set(true);
-    this.authService.verifyOtp(this.email, otpValue, this.purpose).subscribe({
+
+    this.authService.verifyOtp(emailVal, otpVal).subscribe({
       next: (result) => {
-        if (this.purpose === 'register') {
-          this.router.navigate(['/auth/login'], { queryParams: { verified: '1' } });
-        } else {
-          this.router.navigate(['/auth/reset-password'], {
-            queryParams: { token: result.resetToken }
-          });
+        this.verificationInFlight = false;
+        this.toastService.showToast({ type: 'success', message: 'Xác thực thành công!' });
+
+        const resetToken = result?.resetToken;
+        if (!resetToken) {
+          this.loading.set(false);
+          this.errors.set({ api: 'Không nhận được phiên đặt lại mật khẩu. Vui lòng yêu cầu mã mới.' });
+          return;
         }
+        this.router.navigate(['/auth/reset-password'], {
+          queryParams: { token: resetToken }
+        });
       },
       error: (err) => {
-        this.errors.set({ api: err.message });
+        this.verificationInFlight = false;
         this.loading.set(false);
+        const message = err.message || 'Mã xác thực không chính xác. Vui lòng thử lại.';
+        this.errors.set({ otp: message });
+        this.toastService.showToast({ type: 'error', message });
       }
     });
   }

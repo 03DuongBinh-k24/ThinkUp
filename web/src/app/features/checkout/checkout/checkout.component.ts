@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { CommerceService } from '../../../core/services/commerce.service';
 
 @Component({
@@ -12,11 +12,11 @@ import { CommerceService } from '../../../core/services/commerce.service';
 })
 export class CheckoutComponent {
   private commerce = inject(CommerceService);
-  private router = inject(Router);
 
   selectedCategory = signal<'domestic' | 'wallet'>('domestic');
   selectedMethod = signal('bank-transfer');
   processing = signal(false);
+  paymentError = signal('');
   acceptedTerms = signal(true);
 
   readonly courses = this.commerce.checkoutCourses;
@@ -41,18 +41,7 @@ export class CheckoutComponent {
 
   confirmPayment(): void {
     if (this.courses().length === 0 || this.processing()) return;
-    this.processing.set(true);
-
-    setTimeout(() => {
-      this.commerce.completePurchase({
-        courses: this.courses(),
-        summary: { subtotal: this.subtotal(), voucherDiscount: 0, total: this.total() },
-        paymentMethod: this.selectedMethod(),
-      });
-      this.commerce.finalizeCheckout();
-      this.processing.set(false);
-      this.router.navigate(['/main/checkout/success']);
-    }, 1200);
+    this.paymentError.set('Backend chưa cung cấp endpoint tạo giao dịch thanh toán. Lịch sử mua hàng chỉ hiển thị các giao dịch đã có trên hệ thống.');
   }
 
   formatPrice(price: number): string {

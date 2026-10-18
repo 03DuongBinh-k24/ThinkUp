@@ -1,0 +1,2 @@
+:host{display:block;flex:1}.reaction-button{border-color:#E1E5EB;background:white}.reaction-button:hover{background:#F8FAFD}.reaction-button.liked{background:#E1EBFF;border-color:#3061EF66;color:#1E64EF}.reaction-button.disliked{background:#FEE2E2;border-color:#EF444466;color:#DC2626}.share-button{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#5D646F}.share-button:hover{background:#F8FAFD}button{cursor:pointer}button:focus-visible,a:focus-visible{outline:2px solid #1E64EF;outline-offset:3px}
+:host{line-height:1.6}

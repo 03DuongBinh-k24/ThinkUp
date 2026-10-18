@@ -1,0 +1,364 @@
+
+    <!-- TOAST THÔNG BÁO LỖI NGOẠI LỆ / THÀNH CÔNG (EX-ONB-01) -->
+    @if (toastMessage()) {
+      <div
+        class="fixed top-20 right-6 z-50 px-5 py-3 rounded-xl shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+        [ngClass]="toastType() === 'error' ? 'bg-[#FEF2F2] border-[#FCA5A5] text-[#991B1B]' : 'bg-[#F0FDF4] border-[#86EFAC] text-[#166534]'"
+      >
+        <span class="text-base">{{ toastType() === 'error' ? '⚠️' : '✅' }}</span>
+        <span class="text-xs font-semibold">{{ toastMessage() }}</span>
+      </div>
+    }
+
+    <!-- MAIN ONBOARDING VIEW CONTAINER (MAX-W 1240PX CHUẨN FIGMA) -->
+    <div class="survey-page min-h-[calc(100vh-68px)] bg-[#F8FAFD] text-[#0D182B] flex flex-col font-sans select-none">
+      <main class="survey-main mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-start gap-3 px-4 py-3 md:px-6 md:py-4">
+
+        <!-- TOP: STEP TRACKER TIMELINE (ĐÚNG 3 BƯỚC FIGMA NODE 1840:14676) -->
+        <section class="survey-progress w-full shrink-0 rounded-2xl border border-[#DEE5EF] bg-white px-6 py-2.5 md:px-12 shadow-xs">
+          <ol class="relative mx-auto flex w-full max-w-[1020px] items-start justify-between list-none p-0 m-0">
+            @for (step of questions; track step.id; let idx = $index; let isLast = $last) {
+              <li class="relative flex flex-1 flex-col items-center">
+                <!-- Connecting Horizontal Divider -->
+                @if (!isLast) {
+                  <div class="absolute left-1/2 right-[-50%] top-5 -z-0 h-px bg-[#DEE5EF]">
+                    <div
+                      class="h-full bg-[#0766EE] transition-all duration-300"
+                      [style.width.%]="isStepCompleted(step.id) ? 100 : 0"
+                    ></div>
+                  </div>
+                }
+
+                <!-- Step Number Circle: 40px x 40px, rounded-full, border 2px (Exact Figma 1840:14679) -->
+                <div
+                  class="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 font-sans text-sm font-semibold transition-all duration-200"
+                  [ngClass]="{
+                    'border-[#0766EE] bg-white text-[#0766EE]': isStepCompleted(step.id) && step.id !== currentQuestion.id,
+                    'border-[#0766EE] bg-[#0766EE] text-white shadow-[0_6px_16px_-4px_rgba(7,102,238,0.4)]': step.id === currentQuestion.id,
+                    'border-[#DEE5EF] bg-white text-[#667383]': !isStepCompleted(step.id) && step.id !== currentQuestion.id
+                  }"
+                >
+                  <!-- Hiện tick khi bước đó đã được chọn hợp lệ -->
+                  @if (isStepCompleted(step.id) && step.id !== currentQuestion.id) {
+                    <svg class="h-4 w-4 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  } @else {
+                    <span>{{ step.id }}</span>
+                  }
+                </div>
+
+                <!-- Step Label -->
+                <div class="mt-2 text-center">
+                  <span
+                    class="font-sans text-[14px] leading-5 transition-colors block whitespace-nowrap"
+                    [ngClass]="step.id === currentQuestion.id ? 'text-[#0766EE] font-semibold' : isStepCompleted(step.id) ? 'text-[#0D182B] font-medium' : 'text-[#667383] font-medium'"
+                  >
+                    {{ step.label }}
+                  </span>
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
+
+        <!-- BOTTOM: MAIN SECTION CARD (SPLIT-SCREEN 2 CỘT) -->
+        <div class="survey-card flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#DEE5EF] bg-white shadow-xs" [class.flex-1]="currentQuestion.type !== 'single-level'">
+          <div class="survey-card-body flex min-h-0 flex-col overflow-hidden px-6 py-4 md:flex-row md:gap-8 md:px-10 lg:gap-10" [class.flex-1]="currentQuestion.type !== 'single-level'">
+
+            <!-- LEFT COLUMN: NỘI DUNG CÂU HỎI -->
+            <div class="flex flex-col min-h-0 flex-1">
+              <!-- Step indicator badge -->
+              <div class="flex items-center justify-between shrink-0">
+                <span class="rounded-lg bg-[#EDF6FF] px-3 py-1 text-xs font-semibold text-[#0766EE] uppercase tracking-wider">
+                  {{ currentQuestion.badge }}
+                </span>
+              </div>
+
+              <!-- Title & Subtitle -->
+              <div class="mt-2 flex shrink-0 flex-col gap-1">
+                <h1 class="survey-title font-sans text-xl md:text-2xl font-bold leading-tight text-[#0D182B]">
+                  {{ currentQuestion.title }}
+                </h1>
+                <p class="survey-subtitle font-sans text-sm font-normal text-[#667383]">
+                  {{ currentQuestion.subtitle }}
+                </p>
+              </div>
+
+              <!-- Options container -->
+              <div class="survey-options mt-3 min-h-0 overflow-x-hidden pr-2 pb-2" [class.flex-1]="currentQuestion.type !== 'single-level'" [class.overflow-y-auto]="currentQuestion.type !== 'single-level'">
+
+                <!-- BƯỚC 1: VỊ TRÍ CÔNG NGHỆ (Figma Node 3654:16887 - Icon bên trái, Nội dung ở giữa, Radio bên phải) -->
+                @if (currentQuestion.type === 'single-role') {
+                  <div class="flex max-w-[680px] flex-col gap-2 pt-0.5">
+                    @for (opt of currentQuestion.options; track opt.id) {
+                      <button
+                        (click)="selectRole(opt.id)"
+                        type="button"
+                        class="group flex min-h-[48px] w-full items-center justify-between gap-3.5 rounded-[10px] border px-4 py-1.5 text-left font-sans transition-all duration-200"
+                        [ngClass]="answers.targetRole === opt.id
+                          ? 'border-[#007DFF] bg-[#E3F2FD] shadow-[0_2px_8px_rgba(0,125,255,0.12)]'
+                          : 'border-[#D4E3F4] hover:border-[#007DFF] hover:bg-[#F4F9FF] bg-white'"
+                      >
+                        <!-- Left: Icon Box (40px x 40px, rounded-[10px], bg-[#E3F2FD]) -->
+                        <div
+                          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] transition-colors"
+                          [ngClass]="answers.targetRole === opt.id ? 'bg-[#D0E8FD]' : 'bg-[#E3F2FD]'"
+                        >
+                          @if (opt.iconUrl) {
+                            <img [src]="opt.iconUrl" [alt]="opt.title" class="h-[25px] w-[25px] object-contain" />
+                          }
+                        </div>
+
+                        <!-- Middle: Details -->
+                        <div class="flex-1 min-w-0">
+                          <h3
+                            class="font-sans text-[14px] font-semibold leading-tight transition-colors"
+                            [ngClass]="answers.targetRole === opt.id ? 'text-[#007DFF]' : 'text-[#0D182B]'"
+                          >
+                            {{ opt.title }}
+                          </h3>
+                          <p class="mt-1 font-sans text-[12px] font-normal leading-normal text-[#667383]">
+                            {{ opt.desc }}
+                          </p>
+                        </div>
+
+                        <!-- Right: Radio Indicator (18px x 18px circle with inner dot 10px when active) -->
+                        <div
+                          class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition-all"
+                          [ngClass]="answers.targetRole === opt.id
+                            ? 'border-[#007DFF] bg-white'
+                            : 'border-[#CADBF0] bg-white group-hover:border-[#007DFF]'"
+                        >
+                          @if (answers.targetRole === opt.id) {
+                            <div class="h-2.5 w-2.5 rounded-full bg-[#007DFF]"></div>
+                          }
+                        </div>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <!-- BƯỚC 2: CÔNG NGHỆ ƯU TIÊN (Figma Node 3659:16992 - Pill rounded-[39px], Khóa khi đủ 3 thẻ) -->
+                @if (currentQuestion.type === 'multi-tech') {
+                  <div class="flex flex-col gap-4">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      @for (opt of sortedTechOptions(); track opt.id) {
+                        @let isSelected = isTechSelected(opt.id);
+                        @let isDisabled = !isSelected && selectedTechCount() >= 3;
+
+                        <button
+                          (click)="toggleTech(opt.id)"
+                          [disabled]="isDisabled"
+                          type="button"
+                          class="group flex min-h-[54px] items-center justify-between gap-3.5 px-5 py-1.5 rounded-[39px] border text-left font-sans transition-all duration-200"
+                          [ngClass]="{
+                            'border-[#73AEF8] bg-[#DBF1FF] shadow-xs cursor-pointer': isSelected,
+                            'border-[#DEE5EF] hover:border-[#73AEF8] hover:bg-[#F8FBFF] bg-white cursor-pointer': !isSelected && !isDisabled,
+                            'border-[#E2E8F0] bg-slate-50 opacity-40 cursor-not-allowed': isDisabled
+                          }"
+                        >
+                          <!-- Left: Tech SVG Icon Box -->
+                          <div
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+                            [ngClass]="isSelected ? 'bg-white shadow-xs' : 'bg-transparent'"
+                          >
+                            @if (opt.iconUrl) {
+                              <img [src]="opt.iconUrl" [alt]="opt.title" class="h-[44px] w-[44px] object-contain" />
+                            }
+                          </div>
+
+                          <!-- Middle: Tech Title -->
+                          <div class="flex-1 min-w-0">
+                            <span
+                              class="font-sans text-[15px] font-semibold leading-tight block transition-colors"
+                              [ngClass]="isSelected ? 'text-[#0766EE]' : 'text-[#0D182B]'"
+                            >
+                              {{ opt.title }}
+                            </span>
+                          </div>
+
+                          <!-- Right: Selection Checkmark Circle indicator -->
+                          <div
+                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors mr-1"
+                            [ngClass]="isSelected ? 'border-[#0766EE] bg-[#0766EE] text-white' : 'border-[#CBD5E1] bg-white group-hover:border-[#73AEF8]'"
+                          >
+                            @if (isSelected) {
+                              <svg class="h-3 w-3 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            }
+                          </div>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- BƯỚC 3: TRÌNH ĐỘ CÔNG NGHỆ HIỆN TẠI (Figma Node 1840:13225 - 3 Thẻ lớn có Emoji 🌱 🌿 🌳) -->
+                @if (currentQuestion.type === 'single-level') {
+                  <div class="survey-level-list flex max-w-[700px] flex-col gap-3.5 pt-1">
+                    @for (opt of currentQuestion.options; track opt.id) {
+                      <button
+                        (click)="selectLevel(opt.id)"
+                        type="button"
+                        class="survey-level-option group flex min-h-[64px] items-center gap-4 rounded-[20px] p-3 text-left font-sans transition-all duration-200 border"
+                        [ngClass]="answers.currentLevel === opt.id
+                          ? 'border-[#0766EE] bg-white shadow-[0_0_0_1px_rgba(19,104,233,0.4)] ring-2 ring-[#0766EE]/20'
+                          : 'border-[#DEE5EF] bg-[#EFF6FD] hover:bg-[#E5F1FC] hover:border-[#B0BAC9]'"
+                      >
+                        <!-- Big Emoji box -->
+                        <div class="survey-level-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-xs text-2xl">
+                          <span>{{ opt.emoji }}</span>
+                        </div>
+
+                        <!-- Level text details -->
+                        <div class="flex-1 min-w-0">
+                          <h3 class="survey-level-title font-sans text-[16px] font-bold leading-snug text-[#0D182B]" [ngClass]="answers.currentLevel === opt.id ? 'text-[#0766EE]' : ''">
+                            {{ opt.title }}
+                          </h3>
+                          <p class="survey-level-desc mt-1 font-sans text-[13px] font-normal leading-relaxed text-[#667383]">
+                            {{ opt.desc }}
+                          </p>
+                        </div>
+
+                        <!-- Radio circle -->
+                        <div
+                          class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
+                          [ngClass]="answers.currentLevel === opt.id ? 'border-[#0766EE] bg-white' : 'border-[#CBD5E1] bg-white'"
+                        >
+                          @if (answers.currentLevel === opt.id) {
+                            <div class="h-2.5 w-2.5 rounded-full bg-[#0766EE]"></div>
+                          }
+                        </div>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <!-- Validation error message -->
+                @if (errorMessage()) {
+                  <div class="mt-3 text-xs text-red-500 font-medium flex items-center gap-1.5 animate-pulse">
+                    <span>⚠️</span>
+                    <span>{{ errorMessage() }}</span>
+                  </div>
+                }
+
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: ASIDE PANEL (Xuất nguyên khung Figma - Chỉ hiện trên màn hình laptop/desktop lg:flex) -->
+            @if (currentQuestion.asideImage) {
+              <div class="survey-aside hidden lg:flex w-[340px] xl:w-[380px] shrink-0 flex-col items-center justify-center p-2">
+                <div
+                  class="survey-aside-art w-full"
+                  [class.survey-aside-art-goal]="currentQuestion.id === 1"
+                  [class.survey-aside-art-level]="currentQuestion.id === 3"
+                >
+                  <img
+                    [src]="currentQuestion.asideImage"
+                    [alt]="currentQuestion.asideTitle"
+                    class="survey-aside-image block w-full select-none"
+                  />
+                </div>
+                <div class="survey-aside-copy mt-6 flex flex-col items-center text-center px-4">
+                  <h3 class="survey-aside-title text-[20px] font-bold text-[#0D182B] mb-2">{{ currentQuestion.asideTitle }}</h3>
+                  <p class="survey-aside-desc text-[14px] text-[#667383] leading-relaxed">{{ currentQuestion.asideDesc }}</p>
+                </div>
+              </div>
+            }
+
+          </div>
+
+          <!-- FOOTER ACTIONS BAR (QUAY LẠI, BỎ QUA, TIẾP THEO / HOÀN TẤT) -->
+          <div class="survey-footer flex shrink-0 items-center justify-between border-t border-[#DEE5EF] bg-white px-6 py-2.5 md:px-10">
+            <!-- Back button (Ẩn ở Bước 1, hiện ở Bước 2 & 3 theo SPEC-ONB-STU-01) -->
+            @if (currentStep() > 0) {
+              <button
+                (click)="prevStep()"
+                type="button"
+                [disabled]="submitting()"
+                class="flex h-10 items-center gap-1.5 rounded-xl border border-[#DEE5EF] px-5 font-sans text-xs font-semibold text-[#0D182B] transition-colors hover:bg-[#F8FAFD] active:scale-95 disabled:opacity-50"
+              >
+                <span>←</span>
+                <span>Quay lại</span>
+              </button>
+            } @else {
+              <div></div>
+            }
+
+            <!-- Skip & Next/Submit buttons -->
+            <div class="flex items-center gap-3">
+              @if (currentStep() < 2) {
+                <button
+                  (click)="openSkipModal()"
+                  [disabled]="submitting()"
+                  type="button"
+                  class="h-10 rounded-xl border border-[#DEE5EF] px-5 font-sans text-xs font-semibold text-[#667383] transition-colors hover:bg-[#F8FAFD] hover:text-[#0D182B] disabled:opacity-50"
+                >
+                  Bỏ qua khảo sát
+                </button>
+              }
+              <!-- Primary Button (Tiếp tục / Hoàn tất khảo sát kèm trạng thái Disabled mặc định) -->
+              <button
+                (click)="handlePrimaryAction()"
+                [disabled]="!canProceed() || submitting()"
+                type="button"
+                class="flex h-10 items-center gap-2 rounded-xl px-6 font-sans text-xs font-semibold transition-all shadow-sm"
+                [ngClass]="canProceed() && !submitting()
+                  ? 'bg-[#0766EE] text-white shadow-[0_4px_14px_rgba(7,102,238,0.35)] hover:bg-[#0555cc] active:scale-95 cursor-pointer'
+                  : 'bg-[#CBD5E1] text-[#64748B] cursor-not-allowed opacity-70'"
+              >
+                @if (submitting()) {
+                  <!-- Spinner xoay khi đang submit (EX-ONB-02 & AC-ONB-15) -->
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>ThinkUp đang xử lý...</span>
+                } @else {
+                  <span>{{ currentStep() === 2 ? 'Hoàn tất khảo sát' : 'Tiếp tục' }}</span>
+                  <span>→</span>
+                }
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      @if (showSkipConfirm()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div class="absolute inset-0" (click)="closeSkipModal()"></div>
+
+          <div class="relative z-10 w-full max-w-[480px] rounded-2xl border border-[#DEE5EF] bg-white p-6 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <h2 class="font-['Inter'] text-[20px] font-semibold leading-7 text-[#1A2130]">
+              Bạn có chắc muốn bỏ qua khảo sát?
+            </h2>
+
+            <p class="font-['Inter'] text-[14px] font-normal leading-[22px] text-[#667383]">
+              Nếu bạn bỏ qua, bạn vẫn có thể khám phá các khóa học. Tuy nhiên, gợi ý khóa học và lộ trình sẽ chưa được cá nhân hóa theo mục tiêu và trình độ của bạn.
+            </p>
+
+            <div class="flex items-center gap-3 pt-2">
+              <button
+                (click)="closeSkipModal()"
+                type="button"
+                class="flex-1 h-11 rounded-lg bg-[#0766EE] hover:bg-[#0555cc] text-white font-['Inter'] text-[14px] font-medium transition active:scale-[0.98] shadow-xs"
+              >
+                Tiếp tục khảo sát
+              </button>
+
+              <button
+                (click)="confirmSkipSurvey()"
+                type="button"
+                class="flex-1 h-11 rounded-lg border border-[#DEE5EF] bg-white hover:bg-[#F8FAFD] text-[#243045] font-['Inter'] text-[14px] font-medium transition active:scale-[0.98]"
+              >
+                Bỏ qua khảo sát
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+    </div>

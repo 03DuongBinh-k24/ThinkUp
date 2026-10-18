@@ -1,0 +1,108 @@
+.survey-aside-art {
+  overflow: hidden;
+}
+
+.survey-aside-image {
+  height: auto;
+}
+
+/* These two source PNGs contain their own caption; show only the artwork. */
+.survey-aside-art-goal {
+  aspect-ratio: 926 / 750;
+}
+
+.survey-aside-art-level {
+  aspect-ratio: 896 / 680;
+}
+
+.survey-aside-art-level .survey-aside-image {
+  transform: translateY(-14%);
+}
+
+.survey-aside-title {
+  font-size: 20px;
+}
+
+.survey-aside-desc {
+  font-size: 14px;
+}
+
+/* Laptop sizing follows the same scale across the survey's text, cards and illustration. */
+@media (min-width: 1024px) and (max-width: 1500px) {
+  .survey-page {
+    min-height: calc(100vh - 56px);
+  }
+
+  .survey-main {
+    gap: 10px;
+    padding-block: 12px;
+  }
+
+  .survey-progress {
+    padding-block: 6px;
+  }
+
+  .survey-card-body {
+    gap: 24px;
+    padding-block: 14px;
+  }
+
+  .survey-title {
+    font-size: 20px;
+  }
+
+  .survey-subtitle {
+    font-size: 13px;
+  }
+
+  .survey-options {
+    margin-top: 10px;
+  }
+
+  .survey-level-list {
+    gap: 10px;
+  }
+
+  .survey-level-option {
+    min-height: 60px;
+    gap: 12px;
+    border-radius: 16px;
+    padding: 8px 10px;
+  }
+
+  .survey-level-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+
+  .survey-level-title {
+    font-size: 14px;
+  }
+
+  .survey-level-desc {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .survey-aside {
+    width: 370px;
+  }
+
+  .survey-aside-copy {
+    margin-top: 12px;
+  }
+
+  .survey-aside-title {
+    margin-bottom: 4px;
+    font-size: 18px;
+  }
+
+  .survey-aside-desc {
+    font-size: 13px;
+  }
+
+  .survey-footer {
+    padding-block: 8px;
+  }
+}

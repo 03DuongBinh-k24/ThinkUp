@@ -1,8 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
+
+export interface ForgotPasswordErrors {
+  email?: string;
+  api?: string;
+  code?: string;
+  provider?: string;
+}
 
 @Component({
   selector: 'app-forgot-password',
@@ -11,51 +19,69 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './forgot-password.component.html',
   styleUrl: './forgot-password.component.css',
 })
-export class ForgotPasswordComponent {
-  private authService = inject(AuthService);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
+export class ForgotPasswordComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  email = signal('');
-  loading = signal(false);
-  errors = signal<{ email?: string; api?: string; code?: string; provider?: string }>({});
+  readonly email = signal('');
+  readonly loading = signal(false);
+  readonly errors = signal<ForgotPasswordErrors>({});
 
-  constructor() {
-    // Pre-fill email from query params
+  ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
-      if (params['email']) this.email.set(params['email']);
+      const emailParam = params['email'];
+      if (emailParam) {
+        this.email.set(emailParam);
+      }
     });
   }
 
   onEmailChange(value: string): void {
     this.email.set(value);
     if (this.errors().email) {
-      this.errors.update(e => ({ ...e, email: undefined }));
+      this.errors.update(prev => ({ ...prev, email: undefined }));
     }
   }
 
-  onSubmit(): void {
+  validate(): ForgotPasswordErrors {
+    const newErrors: ForgotPasswordErrors = {};
     const emailVal = this.email().trim();
-    // Validate
     if (!emailVal) {
-      this.errors.set({ email: 'Vui lòng nhập email' });
-      return;
+      newErrors.email = 'Vui lòng nhập email';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      newErrors.email = 'Email không hợp lệ';
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      this.errors.set({ email: 'Email không hợp lệ' });
+    return newErrors;
+  }
+
+  onSubmit(): void {
+    const validationErrors = this.validate();
+    if (Object.keys(validationErrors).length > 0) {
+      this.errors.set(validationErrors);
       return;
     }
 
+    const emailVal = this.email().trim();
     this.loading.set(true);
+
     this.authService.forgotPassword(emailVal).subscribe({
       next: (result) => {
-        const emailToVerify = result.email || emailVal;
+        this.toastService.showToast({ type: 'success', message: 'Mã xác thực đã được gửi!' });
+        const emailToVerify = result?.email || emailVal;
         this.router.navigate(['/auth/verify-otp'], {
-          queryParams: { email: emailToVerify, purpose: 'reset_password' }
+          queryParams: { email: emailToVerify }
         });
       },
       error: (err) => {
-        this.errors.set({ api: err.message });
+        const message = err.message || 'Gửi yêu cầu thất bại. Vui lòng thử lại.';
+        if (err.code === 'OAUTH_ACCOUNT') {
+          this.errors.set({ api: message, code: 'OAUTH_ACCOUNT', provider: err.provider });
+        } else {
+          this.errors.set({ api: message });
+        }
+        this.toastService.showToast({ type: 'error', message });
         this.loading.set(false);
       }
     });

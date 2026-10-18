@@ -1,66 +1,63 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { StudentPreferences, User } from '../models/user.model';
+import { Course } from '../models/course.model';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   private http = inject(HttpClient);
+  private authService = inject(AuthService);
   private apiUrl = environment.apiUrl;
 
-  private readonly PREFS_KEY = 'thinkup_student_preferences';
-  private readonly ONBOARDING_DONE_KEY = 'thinkup_onboarding_done';
-  private readonly USER_KEY = 'thinkup_current_user';
+  getRecommendedCourses(): Observable<Course[]> {
+    interface BackendCourse {
+      id: string; course_id?: string | null; title: string; description?: string | null;
+      short_description?: string | null; category_id?: string | null; level?: string | null;
+      rating?: number | null; total_reviews?: number | null; total_students?: number | null;
+      price?: number | null; original_price?: number | null; thumbnail_url?: string | null;
+      instructor_id?: string | null; badge?: string | null; tag_ids?: string[];
+    }
+    return this.http.get<{ courses: BackendCourse[] }>(`${this.apiUrl}/user/onboarding/courses`).pipe(
+      map(response => response.courses.map(course => ({
+        id: course.id,
+        courseId: course.course_id || undefined,
+        title: course.title,
+        description: course.description || undefined,
+        shortDescription: course.short_description || undefined,
+        instructor: 'Giảng viên ThinkUp',
+        category: course.category_id || undefined,
+        level: course.level || undefined,
+        rating: course.rating ?? 0,
+        ratingCount: course.total_reviews ?? 0,
+        studentsCount: course.total_students ?? 0,
+        originalPrice: course.original_price ?? course.price ?? 0,
+        salePrice: course.price ?? 0,
+        thumbnailUrl: course.thumbnail_url || undefined,
+        badge: course.badge || undefined,
+        tags: course.tag_ids || [],
+      })))
+    );
+  }
 
   /**
    * Kiểm tra xem học viên hiện tại đã hoàn thành khảo sát (hoặc đã bỏ qua) hay chưa.
    */
   isOnboardingCompleted(): boolean {
-    if (typeof localStorage === 'undefined') return false;
-
-    // 1. Kiểm tra cờ trực tiếp
-    const doneFlag = localStorage.getItem(this.ONBOARDING_DONE_KEY);
-    if (doneFlag === 'true') return true;
-
-    // 2. Kiểm tra trong object user hiện tại
-    try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        if (user.onboarding_completed === true) return true;
-      }
-    } catch {
-      // Ignored
-    }
-
-    return false;
+    return this.getCurrentUser()?.onboarding_completed === true;
   }
 
   /**
    * Lấy dữ liệu sở thích đã lưu của học viên (nếu đã hoàn thành khảo sát)
    */
   getPreferences(): StudentPreferences | null {
-    if (typeof localStorage === 'undefined') return null;
-    try {
-      const raw = localStorage.getItem(this.PREFS_KEY);
-      if (raw) return JSON.parse(raw);
-
-      // Thử đọc từ thinkup_current_user
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        if (user.preferences) return user.preferences;
-      }
-    } catch {
-      // Ignored
-    }
-    return null;
+    return this.getCurrentUser()?.preferences ?? null;
   }
 
   /**
-   * Gửi dữ liệu khảo sát lên máy chủ (POST /api/v1/onboarding/submit)
+   * Gửi dữ liệu khảo sát lên máy chủ.
    */
   submitOnboarding(preferences: StudentPreferences): Observable<{ success: boolean; message: string }> {
     const payload = {
@@ -69,95 +66,41 @@ export class OnboardingService {
       currentLevel: preferences.currentLevel
     };
 
-    return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/onboarding/submit`, payload).pipe(
-      tap(() => {
-        this.saveCompletedState(preferences);
-      }),
-      catchError(() => {
-        // Fallback lưu local mock khi Backend chưa sẵn sàng hoặc offline
-        this.saveCompletedState(preferences);
-        return of({ success: true, message: 'Thiết lập thành công!' });
-      })
+    return this.http.post<{ message: string }>(`${this.apiUrl}/user/onboarding/submit`, payload).pipe(
+      tap(() => this.saveCompletedState(preferences)),
+      map(response => ({ success: true, message: response.message }))
     );
   }
 
   /**
-   * Gửi yêu cầu bỏ qua khảo sát lên máy chủ (POST /api/v1/onboarding/skip)
+   * Gửi yêu cầu bỏ qua khảo sát lên máy chủ.
    */
   skipOnboarding(): Observable<{ success: boolean; message: string }> {
-    return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/onboarding/skip`, {}).pipe(
-      tap(() => {
-        this.saveSkippedState();
-      }),
-      catchError(() => {
-        this.saveSkippedState();
-        return of({ success: true, message: 'Đã bỏ qua khảo sát' });
-      })
+    return this.http.post<{ message: string }>(`${this.apiUrl}/user/onboarding/skip`, {}).pipe(
+      tap(() => this.saveSkippedState()),
+      map(response => ({ success: true, message: response.message }))
     );
   }
 
-  /**
-   * Đặt lại trạng thái test
-   */
-  resetOnboardingState(): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(this.ONBOARDING_DONE_KEY);
-    localStorage.removeItem(this.PREFS_KEY);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
-    }
-
-    try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        user.onboarding_completed = false;
-        delete user.preferences;
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-      }
-    } catch {}
+  getCurrentUser(): User | null {
+    return this.authService.currentUser();
   }
 
   private saveCompletedState(preferences: StudentPreferences): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(this.ONBOARDING_DONE_KEY, 'true');
-    localStorage.setItem(this.PREFS_KEY, JSON.stringify({
-      ...preferences,
-      submittedAt: new Date().toISOString()
-    }));
-
-    try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        user.onboarding_completed = true;
-        user.preferences = preferences;
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-      }
-    } catch {}
-
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
-    }
+    const user = this.getCurrentUser();
+    if (!user) return;
+    this.authService.updateUser({
+      ...user,
+      onboarding_completed: true,
+      preferences: { ...preferences, submittedAt: new Date().toISOString() }
+    });
   }
 
   private saveSkippedState(): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(this.ONBOARDING_DONE_KEY, 'true');
-    localStorage.removeItem(this.PREFS_KEY);
-
-    try {
-      const userRaw = localStorage.getItem(this.USER_KEY);
-      if (userRaw) {
-        const user: User = JSON.parse(userRaw);
-        user.onboarding_completed = true;
-        delete user.preferences;
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-      }
-    } catch {}
-
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('thinkup_onboarding_draft');
-    }
+    const user = this.getCurrentUser();
+    if (!user) return;
+    const updated: User = { ...user, onboarding_completed: true };
+    delete updated.preferences;
+    this.authService.updateUser(updated);
   }
 }

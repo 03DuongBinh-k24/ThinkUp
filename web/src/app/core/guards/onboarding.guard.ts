@@ -1,30 +1,24 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { OnboardingService } from '../services/onboarding.service';
+import { AuthService } from '../services/auth.service';
+import { catchError, map, of } from 'rxjs';
 
 /**
  * Route Guard ép buộc hoàn thành khảo sát (AC-ONB-01):
  * Nếu người dùng đã đăng nhập và chưa hoàn thành Onboarding (onboarding_completed == false),
  * tự động chuyển hướng về trang /onboarding.
  */
-export const onboardingRequiredGuard: CanActivateFn = () => {
+export const onboardingRequiredGuard: CanActivateChildFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
-
-  const isLoggedIn = typeof localStorage !== 'undefined' && localStorage.getItem('thinkup_user_logged_in') === 'true';
-
-  // Khách vãng lai xem bình thường (không ép buộc)
-  if (!isLoggedIn) {
-    return true;
-  }
-
-  // Học viên đã đăng nhập nhưng chưa hoàn thành khảo sát
-  if (!onboardingService.isOnboardingCompleted()) {
-    router.navigate(['/onboarding']);
-    return false;
-  }
-
-  return true;
+  const auth = inject(AuthService);
+  if (!auth.getToken()) return true;
+  return auth.validateSession().pipe(
+    map(valid => valid && onboardingService.getCurrentUser()?.role === 'student' && !onboardingService.isOnboardingCompleted()
+      ? router.createUrlTree(['/onboarding']) : true),
+    catchError(() => of(true))
+  );
 };
 
 /**
@@ -35,11 +29,17 @@ export const onboardingRequiredGuard: CanActivateFn = () => {
 export const onboardingCompletedGuard: CanActivateFn = () => {
   const router = inject(Router);
   const onboardingService = inject(OnboardingService);
-
-  if (onboardingService.isOnboardingCompleted()) {
-    router.navigate(['/main/home']);
-    return false;
-  }
-
-  return true;
+  const auth = inject(AuthService);
+  const loginUrl = router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: '/onboarding' } });
+  if (!auth.getToken()) return loginUrl;
+  return auth.validateSession().pipe(
+    map(valid => {
+      if (!valid || !onboardingService.getCurrentUser()) return loginUrl;
+      if (onboardingService.getCurrentUser()?.role !== 'student' || onboardingService.isOnboardingCompleted()) {
+        return router.createUrlTree(['/main/home']);
+      }
+      return true;
+    }),
+    catchError(() => of(auth.isAuthenticated() ? true : loginUrl))
+  );
 };
