@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import MailComposer from 'nodemailer/lib/mail-composer/index.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -76,33 +77,58 @@ export function maskEmail(email) {
   return `${local[0]}***@${domain}`;
 }
 
+async function sendViaGmailRestApi({ clientId, clientSecret, refreshToken, from, to, subject, html, text }) {
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok || !tokenData.access_token) {
+    throw new Error(`Gmail OAuth2 Token Error: ${tokenData.error_description || tokenData.error || 'Failed to refresh token'}`);
+  }
+
+  const mail = new MailComposer({ from, to, subject, html, text });
+  const compiled = await mail.compile().build();
+  const raw = Buffer.from(compiled).toString('base64url');
+
+  const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ raw }),
+  });
+
+  const sendData = await sendRes.json();
+  if (!sendRes.ok) {
+    throw new Error(`Gmail REST API Error: ${sendData.error?.message || 'Send message failed'}`);
+  }
+
+  return { accepted: [to], messageId: sendData.id, response: '250 2.0.0 OK (Gmail REST API HTTPS 443)' };
+}
+
 export async function sendEmail({ to, subject, html, text }) {
-  const user = process.env.GMAIL_USER || process.env.SMTP_USER;
-  const clientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GMAIL_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN;
+  const user = process.env.SMTP_USER || process.env.GMAIL_USER;
+  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN || process.env.GMAIL_REFRESH_TOKEN;
+  const from = process.env.SMTP_FROM || (user ? `"ThinkUp" <${user}>` : '"ThinkUp" <noreply@thinkup.vn>');
 
-  // 1. Ưu tiên: Sử dụng Google OAuth2 nếu có đầy đủ thông số
-  if (user && clientId && clientSecret && refreshToken) {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        type: 'OAuth2',
-        user,
-        clientId,
-        clientSecret,
-        refreshToken,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 5000,
-      socketTimeout: 15000,
-    });
-
-    const from = process.env.SMTP_FROM || `"ThinkUp" <${user}>`;
-    return await transporter.sendMail({ from, to, subject, html, text });
+  // 1. Ưu tiên: Sử dụng Google Gmail REST API qua cổng HTTPS 443 (100% không bị Railway / ISP chặn SMTP timeout)
+  if (clientId && clientSecret && refreshToken) {
+    try {
+      return await sendViaGmailRestApi({ clientId, clientSecret, refreshToken, from, to, subject, html, text });
+    } catch (apiErr) {
+      console.warn('[Gmail REST API] Warning:', apiErr.message, '-> Fallback to SMTP...');
+    }
   }
 
   // 2. Dự phòng: Sử dụng SMTP truyền thống (Gmail App Password, Brevo, Resend...)
@@ -127,6 +153,5 @@ export async function sendEmail({ to, subject, html, text }) {
     socketTimeout: 15000,
   });
 
-  const from = process.env.SMTP_FROM || `"ThinkUp" <${user}>`;
   return await transporter.sendMail({ from, to, subject, html, text });
 }
