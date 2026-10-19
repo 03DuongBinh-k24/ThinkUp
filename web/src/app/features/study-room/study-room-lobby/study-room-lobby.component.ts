@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,6 +15,7 @@ export class StudyRoomLobbyComponent implements OnInit {
   private readonly roomsService = inject(StudyRoomService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
   readonly topics = ['Tất cả', 'Lập trình', 'UI/UX & Thiết kế', 'TOEIC / IELTS', 'Tự học', 'Focus Session', 'Study Group'];
   readonly tabs = [{ key: 'trending', label: 'Trending' }, { key: 'new', label: 'Mới mở' }, { key: 'active', label: 'Đang hoạt động' }, { key: 'available', label: 'Còn chỗ' }];
   readonly previews: ThemePreview[] = [
@@ -42,7 +43,10 @@ export class StudyRoomLobbyComponent implements OnInit {
   ];
   readonly previewPage = signal(0);
   readonly visiblePreviews = computed(() => this.previews.slice(this.previewPage() * 3, this.previewPage() * 3 + 3));
-  readonly selectedTopic = signal('Tất cả');
+  readonly selectedTopics = signal<readonly string[]>([]);
+  readonly pendingTopics = signal<readonly string[]>([]);
+  readonly isTopicMenuOpen = signal(false);
+  readonly topicSearch = signal('');
   readonly selectedTab = signal('trending');
   readonly search = signal('');
   readonly modal = signal<'create' | 'password' | 'full' | 'waitlist' | 'approval' | 'created' | null>(null);
@@ -50,13 +54,23 @@ export class StudyRoomLobbyComponent implements OnInit {
   readonly rooms = this.roomsService.rooms;
   readonly loading = signal(true);
   readonly loadError = signal('');
+  readonly visibleTopics = computed(() => {
+    const query = this.topicSearch().trim().toLocaleLowerCase('vi');
+    return this.topics.slice(1).filter(topic => !query || topic.toLocaleLowerCase('vi').includes(query));
+  });
+  readonly topicTriggerLabel = computed(() => {
+    const topics = this.selectedTopics();
+    if (topics.length === 0) return 'Chủ đề: Tất cả';
+    if (topics.length === 1) return `Chủ đề: ${topics[0]}`;
+    return `Chủ đề: ${topics.length} đã chọn`;
+  });
   readonly filteredRooms = computed(() => {
     const query = this.search().trim().toLowerCase();
-    const topic = this.selectedTopic();
+    const topics = this.selectedTopics();
     const tab = this.selectedTab();
     let rooms = this.rooms().filter(room =>
       room.type !== 'private' &&
-      (topic === 'Tất cả' || room.tags.some(tag => tag.toLowerCase() === topic.toLowerCase())) &&
+      (topics.length === 0 || topics.some(topic => room.tags.some(tag => tag.toLowerCase() === topic.toLowerCase()))) &&
       (!query || [room.name, room.description, ...room.tags].some(value => value.toLowerCase().includes(query))) &&
       (tab !== 'available' || room.currentUsers < room.maxUsers) &&
       (tab !== 'active' || room.status === 'focus' || room.status === 'break'));
@@ -78,6 +92,41 @@ export class StudyRoomLobbyComponent implements OnInit {
   newRoomLimit = 20;
 
   ngOnInit(): void { this.loadRooms(); }
+
+  @HostListener('document:click', ['$event'])
+  closeTopicMenuOnOutsideClick(event: MouseEvent): void {
+    if (this.isTopicMenuOpen() && !this.elementRef.nativeElement.contains(event.target as Node)) this.closeTopicMenu();
+  }
+
+  @HostListener('document:keydown.escape')
+  closeTopicMenuOnEscape(): void { this.closeTopicMenu(); }
+
+  toggleTopicMenu(): void {
+    if (this.isTopicMenuOpen()) { this.closeTopicMenu(); return; }
+    this.pendingTopics.set([...this.selectedTopics()]);
+    this.topicSearch.set('');
+    this.isTopicMenuOpen.set(true);
+  }
+
+  closeTopicMenu(): void { this.isTopicMenuOpen.set(false); this.topicSearch.set(''); }
+
+  togglePendingTopic(topic: string): void {
+    const selected = this.pendingTopics();
+    this.pendingTopics.set(selected.includes(topic) ? selected.filter(item => item !== topic) : [...selected, topic]);
+  }
+
+  clearPendingTopics(): void { this.pendingTopics.set([]); }
+
+  applyTopicFilter(): void { this.selectedTopics.set([...this.pendingTopics()]); this.closeTopicMenu(); }
+
+  resetFilters(): void {
+    this.search.set('');
+    this.selectedTopics.set([]);
+    this.pendingTopics.set([]);
+    this.selectedTab.set('trending');
+    this.closeTopicMenu();
+    this.loadRooms();
+  }
 
   loadRooms(): void {
     this.loading.set(true);
