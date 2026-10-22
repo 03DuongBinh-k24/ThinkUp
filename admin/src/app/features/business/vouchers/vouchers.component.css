@@ -269,7 +269,7 @@ button.voucher-kpi:hover, button.voucher-kpi.selected { border-color: #91bdf1; b
 .voucher-detail-footer .voucher-detail-delete-action:disabled { border-color: #dbe3ec; background: #f3f6fa; color: #94a3b8; opacity: 1; }
 .voucher-detail-footer .button.primary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; background: #245bdd; border-color: #245bdd; color: #fff; }
 .voucher-detail-edit svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-/* Icon trong nút footer (Nhân bản, Xoá) phải được ràng kích thước và nét vẽ,
+/* Icon trong các nút footer phải được ràng kích thước và nét vẽ,
    nếu không SVG sẽ mặc định fill đen và phình to. */
 .voucher-detail-footer .button svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .voucher-detail-close:focus-visible, .voucher-detail-footer .button:focus-visible { outline: 2px solid #245bdd; outline-offset: 2px; }
@@ -315,7 +315,6 @@ button.voucher-kpi:focus-visible { outline: 2px solid #176de1; outline-offset: 2
 .voucher-panel { border-color: #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px #10294a0b; }
 .voucher-toolbar { padding: 20px; background: #fbfcfe; border-bottom: 1px solid #e8edf3; }
 .create-button { height: 40px; border-radius: 8px; }
-.voucher-toolbar .custom-select-control { --custom-select-trigger-height: 40px; }
 .voucher-toolbar app-export-menu { --export-trigger-size: 40px; }
 /* Export button mirrors the Orders toolbar design: solid primary with a download icon. */
 .toolbar-button { display: inline-flex; flex: none; justify-content: center; align-items: center; gap: 7px; height: 48px; padding: 0 16px; border: 1px solid #0965e4; border-radius: 8px; white-space: nowrap; background: #0965e4; color: #fff; font: var(--admin-text-control-label); }
@@ -409,7 +408,7 @@ button.voucher-kpi:focus-visible { outline: 2px solid #176de1; outline-offset: 2
 .voucher-form-layout, .voucher-detail-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(310px, .82fr); align-items: start; gap: 26px; }
 .voucher-form-layout { grid-template-columns: minmax(0, 1fr) 350px; }
 .voucher-form-main, .voucher-detail-main { min-width: 0; }
-.voucher-detail-layout { grid-template-columns: minmax(0, 680px) minmax(280px, 300px); justify-content: start; gap: 20px; }
+.voucher-detail-layout { grid-template-columns: minmax(0, 1fr); }
 .voucher-setup-summary { position: sticky; top: 0; min-width: 0; overflow: hidden; border: 1px solid #d8e3ef; border-radius: 10px; background: #f7f9fc; color: #172d4e; }
 .voucher-summary-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid #dfe7f0; background: #fff; }
 .voucher-summary-heading > div { min-width: 0; }
@@ -424,9 +423,9 @@ button.voucher-kpi:focus-visible { outline: 2px solid #176de1; outline-offset: 2
 .voucher-setup-summary dl > div { display: grid; grid-template-columns: minmax(105px, 40%) minmax(0, 1fr); align-items: start; gap: 12px; }
 .voucher-setup-summary dt { color: #64748b; font: var(--admin-text-caption); }
 .voucher-setup-summary dd { min-width: 0; margin: 0; color: #172d4e; font: var(--admin-text-body-default); font-weight: var(--admin-font-weight-regular); text-align: right; overflow-wrap: anywhere; }
-.voucher-detail-overview { top: 0; }
 @media (max-width: 1180px) {
-  .voucher-form-layout, .voucher-detail-layout { grid-template-columns: minmax(0, 1.65fr) minmax(290px, .8fr); gap: 18px; }
+  .voucher-form-layout { grid-template-columns: minmax(0, 1.65fr) minmax(290px, .8fr); gap: 18px; }
+  .voucher-detail-layout { grid-template-columns: minmax(0, 1fr); }
   .voucher-form-dialog > .dialog-body, .voucher-detail > .voucher-detail-body { padding-left: 20px; padding-right: 20px; }
 }
 

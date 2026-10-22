@@ -130,12 +130,6 @@
             @if (order.status === 'success') {
               <div class="summary-datetime"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><div><span>Thanh toán thành công</span><strong>{{ order.paidAt ? dateTimeSecond(order.paidAt) : 'Chưa có thông tin' }}</strong></div></div>
               <div class="summary-status"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><div><span>Trạng thái đơn hàng</span><strong class="status-outline status-success">Thành công</strong></div></div>
-              <div class="summary-section">
-                <h4 class="summary-section-title"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></span>Đối soát &amp; chứng từ</h4>
-                <div class="reconciliation-item"><span>Mã hóa đơn điện tử</span><strong>{{ order.invoiceId || 'Chưa phát hành' }}</strong></div>
-                <div class="reconciliation-item"><span>Mã giao dịch cổng thanh toán</span><strong>{{ order.transactionId || 'Chưa có' }}</strong></div>
-                <div class="invoice-state"><img src="/assets/business/orders/circle-check.svg" alt=""><span><strong>{{ order.invoiceId ? 'Hóa đơn đã phát hành' : 'Hóa đơn chưa phát hành' }}</strong><small>{{ order.invoiceId ? 'Chứng từ đã được ghi nhận.' : 'Chưa có chứng từ.' }}</small></span></div>
-              </div>
             } @else if (order.status === 'pending') {
               <div class="summary-datetime"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><div><span>Hạn thanh toán</span><strong>{{ dateTimeSecond(paymentDeadline(order).toISOString()) }}</strong><small>Hết hạn sau 15 phút kể từ lúc tạo đơn.</small></div></div>
               <div class="summary-status"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><div><span>Trạng thái đơn hàng</span><strong class="status-outline status-pending">Chờ thanh toán</strong></div></div>
@@ -144,6 +138,18 @@
               <div class="summary-status"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><div><span>Trạng thái đơn hàng</span><strong class="status-outline status-cancelled">Đã hủy</strong></div></div>
               <div class="summary-result"><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span><div><strong>Kết quả thanh toán</strong><small>{{ paymentStateLabel(order) }}. {{ order.cancellation?.paymentState === 'unpaid' ? 'Không phát sinh hoàn tiền.' : '' }}</small></div></div>
             }
+            <div class="summary-section">
+              <h4 class="summary-section-title"><span class="exception-line-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></span>Đối soát &amp; chứng từ</h4>
+              <div class="reconciliation-item"><span>Mã hóa đơn điện tử</span><strong>{{ order.invoiceId || 'Chưa phát hành' }}</strong></div>
+              <div class="reconciliation-item"><span>Mã giao dịch cổng thanh toán</span><strong>{{ order.transactionId || 'Chưa có' }}</strong></div>
+              <div class="invoice-state" [class.pending]="order.status === 'pending'" [class.cancelled]="order.status === 'cancelled'">
+                <img [src]="order.status === 'success' ? '/assets/business/orders/circle-check.svg' : order.status === 'pending' ? '/assets/business/orders/hourglass.svg' : '/assets/business/orders/circle-x.svg'" alt="">
+                <span>
+                  <strong>{{ order.invoiceId ? 'Hóa đơn đã phát hành' : order.status === 'pending' ? 'Chưa phát sinh hóa đơn' : 'Không phát hành hóa đơn' }}</strong>
+                  <small>{{ order.invoiceId ? 'Chứng từ đã được ghi nhận.' : order.status === 'pending' ? 'Hóa đơn được phát hành sau khi thanh toán thành công.' : 'Đơn hàng đã hủy nên không phát hành chứng từ thanh toán.' }}</small>
+                </span>
+              </div>
+            </div>
           </aside>
         </div>
       </div>
