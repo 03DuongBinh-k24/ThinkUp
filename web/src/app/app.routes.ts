@@ -85,7 +85,16 @@ export const routes: Routes = [
       { path: 'study-room/:roomId', data: { hideShell: true }, loadComponent: () => import('./features/study-room/study-room-view/study-room-view.component').then(m => m.StudyRoomViewComponent) },
       { path: 'roadmap', loadComponent: () => import('./features/roadmap/roadmap-list/roadmap-list.component').then(m => m.RoadmapListComponent) },
       { path: 'roadmap/:id', loadComponent: () => import('./features/roadmap/roadmap-detail/roadmap-detail.component').then(m => m.RoadmapDetailComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId', loadComponent: () => import('./features/roadmap/roadmap-test/roadmap-test.component').then(m => m.RoadmapTestComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId/processing', loadComponent: () => import('./features/roadmap/roadmap-test-processing/roadmap-test-processing.component').then(m => m.RoadmapTestProcessingComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId/result', loadComponent: () => import('./features/roadmap/roadmap-survey-complete/roadmap-survey-complete.component').then(m => m.RoadmapSurveyCompleteComponent) },
       { path: 'roadmap/:roadmapId/:skillId', loadComponent: () => import('./features/roadmap/roadmap-skill-detail/roadmap-skill-detail.component').then(m => m.RoadmapSkillDetailComponent) },
+      { path: 'flashcards', loadComponent: () => import('./features/roadmap/flashcard-list/flashcard-list.component').then(m => m.FlashcardListComponent) },
+      { path: 'flashcards/new', loadComponent: () => import('./features/roadmap/flashcard-form/flashcard-form.component').then(m => m.FlashcardFormComponent) },
+      { path: 'flashcards/:id', loadComponent: () => import('./features/roadmap/flashcard-detail/flashcard-detail.component').then(m => m.FlashcardDetailComponent) },
+      { path: 'flashcards/:id/edit', loadComponent: () => import('./features/roadmap/flashcard-form/flashcard-form.component').then(m => m.FlashcardFormComponent) },
+      { path: 'flashcards/:id/study', loadComponent: () => import('./features/roadmap/flashcard-study/flashcard-study.component').then(m => m.FlashcardStudyComponent) },
+      { path: 'flashcards/:id/complete', loadComponent: () => import('./features/roadmap/flashcard-complete/flashcard-complete.component').then(m => m.FlashcardCompleteComponent) },
     ]
   },
   // Legal routes
