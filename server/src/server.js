@@ -31,6 +31,8 @@ import { createBillingRouter } from './user/purchase/billing.user.js';
 import { createStudyRoomRouter } from './user/studyroom/studyroom.user.js';
 import { createRoadmapRouter } from './user/roadmap/roadmap.user.js';
 import { createFlashcardRouter } from './user/flashcard/flashcard.user.js';
+import { createPaymentRouter } from './user/payment/payment.router.js';
+import { createCartRouter } from './user/cart/cart.user.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,6 +43,8 @@ const CLIENT_URL = rawClientUrl.split(',')[0].trim().replace(/\/+$/, '');
 const defaultOrigins = [
   'https://think-up-edu.vercel.app',
   'https://thinkup-edu.vercel.app',
+  'https://think-up-admin.vercel.app',
+  'https://thinkup-admin.vercel.app',
   'http://localhost:4200',
   'http://localhost:4201',
   'http://localhost:3000',
@@ -358,11 +362,8 @@ onboardingRouter.get('/courses', requireAuth, async (req, res, next) => {
 });
 
 app.use('/api/user/onboarding', onboardingRouter);
-
-// ─── 5b. Alias Routes: /api/v1/onboarding (tương thích FE Angular) ───────────
-// FE Angular đang gọi /api/v1/onboarding/submit và /api/v1/onboarding/skip
-// Alias này đảm bảo FE không cần thay đổi code, BE tự route về cùng handler.
 app.use('/api/v1/onboarding', onboardingRouter);
+app.use('/api/onboarding', onboardingRouter); // Alias gọi trực tiếp không cần tiền tố
 
 // ─── 5b2. Router Profile Học viên: /api/user/profile ─────────────────────────
 const profileRouter = express.Router();
@@ -438,6 +439,23 @@ const flashcardRouter = createFlashcardRouter(express, requireAuth);
 app.use('/api/user/flashcards', flashcardRouter);
 app.use('/api/v1/user/flashcards', flashcardRouter); // Hỗ trợ tiền tố v1
 app.use('/api/flashcards', flashcardRouter); // Alias thuận tiện cho client
+
+// ─── 5h. Router Cổng Thanh Toán & Webhook: /api/payment & /api/user/payment ──
+const paymentRouter = createPaymentRouter(express, requireAuth);
+app.use('/api/payment', paymentRouter);
+app.use('/api/user/payment', paymentRouter);
+app.use('/api/v1/payment', paymentRouter); // Hỗ trợ tiền tố v1
+
+// ─── 5i. Router Giỏ Hàng Học Viên & Khách: /api/user/cart ───────────────────
+function optionalAuth(req, res, next) {
+  const userId = extractBearerUserId(req);
+  if (userId) req.userId = userId;
+  next();
+}
+const cartRouter = createCartRouter(express, requireAuth, optionalAuth);
+app.use('/api/user/cart', cartRouter);
+app.use('/api/v1/user/cart', cartRouter); // Hỗ trợ tiền tố v1
+app.use('/api/cart', cartRouter); // Alias tương thích trực tiếp
 
 // ─── 6. Bộ Xử Lý Lỗi Tập Trung (Tương thích quy tắc bảo mật writing-block) ──
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
