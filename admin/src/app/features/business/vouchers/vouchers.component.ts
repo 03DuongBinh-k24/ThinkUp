@@ -148,8 +148,6 @@ export class VouchersComponent {
   readonly advancedFilter = signal<VoucherAdvancedFilter>(emptyVoucherFilter());
   readonly filterDraft = signal<VoucherAdvancedFilter>(emptyVoucherFilter());
   readonly advancedFilterCount = computed(() => countVoucherFilter(this.advancedFilter()));
-  readonly duplicating = signal<BusinessVoucher | null>(null);
-  readonly duplicateCode = signal('');
   readonly deleting = signal<BusinessVoucher | null>(null);
   toggleRowActions(code: string): void {
     this.openActionMenuCode.update(current => current === code ? null : code);
@@ -160,7 +158,7 @@ export class VouchersComponent {
     this.backdropPointerStarted = event.target === event.currentTarget;
   }
 
-  closeFromBackdrop(event: MouseEvent, dialog: 'form' | 'detail' | 'filter' | 'confirm' | 'duplicate' | 'delete'): void {
+  closeFromBackdrop(event: MouseEvent, dialog: 'form' | 'detail' | 'filter' | 'confirm' | 'delete'): void {
     const shouldClose = this.backdropPointerStarted && event.target === event.currentTarget;
     this.backdropPointerStarted = false;
     if (!shouldClose) return;
@@ -170,7 +168,6 @@ export class VouchersComponent {
       case 'detail': this.detail.set(null); break;
       case 'filter': this.closeAdvancedFilter(); break;
       case 'confirm': this.confirm.set(null); break;
-      case 'duplicate': this.closeDuplicate(); break;
       case 'delete': this.closeDelete(); break;
     }
   }
@@ -266,11 +263,9 @@ export class VouchersComponent {
     return 'Đã hết hạn theo thời gian hoặc hết lượt phát hành';
   }
   websiteVisibilityHint(item: BusinessVoucher): string {
-    const status = this.editedStatus();
-    if (status === 'locked') return 'Voucher vẫn được ẩn khi tạm khóa và sẽ hiển thị lại sau khi mở khóa.';
-    if (!item.showOnSite) return 'Voucher đang được ẩn khỏi giỏ hàng và trang thanh toán.';
-    if (status === 'scheduled') return 'Voucher sẽ được gợi ý khi bắt đầu thời gian phát hành.';
-    return 'Voucher được gợi ý cho học viên tại giỏ hàng và trang thanh toán.';
+    return item.showOnSite
+      ? 'Bất kỳ khách hàng nào cũng có thể thấy và sử dụng voucher này.'
+      : 'Chỉ những khách hàng có mã voucher trực tiếp mới có thể áp dụng.';
   }
   discount(item: BusinessVoucher): string { return item.discountType === 'fixed' ? money(item.discountValue) : `${item.discountValue}% · tối đa ${money(item.maxDiscount ?? 0)}`; }
   date(value: string): string { return value.slice(8, 10) + '/' + value.slice(5, 7) + '/' + value.slice(0, 4); }
@@ -313,7 +308,7 @@ export class VouchersComponent {
   }
 
   private createdAtOf(item: BusinessVoucher): string {
-    return item.auditLog.find(entry => entry.action === 'created' || entry.action === 'duplicated')?.at ?? item.startsAt;
+    return item.auditLog.find(entry => entry.action === 'created')?.at ?? item.startsAt;
   }
 
   private timestamp(value: string): number {
@@ -484,27 +479,6 @@ export class VouchersComponent {
     const eligible = locked ? ['active', 'scheduled'].includes(status) : item.locked && status !== 'expired';
     if (eligible) this.confirm.set({ items: [item], locked });
   }
-  /** Mở hộp nhân bản voucher sang một mã mới, giữ nguyên toàn bộ điều kiện. */
-  requestDuplicate(item: BusinessVoucher): void {
-    this.detail.set(null);
-    this.duplicating.set(item);
-    this.duplicateCode.set(`${item.code}-COPY`);
-    this.error.set('');
-  }
-  closeDuplicate(): void {
-    this.duplicating.set(null);
-    this.duplicateCode.set('');
-    this.error.set('');
-  }
-  confirmDuplicate(): void {
-    const source = this.duplicating(); if (!source) return;
-    const code = this.duplicateCode().trim().toUpperCase();
-    if (!/^[A-Z0-9-]+$/.test(code)) { this.error.set('Mã voucher mới phải viết hoa, không dấu và không khoảng trắng.'); return; }
-    if (this.vouchers().some(item => item.code === code)) { this.error.set(`Mã ${code} đã tồn tại. Chọn mã khác để nhân bản.`); return; }
-    this.data.duplicateVoucher(source, code);
-    this.closeDuplicate();
-    this.toast.set(`Đã nhân bản voucher ${source.code} thành ${code}.`);
-  }
   /** Mở hộp xác nhận xoá voucher. */
   requestDelete(item: BusinessVoucher): void {
     this.detail.set(null);
@@ -534,7 +508,6 @@ export class VouchersComponent {
       updated: 'Cập nhật điều kiện',
       locked: 'Tạm khoá',
       unlocked: 'Mở khoá',
-      duplicated: 'Nhân bản',
       deleted: 'Xoá voucher'
     }[action] ?? action;
   }

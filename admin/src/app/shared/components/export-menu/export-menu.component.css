@@ -5,7 +5,7 @@
 .export-trigger:focus-visible { outline: 2px solid #4388e8; outline-offset: 2px; }
 .export-trigger svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 /* Menu định dạng dùng đúng bộ khuôn của dropdown "Trạng thái" (.custom-select-menu). */
-.export-options { position: absolute; z-index: 60; top: calc(100% + 6px); right: 0; display: grid; width: 330px; padding: 6px; border: 1px solid #d7e3f1; border-radius: 9px; background: #fff; box-shadow: 0 14px 34px #173b6d24; scrollbar-width: thin; scrollbar-color: #b9c8da transparent; }
-.export-options button { display: flex; align-items: center; width: 100%; min-height: 36px; padding: 8px 10px; border: 0; border-radius: 6px; background: transparent; color: #213758; font: var(--admin-text-control-input); text-align: left; cursor: pointer; }
+.export-options { position: absolute; z-index: 60; top: calc(100% + 6px); right: 0; display: grid; width: max-content; min-width: 180px; padding: 4px; border: 1px solid #d7e3f1; border-radius: 9px; background: #fff; box-shadow: 0 14px 34px #173b6d24; scrollbar-width: thin; scrollbar-color: #b9c8da transparent; }
+.export-options button { display: flex; align-items: center; width: 100%; min-height: calc(var(--admin-line-height-compact) + 8px); padding: 4px; border: 0; border-radius: 6px; background: transparent; color: #213758; font: var(--admin-text-control-input); text-align: left; cursor: pointer; }
 .export-options button:hover:not(:disabled) { background: #edf5ff; color: #075ac9; }
 .export-options button:focus-visible { outline: 2px solid #4388e8; outline-offset: -2px; }

@@ -8,7 +8,7 @@ export type VoucherScope = 'all' | 'rating' | 'instructor' | 'courses';
 /** Nhóm học viên được phép dùng voucher (tương ứng "nhóm khách hàng" của Haravan). */
 export type VoucherAudience = 'all' | 'new_learner';
 /** Loại thao tác quản trị được ghi vào lịch sử voucher. */
-export type VoucherAuditAction = 'created' | 'updated' | 'locked' | 'unlocked' | 'duplicated' | 'deleted';
+export type VoucherAuditAction = 'created' | 'updated' | 'locked' | 'unlocked' | 'deleted';
 
 export interface VoucherAuditEntry {
   at: string;

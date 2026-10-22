@@ -46,16 +46,14 @@ export class InvoicePdfService {
     this.sectionTitle(pdf, 'ĐƠN VỊ CUNG CẤP', margin, y, contentWidth / 2 - 3);
     this.sectionTitle(pdf, 'THÔNG TIN KHÁCH HÀNG', pageWidth / 2 + 3, y, contentWidth / 2 - 3);
     y += 12;
-    // Nội dung khách hàng thẳng trục với value của Mã đơn hàng/Mã giao dịch phía trên.
-    const customerColumnX = rightInvoiceColumn + 28;
     this.contactLine(pdf, 'Nền tảng giáo dục ThinkUp', margin, y, true);
-    this.contactLine(pdf, order.learner, customerColumnX, y, true);
+    this.labelValueRow(pdf, 'Họ và tên', order.learner, rightInvoiceColumn, y, invoiceColumnWidth);
     y += 8;
     this.contactLine(pdf, 'Dịch vụ đào tạo trực tuyến', margin, y);
-    this.contactLine(pdf, order.email, customerColumnX, y);
+    this.labelValueRow(pdf, 'Gmail', order.email, rightInvoiceColumn, y, invoiceColumnWidth);
     y += 8;
     this.contactLine(pdf, 'Hóa đơn điện tử được phát hành tự động', margin, y);
-    this.contactLine(pdf, order.phone, customerColumnX, y);
+    this.labelValueRow(pdf, 'Số điện thoại', order.phone, rightInvoiceColumn, y, invoiceColumnWidth);
 
     y += 18;
     this.sectionTitle(pdf, 'CHI TIẾT DỊCH VỤ', margin, y, contentWidth);
@@ -110,7 +108,6 @@ export class InvoicePdfService {
     pdf.setTextColor(100, 116, 139);
     pdf.setFontSize(8);
     pdf.text('Cảm ơn bạn đã tin tưởng và học tập cùng ThinkUp.', pageWidth / 2, 285, { align: 'center' });
-    pdf.text('Chứng từ giao dịch điện tử - Không cần chữ ký.', pageWidth / 2, 290, { align: 'center' });
     pdf.save(`hoa-don-${order.invoiceId ?? order.id}.pdf`);
   }
 

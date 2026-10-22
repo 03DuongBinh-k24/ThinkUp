@@ -40,19 +40,6 @@ export class BusinessDemoService {
     this.vouchers.update(items => items.map(item => item.code === normalized.code ? normalized : item));
   }
 
-  /** Nhân bản voucher sang mã mới, giữ nguyên toàn bộ điều kiện đã cấu hình. */
-  duplicateVoucher(source: BusinessVoucher, newCode: string): void {
-    const copy: BusinessVoucher = {
-      ...structuredClone(source),
-      code: newCode,
-      used: 0,
-      locked: false,
-      fundedAmount: voucherFundedAmount(source),
-      auditLog: [this.auditEntry('duplicated', `Nhân bản từ mã ${source.code}.`)]
-    };
-    this.vouchers.update(items => [copy, ...items]);
-  }
-
   /** Xoá mềm voucher: giữ bản ghi để đối soát các đơn hàng đã dùng mã này. */
   deleteVoucher(code: string): void {
     this.vouchers.update(items => items.map(item => item.code === code
