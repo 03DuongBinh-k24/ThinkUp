@@ -1,10 +1,13 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
+import { Observable, catchError, from, map, of, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   MOCK_ADMIN_ACCOUNT,
-  MOCK_ADMIN_BACKUP_CODES
+  MOCK_ADMIN_BACKUP_CODES,
+  MOCK_FIRST_LOGIN_ADMIN_ACCOUNT,
+  MOCK_ADMIN_SETUP_KEY,
+  MockAdminAccount
 } from '../data/mock/admin-auth.mock';
 import {
   AdminAuthError,
@@ -160,13 +163,14 @@ export class AdminAuthService {
       return throwError(() => this.buildError('Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.', 401, 'NO_SESSION'));
     }
 
-    if (environment.adminDemoAuthFlow.twoFactorEnabled && input.otp.trim() !== environment.adminDemoAuthFlow.twoFactorCode) {
+    if (!user.mustChangePassword && environment.adminDemoAuthFlow.twoFactorEnabled && input.otp.trim() !== environment.adminDemoAuthFlow.twoFactorCode) {
       return throwError(() => this.buildError('Mã xác thực không chính xác hoặc đã hết hạn. Vui lòng thử lại.', 401, 'INVALID_OTP'));
     }
 
     const updatedUser: AdminUser = {
       ...user,
-      passwordExpiresAt: this.addDays(new Date(), PASSWORD_LIFETIME_DAYS).toISOString()
+      passwordExpiresAt: this.addDays(new Date(), PASSWORD_LIFETIME_DAYS).toISOString(),
+      mustChangePassword: false
     };
 
     this.persistUser(updatedUser);
@@ -180,8 +184,14 @@ export class AdminAuthService {
    * TODO(pre-deploy): thay bằng endpoint xác thực mã thiết lập của backend.
    */
   verifySetupCode(code: string): Observable<void> {
-    if (environment.adminDemoAuthFlow.twoFactorEnabled && code.trim() !== environment.adminDemoAuthFlow.twoFactorCode) {
-      return throwError(() => this.buildError('Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.', 401, 'INVALID_OTP'));
+    if (environment.adminDemoAuthFlow.twoFactorEnabled) {
+      return from(this.verifyDemoTotp(code.trim())).pipe(
+        map(valid => {
+          if (!valid) {
+            throw this.buildError('Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.', 401, 'INVALID_OTP');
+          }
+        })
+      );
     }
 
     return of(undefined);
@@ -193,6 +203,16 @@ export class AdminAuthService {
     return of(MOCK_ADMIN_BACKUP_CODES).pipe(
       tap(codes => this.issuedCodesState.set(codes))
     );
+  }
+
+  /** Xác nhận quản trị viên đã lưu mã dự phòng và hoàn tất onboarding bảo mật. */
+  confirmBackupCodesSaved(): void {
+    const user = this.userState();
+    if (!user) return;
+
+    const updatedUser: AdminUser = { ...user, twoFactorSetupRequired: false };
+    this.persistUser(updatedUser);
+    this.userState.set(updatedUser);
   }
 
   passwordReminderDismissed(): boolean {
@@ -236,7 +256,9 @@ export class AdminAuthService {
       fullName: backendUser.name || backendUser.full_name || 'Quản trị viên',
       role: 'admin' as AdminRole,
       avatar: backendUser.avatar ?? backendUser.avatar_url ?? null,
-      passwordExpiresAt: response.passwordExpiresAt ?? backendUser.password_expires_at ?? null
+      passwordExpiresAt: response.passwordExpiresAt ?? backendUser.password_expires_at ?? null,
+      mustChangePassword: response.mustChangePassword ?? backendUser.must_change_password ?? false,
+      twoFactorSetupRequired: response.twoFactorSetupRequired ?? backendUser.two_factor_setup_required ?? false
     };
 
     this.saveSession(token, user, rememberMe);
@@ -245,7 +267,23 @@ export class AdminAuthService {
 
   private handleError(error: HttpErrorResponse, payload: { email: string; password: string }): Observable<AdminUser | null> {
     // TODO(pre-deploy): Bỏ nhánh fallback demo khi backend đã cấp tài khoản role 'admin' thật.
-    if (environment.adminDemoLogin && this.isDemoAccount(payload)) {
+    const demoAccount = this.findDemoAccount(payload);
+    if (environment.adminDemoLogin && demoAccount) {
+      if (demoAccount === MOCK_FIRST_LOGIN_ADMIN_ACCOUNT) {
+        const firstLoginUser: AdminUser = {
+          id: 'demo-admin-first-login',
+          email: demoAccount.email,
+          fullName: demoAccount.fullName,
+          role: 'admin',
+          avatar: null,
+          passwordExpiresAt: null,
+          mustChangePassword: true,
+          twoFactorSetupRequired: true
+        };
+        this.saveSession(`demo-token-${demoAccount.email}`, firstLoginUser, false);
+        return of(firstLoginUser);
+      }
+
       if (environment.adminDemoAuthFlow.twoFactorEnabled) {
         this.startChallenge(payload.email, null, this.demoPasswordExpiry());
         return of(null);
@@ -409,8 +447,9 @@ export class AdminAuthService {
     }
   }
 
-  private isDemoAccount(payload: { email: string; password: string }): boolean {
-    return payload.email === MOCK_ADMIN_ACCOUNT.email && payload.password === MOCK_ADMIN_ACCOUNT.password;
+  private findDemoAccount(payload: { email: string; password: string }): MockAdminAccount | null {
+    const accounts = [MOCK_ADMIN_ACCOUNT, MOCK_FIRST_LOGIN_ADMIN_ACCOUNT];
+    return accounts.find(account => payload.email === account.email && payload.password === account.password) ?? null;
   }
 
   private demoPasswordExpiry(): string | null {
@@ -429,6 +468,37 @@ export class AdminAuthService {
     return next;
   }
 
+  /** Xác minh TOTP thật cho tài khoản demo; chấp nhận lệch một chu kỳ 30 giây. */
+  private async verifyDemoTotp(code: string): Promise<boolean> {
+    if (!/^\d{6}$/.test(code) || typeof crypto === 'undefined' || !crypto.subtle) return false;
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      decodeBase32(MOCK_ADMIN_SETUP_KEY),
+      { name: 'HMAC', hash: 'SHA-1' },
+      false,
+      ['sign']
+    );
+    const currentCounter = Math.floor(Date.now() / 30_000);
+
+    for (const offset of [-1, 0, 1]) {
+      const counter = new ArrayBuffer(8);
+      new DataView(counter).setBigUint64(0, BigInt(currentCounter + offset));
+      const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, counter));
+      const index = signature[signature.length - 1] & 0x0f;
+      const value = (
+        ((signature[index] & 0x7f) << 24)
+        | ((signature[index + 1] & 0xff) << 16)
+        | ((signature[index + 2] & 0xff) << 8)
+        | (signature[index + 3] & 0xff)
+      ) % 1_000_000;
+
+      if (value.toString().padStart(6, '0') === code) return true;
+    }
+
+    return false;
+  }
+
   private daysUntil(expiresAt: string): number {
     const diff = new Date(expiresAt).getTime() - Date.now();
     return Math.ceil(diff / 86_400_000);
@@ -438,4 +508,21 @@ export class AdminAuthService {
 /** Mã dự phòng được so khớp bỏ qua dấu gạch nối/khoảng trắng: `A8F9-3B2C…` = `a8f93b2c…`. */
 function normalizeBackupCode(code: string): string {
   return code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function decodeBase32(value: string): ArrayBuffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+
+  for (const character of value.replace(/=+$/g, '').toUpperCase()) {
+    const index = alphabet.indexOf(character);
+    if (index < 0) continue;
+    bits += index.toString(2).padStart(5, '0');
+  }
+
+  const bytes = new Uint8Array(Math.floor(bits.length / 8));
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Number.parseInt(bits.slice(index * 8, index * 8 + 8), 2);
+  }
+  return bytes.buffer;
 }

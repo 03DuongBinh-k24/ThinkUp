@@ -21,6 +21,13 @@ export const MOCK_ADMIN_ACCOUNT: MockAdminAccount = {
   fullName: MOCK_ADMIN_NAME
 };
 
+/** Tài khoản mới được IT cấp để kiểm thử onboarding bảo mật lần đăng nhập đầu. */
+export const MOCK_FIRST_LOGIN_ADMIN_ACCOUNT: MockAdminAccount = {
+  email: 'new-admin@thinkup.edu.vn',
+  password: 'Welcome@1234',
+  fullName: 'Quản trị viên mới'
+};
+
 /** Mã OTP hợp lệ của luồng demo (backend thật sẽ sinh mã theo TOTP). */
 export const MOCK_ADMIN_TWO_FACTOR_CODE = '123456';
 
