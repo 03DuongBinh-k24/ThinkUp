@@ -362,11 +362,8 @@ onboardingRouter.get('/courses', requireAuth, async (req, res, next) => {
 });
 
 app.use('/api/user/onboarding', onboardingRouter);
-
-// ─── 5b. Alias Routes: /api/v1/onboarding (tương thích FE Angular) ───────────
-// FE Angular đang gọi /api/v1/onboarding/submit và /api/v1/onboarding/skip
-// Alias này đảm bảo FE không cần thay đổi code, BE tự route về cùng handler.
 app.use('/api/v1/onboarding', onboardingRouter);
+app.use('/api/onboarding', onboardingRouter); // Alias gọi trực tiếp không cần tiền tố
 
 // ─── 5b2. Router Profile Học viên: /api/user/profile ─────────────────────────
 const profileRouter = express.Router();
