@@ -10,6 +10,10 @@ export interface AdminUser {
   avatar?: string | null;
   /** Thời điểm mật khẩu hết hạn (ISO). Không có nghĩa là chính sách xoay vòng đang tắt. */
   passwordExpiresAt?: string | null;
+  /** Bắt buộc đổi mật khẩu mặc định trước khi sử dụng hệ thống. */
+  mustChangePassword?: boolean;
+  /** Bắt buộc hoàn tất thiết lập ứng dụng 2FA và lưu mã dự phòng. */
+  twoFactorSetupRequired?: boolean;
 }
 
 /** Payload gửi lên API đăng nhập. */
@@ -34,6 +38,8 @@ export interface AdminLoginResponse {
   requiresTwoFactor?: boolean;
   twoFactorToken?: string;
   passwordExpiresAt?: string | null;
+  mustChangePassword?: boolean;
+  twoFactorSetupRequired?: boolean;
   user?: {
     id?: string;
     studentId?: string | null;
@@ -46,6 +52,8 @@ export interface AdminLoginResponse {
     avatar_url?: string | null;
     email_verified?: boolean;
     password_expires_at?: string | null;
+    must_change_password?: boolean;
+    two_factor_setup_required?: boolean;
   };
 }
 

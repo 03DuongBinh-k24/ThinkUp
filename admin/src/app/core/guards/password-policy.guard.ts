@@ -10,6 +10,14 @@ export const passwordPolicyGuard: CanActivateFn = () => {
   const auth = inject(AdminAuthService);
   const router = inject(Router);
 
+  if (auth.currentUser()?.mustChangePassword) {
+    return router.createUrlTree(['/auth/change-password']);
+  }
+
+  if (auth.currentUser()?.twoFactorSetupRequired) {
+    return router.createUrlTree(['/auth/setup-2fa']);
+  }
+
   if (auth.passwordState() === 'expired') {
     return router.createUrlTree(['/auth/password-expired']);
   }
