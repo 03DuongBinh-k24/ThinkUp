@@ -1,7 +1,7 @@
 :host { display: block; }
 .admin-shell { --sidebar-width: 256px; display: grid; grid-template-columns: var(--sidebar-width) minmax(0,1fr); min-height: 100vh; background: #f4f8ff; }
 .admin-shell.is-collapsed { --sidebar-width: 72px; }
-.sidebar { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; background: #051638; color: #eef6ff; padding: 12px 9px; }
+.sidebar { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; height: 100vh; overflow: visible; background: #051638; color: #eef6ff; padding: 12px 9px; }
 .brand { display: flex; align-items: flex-start; gap: 8px; height: 58px; padding: 0 7px; position: relative; }
 .brand > img { flex: none; margin-top: 5px; }
 .brand-copy { display: grid; gap: 1px; white-space: nowrap; }
@@ -9,7 +9,7 @@
 .brand-copy strong span { color: #1570d1; }
 .brand-copy small { font-size: 12px; color: #dceafe; }
 .collapse-button { margin-left: auto; padding: 3px; border: 0; color: inherit; background: transparent; cursor: pointer; }
-.nav-list { display: grid; gap: 3px; }
+.nav-list { display: grid; align-content: start; gap: 3px; min-height: 0; overflow-y: auto; }
 .nav-item { width: 100%; height: 39px; padding: 0 10px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 6px; background: transparent; color: #eef6ff; font: 500 15px Inter, Arial, sans-serif; text-align: left; cursor: pointer; white-space: nowrap; }
 .nav-item:hover { background: #17315b; }
 .nav-item.active { background: #1570d1; box-shadow: 0 4px 8px #1570d14d; }
@@ -30,14 +30,28 @@
 .is-collapsed .brand:hover .collapse-button, .is-collapsed .brand:focus-within .collapse-button { opacity: 1; pointer-events: auto; }
 .is-collapsed .nav-item { justify-content: center; }
 .page-shell { min-width: 0; }
-.topbar { position: sticky; top: 0; z-index: 20; height: 69px; background: #eff7ff; border-bottom: 1px solid #d8e8f7; display: flex; justify-content: flex-end; align-items: center; padding: 0 23px; }
-.top-actions { display: flex; align-items: center; gap: 14px; color: #1570d1; }
-.top-icon { width: 47px; height: 47px; border: 0; background: transparent; color: #1570d1; font-size: 28px; cursor: pointer; position: relative; }
-.top-icon img { width: 26px; height: 26px; }
-.badge { position: absolute; right: 0; top: -2px; background: #ff778b; color: #fff; border-radius: 50%; font: 700 14px Inter, Arial, sans-serif; width: 19px; height: 19px; line-height: 19px; }
-.avatar { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 4px solid #e1efff; background: #fff; font-size: 27px; font-weight: 700; }
-.account-button { color: #1570d1; background: transparent; border: 0; font: 500 18px Inter, Arial, sans-serif; cursor: pointer; }.account-button span { margin-left: 6px; }
-.account-chevron { width: 16px; height: 16px; margin-left: 6px; vertical-align: middle; }
-.popover-anchor { position: relative; }.top-popover { position: absolute; right: 0; top: 50px; z-index: 10; width: 230px; background: #fff; color: #123260; border: 1px solid #dbe7f6; border-radius: 8px; padding: 14px; box-shadow: 0 8px 24px #12326020; font-size: 14px; }
+.top-utility-bar { position: fixed; z-index: 25; top: 16px; right: 24px; display: block; width: max-content; padding: 0; border: 0; background: transparent; }
+.liquid-tools { display: flex; align-items: center; gap: 2px; padding: 4px; border: 1px solid #cbdced80; border-radius: 18px; background: linear-gradient(135deg, #ffffffa8, #edf5ff78); box-shadow: inset 0 1px 0 #ffffffcc, 0 7px 20px #163c6d12; backdrop-filter: blur(20px) saturate(155%); -webkit-backdrop-filter: blur(20px) saturate(155%); }
+.top-popover-anchor { position: relative; }
+.top-tool { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 5px 12px; border: 0; border-radius: 12px; background: transparent; color: #183a67; font: 600 14px Inter, Arial, sans-serif; cursor: pointer; transition: background-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.top-tool:hover, .top-tool[aria-expanded='true'] { background: #ffffff99; box-shadow: inset 0 1px 0 #ffffffd9; }
+.top-tool:active { transform: translateY(1px); }
+.top-tool:focus-visible { outline: 2px solid #4388e8; outline-offset: 2px; }
+.top-tool.icon-only { width: 46px; padding-inline: 0; }
+.top-tool > img, .top-icon-wrap > img { width: 21px; height: 21px; opacity: .88; }
+.top-icon-wrap { position: relative; display: grid; place-items: center; width: 21px; height: 21px; }
+.badge { position: absolute; right: -8px; top: -8px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: #ff778b; color: #fff; font: 700 11px Inter, Arial, sans-serif; }
+.avatar { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #d9eaff; background: #fff; color: #1570d1; font-size: 16px; font-weight: 700; }
+.avatar svg { width: 19px; height: 19px; }
+.account-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-chevron { width: 15px; height: 15px; flex: none; }
+.top-popover { position: absolute; z-index: 30; top: calc(100% + 10px); right: 0; width: 230px; padding: 14px; border: 1px solid #d7e2ef; border-radius: 12px; background: #fff; color: #123260; box-shadow: 0 14px 35px #061a3a29; font-size: 14px; }
+.account-popover { display: grid; gap: 10px; }
+.account-meta { display: grid; gap: 2px; min-width: 0; }
+.account-meta strong { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-meta span { color: #5b708c; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-logout { min-height: 36px; border: 1px solid #d7e2ef; border-radius: 9px; background: #f6f9fe; color: #c0392b; font: 600 13.5px Inter, Arial, sans-serif; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
+.account-logout:hover { background: #fdeceb; border-color: #f2c4c0; }
+.account-logout:focus-visible { outline: 2px solid #4388e8; outline-offset: 2px; }
 @media (max-width: 1440px) { .admin-shell { --sidebar-width: 230px; } .nav-item { font-size: 14px; } .brand-copy strong { font-size: 22px; } }
 

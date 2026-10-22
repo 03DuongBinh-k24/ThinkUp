@@ -1,13 +1,13 @@
 // TODO(pre-deploy): Nhớ xóa dữ liệu dashboard mẫu này và thay bằng service sử dụng API admin đã được backend bàn giao.
-export interface DashboardMetric { title: string; value: string; unit?: string; detail?: string[]; trend?: string; theme: string; icon: string; arrow: string; decoration: string; }
+export interface DashboardMetric { title: string; value: string; unit?: string; detail?: string[]; trend?: string; theme: string; }
 export interface ActionItem { title: string; description: string; count: number; suffix: string; status: string; action: string; theme: string; icon: string; }
 export interface AuditLog { time: string; account: string; role: string; action: string; ip: string; id?: string; actor?: string; actionCode?: string; device?: string; entity?: string; previous?: string; current?: string; }
 
 export const DASHBOARD_METRICS: DashboardMetric[] = [
-  { title: 'Tổng người dùng', value: '120.540', unit: 'người', trend: '+38,2%', theme: 'users', icon: '1-group.svg', arrow: '1-svg.svg', decoration: '1-svg1.svg' },
-  { title: 'Khóa học', value: '215', unit: 'khóa học', trend: '+12%', detail: ['Đã xuất bản: 180', 'Chờ duyệt: 25', 'Bị ẩn: 10'], theme: 'courses', icon: '1-svg2.svg', arrow: '1-svg3.svg', decoration: '1-svg4.svg' },
-  { title: 'Doanh thu', value: '2.48', unit: 'tỷ VNĐ', trend: '+24,1%', theme: 'revenue', icon: '1-svg5.svg', arrow: '1-svg6.svg', decoration: '1-svg7.svg' },
-  { title: 'Phòng học ảo', value: '18', unit: 'phòng đang diễn ra', detail: ['Trực tuyến: 258'], theme: 'rooms', icon: '1-svg8.svg', arrow: '1-svg9.svg', decoration: '1-svg10.svg' }
+  { title: 'Tổng người dùng', value: '120.540', unit: 'người', trend: '+38,2%', theme: 'users' },
+  { title: 'Khóa học', value: '215', unit: 'khóa học', trend: '+12%', detail: ['Đã xuất bản: 180', 'Chờ duyệt: 25', 'Bị ẩn: 10'], theme: 'courses' },
+  { title: 'Doanh thu', value: '2.48', unit: 'tỷ VNĐ', trend: '+24,1%', theme: 'revenue' },
+  { title: 'Phòng học ảo', value: '18', unit: 'phòng đang diễn ra', detail: ['Trực tuyến: 258'], theme: 'rooms' }
 ];
 
 export const DASHBOARD_ACTIONS: ActionItem[] = [

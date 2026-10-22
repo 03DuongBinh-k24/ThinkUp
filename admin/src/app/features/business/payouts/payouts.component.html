@@ -1,103 +1,130 @@
 <main class="business-page payouts-page">
   <header class="page-heading">
     <div>
-      <p class="breadcrumb">Quản lý kinh doanh <span>/</span> Rút tiền giảng viên</p>
-      <h1>Rút tiền giảng viên</h1>
-      <p class="subtitle">Xem xét và duyệt các yêu cầu rút tiền của giảng viên. Sau khi duyệt, yêu cầu chuyển sang Chờ giải ngân.</p>
+      <nav class="breadcrumb" aria-label="Đường dẫn trang"><span class="breadcrumb-parent">Quản lý kinh doanh</span><span class="breadcrumb-separator" aria-hidden="true">/</span><span class="breadcrumb-current" aria-current="page">Chi trả giảng viên</span></nav>
+      <h1>Quản lý chi trả giảng viên</h1>
     </div>
   </header>
 
   <!-- TODO(pre-deploy): Nhớ thay số liệu và quyền demo bằng API rút tiền cùng RBAC thật; backend xử lý duyệt, từ chối, hoàn ví, email và giải ngân. -->
   <section class="kpi-grid" aria-label="Tổng quan rút tiền">
     <button class="kpi" type="button" [class.selected]="status() === 'pending'" (click)="filterFromKpi('pending')">
-      <span class="kpi-icon pending"><img src="/assets/business/orders/hourglass.svg" alt=""></span>
+      <span class="kpi-icon pending" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10M7 21h10M8 3c0 4 1.5 6.1 4 9-2.5 2.9-4 5-4 9m8-18c0 4-1.5 6.1-4 9 2.5 2.9 4 5 4 9"/><path d="M9.5 7.5h5M9.5 17h5"/></svg>
+      </span>
       <span class="kpi-content">
         <span class="kpi-label">Yêu cầu chờ duyệt</span>
         <strong class="kpi-value">{{ pending() }}</strong>
         <span class="kpi-foot">{{ largePending() }} yêu cầu từ 20 triệu trở lên</span>
       </span>
-      <img class="kpi-chevron" src="/assets/business/orders/chevron-right.svg" alt="">
     </button>
     <button class="kpi" type="button" [class.selected]="status() === 'approved'" (click)="filterFromKpi('approved')">
-      <span class="kpi-icon awaiting"><img src="/assets/dashboard/0-money-coin-outline.svg" alt=""></span>
+      <span class="kpi-icon awaiting" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M7 6V4h10v2"/></svg>
+      </span>
       <span class="kpi-content">
         <span class="kpi-label">Tiền chờ giải ngân</span>
         <strong class="kpi-value">{{ money(awaitingAmount()) }}</strong>
-        <span class="kpi-foot">Chờ kế toán chuyển khoản</span>
       </span>
-      <img class="kpi-chevron" src="/assets/business/orders/chevron-right.svg" alt="">
     </button>
     <button class="kpi" type="button" [class.selected]="status() === 'paid' && paidMonthOnly() && !taxOnly()" (click)="filterPaid()">
-      <span class="kpi-icon paid"><img src="/assets/dashboard/3-analytics-icon.svg" alt=""></span>
+      <span class="kpi-icon paid" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/><path d="m4 6 5-3 5 4 6-4"/></svg>
+      </span>
       <span class="kpi-content">
         <span class="kpi-label">Đã chi trả tháng này</span>
         <strong class="kpi-value">{{ money(paidAmount()) }}</strong>
         <span class="kpi-foot">{{ paidCount() }} lượt thành công</span>
       </span>
-      <img class="kpi-chevron" src="/assets/business/orders/chevron-right.svg" alt="">
     </button>
     <button class="kpi" type="button" [class.selected]="taxOnly()" (click)="filterTax()">
-      <span class="kpi-icon tax"><img src="/assets/business/orders/file-check.svg" alt=""></span>
+      <span class="kpi-icon tax" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/><path d="m16.5 16.5 1.3 1.3 2.7-3"/></svg>
+      </span>
       <span class="kpi-content">
         <span class="kpi-label">Thuế TNCN đã khấu trừ</span>
         <strong class="kpi-value">{{ money(taxAmount()) }}</strong>
         <span class="kpi-foot">Trong tháng này</span>
       </span>
-      <img class="kpi-chevron" src="/assets/business/orders/chevron-right.svg" alt="">
     </button>
   </section>
 
   <section class="filters-toolbar" aria-label="Tìm kiếm và lọc yêu cầu rút tiền">
-    <label class="search-field">
-      <span class="sr-only">Tìm theo mã yêu cầu, tên, email hoặc số tài khoản</span>
-      <img src="/assets/business/orders/search.svg" alt="">
-      <input type="search" placeholder="Tìm theo mã yêu cầu, tên giảng viên, email, số tài khoản..." [ngModel]="search()" (ngModelChange)="search.set($event)">
-    </label>
-    <label class="filter-select">
-      <span class="sr-only">Trạng thái</span>
-      <select [ngModel]="status()" (ngModelChange)="setStatus($event)">
-        <option value="">Tất cả trạng thái</option>
-        <option value="pending">Chờ duyệt</option>
-        <option value="approved">Chờ giải ngân</option>
-        <option value="paid">Đã giải ngân</option>
-        <option value="rejected">Bị từ chối</option>
-      </select>
-    </label>
-    <label class="filter-select">
-      <span class="sr-only">Hạn mức</span>
-      <select [ngModel]="limit()" (ngModelChange)="limit.set($event)">
-        <option value="">Hạn mức</option>
-        <option value="small">Dưới 20 triệu</option>
-        <option value="large">Từ 20 triệu trở lên</option>
-      </select>
-    </label>
-    <div class="date-range" role="group" aria-label="Khoảng thời gian">
-      <img src="/assets/business/orders/calendar-days.svg" alt="">
-      <label><span class="sr-only">Từ ngày</span><input type="date" [ngModel]="from()" (ngModelChange)="setFrom($event)"></label>
-      <span aria-hidden="true">–</span>
-      <label><span class="sr-only">Đến ngày</span><input type="date" [ngModel]="to()" (ngModelChange)="setTo($event)"></label>
+    <app-search-field label="Tìm theo mã yêu cầu, tên giảng viên hoặc email" placeholder="Tìm theo mã yêu cầu, tên giảng viên, email..." [value]="search()" (valueChange)="search.set($event)"></app-search-field>
+    <div class="filter-select business-dropdown-field">
+      <span id="payout-status-label">Trạng thái</span>
+      <app-custom-select controlId="payout-status" labelId="payout-status-label" [value]="status()" [options]="statusOptions" (valueChange)="setStatus($any($event))"></app-custom-select>
     </div>
-    <label class="filter-select quick-date">
-      <span class="sr-only">Chọn thời gian nhanh</span>
-      <select [ngModel]="quickRange()" (ngModelChange)="quickDate($event)">
-        <option value="custom" hidden>Khoảng tùy chọn</option>
-        <option value="all">Toàn bộ thời gian</option>
-        <option value="today">Hôm nay</option>
-        <option value="month">Tháng này</option>
-        <option value="last">Tháng trước</option>
-      </select>
-    </label>
-    <button class="export-button" type="button" (click)="export()"><img src="/assets/business/orders/download.svg" alt="">Xuất CSV</button>
+    <div class="limit-filter">
+      <span class="filter-label">Hạn mức</span>
+      <button class="limit-trigger" type="button" [class.active]="limitMin() !== null || limitMax() !== null" [attr.aria-expanded]="limitOpen()" aria-haspopup="dialog" (click)="toggleLimit()">
+        <span>{{ limitMin() === null || limitMax() === null ? 'Tất cả hạn mức' : formatLimitCompact(limitMin()!) + ' – ' + formatLimitCompact(limitMax()!) }}</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+      </button>
+      @if (limitOpen()) {
+        <button class="limit-backdrop" type="button" aria-label="Đóng bộ lọc hạn mức" (click)="limitOpen.set(false)"></button>
+        <section class="limit-popover" role="dialog" aria-label="Chọn khoảng hạn mức">
+          <div class="limit-popover-head">
+            <div><strong>Khoảng hạn mức</strong><span>Chọn số tiền tối thiểu và tối đa</span></div>
+            <button type="button" aria-label="Đóng" (click)="limitOpen.set(false)">×</button>
+          </div>
+          <div class="limit-current"><span>Khoảng đang chọn</span><strong>{{ formatLimit(limitMinDraft()) }} – {{ formatLimit(limitMaxDraft()) }} {{ limitUnitLabel() }}</strong></div>
+          <div class="limit-dual-slider">
+            <span class="limit-track-fill" [style.left.%]="limitPercent(limitMinDraft())" [style.right.%]="100 - limitPercent(limitMaxDraft())"></span>
+            <input type="range" min="0" [max]="limitSliderMax()" [step]="limitSliderStep()" [ngModel]="limitMinDraft()" (ngModelChange)="setLimitMinDraft($event)" aria-label="Hạn mức tối thiểu">
+            <input type="range" min="0" [max]="limitSliderMax()" [step]="limitSliderStep()" [ngModel]="limitMaxDraft()" (ngModelChange)="setLimitMaxDraft($event)" aria-label="Hạn mức tối đa">
+          </div>
+          <div class="limit-scale"><span>0</span><span>{{ formatLimit(limitSliderMax()) }} {{ limitUnitLabel() }}</span></div>
+          <div class="limit-unit-row">
+            <span class="limit-unit-label" id="limit-unit-label">Đơn vị nhập</span>
+            <app-custom-select controlId="limit-unit" labelId="limit-unit-label" [value]="limitUnit()" [options]="limitUnitOptions" [menuWidth]="180" (valueChange)="setLimitUnit($any($event))"></app-custom-select>
+          </div>
+          <div class="limit-input-grid">
+            <label class="limit-input"><span>Tối thiểu</span><div><input type="text" inputmode="decimal" [value]="formatLimit(limitMinDraft())" (input)="updateLimitInput('min', $any($event.target))" aria-label="Hạn mức tối thiểu"><b>{{ limitUnitLabel() }}</b></div></label>
+            <label class="limit-input"><span>Tối đa</span><div><input type="text" inputmode="decimal" [value]="formatLimit(limitMaxDraft())" (input)="updateLimitInput('max', $any($event.target))" aria-label="Hạn mức tối đa"><b>{{ limitUnitLabel() }}</b></div></label>
+          </div>
+          <div class="limit-actions"><button type="button" class="limit-reset" (click)="resetLimit()">Đặt lại</button><button type="button" class="limit-apply" (click)="applyLimit()">Áp dụng</button></div>
+        </section>
+      }
+    </div>
+    <div class="date-filter">
+      <span class="filter-label">Khoảng thời gian</span>
+      <button class="date-trigger" type="button" [attr.aria-expanded]="quickOpen()" aria-controls="payout-date-options" (click)="toggleQuickRange()">
+        <img src="/assets/business/orders/calendar-days.svg" alt="">
+        <span>{{ dateLabel() }}</span>
+      </button>
+      @if (quickOpen()) {
+        <div class="date-popover" id="payout-date-options" [style.left.px]="datePopoverPosition()?.left" [style.top.px]="datePopoverPosition()?.top" [style.max-height.px]="datePopoverPosition()?.maxHeight" [style.visibility]="datePopoverPosition() ? 'visible' : 'hidden'">
+          <p>Chọn nhanh</p>
+          <div class="quick-dates">
+            <button type="button" [class.active]="rangeDraft() === 'all'" (click)="selectQuickDate('all')">Tất cả</button>
+            <button type="button" [class.active]="rangeDraft() === 'today'" (click)="selectQuickDate('today')">Hôm nay</button>
+            <button type="button" [class.active]="rangeDraft() === 'week'" (click)="selectQuickDate('week')">7 ngày</button>
+            <button type="button" [class.active]="rangeDraft() === 'month'" (click)="selectQuickDate('month')">Tháng này</button>
+            <button type="button" [class.active]="rangeDraft() === 'quarter'" (click)="selectQuickDate('quarter')">Quý này</button>
+            <button type="button" [class.active]="rangeDraft() === 'year'" (click)="selectQuickDate('year')">Năm này</button>
+          </div>
+          <div class="date-fields">
+            <div><span>Từ ngày</span><app-date-time-picker [value]="fromDraft()" label="Chọn ngày bắt đầu" (valueChange)="selectFrom($event)"></app-date-time-picker></div>
+            <div><span>Đến ngày</span><app-date-time-picker [value]="toDraft()" label="Chọn ngày kết thúc" (valueChange)="selectTo($event)"></app-date-time-picker></div>
+          </div>
+          <div class="date-popover-actions">
+            <button class="date-clear-button" type="button" aria-label="Xoá khoảng thời gian" title="Xoá khoảng thời gian" [disabled]="!canClearDateRange()" (click)="clearDateRange()">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+            <button class="date-apply-button" type="button" (click)="applyDateRange()">Áp dụng</button>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="sort-filter">
+      <span class="filter-label">Sắp xếp</span>
+      <button class="sort-trigger" type="button" [attr.aria-label]="'Thứ tự ngày gửi: ' + (sort() === 'newest' ? 'Mới nhất' : 'Cũ nhất') + '. Nhấn để đổi thứ tự'" (click)="toggleSort()"><img src="/assets/business/orders/arrow-down.svg" alt="" [class.oldest-first]="sort() === 'oldest'"><span>{{ sort() === 'newest' ? 'Mới nhất' : 'Cũ nhất' }}</span></button>
+    </div>
+    <app-export-menu label="Xuất danh sách chi trả giảng viên" (formatChange)="export($event)"></app-export-menu>
   </section>
 
-  <section class="panel requests-panel" aria-labelledby="requests-title">
-    <div class="requests-heading">
-      <div class="requests-title">
-        <h2 id="requests-title">Danh sách yêu cầu rút tiền</h2>
-        <span>({{ filtered().length }} yêu cầu)</span>
-      </div>
-      <span class="sort-label">Mới nhất trước</span>
-    </div>
+  <section class="panel requests-panel" aria-label="Danh sách yêu cầu rút tiền">
     <div class="table-wrap">
       <table>
         <thead><tr>
@@ -107,14 +134,13 @@
           <th scope="col" class="number">Thuế TNCN</th>
           <th scope="col" class="number">Thực chi</th>
           <th scope="col">Thông tin ngân hàng</th>
-          <th scope="col">Ngày gửi</th>
+          <th scope="col" [attr.aria-sort]="sort() === 'newest' ? 'descending' : 'ascending'"><img class="sort-icon" src="/assets/business/orders/arrow-down.svg" alt="" [class.oldest-first]="sort() === 'oldest'"> Ngày gửi</th>
           <th scope="col">Trạng thái</th>
-          <th scope="col" class="actions-heading">Thao tác</th>
         </tr></thead>
         <tbody>
           @for (item of visible(); track item.id) {
-            <tr>
-              <td class="request-id">{{ item.id }}</td>
+            <tr [class.row-menu-open]="openActionMenuId() === item.id">
+              <td class="request-id request-code-cell" [class.menu-open]="openActionMenuId() === item.id"><div class="request-code-main"><span>{{ item.id }}</span><div class="row-actions request-id-actions" (click)="$event.stopPropagation()"><button class="row-actions-trigger" type="button" [attr.aria-label]="'Mở menu thao tác cho yêu cầu ' + item.id" aria-haspopup="menu" [attr.aria-expanded]="openActionMenuId() === item.id" data-tooltip="Xem các thao tác với yêu cầu rút tiền" (click)="toggleRowActions(item.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg></button>@if (openActionMenuId() === item.id) {<div class="row-actions-menu" role="menu">@if (item.status === 'pending') {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'review')"><img src="/assets/business/orders/circle-check.svg" alt=""><span>Duyệt yêu cầu</span></button><button class="danger" type="button" role="menuitem" (click)="closeRowActions(); open(item, 'reject')"><img src="/assets/business/orders/circle-x.svg" alt=""><span>Từ chối yêu cầu</span></button>} @else {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'details')"><img src="/assets/dashboard/4-icon-eye-outlined.svg" alt=""><span>Xem chi tiết</span></button>}</div>}</div></div></td>
               <td><div class="stack"><strong>{{ item.instructor }}</strong><span class="muted email" [title]="item.email">{{ item.email }}</span></div></td>
               <td class="number amount" [class.high-value]="item.amount >= 20000000">{{ money(item.amount) }}</td>
               <td class="number">{{ money(item.taxAmount) }}</td>
@@ -122,26 +148,20 @@
               <td><div class="stack bank"><span>{{ item.bank }}</span><span class="muted">{{ item.accountNumber }}</span></div></td>
               <td><div class="stack date"><span>{{ datePart(item.submittedAt) }}</span><span class="muted">{{ timePart(item.submittedAt) }}</span></div></td>
               <td><span [class]="'status ' + item.status">{{ statusLabel(item.status) }}</span></td>
-              <td>
-                <div class="icon-actions">
-                  <button class="icon-button view" type="button" [attr.aria-label]="'Xem chi tiết ' + item.id" [title]="'Xem chi tiết ' + item.id" (click)="open(item, 'details')"><img src="/assets/dashboard/4-icon-eye-outlined.svg" alt=""></button>
-                  @if (item.status === 'pending') {
-                    <button class="icon-button approve" type="button" [disabled]="!canApprove(item)" [attr.aria-label]="'Duyệt ' + item.id" [title]="canApprove(item) ? 'Duyệt yêu cầu' : 'Hồ sơ hoặc số dư chưa đủ điều kiện duyệt'" (click)="open(item, 'review')"><img src="/assets/business/orders/circle-check.svg" alt=""></button>
-                    <button class="icon-button reject" type="button" [attr.aria-label]="'Từ chối ' + item.id" [title]="'Từ chối ' + item.id" (click)="open(item, 'reject')"><img src="/assets/business/orders/circle-x.svg" alt=""></button>
-                  }
-                </div>
-              </td>
             </tr>
           }
-          @if (!filtered().length) { <tr><td colspan="9" class="empty">Không có yêu cầu rút tiền phù hợp.</td></tr> }
+          @if (!filtered().length) { <tr><td colspan="8" class="empty">Không có yêu cầu rút tiền phù hợp.</td></tr> }
         </tbody>
       </table>
     </div>
     <div class="table-footer">
-      <span>Hiển thị {{ filtered().length ? (currentPage() - 1) * pageSize + 1 : 0 }}–{{ Math.min(currentPage() * pageSize, filtered().length) }} trên {{ filtered().length }} yêu cầu</span>
-      <div class="pager" aria-label="Phân trang">
+      <span>Hiển thị {{ filtered().length ? (currentPage() - 1) * pageSize + 1 : 0 }} - {{ (currentPage() - 1) * pageSize + visible().length }} của {{ filtered().length }} yêu cầu rút tiền</span>
+      <div class="pagination" aria-label="Phân trang">
         <button type="button" [disabled]="currentPage() <= 1" aria-label="Trang trước" (click)="page.set(currentPage() - 1)"><img src="/assets/business/orders/chevron-left.svg" alt=""></button>
-        <span>{{ currentPage() }} / {{ totalPages() }}</span>
+        @for (item of pagination(); track $index) {
+          @if (item.kind === 'page') { <button type="button" [class.current]="item.value === currentPage()" [attr.aria-current]="item.value === currentPage() ? 'page' : null" [attr.aria-label]="'Trang ' + item.value" (click)="page.set(item.value)">{{ item.value }}</button> }
+          @else { <span class="pagination-ellipsis" aria-hidden="true">…</span> }
+        }
         <button type="button" [disabled]="currentPage() >= totalPages()" aria-label="Trang sau" (click)="page.set(currentPage() + 1)"><img src="/assets/business/orders/chevron-right.svg" alt=""></button>
       </div>
     </div>
@@ -153,7 +173,7 @@
     <section class="dialog payout-dialog" role="dialog" aria-modal="true" aria-labelledby="payout-dialog-title" [attr.inert]="dialog() === 'reject' ? '' : null" [attr.aria-hidden]="dialog() === 'reject' ? 'true' : null" (click)="$event.stopPropagation()">
       <div class="dialog-head">
         <h2 id="payout-dialog-title">Chi tiết yêu cầu rút tiền</h2>
-        <button class="dialog-close" type="button" aria-label="Đóng chi tiết yêu cầu" (click)="close()">×</button>
+        <button class="dialog-close" type="button" aria-label="Đóng chi tiết yêu cầu" (click)="close()"><svg lucideX aria-hidden="true"></svg></button>
       </div>
       <div class="dialog-body">
         <div class="request-summary">
@@ -165,6 +185,9 @@
           </div>
           <span [class]="'status request-status ' + item.status">{{ statusLabel(item.status) }}</span>
         </div>
+        @if (dialog() === 'review' && approvalIssues(item).length) {
+          <div class="payout-approval-warning" role="alert"><strong>Chưa đủ điều kiện duyệt</strong><ul>@for (issue of approvalIssues(item); track issue) {<li>{{ issue }}</li>}</ul></div>
+        }
 
         <section class="payout-progress" aria-label="Tiến trình xử lý yêu cầu rút tiền">
           <svg class="progress-lines" viewBox="0 0 1000 210" preserveAspectRatio="none" aria-hidden="true">
@@ -198,11 +221,11 @@
         <div class="payout-info-grid">
           <section class="payout-info-card" aria-labelledby="instructor-details-title">
             <h3 id="instructor-details-title">Thông tin giảng viên</h3>
-            <dl><div><dt>Họ và tên</dt><dd>{{ item.instructor }}</dd></div><div><dt>Email</dt><dd>{{ item.email }}</dd></div><div><dt>Hồ sơ định danh</dt><dd [class.invalid]="!item.verified">{{ item.verified ? 'Đã xác minh' : 'Chưa xác minh' }}</dd></div><div><dt>Hợp đồng đối tác</dt><dd [class.invalid]="!item.contractValid">{{ item.contractValid ? 'Hợp lệ' : 'Cần kiểm tra' }}</dd></div><div><dt>Tranh chấp</dt><dd [class.invalid]="item.disputed">{{ item.disputed ? 'Có' : 'Không' }}</dd></div></dl>
+            <dl><div><dt>Họ và tên</dt><dd>{{ item.instructor }}</dd></div><div><dt>Email</dt><dd>{{ item.email }}</dd></div><div><dt>Hồ sơ định danh</dt><dd [class.invalid]="!item.verified">{{ item.verified ? 'Đã xác minh' : 'Chưa xác minh' }}</dd></div><div><dt>Hợp đồng đối tác</dt><dd [class.invalid]="!item.contractValid">{{ item.contractValid ? 'Hợp lệ' : 'Cần kiểm tra' }}</dd></div></dl>
           </section>
           <section class="payout-info-card" aria-labelledby="reconciliation-title">
             <h3 id="reconciliation-title">Đối soát khoản rút</h3>
-            <dl><div><dt>Số dư khả dụng</dt><dd>{{ money(item.availableBalance) }}</dd></div><div><dt>Số tiền yêu cầu</dt><dd>{{ money(item.amount) }}</dd></div><div><dt>Thuế TNCN dự kiến</dt><dd>{{ money(item.taxAmount) }}</dd></div><div class="net-row"><dt>Thực nhận dự kiến</dt><dd>{{ money(item.amount - item.taxAmount) }}</dd></div></dl>
+            <dl><div><dt>Số tiền yêu cầu</dt><dd>{{ money(item.amount) }}</dd></div><div><dt>Thuế TNCN dự kiến</dt><dd>{{ money(item.taxAmount) }}</dd></div><div class="net-row"><dt>Thực nhận dự kiến</dt><dd>{{ money(item.amount - item.taxAmount) }}</dd></div></dl>
           </section>
           <section class="payout-info-card" aria-labelledby="bank-details-title">
             <h3 id="bank-details-title">Tài khoản nhận tiền</h3>
@@ -221,17 +244,18 @@
         <!-- TODO(pre-deploy): Nhớ xác thực thuế suất, điều kiện thanh toán và trạng thái giải ngân trên backend; duyệt không thực hiện chuyển khoản. -->
         @if (error() && dialog() !== 'reject') { <p class="error" role="alert">{{ error() }}</p> }
       </div>
+      @if (item.status === 'pending') {
       <div class="dialog-footer">
-        <button class="button" type="button" (click)="close()">{{ dialog() === 'details' || item.status !== 'pending' ? 'Đóng' : 'Hủy' }}</button>
         @if (item.status === 'pending' && (dialog() === 'details' || dialog() === 'reject')) {
           <button class="button danger" type="button" (click)="openReject()">Từ chối yêu cầu</button>
-          <button class="button primary" type="button" [disabled]="!canApprove(item)" [title]="canApprove(item) ? '' : 'Hồ sơ, hợp đồng, số dư hoặc quyền duyệt chưa hợp lệ'" (click)="dialog.set('review')">Duyệt yêu cầu</button>
+          <button class="button primary" type="button" (click)="dialog.set('review')">Duyệt yêu cầu</button>
         }
         @if (item.status === 'pending' && dialog() === 'review') {
           <button class="button danger" type="button" (click)="openReject()">Từ chối yêu cầu</button>
-          <button class="button primary" type="button" [disabled]="!canApprove(item)" (click)="approve()">Xác nhận duyệt</button>
+          <button class="button primary" type="button" (click)="approve()">Xác nhận duyệt</button>
         }
       </div>
+      }
     </section>
   </div>
   @if (dialog() === 'reject') {
@@ -239,7 +263,7 @@
       <section class="reject-dialog" role="dialog" aria-modal="true" aria-labelledby="reject-dialog-title" (click)="$event.stopPropagation()">
         <div class="reject-head">
           <h2 id="reject-dialog-title">Từ chối yêu cầu rút tiền</h2>
-          <button class="dialog-close" type="button" aria-label="Đóng popup từ chối" (click)="cancelReject()">×</button>
+          <button class="dialog-close" type="button" aria-label="Đóng popup từ chối" (click)="cancelReject()"><svg lucideX aria-hidden="true"></svg></button>
         </div>
         <div class="reject-body">
           <div class="reject-summary">
@@ -247,15 +271,9 @@
             <div><span>Mã yêu cầu</span><strong>{{ item.id }}</strong></div>
             <div><span>Số tiền yêu cầu</span><strong>{{ money(item.amount) }}</strong></div>
           </div>
-          <div class="reject-field">
-            <label for="reject-reason">Lý do từ chối <span aria-hidden="true">*</span></label>
-            <select id="reject-reason" required [ngModel]="rejectionReason()" (ngModelChange)="rejectionReason.set($event)">
-              <option value="">Chọn lý do từ chối</option>
-              <option>Sai số tài khoản</option>
-              <option>Tên tài khoản không khớp</option>
-              <option>Doanh thu không khả dụng</option>
-              <option>Khác</option>
-            </select>
+          <div class="reject-field business-float-field">
+            <label id="reject-reason-label">Lý do từ chối <span aria-hidden="true">*</span></label>
+            <app-custom-select controlId="reject-reason" labelId="reject-reason-label" placeholder="Chọn lý do từ chối" [value]="rejectionReason()" [options]="rejectReasonOptions" (valueChange)="rejectionReason.set($any($event))"></app-custom-select>
           </div>
           <div class="reject-field">
             <label for="reject-details">Giải thích chi tiết <span aria-hidden="true">*</span></label>
@@ -265,16 +283,14 @@
             <span class="reject-label">Minh chứng (nếu có)</span>
             <div class="evidence-actions">
               <input #evidenceInput class="sr-only" type="file" accept="image/*,.pdf" tabindex="-1" aria-label="Tải minh chứng từ máy" (change)="chooseEvidence($event)">
-              <button class="evidence-button" type="button" (click)="evidenceInput.click()"><span aria-hidden="true">↥</span> Tải tệp từ máy</button>
-              <button class="evidence-button" type="button" disabled title="Chưa có kết nối Drive"><span aria-hidden="true">◇</span> Chọn từ Drive</button>
+              <button class="evidence-button" type="button" (click)="evidenceInput.click()"><svg lucideUpload aria-hidden="true"></svg> Tải tệp từ máy</button>
             </div>
             @if (evidence()) { <span class="evidence-name">Đã chọn: {{ evidence() }}</span> }
           </div>
-          <p class="refund-note"><span aria-hidden="true">ⓘ</span> Số tiền đang tạm giữ sẽ được hoàn về ví khả dụng sau khi từ chối.</p>
+          <p class="refund-note"><span class="refund-note-icon" aria-hidden="true"><svg lucideInfo></svg></span> Số tiền đang tạm giữ sẽ được hoàn về ví khả dụng sau khi từ chối.</p>
           @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
         </div>
         <div class="reject-footer">
-          <button class="button" type="button" (click)="cancelReject()">Hủy</button>
           <button class="button danger" type="button" (click)="reject()">Xác nhận từ chối</button>
         </div>
       </section>

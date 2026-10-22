@@ -92,3 +92,37 @@ body { margin: 0; font-family: Inter, Arial, sans-serif; }
   font-variant-numeric: tabular-nums;
 }
 
+/* 3. Token dùng chung cho luồng xác thực quản trị (đăng nhập, 2FA, đổi mật khẩu).
+   Số đo lấy từ Figma — bộ khung 1920px — và giữ nguyên ở mọi màn hình trong luồng
+   để tiêu đề, nhãn, viền và nút có cùng một ngôn ngữ thị giác. */
+:root {
+  --admin-auth-ink: #0a2351;
+  --admin-auth-ink-strong: #0f1320;
+  --admin-auth-muted: #657495;
+  --admin-auth-muted-soft: #7a93bc;
+
+  --admin-auth-primary: #007ef5;
+  --admin-auth-primary-hover: #0068cc;
+  --admin-auth-primary-soft: #e8f2ff;
+  --admin-auth-primary-disabled: #d6e0f0;
+
+  --admin-auth-danger: #c71f29;
+  --admin-auth-danger-strong: #f9252f;
+  --admin-auth-warning-bg: #fef3c7;
+  --admin-auth-warning-border: #fcd34d;
+  --admin-auth-warning-ink: #92400e;
+  --admin-auth-success: #128a4f;
+
+  --admin-auth-surface: #ffffff;
+  --admin-auth-page: #f5f9fe;
+  --admin-auth-border: #d6e0f0;
+  --admin-auth-border-soft: #e3ebf5;
+  --admin-auth-border-field: #c5ddf9;
+  --admin-auth-placeholder: #89a3ca;
+
+  --admin-auth-radius-field: 8px;
+  --admin-auth-radius-card: 16px;
+  --admin-auth-topbar-height: 82px;
+  --admin-auth-card-shadow: 0 8px 24px #1429471a;
+}
+
