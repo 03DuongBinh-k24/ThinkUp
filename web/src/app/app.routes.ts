@@ -3,6 +3,7 @@ import { onboardingRequiredGuard, onboardingCompletedGuard } from './core/guards
 import { guestGuard } from './core/guards/guest.guard';
 import { BlogService } from './features/blog/services/blog.service';
 import { BLOG_PROVIDERS } from './features/blog/services/blog.providers';
+import { unsavedChangesGuard } from './features/profile/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   // Email links may point to the client origin when the backend public URL is not configured.
@@ -54,7 +55,7 @@ export const routes: Routes = [
       { path: 'checkout', loadComponent: () => import('./features/checkout/checkout/checkout.component').then(m => m.CheckoutComponent) },
       { path: 'checkout/success', loadComponent: () => import('./features/checkout/checkout-success/checkout-success.component').then(m => m.CheckoutSuccessComponent) },
       { path: 'profile', loadComponent: () => import('./features/profile/profile-overview/profile-overview.component').then(m => m.ProfileOverviewComponent) },
-      { path: 'profile/edit', loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
+      { path: 'profile/edit', canDeactivate: [unsavedChangesGuard], loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
       { path: 'profile/billing', loadComponent: () => import('./features/profile/purchase-history/purchase-history.component').then(m => m.PurchaseHistoryComponent) },
       { path: 'profile/billing/:id', loadComponent: () => import('./features/profile/purchase-transaction-detail/purchase-transaction-detail.component').then(m => m.PurchaseTransactionDetailComponent) },
       { path: 'my-courses', loadComponent: () => import('./features/my-courses/my-courses.component').then(m => m.MyCoursesComponent) },
@@ -106,6 +107,9 @@ export const routes: Routes = [
     ]
   },
   // User profile alias
+  { path: 'profile/me/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
+  { path: 'profile/me', redirectTo: 'main/profile', pathMatch: 'full' },
+  { path: 'profile/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
   { path: 'profile', redirectTo: 'main/profile', pathMatch: 'full' },
   // Default fallbacks: khách chưa đăng nhập xem Landing page chuẩn
   { path: 'main', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
