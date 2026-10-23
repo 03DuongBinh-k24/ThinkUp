@@ -135,6 +135,17 @@ export class LoginComponent {
 
   /** Điều hướng theo bước kế tiếp của luồng: hạn mật khẩu → 2FA → trang đích. */
   private goToNextStep(): void {
+    const user = this.auth.currentUser();
+    if (user?.mustChangePassword) {
+      void this.router.navigateByUrl('/auth/change-password');
+      return;
+    }
+
+    if (user?.twoFactorSetupRequired) {
+      void this.router.navigateByUrl('/auth/setup-2fa');
+      return;
+    }
+
     const state = this.auth.passwordState();
 
     if (state === 'expired') {

@@ -304,6 +304,9 @@ export async function getTransactionBillingDetail(userId, id) {
     subtotalOriginal += originalPrice;
     subtotalSale += salePrice;
 
+    // Ảnh bìa ưu tiên từ order_summary hoặc courseDoc
+    const thumbUrl = c.thumbnail_url || c.thumbnail || courseDoc?.thumbnail_url || '';
+
     enrichedCourses.push({
       id: rawCourseId || (courseDoc ? `course-${courseDoc.course_id}` : ''),
       course_id: courseDoc?.course_id || cleanId,
@@ -313,7 +316,8 @@ export async function getTransactionBillingDetail(userId, id) {
       price_number: salePrice,
       original_price: formatVND(originalPrice),
       original_price_number: originalPrice,
-      thumbnail_url: courseDoc?.thumbnail_url || '',
+      thumbnail_url: thumbUrl,
+      thumbnail: thumbUrl,
       badge: courseDoc?.badge || courseDoc?.icon || 'Course',
       tone: 'blue',
     });
@@ -331,8 +335,8 @@ export async function getTransactionBillingDetail(userId, id) {
   const courseDiscount = Math.max(0, subtotalOriginal - subtotalSale);
 
   // Mã giảm giá và số tiền giảm giá
-  const voucherCode = txDoc.voucher_code || '';
-  const voucherDiscount = parseFloat(txDoc.voucher_discount) || 0;
+  const voucherCode = txDoc.voucher_code || orderDoc?.voucher_code || summary.voucher_code || '';
+  const voucherDiscount = parseFloat(txDoc.voucher_discount || orderDoc?.voucher_discount || summary.voucher_discount) || 0;
 
   // Tổng thanh toán đơn hàng (số tiền người dùng thực sự trả sau khi trừ hết mọi khoản)
   const totalPayment = actualAmount > 0

@@ -10,6 +10,10 @@ export interface AdminUser {
   avatar?: string | null;
   /** Thời điểm mật khẩu hết hạn (ISO). Không có nghĩa là chính sách xoay vòng đang tắt. */
   passwordExpiresAt?: string | null;
+  /** Bắt buộc đổi mật khẩu mặc định trước khi sử dụng hệ thống. */
+  mustChangePassword?: boolean;
+  /** Bắt buộc hoàn tất thiết lập ứng dụng 2FA và lưu mã dự phòng. */
+  twoFactorSetupRequired?: boolean;
 }
 
 /** Payload gửi lên API đăng nhập. */

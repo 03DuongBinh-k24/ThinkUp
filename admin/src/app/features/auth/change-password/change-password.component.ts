@@ -36,6 +36,7 @@ export class ChangePasswordComponent {
   readonly loading = signal(false);
   readonly formError = signal('');
   readonly otpError = signal('');
+  readonly firstLogin = computed(() => !!this.auth.currentUser()?.mustChangePassword);
 
   readonly showCurrent = signal(false);
   readonly showNew = signal(false);
@@ -53,7 +54,9 @@ export class ChangePasswordComponent {
         ]
       ],
       repeatPassword: ['', [Validators.required]],
-      otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
+      otp: ['', this.auth.currentUser()?.mustChangePassword
+        ? []
+        : [Validators.required, Validators.pattern(/^\d{6}$/)]]
     },
     { validators: [matchPasswords] }
   );
@@ -76,6 +79,7 @@ export class ChangePasswordComponent {
     }
 
     this.loading.set(true);
+    const completingFirstLogin = this.firstLogin();
 
     this.auth
       .changePassword({
@@ -86,7 +90,7 @@ export class ChangePasswordComponent {
       .subscribe({
         next: () => {
           this.loading.set(false);
-          void this.router.navigateByUrl(this.returnUrl());
+          void this.router.navigateByUrl(completingFirstLogin ? '/auth/setup-2fa' : this.returnUrl());
         },
         error: (error: AdminAuthError) => {
           this.loading.set(false);

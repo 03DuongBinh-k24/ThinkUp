@@ -74,6 +74,7 @@ export class BackupCodesComponent {
 
   finish(): void {
     if (!this.confirmed()) return;
+    this.auth.confirmBackupCodesSaved();
     void this.router.navigateByUrl('/');
   }
 
