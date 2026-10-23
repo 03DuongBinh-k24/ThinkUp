@@ -3,6 +3,7 @@ import { onboardingRequiredGuard, onboardingCompletedGuard } from './core/guards
 import { guestGuard } from './core/guards/guest.guard';
 import { BlogService } from './features/blog/services/blog.service';
 import { BLOG_PROVIDERS } from './features/blog/services/blog.providers';
+import { unsavedChangesGuard } from './features/profile/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   // Email links may point to the client origin when the backend public URL is not configured.
@@ -54,7 +55,7 @@ export const routes: Routes = [
       { path: 'checkout', loadComponent: () => import('./features/checkout/checkout/checkout.component').then(m => m.CheckoutComponent) },
       { path: 'checkout/success', loadComponent: () => import('./features/checkout/checkout-success/checkout-success.component').then(m => m.CheckoutSuccessComponent) },
       { path: 'profile', loadComponent: () => import('./features/profile/profile-overview/profile-overview.component').then(m => m.ProfileOverviewComponent) },
-      { path: 'profile/edit', loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
+      { path: 'profile/edit', canDeactivate: [unsavedChangesGuard], loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
       { path: 'profile/billing', loadComponent: () => import('./features/profile/purchase-history/purchase-history.component').then(m => m.PurchaseHistoryComponent) },
       { path: 'profile/billing/:id', loadComponent: () => import('./features/profile/purchase-transaction-detail/purchase-transaction-detail.component').then(m => m.PurchaseTransactionDetailComponent) },
       { path: 'my-courses', loadComponent: () => import('./features/my-courses/my-courses.component').then(m => m.MyCoursesComponent) },
@@ -85,7 +86,16 @@ export const routes: Routes = [
       { path: 'study-room/:roomId', data: { hideShell: true }, loadComponent: () => import('./features/study-room/study-room-view/study-room-view.component').then(m => m.StudyRoomViewComponent) },
       { path: 'roadmap', loadComponent: () => import('./features/roadmap/roadmap-list/roadmap-list.component').then(m => m.RoadmapListComponent) },
       { path: 'roadmap/:id', loadComponent: () => import('./features/roadmap/roadmap-detail/roadmap-detail.component').then(m => m.RoadmapDetailComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId', loadComponent: () => import('./features/roadmap/roadmap-test/roadmap-test.component').then(m => m.RoadmapTestComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId/processing', loadComponent: () => import('./features/roadmap/roadmap-test-processing/roadmap-test-processing.component').then(m => m.RoadmapTestProcessingComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId/result', loadComponent: () => import('./features/roadmap/roadmap-survey-complete/roadmap-survey-complete.component').then(m => m.RoadmapSurveyCompleteComponent) },
       { path: 'roadmap/:roadmapId/:skillId', loadComponent: () => import('./features/roadmap/roadmap-skill-detail/roadmap-skill-detail.component').then(m => m.RoadmapSkillDetailComponent) },
+      { path: 'flashcards', loadComponent: () => import('./features/roadmap/flashcard-list/flashcard-list.component').then(m => m.FlashcardListComponent) },
+      { path: 'flashcards/new', loadComponent: () => import('./features/roadmap/flashcard-form/flashcard-form.component').then(m => m.FlashcardFormComponent) },
+      { path: 'flashcards/:id', loadComponent: () => import('./features/roadmap/flashcard-detail/flashcard-detail.component').then(m => m.FlashcardDetailComponent) },
+      { path: 'flashcards/:id/edit', loadComponent: () => import('./features/roadmap/flashcard-form/flashcard-form.component').then(m => m.FlashcardFormComponent) },
+      { path: 'flashcards/:id/study', loadComponent: () => import('./features/roadmap/flashcard-study/flashcard-study.component').then(m => m.FlashcardStudyComponent) },
+      { path: 'flashcards/:id/complete', loadComponent: () => import('./features/roadmap/flashcard-complete/flashcard-complete.component').then(m => m.FlashcardCompleteComponent) },
     ]
   },
   // Legal routes
@@ -97,6 +107,9 @@ export const routes: Routes = [
     ]
   },
   // User profile alias
+  { path: 'profile/me/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
+  { path: 'profile/me', redirectTo: 'main/profile', pathMatch: 'full' },
+  { path: 'profile/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
   { path: 'profile', redirectTo: 'main/profile', pathMatch: 'full' },
   // Default fallbacks: khách chưa đăng nhập xem Landing page chuẩn
   { path: 'main', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
