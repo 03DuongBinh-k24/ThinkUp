@@ -59,6 +59,11 @@ export const routes: Routes = [
       { path: 'profile/edit', canDeactivate: [unsavedChangesGuard], loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
       { path: 'profile/billing', loadComponent: () => import('./features/profile/purchase-history/purchase-history.component').then(m => m.PurchaseHistoryComponent) },
       { path: 'profile/billing/:id', loadComponent: () => import('./features/profile/purchase-transaction-detail/purchase-transaction-detail.component').then(m => m.PurchaseTransactionDetailComponent) },
+      { path: 'settings', loadComponent: () => import('./features/settings/settings-home/settings-home.component').then(m => m.SettingsHomeComponent) },
+      { path: 'settings/account-security', loadComponent: () => import('./features/settings/account-security/account-security.component').then(m => m.AccountSecurityComponent) },
+      { path: 'settings/learning-options', loadComponent: () => import('./features/settings/learning-options/learning-options.component').then(m => m.LearningOptionsComponent) },
+      { path: 'settings/notifications', loadComponent: () => import('./features/settings/notifications/notifications.component').then(m => m.NotificationsComponent) },
+      { path: 'settings/payment', loadComponent: () => import('./features/settings/payment/payment.component').then(m => m.PaymentComponent) },
       { path: 'my-courses', loadComponent: () => import('./features/my-courses/my-courses.component').then(m => m.MyCoursesComponent) },
       {
         path: 'certificates',
