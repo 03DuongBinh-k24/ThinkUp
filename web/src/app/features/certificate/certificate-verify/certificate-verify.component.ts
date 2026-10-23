@@ -2,6 +2,7 @@ import { Component, DestroyRef, ElementRef, OnDestroy, computed, effect, inject,
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { LucideShieldCheck } from '@lucide/angular';
 import { CertificateVerification } from '../../../core/models/certificate.model';
 import { CertificateService } from '../../../core/services/certificate.service';
 import { CertificateArtworkComponent } from '../components/certificate-artwork/certificate-artwork.component';
@@ -11,7 +12,7 @@ type VerifyState = 'idle' | 'loading' | 'success' | 'not-found' | 'error';
 @Component({
   selector: 'app-certificate-verify',
   standalone: true,
-  imports: [RouterLink, CertificateArtworkComponent],
+  imports: [RouterLink, CertificateArtworkComponent, LucideShieldCheck],
   templateUrl: './certificate-verify.component.html',
   styleUrl: './certificate-verify.component.css'
 })
