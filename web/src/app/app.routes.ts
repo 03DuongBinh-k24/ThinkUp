@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { onboardingRequiredGuard, onboardingCompletedGuard } from './core/guards/onboarding.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { authGuard } from './core/guards/auth.guard';
 import { BlogService } from './features/blog/services/blog.service';
 import { BLOG_PROVIDERS } from './features/blog/services/blog.providers';
 import { unsavedChangesGuard } from './features/profile/guards/unsaved-changes.guard';
@@ -65,6 +66,11 @@ export const routes: Routes = [
       { path: 'settings/payment', loadComponent: () => import('./features/settings/payment/payment.component').then(m => m.PaymentComponent) },
       { path: 'my-courses', loadComponent: () => import('./features/my-courses/my-courses.component').then(m => m.MyCoursesComponent) },
       {
+        path: 'certificates',
+        canActivate: [authGuard],
+        loadComponent: () => import('./features/certificate/my-certificates/my-certificates.component').then(m => m.MyCertificatesComponent)
+      },
+      {
         path: 'blog',
         providers: [BlogService, ...BLOG_PROVIDERS],
         children: [
@@ -116,6 +122,21 @@ export const routes: Routes = [
   { path: 'profile/me', redirectTo: 'main/profile', pathMatch: 'full' },
   { path: 'profile/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
   { path: 'profile', redirectTo: 'main/profile', pathMatch: 'full' },
+  // Tra cứu chứng chỉ công khai (không cần đăng nhập)
+  {
+    path: 'tra-cuu',
+    loadComponent: () => import('./features/certificate/certificate-verify/certificate-verify.component').then(m => m.CertificateVerifyComponent)
+  },
+  // Alias in trên artwork chứng chỉ (thinkup.vn/verify)
+  {
+    path: 'verify',
+    loadComponent: () => import('./features/certificate/certificate-verify/certificate-verify.component').then(m => m.CertificateVerifyComponent)
+  },
+  // Link chia sẻ dạng /chung-chi/{Mã} -> trang tra cứu kèm mã
+  {
+    path: 'chung-chi/:code',
+    redirectTo: route => `/tra-cuu?code=${encodeURIComponent(route.params['code'] ?? '')}`
+  },
   // Default fallbacks: khách chưa đăng nhập xem Landing page chuẩn
   { path: 'main', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
   { path: '', redirectTo: 'main', pathMatch: 'full' },
