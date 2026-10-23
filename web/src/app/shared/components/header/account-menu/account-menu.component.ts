@@ -37,7 +37,7 @@ export class AccountMenuComponent {
     { label: 'Flashcard', href: '/main/courses', icon: 'cards' },
     { label: 'Quản lý bài viết', href: '/main/blog', icon: 'newspaper' },
     { label: 'Lịch sử thanh toán', href: '/main/profile/billing', icon: 'credit-card' },
-    { label: 'Chứng chỉ', href: '/main/profile', icon: 'badge' },
+    { label: 'Chứng chỉ', href: '/main/certificates', icon: 'badge' },
     { label: 'Thông báo', href: '/main/profile', icon: 'bell', badge: 3, dividerBefore: true },
     { label: 'Cài đặt', href: '/main/profile/edit', icon: 'settings' },
     { label: 'Hồ sơ học viên', href: '/main/profile', icon: 'user', dividerBefore: true },
