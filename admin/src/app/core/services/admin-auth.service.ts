@@ -2,10 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import {
-  MOCK_ADMIN_ACCOUNT,
-  MOCK_ADMIN_BACKUP_CODES
-} from '../data/mock/admin-auth.mock';
+import { MOCK_ADMIN_BACKUP_CODES } from '../data/mock/admin-auth.mock';
 import {
   AdminAuthError,
   AdminLoginRequest,
@@ -13,7 +10,8 @@ import {
   AdminPasswordState,
   AdminRole,
   AdminTwoFactorChallenge,
-  AdminUser
+  AdminUser,
+  AdminVerifyTwoFactorResponse
 } from '../models/admin-user.model';
 
 const TOKEN_KEY = 'access_token';
@@ -24,18 +22,14 @@ const REMINDER_KEY = 'thinkup_admin_password_reminder_dismissed';
 /** Chính sách xoay vòng mật khẩu: 90 ngày, cảnh báo trước 7 ngày. */
 const PASSWORD_LIFETIME_DAYS = 90;
 const PASSWORD_WARNING_DAYS = 7;
-/** Mã OTP có hiệu lực 5 phút kể từ lúc mở bước xác thực. */
-const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+/** TTL mặc định khi backend không trả `expiresInSeconds`. */
+const CHALLENGE_TTL_SECONDS = 5 * 60;
 
 /**
  * Quản lý phiên đăng nhập của phân hệ quản trị.
  *
- * Backend dùng chung endpoint `POST /api/auth/login` cho mọi vai trò, nên service
- * chỉ nhận phiên khi `user.role === 'admin'`. Khi môi trường local chưa có tài khoản
- * quản trị thật, cờ `environment.adminDemoLogin` cho phép dùng tài khoản demo.
- *
- * Các bước 2FA / đổi mật khẩu hiện chưa có API tương ứng ở backend; nhánh demo được
- * đánh dấu `TODO(pre-deploy)` và chỉ chạy khi bật `environment.adminDemoAuthFlow`.
+ * Luồng đăng nhập dùng API riêng của Admin: thông tin đăng nhập tạo một token tạm,
+ * sau đó OTP hoặc mã dự phòng đổi token tạm lấy access token.
  */
 @Injectable({ providedIn: 'root' })
 export class AdminAuthService {
@@ -90,20 +84,24 @@ export class AdminAuthService {
   login(credentials: AdminLoginRequest): Observable<AdminUser | null> {
     const payload = {
       email: (credentials.email ?? '').trim().toLowerCase(),
-      password: (credentials.password ?? '').trim(),
-      rememberMe: !!credentials.rememberMe
+      password: credentials.password ?? ''
     };
 
-    return this.http.post<AdminLoginResponse>(`${this.apiUrl}/auth/login`, payload).pipe(
+    return this.http.post<AdminLoginResponse>(`${this.apiUrl}/admin/auth/login`, payload).pipe(
       map(response => {
-        if (response.requiresTwoFactor) {
-          this.startChallenge(payload.email, response.twoFactorToken ?? null, response.passwordExpiresAt ?? null);
-          return null;
+        if (!response.success || !response.requires2FA || !response.twoFactorToken) {
+          throw this.buildError('Phản hồi đăng nhập không hợp lệ. Vui lòng thử lại.', 500, 'INVALID_RESPONSE');
         }
 
-        return this.mapLoginResponse(response, payload.email, payload.rememberMe);
+        this.startChallenge(
+          payload.email,
+          response.twoFactorToken,
+          response.expiresInSeconds ?? CHALLENGE_TTL_SECONDS,
+          !!credentials.rememberMe
+        );
+        return null;
       }),
-      catchError((error: HttpErrorResponse) => this.handleError(error, payload))
+      catchError((error: unknown) => throwError(() => this.normalizeError(error)))
     );
   }
 
@@ -111,39 +109,23 @@ export class AdminAuthService {
   verifyTwoFactorCode(code: string): Observable<AdminUser> {
     const challenge = this.challengeState();
     if (!challenge) {
-      return throwError(() => this.buildError('Phiên xác thực đã hết hiệu lực. Vui lòng đăng nhập lại.', 401, 'CHALLENGE_EXPIRED'));
+      return throwError(() => this.buildError('Phiên xác thực đã hết hiệu lực. Vui lòng đăng nhập lại.', 401, '2FA_SESSION_EXPIRED'));
     }
     if (Date.now() > challenge.expiresAt) {
       this.clearChallenge();
-      return throwError(() => this.buildError('Mã xác thực không chính xác hoặc đã hết hạn. Vui lòng thử lại.', 401, 'CHALLENGE_EXPIRED'));
+      return throwError(() => this.buildError('Phiên xác thực đã hết hiệu lực. Vui lòng đăng nhập lại.', 401, '2FA_SESSION_EXPIRED'));
     }
 
-    // TODO(pre-deploy): thay bằng POST /api/auth/2fa/verify { challengeToken, code }
-    // khi backend triển khai xác thực 2 lớp.
-    if (environment.adminDemoAuthFlow.twoFactorEnabled) {
-      const expected = environment.adminDemoAuthFlow.twoFactorCode;
-      if (code.trim() !== expected) {
-        return throwError(() => this.buildError('Mã xác thực không chính xác hoặc đã hết hạn. Vui lòng thử lại.', 401, 'INVALID_OTP'));
-      }
-      return of(this.completeDemoChallenge());
-    }
-
-    return throwError(() => this.buildError('Máy chủ chưa hỗ trợ xác thực 2 lớp. Vui lòng liên hệ bộ phận IT.', 501, 'NOT_IMPLEMENTED'));
+    return this.verifyTwoFactor({ otp: code.trim() });
   }
 
   /** Xác thực bằng mã dự phòng (mỗi mã dùng đúng một lần). */
   verifyBackupCode(code: string): Observable<AdminUser> {
     if (!this.challengeState()) {
-      return throwError(() => this.buildError('Phiên xác thực đã hết hiệu lực. Vui lòng đăng nhập lại.', 401, 'CHALLENGE_EXPIRED'));
+      return throwError(() => this.buildError('Phiên xác thực đã hết hiệu lực. Vui lòng đăng nhập lại.', 401, '2FA_SESSION_EXPIRED'));
     }
 
-    // TODO(pre-deploy): thay bằng endpoint xác thực mã dự phòng của backend.
-    const normalized = normalizeBackupCode(code);
-    if (environment.adminDemoAuthFlow.twoFactorEnabled && MOCK_ADMIN_BACKUP_CODES.some(item => normalizeBackupCode(item) === normalized)) {
-      return of(this.completeDemoChallenge());
-    }
-
-    return throwError(() => this.buildError('Mã dự phòng không chính xác. Vui lòng thử lại.', 401, 'INVALID_BACKUP_CODE'));
+    return this.verifyTwoFactor({ backupCode: formatBackupCode(code) });
   }
 
   cancelChallenge(): void {
@@ -218,52 +200,54 @@ export class AdminAuthService {
     this.challengeState.set(null);
   }
 
-  private mapLoginResponse(response: AdminLoginResponse, fallbackEmail: string, rememberMe: boolean): AdminUser {
-    const token = response.accessToken || response.token;
-    const backendUser = response.user;
-
-    if (!token || !backendUser) {
-      throw this.buildError('Phản hồi đăng nhập không hợp lệ. Vui lòng thử lại.', 500, 'INVALID_RESPONSE');
+  private verifyTwoFactor(input: { otp: string } | { backupCode: string }): Observable<AdminUser> {
+    const challenge = this.challengeState();
+    if (!challenge) {
+      return throwError(() => this.buildError('Phiên xác thực đã hết hiệu lực. Vui lòng đăng nhập lại.', 401, '2FA_SESSION_EXPIRED'));
     }
 
-    if (backendUser.role !== 'admin') {
+    return this.http.post<AdminVerifyTwoFactorResponse>(`${this.apiUrl}/admin/auth/verify-2fa`, {
+      twoFactorToken: challenge.twoFactorToken,
+      ...input
+    }).pipe(
+      map(response => this.completeChallenge(response, challenge)),
+      catchError((error: unknown) => {
+        const normalized = this.normalizeError(error);
+        if (normalized.code === '2FA_SESSION_EXPIRED') this.clearChallenge();
+        return throwError(() => normalized);
+      })
+    );
+  }
+
+  private completeChallenge(response: AdminVerifyTwoFactorResponse, challenge: AdminTwoFactorChallenge): AdminUser {
+    if (!response.success || !response.accessToken || !response.admin) {
+      throw this.buildError('Phản hồi xác thực không hợp lệ. Vui lòng thử lại.', 500, 'INVALID_RESPONSE');
+    }
+
+    if (response.admin.role.toUpperCase() !== 'ADMIN') {
       throw this.buildError('Tài khoản này không được phép truy cập trang quản trị.', 403, 'FORBIDDEN_ROLE');
     }
 
+    const daysLeft = response.passwordStatus?.daysLeft;
+    const passwordExpiresAt = typeof daysLeft === 'number'
+      ? this.addDays(new Date(), response.passwordStatus?.isExpired ? -1 : daysLeft).toISOString()
+      : null;
     const user: AdminUser = {
-      id: backendUser.id ?? '',
-      email: backendUser.email ?? fallbackEmail,
-      fullName: backendUser.name || backendUser.full_name || 'Quản trị viên',
+      id: response.admin.id,
+      email: response.admin.email || challenge.email,
+      fullName: response.admin.full_name || 'Quản trị viên',
       role: 'admin' as AdminRole,
-      avatar: backendUser.avatar ?? backendUser.avatar_url ?? null,
-      passwordExpiresAt: response.passwordExpiresAt ?? backendUser.password_expires_at ?? null
+      avatar: null,
+      passwordExpiresAt
     };
 
-    this.saveSession(token, user, rememberMe);
+    this.saveSession(response.accessToken, user, challenge.rememberMe);
+    this.clearChallenge();
     return user;
   }
 
-  private handleError(error: HttpErrorResponse, payload: { email: string; password: string }): Observable<AdminUser | null> {
-    // TODO(pre-deploy): Bỏ nhánh fallback demo khi backend đã cấp tài khoản role 'admin' thật.
-    if (environment.adminDemoLogin && this.isDemoAccount(payload)) {
-      if (environment.adminDemoAuthFlow.twoFactorEnabled) {
-        this.startChallenge(payload.email, null, this.demoPasswordExpiry());
-        return of(null);
-      }
-
-      const demoUser: AdminUser = {
-        id: 'demo-admin',
-        email: MOCK_ADMIN_ACCOUNT.email,
-        fullName: MOCK_ADMIN_ACCOUNT.fullName,
-        role: 'admin',
-        avatar: null,
-        passwordExpiresAt: this.demoPasswordExpiry()
-      };
-      this.saveSession(`demo-token-${MOCK_ADMIN_ACCOUNT.email}`, demoUser, false);
-      return of(demoUser);
-    }
-
-    return throwError(() => this.toAuthError(error));
+  private normalizeError(error: unknown): AdminAuthError {
+    return error instanceof HttpErrorResponse ? this.toAuthError(error) : error as AdminAuthError;
   }
 
   private toAuthError(error: HttpErrorResponse): AdminAuthError {
@@ -271,9 +255,9 @@ export class AdminAuthService {
       return this.buildError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền mạng.', 0, 'NETWORK_ERROR');
     }
 
-    const body = error.error as { message?: string; code?: string; retryAfter?: number } | null;
+    const body = error.error as { message?: string; code?: string; retryAfter?: number; remainingSeconds?: number } | null;
     const message = body?.message?.trim();
-    const retryAfter = body?.retryAfter;
+    const retryAfter = body?.remainingSeconds ?? body?.retryAfter;
 
     if (error.status === 401) {
       return this.buildError(message || 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!', 401, body?.code || 'INVALID_CREDENTIALS');
@@ -281,7 +265,7 @@ export class AdminAuthService {
     if (error.status === 403) {
       const code = body?.code || 'FORBIDDEN_ROLE';
       const authError = this.buildError(
-        message || (code === 'BRUTE_FORCE_LOCKED'
+        message || (code === 'ACCOUNT_LOCKED'
           ? 'Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút.'
           : 'Tài khoản của bạn không có quyền truy cập trang quản trị.'),
         403,
@@ -291,7 +275,7 @@ export class AdminAuthService {
       return authError;
     }
     if (error.status === 429) {
-      const authError = this.buildError(message || 'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau.', 429, body?.code || 'BRUTE_FORCE_LOCKED');
+      const authError = this.buildError(message || 'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau.', 429, body?.code || 'ACCOUNT_LOCKED');
       authError.retryAfter = retryAfter;
       return authError;
     }
@@ -309,48 +293,24 @@ export class AdminAuthService {
     return error;
   }
 
-  private startChallenge(email: string, challengeToken: string | null, passwordExpiresAt: string | null): void {
+  private startChallenge(email: string, twoFactorToken: string, expiresInSeconds: number, rememberMe: boolean): void {
     const challenge: AdminTwoFactorChallenge = {
       email,
-      challengeToken,
-      expiresAt: Date.now() + CHALLENGE_TTL_MS
+      twoFactorToken,
+      expiresAt: Date.now() + Math.max(1, expiresInSeconds) * 1000,
+      rememberMe
     };
 
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(CHALLENGE_KEY, JSON.stringify(challenge));
-      if (passwordExpiresAt) {
-        sessionStorage.setItem('thinkup_admin_pending_password_expiry', passwordExpiresAt);
-      } else {
-        sessionStorage.removeItem('thinkup_admin_pending_password_expiry');
-      }
     }
 
     this.challengeState.set(challenge);
   }
 
-  private completeDemoChallenge(): AdminUser {
-    const pendingExpiry = typeof window === 'undefined'
-      ? null
-      : sessionStorage.getItem('thinkup_admin_pending_password_expiry');
-
-    const user: AdminUser = {
-      id: 'demo-admin',
-      email: MOCK_ADMIN_ACCOUNT.email,
-      fullName: MOCK_ADMIN_ACCOUNT.fullName,
-      role: 'admin',
-      avatar: null,
-      passwordExpiresAt: pendingExpiry || this.demoPasswordExpiry()
-    };
-
-    this.saveSession(`demo-token-${MOCK_ADMIN_ACCOUNT.email}`, user, false);
-    this.clearChallenge();
-    return user;
-  }
-
   private clearChallenge(): void {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(CHALLENGE_KEY);
-      sessionStorage.removeItem('thinkup_admin_pending_password_expiry');
     }
     this.challengeState.set(null);
   }
@@ -399,7 +359,7 @@ export class AdminAuthService {
 
     try {
       const challenge = JSON.parse(raw) as AdminTwoFactorChallenge;
-      if (challenge?.email && challenge.expiresAt > Date.now()) {
+      if (challenge?.email && challenge.twoFactorToken && challenge.expiresAt > Date.now()) {
         this.challengeState.set(challenge);
       } else {
         sessionStorage.removeItem(CHALLENGE_KEY);
@@ -407,15 +367,6 @@ export class AdminAuthService {
     } catch {
       sessionStorage.removeItem(CHALLENGE_KEY);
     }
-  }
-
-  private isDemoAccount(payload: { email: string; password: string }): boolean {
-    return payload.email === MOCK_ADMIN_ACCOUNT.email && payload.password === MOCK_ADMIN_ACCOUNT.password;
-  }
-
-  private demoPasswordExpiry(): string | null {
-    const daysLeft = environment.adminDemoAuthFlow.passwordDaysLeft;
-    return daysLeft === null ? null : this.addDays(new Date(), daysLeft).toISOString();
   }
 
   private clearReminderDismissal(): void {
@@ -435,7 +386,8 @@ export class AdminAuthService {
   }
 }
 
-/** Mã dự phòng được so khớp bỏ qua dấu gạch nối/khoảng trắng: `A8F9-3B2C…` = `a8f93b2c…`. */
-function normalizeBackupCode(code: string): string {
-  return code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+/** Chuẩn hoá mã dự phòng về định dạng backend `XXXX-XXXX`. */
+function formatBackupCode(code: string): string {
+  const normalized = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}`;
 }
