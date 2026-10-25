@@ -389,7 +389,7 @@ export const MOCK_LEARNING_COURSE: LearningCourse = {
   chapters: [
     {
       id: 'chapter-1',
-      title: 'Chương 1: Giới thiệu',
+      title: 'Phần 1: Giới thiệu',
       lessons: [
         { id: 'lesson-1-1', order: 1, title: 'Giới thiệu khóa học và lộ trình', type: 'video', duration: '06:24', completed: true, status: 'done', videoUrl: VIDEO_DEMO, summary: 'Tổng quan mục tiêu khóa học, cấu trúc lộ trình và cách học hiệu quả trên ThinkUp.' },
         { id: 'lesson-1-2', order: 2, title: 'Cài đặt Python và môi trường lập trình', type: 'video', duration: '12:30', completed: true, status: 'done', videoUrl: VIDEO_DEMO, summary: 'Cài đặt Python 3.12, VS Code và tạo môi trường ảo cho dự án đầu tiên.' },
@@ -488,10 +488,10 @@ export const MOCK_QA_POSTS: CommunityPost[] = [
 export const MOCK_DISCUSSION_POSTS: CommunityPost[] = [
   {
     id: 'd-1',
-    author: 'Nguyễn Văn A',
-    initials: 'NA',
+    author: 'Nguyễn Văn B',
+    initials: 'NB',
     role: 'Học viên',
-    body: 'Mình đang bị lỗi NameError: name "x" is not defined khi chạy đoạn code này. Mọi người giúp mình với ạ!',
+    body: 'Mình đang bị lỗi NameError: name "x" is not defined khi chạy đoạn code này, không biết là do đâu nhỉ? Ai có thể hướng dẫn giúp mình với ạ!',
     createdAt: '12/04/2024 14:30',
     likes: 12,
     replies: [
@@ -520,7 +520,7 @@ export const MOCK_DISCUSSION_POSTS: CommunityPost[] = [
     author: 'Lê Thị Bích',
     initials: 'LB',
     role: 'Học viên',
-    body: 'Có bạn nào có tài liệu tổng hợp các hàm built-in trong Python không ạ? Mình đang cần ôn lại trước khi làm bài kiểm tra.',
+    body: 'Có bạn nào có tài liệu tổng hợp các hàm built-in trong Python không ạ? Mình cảm ơn!',
     createdAt: '12/04/2024 13:15',
     likes: 8,
     replies: [],
@@ -573,6 +573,23 @@ export const MOCK_REPORT_REASONS: ReportReason[] = [
 ];
 
 // TODO(pre-deploy): Nhớ xóa dữ liệu tài liệu mẫu khi backend cung cấp API kho tài liệu khóa học.
+const EXTRA_DOCUMENT_TOPICS = [
+  'Chuỗi và các phương thức xử lý chuỗi',
+  'Danh sách và tuple',
+  'Dictionary và set',
+  'Câu lệnh điều kiện nâng cao',
+  'Vòng lặp và comprehension',
+  'Hàm và tham số',
+  'Module và package',
+  'Xử lý lỗi và ngoại lệ',
+  'Đọc ghi file',
+  'Lớp và đối tượng',
+  'Dự án quản lý chi tiêu',
+  'Ôn tập cuối khóa',
+];
+
+const EXTRA_DOCUMENT_SIZES = ['1.1 MB', '284 KB', '1.6 MB', '328 KB', '2.4 MB', '742 KB'];
+
 export const MOCK_COURSE_DOCUMENTS: CourseDocument[] = [
   { id: 'doc-1', name: 'Giới thiệu về Python.pdf', subtitle: 'Bài 1 - Giới thiệu về Python', category: 'lecture', kind: 'Tài liệu bài giảng', size: '1.2 MB', updated: '12/04/2024', ext: 'pdf' },
   { id: 'doc-2', name: 'code_bai_1_gioi_thieu.zip', subtitle: 'Bài 1 - Giới thiệu về Python', category: 'code', kind: 'Mã nguồn', size: '256 KB', updated: '12/04/2024', ext: 'zip' },
@@ -586,6 +603,63 @@ export const MOCK_COURSE_DOCUMENTS: CourseDocument[] = [
   { id: 'doc-10', name: 'Slides chương 2.pptx', subtitle: 'Tổng hợp slide chương 2', category: 'lecture', kind: 'Tài liệu bài giảng', size: '2.9 MB', updated: '16/04/2024', ext: 'pptx' },
   { id: 'doc-11', name: 'F-string và định dạng chuỗi.pdf', subtitle: 'Bài 8 - F-string và định dạng chuỗi', category: 'lecture', kind: 'Tài liệu bài giảng', size: '980 KB', updated: '17/04/2024', ext: 'pdf' },
   { id: 'doc-12', name: 'code_chuong_2.zip', subtitle: 'Mã nguồn chương 2', category: 'code', kind: 'Mã nguồn', size: '746 KB', updated: '17/04/2024', ext: 'zip' },
+  ...Array.from({ length: 36 }, (_, index): CourseDocument => {
+    const lesson = index + 13;
+    const topic = EXTRA_DOCUMENT_TOPICS[index % EXTRA_DOCUMENT_TOPICS.length];
+    const day = String(18 + Math.floor(index / 4)).padStart(2, '0');
+    const size = EXTRA_DOCUMENT_SIZES[index % EXTRA_DOCUMENT_SIZES.length];
+    const variant = index % 4;
+
+    if (variant === 0) {
+      return {
+        id: `doc-${lesson}`,
+        name: `${topic} - Bài ${lesson}.pdf`,
+        subtitle: `Bài ${lesson}: ${topic}`,
+        category: 'lecture',
+        kind: 'Tài liệu bài giảng',
+        size,
+        updated: `${day}/04/2024`,
+        ext: 'pdf',
+      };
+    }
+
+    if (variant === 1) {
+      return {
+        id: `doc-${lesson}`,
+        name: `code_bai_${lesson}.zip`,
+        subtitle: `Bài ${lesson}: ${topic}`,
+        category: 'code',
+        kind: 'Mã nguồn',
+        size,
+        updated: `${day}/04/2024`,
+        ext: 'zip',
+      };
+    }
+
+    if (variant === 2) {
+      return {
+        id: `doc-${lesson}`,
+        name: `Bài tập bài ${lesson}.docx`,
+        subtitle: `Bài ${lesson}: ${topic}`,
+        category: 'exercise',
+        kind: 'Bài tập',
+        size,
+        updated: `${day}/04/2024`,
+        ext: 'docx',
+      };
+    }
+
+    return {
+      id: `doc-${lesson}`,
+      name: `Slides bài ${lesson}.pptx`,
+      subtitle: `Bài ${lesson}: ${topic}`,
+      category: 'lecture',
+      kind: 'Tài liệu bài giảng',
+      size,
+      updated: `${day}/04/2024`,
+      ext: 'pptx',
+    };
+  }),
 ];
 
 // TODO(pre-deploy): Nhớ xóa dữ liệu hỏi đáp mẫu khi backend cung cấp API hỏi đáp khóa học.

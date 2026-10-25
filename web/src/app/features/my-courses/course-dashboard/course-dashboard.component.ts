@@ -5,24 +5,30 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   LucideAward,
   LucideBookOpen,
+  LucideChartColumn,
   LucideCheck,
   LucideChevronDown,
   LucideChevronLeft,
   LucideChevronRight,
   LucideCircleAlert,
+  LucideCircleCheck,
   LucideCirclePlay,
+  LucideCircleQuestionMark,
   LucideClock,
+  LucideCode,
   LucideDownload,
+  LucideEllipsisVertical,
   LucideFileText,
-  LucideFlag,
   LucideGlobe,
+  LucideGripVertical,
+  LucideListChecks,
   LucideMessageSquare,
   LucidePlay,
   LucideSearch,
   LucideSend,
   LucideStar,
   LucideThumbsUp,
-  LucideUsers,
+  LucideVideo,
 } from '@lucide/angular';
 import { Subscription } from 'rxjs';
 import {
@@ -38,7 +44,9 @@ import {
   CourseDocument,
   CourseReviewSummary,
   DashboardQuestion,
+  LearningChapter,
   LearningCourse,
+  LearningLesson,
 } from '../../learning/models/learning.model';
 import { LearningEnrollment, LearningService } from '../../learning/services/learning.service';
 
@@ -56,24 +64,30 @@ type DocumentFilter = 'all' | 'lecture' | 'code' | 'exercise';
     ReviewModalComponent,
     LucideAward,
     LucideBookOpen,
+    LucideChartColumn,
     LucideCheck,
     LucideChevronDown,
     LucideChevronLeft,
     LucideChevronRight,
     LucideCircleAlert,
+    LucideCircleCheck,
     LucideCirclePlay,
+    LucideCircleQuestionMark,
     LucideClock,
+    LucideCode,
     LucideDownload,
+    LucideEllipsisVertical,
     LucideFileText,
-    LucideFlag,
     LucideGlobe,
+    LucideGripVertical,
+    LucideListChecks,
     LucideMessageSquare,
     LucidePlay,
     LucideSearch,
     LucideSend,
     LucideStar,
     LucideThumbsUp,
-    LucideUsers,
+    LucideVideo,
   ],
   templateUrl: './course-dashboard.component.html',
 })
@@ -138,20 +152,16 @@ export class CourseDashboardComponent implements OnDestroy {
   readonly pageNumbers = computed<(number | 'ellipsis')[]>(() => {
     const total = this.documentPageCount();
     const current = Math.min(this.documentPage(), total);
-    if (total <= 5) return Array.from({ length: total }, (_, index) => index + 1);
-    const pages: (number | 'ellipsis')[] = [1];
-    if (current > 3) pages.push('ellipsis');
-    for (let page = Math.max(2, current - 1); page <= Math.min(total - 1, current + 1); page += 1) {
-      pages.push(page);
-    }
-    if (current < total - 2) pages.push('ellipsis');
-    pages.push(total);
-    return pages;
+    if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+    if (current <= 3) return [1, 2, 3, 'ellipsis', total];
+    if (current >= total - 2) return [1, 'ellipsis', total - 2, total - 1, total];
+    return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
   });
 
   readonly questions = signal<DashboardQuestion[]>([...MOCK_COURSE_QUESTIONS]);
   readonly discussions = signal<CommunityPost[]>([...MOCK_DISCUSSION_POSTS]);
   readonly expandedChapterIds = signal<string[]>([]);
+  discussionSort: 'newest' | 'popular' | 'oldest' = 'newest';
 
   readonly reviewOpen = signal(false);
   readonly reviewSummary = signal<CourseReviewSummary | null>(null);
@@ -169,16 +179,20 @@ export class CourseDashboardComponent implements OnDestroy {
   private readonly subscriptions = new Subscription();
 
   readonly outcomes = [
-    'Nắm vững cú pháp và tư duy lập trình Python',
-    'Làm việc thành thạo với biến, vòng lặp, hàm và module',
-    'Xây dựng ứng dụng quản lý chi tiêu hoàn chỉnh',
-    'Tự tin giải quyết bài tập và phỏng vấn Python cơ bản',
+    'Hiểu và cài đặt môi trường Python',
+    'Nắm vững cú pháp Python cơ bản',
+    'Làm việc với biến, kiểu dữ liệu và toán tử',
+    'Sử dụng cấu trúc điều khiển (if, for, while)',
+    'Xây dựng và sử dụng hàm trong Python',
+    'Làm việc với chuỗi, danh sách, tuple, dictionary',
+    'Xử lý lỗi và ngoại lệ',
+    'Đọc và ghi file',
+    'Thực hành qua các bài tập và dự án thực tế',
   ];
 
   readonly requirements = [
-    'Máy tính có kết nối internet, không cần kinh nghiệm lập trình.',
-    'Cài đặt Python 3.12 và VS Code theo hướng dẫn bài 2.',
-    'Tinh thần học đều đặn 30 phút mỗi ngày.',
+    'Không yêu cầu kinh nghiệm lập trình trước đó.',
+    'Chỉ cần máy tính có kết nối Internet.',
   ];
 
   constructor() {
@@ -205,7 +219,7 @@ export class CourseDashboardComponent implements OnDestroy {
       this.learningService.getCourse(courseId).subscribe({
         next: (course) => {
           this.course.set(course);
-          this.expandedChapterIds.set(course.chapters.map((chapter) => chapter.id));
+          this.expandedChapterIds.set(course.chapters.slice(0, 1).map((chapter) => chapter.id));
           this.status.set('ready');
           this.selectedLessonId = course.chapters[0]?.lessons[0]?.id ?? '';
         },
@@ -302,6 +316,32 @@ export class CourseDashboardComponent implements OnDestroy {
 
   isChapterExpanded(chapterId: string): boolean {
     return this.expandedChapterIds().includes(chapterId);
+  }
+
+  get sortedDiscussions(): CommunityPost[] {
+    const posts = [...this.discussions()];
+    if (this.discussionSort === 'oldest') return posts.reverse();
+    if (this.discussionSort === 'popular') return posts.sort((a, b) => b.likes - a.likes);
+    return posts;
+  }
+
+  chapterDuration(chapter: LearningChapter): string {
+    const seconds = chapter.lessons.reduce((total, lesson) => total + this.durationInSeconds(lesson), 0);
+    if (!seconds) return '';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.round((seconds % 3600) / 60);
+    return hours ? `${hours}h ${minutes.toString().padStart(2, '0')}m` : `${minutes}m`;
+  }
+
+  quizQuestionCount(lesson: LearningLesson): number {
+    return lesson.quiz?.questions.length ?? 0;
+  }
+
+  private durationInSeconds(lesson: LearningLesson): number {
+    const match = lesson.duration.match(/(\d+):(\d+)/);
+    if (match) return Number(match[1]) * 60 + Number(match[2]);
+    const minutes = lesson.duration.match(/(\d+)/);
+    return minutes ? Number(minutes[1]) * 60 : 0;
   }
 
   startQuestionReply(question: DashboardQuestion): void {
@@ -426,7 +466,7 @@ export class CourseDashboardComponent implements OnDestroy {
   lessonLabel(type: string): string {
     if (type === 'video') return 'Video';
     if (type === 'reading') return 'Bài đọc';
-    if (type === 'quiz') return 'Quiz';
-    return 'Lab';
+    if (type === 'quiz') return 'Trắc nghiệm';
+    return 'Phòng lab';
   }
 }

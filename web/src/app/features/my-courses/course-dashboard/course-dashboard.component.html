@@ -23,66 +23,77 @@
       <div class="mt-3 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <div class="min-w-0">
           <!-- Hero -->
-          <div class="flex flex-col gap-5 lg:flex-row">
-            <div class="relative h-[164px] w-full shrink-0 overflow-hidden rounded-xl bg-[linear-gradient(163deg,#041348_0%,#01052c_100%)] lg:w-[240px]">
-              <div class="absolute inset-0 overflow-hidden p-3 font-mono text-[7px] leading-[10px] text-[#93C5FD]/25">
+          <div class="flex flex-col gap-6 lg:flex-row">
+            <div class="relative h-[210px] w-full shrink-0 overflow-hidden rounded-[20px] bg-[linear-gradient(163deg,#041348_0%,#01052c_100%)] lg:w-[300px]">
+              <div class="absolute inset-0 overflow-hidden p-4 font-mono text-[7px] leading-[10px] text-[#93C5FD]/20">
                 import sys<br />from typing import<br />def main():<br />&nbsp;&nbsp;print("ThinkUp")<br />&nbsp;&nbsp;for i in range(10):<br />&nbsp;&nbsp;&nbsp;&nbsp;print(i)<br />if __name__ == "__main__":<br />&nbsp;&nbsp;main()<br />class Course:<br />&nbsp;&nbsp;def __init__(self):<br />&nbsp;&nbsp;&nbsp;&nbsp;pass
               </div>
-              <span class="absolute right-4 top-4 grid h-16 w-16 rotate-6 place-items-center rounded-2xl border border-[#FACC15]/40 bg-[#FACC15]/10 text-[26px] font-black text-[#FACC15]">PY</span>
-              <button type="button" (click)="openPreview()" class="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-md bg-black/40 px-2.5 text-[11px] font-medium text-white backdrop-blur transition hover:bg-black/60">
-                <span class="grid h-4 w-4 place-items-center rounded-full bg-white text-[#061543]">
-                  <svg lucidePlay class="ml-px h-2.5 w-2.5 fill-[#061543]" aria-hidden="true"></svg>
+              <div class="absolute inset-0 grid place-items-center">
+                <div class="relative h-[112px] w-[112px]">
+                  <span class="absolute left-0 top-0 h-[60px] w-[62px] rounded-[26px] bg-[#60A5FA]"></span>
+                  <span class="absolute bottom-0 right-0 h-[60px] w-[62px] rounded-[26px] bg-[#F5D547]"></span>
+                  <span class="absolute left-[16px] top-[13px] h-[9px] w-[9px] rounded-full bg-white"></span>
+                  <span class="absolute bottom-[13px] right-[16px] h-[9px] w-[9px] rounded-full bg-white"></span>
+                </div>
+              </div>
+              <button type="button" (click)="openPreview()" class="absolute bottom-3 left-3 inline-flex h-8 items-center gap-2 rounded-full bg-[#020A31]/70 px-2.5 text-[13px] font-medium text-white backdrop-blur-sm transition hover:bg-[#020A31]/90">
+                <span class="grid h-5 w-5 place-items-center rounded-full bg-white text-[#061543]">
+                  <svg lucidePlay class="ml-px h-3 w-3 fill-[#061543]" aria-hidden="true"></svg>
                 </span>
                 Xem giới thiệu
               </button>
             </div>
 
             <div class="min-w-0 flex-1">
-              <h1 class="text-[26px] font-bold leading-9 text-[#0F172B] 2xl:text-[28px]">{{ currentCourse.title }}</h1>
-              <p class="mt-1.5 max-w-[900px] text-[13px] leading-5 text-[#62748E]">
+              <h1 class="text-[28px] font-bold leading-[35px] text-[#0F172B]">{{ currentCourse.title }}</h1>
+              <p class="mt-2 max-w-[900px] text-[14px] leading-[22.75px] text-[#62748E]">
                 {{ currentCourse.description }}
               </p>
 
-              <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <div class="flex items-center gap-2.5">
-                  <span class="grid h-9 w-9 place-items-center rounded-full bg-[#E8F1FF] text-[12px] font-bold text-[#155DFC]">
+              <div class="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3">
+                <div class="flex items-center gap-2">
+                  <span class="grid h-8 w-8 place-items-center rounded-full bg-[#E8F1FF] text-[11px] font-bold text-[#155DFC]">
                     {{ currentCourse.instructor.charAt(0) }}
                   </span>
                   <div>
-                    <p class="text-[10px] text-[#62748E]">Giảng viên</p>
-                    <p class="text-[13px] font-semibold text-[#0F172B]">{{ currentCourse.instructor }}</p>
-                    <p class="text-[10px] text-[#90A1B9]">{{ currentCourse.instructorTitle }}</p>
+                    <p class="text-[12px] leading-4 text-[#62748E]">Giảng viên</p>
+                    <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">{{ currentCourse.instructor }}</p>
+                    <p class="text-[12px] leading-4 text-[#90A1B9]">{{ currentCourse.instructorTitle }}</p>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  (click)="openReviews()"
+                  class="text-left transition hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2076FF] focus-visible:ring-offset-2"
+                  aria-label="Xem đánh giá khóa học"
+                >
+                  <span class="flex items-center gap-1.5">
+                    <span class="text-[16px] font-bold leading-5">{{ currentCourse.rating }}</span>
+                    @for (star of [1, 2, 3, 4, 5]; track star) {
+                      <svg lucideStar class="h-4 w-4" [class]="star <= 4 ? 'fill-[#F59E0B] text-[#F59E0B]' : 'fill-[#E2E8F0] text-[#E2E8F0]'" aria-hidden="true"></svg>
+                    }
+                  </span>
+                  <span class="mt-1 block text-[12px] leading-4 text-[#90A1B9]">({{ currentCourse.ratingCount | number }} đánh giá)</span>
+                </button>
 
                 <div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-[13px] font-bold">{{ currentCourse.rating }}</span>
-                    @for (star of [1, 2, 3, 4, 5]; track star) {
-                      <svg lucideStar class="h-3.5 w-3.5" [class]="star <= 4 ? 'fill-[#F59E0B] text-[#F59E0B]' : 'fill-[#E2E8F0] text-[#E2E8F0]'" aria-hidden="true"></svg>
-                    }
-                  </div>
-                  <p class="mt-0.5 text-[10px] text-[#90A1B9]">({{ currentCourse.ratingCount | number }} đánh giá)</p>
-                </div>
-
-                <div class="flex items-center gap-1.5 text-[13px] font-semibold">
-                  <svg lucideUsers class="h-4 w-4 text-[#62748E]" aria-hidden="true"></svg>
-                  {{ currentCourse.studentCount | number }}
-                  <span class="text-[11px] font-normal text-[#90A1B9]">Học viên</span>
+                  <p class="text-[16px] font-bold leading-5">{{ currentCourse.studentCount | number }}</p>
+                  <p class="mt-1 text-[12px] leading-4 text-[#90A1B9]">Học viên</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Tabs -->
-          <nav class="mt-6 flex gap-6 overflow-x-auto border-b border-[#E2E8F0]" role="tablist" aria-label="Nội dung khóa học">
+          <nav class="mt-6 flex gap-8 overflow-x-auto border-b border-[#DCE6F2]" role="tablist" aria-label="Nội dung khóa học">
             @for (tab of tabs; track tab.id) {
               <button
                 type="button"
                 role="tab"
                 (click)="selectTab(tab.id)"
-                class="-mb-px shrink-0 border-b-2 pb-3 text-[13px] font-medium transition"
-                [class]="activeTab() === tab.id ? 'border-[#155DFC] text-[#155DFC]' : 'border-transparent text-[#62748E] hover:text-[#0F172B]'"
+                class="-mb-px shrink-0 border-b-2 pb-3 text-[16.8px] font-medium leading-5 transition"
+                [class]="activeTab() === tab.id ? 'border-[#2076FF] text-[#2076FF]' : 'border-transparent text-[#56647A] hover:text-[#0F172B]'"
                 [attr.aria-selected]="activeTab() === tab.id"
               >
                 {{ tab.label }}
@@ -91,72 +102,106 @@
           </nav>
 
           <!-- Tab content -->
-          <div class="mt-4 rounded-xl bg-white p-5 shadow-[0_1px_3px_rgba(15,23,43,0.05)] 2xl:p-6">
+          <div class="mt-4">
             @switch (activeTab()) {
+              <!-- Figma 3173:9386 - tab "Nội dung khóa học" của trang dashboard khóa học. -->
               @case ('content') {
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 class="text-[18px] font-bold">Nội dung khóa học</h2>
-                    <p class="mt-1 text-[12px] text-[#62748E]">
-                      {{ currentCourse.chapters.length }} chương · {{ enrollment()?.totalLessons }} bài học
-                    </p>
-                  </div>
-                  <span class="rounded-lg bg-[#EEF6FF] px-3 py-1.5 text-[12px] font-semibold text-[#155DFC]">
-                    Hoàn thành {{ enrollment()?.completed }}/{{ enrollment()?.totalLessons }} bài
-                  </span>
-                </div>
-
-                <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#EEF2F7]">
-                  <div class="h-full rounded-full bg-[#155DFC]" [style.width.%]="enrollment()?.percent ?? 0"></div>
-                </div>
-
-                <div class="mt-4 divide-y divide-[#F1F5F9] border-t border-[#F1F5F9]">
+                <div class="space-y-3">
                   @for (chapter of currentCourse.chapters; track chapter.id) {
-                    <section>
-                      <button type="button" (click)="toggleChapter(chapter.id)" class="flex w-full items-center justify-between gap-3 py-3 text-left">
-                        <span class="flex min-w-0 items-center gap-2">
-                          <svg
-                            lucideChevronDown
-                            class="h-4 w-4 shrink-0 text-[#62748E] transition-transform"
-                            [class.-rotate-90]="!isChapterExpanded(chapter.id)"
-                            aria-hidden="true"
-                          ></svg>
-                          <span class="truncate text-[14px] font-semibold text-[#0F172B]">{{ chapter.title }}</span>
-                        </span>
-                        <span class="shrink-0 text-[11px] text-[#90A1B9]">{{ chapter.lessons.length }} bài học</span>
+                    <section class="overflow-hidden rounded-[20px] border border-[#E0E5EB] bg-white">
+                      <button
+                        type="button"
+                        (click)="toggleChapter(chapter.id)"
+                        class="flex w-full items-center gap-3 px-6 text-left transition"
+                        [class]="isChapterExpanded(chapter.id) ? 'h-[54px] bg-[rgba(237,242,248,0.4)]' : 'h-[60px] bg-white hover:bg-[#F8FAFF]'"
+                      >
+                        @if (isChapterExpanded(chapter.id)) {
+                          <svg lucideGripVertical class="h-5 w-5 shrink-0 text-[#0F172B]" aria-hidden="true"></svg>
+                        } @else {
+                          <svg lucideChevronRight class="h-4 w-4 shrink-0 text-[#0F172B]" aria-hidden="true"></svg>
+                        }
+                        <span class="min-w-0 flex-1 truncate text-[16px] font-bold leading-6 text-[#0F172B]">{{ chapter.title }}</span>
+                        @if (isChapterExpanded(chapter.id)) {
+                          <span class="shrink-0 rounded-md border border-[#E0E5EB] bg-[#F6F9FC] px-3 py-1 text-[12px] font-medium leading-4 text-[#56647A]">
+                            {{ chapter.lessons.length }} bài học
+                          </span>
+                          <svg lucideChevronDown class="h-4 w-4 shrink-0 text-[#0F172B]" aria-hidden="true"></svg>
+                        } @else {
+                          <span class="shrink-0 text-[12px] leading-4 text-[#90A1B9]">
+                            {{ chapter.lessons.length }} bài học
+                            @if (chapterDuration(chapter)) {
+                              · {{ chapterDuration(chapter) }}
+                            }
+                          </span>
+                        }
                       </button>
 
                       @if (isChapterExpanded(chapter.id)) {
-                        <div class="pb-2">
+                        <div>
                           @for (lesson of chapter.lessons; track lesson.id) {
-                            <button
-                              type="button"
+                            <div
                               (click)="openLesson(lesson.id)"
-                              class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-[#F6F9FF]"
+                              (keydown.enter)="openLesson(lesson.id)"
+                              role="button"
+                              tabindex="0"
+                              class="flex h-[61px] cursor-pointer items-center gap-3 border-t border-[#DFE5ED] px-6 text-left transition hover:bg-[#F8FAFF]"
                             >
-                              <span class="grid h-4 w-4 shrink-0 place-items-center">
-                                @if (lesson.completed) {
-                                  <svg lucideCheck class="h-4 w-4 text-[#16A34A]" aria-hidden="true"></svg>
+                              <span class="grid h-5 w-5 shrink-0 place-items-center">
+                                @if (lesson.completed || lesson.status === 'done') {
+                                  <span class="grid h-5 w-5 place-items-center rounded-full bg-[#22C55E] text-white">
+                                    <svg lucideCheck class="h-3 w-3" stroke-width="3" aria-hidden="true"></svg>
+                                  </span>
                                 } @else if (lesson.status === 'failed') {
-                                  <svg lucideCircleAlert class="h-4 w-4 text-[#F59E0B]" aria-hidden="true"></svg>
+                                  <svg lucideCircleAlert class="h-5 w-5 text-[#F59E0B]" aria-hidden="true"></svg>
                                 } @else {
-                                  <span class="h-3.5 w-3.5 rounded-full border border-[#CBD5E1]"></span>
+                                  <span class="h-[18px] w-[18px] rounded-full border border-[#CBD5E1]"></span>
                                 }
                               </span>
-                              <span class="text-[#62748E]">
-                                @if (lesson.type === 'video') {
-                                  <svg lucideCirclePlay class="h-4 w-4" aria-hidden="true"></svg>
-                                } @else {
-                                  <svg lucideFileText class="h-4 w-4" aria-hidden="true"></svg>
+
+                              <span class="grid h-7 w-7 shrink-0 place-items-center text-[#0F172B]">
+                                @switch (lesson.type) {
+                                  @case ('video') {
+                                    <svg lucideCirclePlay class="h-5 w-5" aria-hidden="true"></svg>
+                                  }
+                                  @case ('reading') {
+                                    <svg lucideFileText class="h-5 w-5" aria-hidden="true"></svg>
+                                  }
+                                  @case ('lab') {
+                                    <svg lucideCode class="h-5 w-5" aria-hidden="true"></svg>
+                                  }
+                                  @default {
+                                    <span class="grid h-6 w-6 place-items-center rounded-md bg-[#F3E8FF] text-[#A855F7]">
+                                      <svg lucideCircleQuestionMark class="h-4 w-4" aria-hidden="true"></svg>
+                                    </span>
+                                  }
                                 }
                               </span>
-                              <span class="min-w-0 flex-1 truncate text-[13px] text-[#45556C]">{{ lesson.title }}</span>
-                              <span class="shrink-0 rounded bg-[#F1F5F9] px-1.5 py-0.5 text-[10px] font-medium text-[#62748E]">{{ lessonLabel(lesson.type) }}</span>
-                              <span class="shrink-0 text-[11px] text-[#90A1B9]">{{ lesson.duration }}</span>
-                              <span class="hidden shrink-0 text-[12px] font-semibold text-[#155DFC] sm:block">
-                                {{ lesson.completed ? 'Học lại' : 'Học' }}
+
+                              <span class="min-w-0 flex-1 truncate text-[16.3px] leading-5 text-[#0F172B]">
+                                {{ lesson.order }}. {{ lesson.title }}
                               </span>
-                            </button>
+
+                              <span class="hidden shrink-0 text-[12px] leading-4 text-[#56647A] sm:block">{{ lessonLabel(lesson.type) }}</span>
+
+                              <span class="hidden shrink-0 items-center gap-1.5 text-[12px] leading-4 text-[#56647A] md:flex">
+                                @if (lesson.type === 'quiz') {
+                                  <svg lucideListChecks class="h-4 w-4" aria-hidden="true"></svg>
+                                  {{ quizQuestionCount(lesson) }} câu hỏi
+                                } @else {
+                                  <svg lucideClock class="h-4 w-4" aria-hidden="true"></svg>
+                                  {{ lesson.duration }}
+                                }
+                              </span>
+
+                              <button
+                                type="button"
+                                (click)="openLesson(lesson.id); $event.stopPropagation()"
+                                class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[#0F172B] transition hover:bg-[#EEF2F7]"
+                                [attr.aria-label]="'Mở bài học ' + lesson.title"
+                              >
+                                <svg lucideEllipsisVertical class="h-4 w-4" aria-hidden="true"></svg>
+                              </button>
+                            </div>
                           }
                         </div>
                       }
@@ -165,53 +210,100 @@
                 </div>
               }
 
+              <!-- Figma 3173:9652 - tab "Tổng quan" của cùng trang dashboard khóa học. -->
               @case ('overview') {
-                <h2 class="text-[18px] font-bold">Tổng quan khóa học</h2>
-                <p class="mt-3 max-w-[900px] text-[14px] leading-6 text-[#45556C]">
-                  {{ currentCourse.description }}
-                </p>
-                <p class="mt-2 max-w-[900px] text-[14px] leading-6 text-[#45556C]">
-                  Khóa học được thiết kế theo lộ trình từ cơ bản đến nâng cao, kết hợp video bài giảng, bài đọc, lab thực hành
-                  và bài kiểm tra. Sau mỗi chương, bạn sẽ có cơ hội áp dụng kiến thức vào tình huống thực tế để ghi nhớ lâu hơn.
-                </p>
+                <div class="space-y-4">
+                  <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
+                    <h2 class="text-[21.6px] font-bold leading-7 text-[#0F172B]">Giới thiệu khóa học</h2>
+                    <p class="mt-3 text-[14px] leading-[22.75px] text-[#45556C]">
+                      Python là một trong những ngôn ngữ lập trình phổ biến và dễ học nhất hiện nay. Khóa học này được thiết kế dành riêng cho người mới bắt đầu, giúp bạn từng bước làm quen với Python từ những khái niệm cơ bản nhất.
+                    </p>
+                    <p class="mt-2 text-[14px] leading-[22.75px] text-[#45556C]">
+                      Bạn sẽ học cách viết mã Python, hiểu các cấu trúc dữ liệu, hàm, xử lý lỗi và áp dụng vào các bài tập thực hành để xây dựng nền tảng vững chắc cho hành trình lập trình của mình.
+                    </p>
 
-                <h3 class="mt-6 text-[15px] font-bold">Bạn sẽ học được gì</h3>
-                <div class="mt-3 grid gap-2.5 sm:grid-cols-2">
-                  @for (outcome of outcomes; track outcome) {
-                    <div class="flex gap-2.5 rounded-lg border border-[#E2E8F0] p-3">
-                      <svg lucideCheck class="mt-0.5 h-4 w-4 shrink-0 text-[#16A34A]" aria-hidden="true"></svg>
-                      <span class="text-[13px] leading-5 text-[#45556C]">{{ outcome }}</span>
+                    <div class="mt-5 grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
+                      <div class="flex items-center gap-3">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#DBF0FF] text-[#155DFC]">
+                          <svg lucideChartColumn class="h-5 w-5" aria-hidden="true"></svg>
+                        </span>
+                        <div>
+                          <p class="text-[12px] leading-4 text-[#62748E]">Cấp độ</p>
+                          <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">Cơ bản</p>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#DBF0FF] text-[#155DFC]">
+                          <svg lucideClock class="h-5 w-5" aria-hidden="true"></svg>
+                        </span>
+                        <div>
+                          <p class="text-[12px] leading-4 text-[#62748E]">Thời lượng</p>
+                          <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">8 giờ 45 phút</p>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#DBF0FF] text-[#155DFC]">
+                          <svg lucideVideo class="h-5 w-5" aria-hidden="true"></svg>
+                        </span>
+                        <div>
+                          <p class="text-[12px] leading-4 text-[#62748E]">Hình thức</p>
+                          <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">Học online, mọi lúc mọi nơi</p>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#DBF0FF] text-[#155DFC]">
+                          <svg lucideGlobe class="h-5 w-5" aria-hidden="true"></svg>
+                        </span>
+                        <div>
+                          <p class="text-[12px] leading-4 text-[#62748E]">Ngôn ngữ</p>
+                          <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">Tiếng Việt</p>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#DBF0FF] text-[#155DFC]">
+                          <svg lucideFileText class="h-5 w-5" aria-hidden="true"></svg>
+                        </span>
+                        <div>
+                          <p class="text-[12px] leading-4 text-[#62748E]">Bài giảng</p>
+                          <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">{{ enrollment()?.totalLessons }} bài học</p>
+                        </div>
+                      </div>
                     </div>
-                  }
-                </div>
+                  </section>
 
-                <h3 class="mt-6 text-[15px] font-bold">Yêu cầu</h3>
-                <ul class="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-5 text-[#45556C]">
-                  @for (item of requirements; track item) {
-                    <li>{{ item }}</li>
-                  }
-                </ul>
+                  <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
+                    <h2 class="text-[21.6px] font-bold leading-7 text-[#0F172B]">Bạn sẽ học được gì</h2>
+                    <div class="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
+                      @for (outcome of outcomes; track outcome) {
+                        <div class="flex items-start gap-2.5">
+                          <svg lucideCircleCheck class="mt-0.5 h-5 w-5 shrink-0 text-[#22C55E]" aria-hidden="true"></svg>
+                          <span class="text-[14px] leading-5 text-[#45556C]">{{ outcome }}</span>
+                        </div>
+                      }
+                    </div>
+                  </section>
 
-                <div class="mt-6 flex flex-wrap items-center gap-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
-                  <span class="grid h-12 w-12 place-items-center rounded-full bg-[#E8F1FF] text-[16px] font-bold text-[#155DFC]">
-                    {{ currentCourse.instructor.charAt(0) }}
-                  </span>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-[10px] uppercase tracking-wide text-[#62748E]">Giảng viên</p>
-                    <p class="text-[14px] font-bold">{{ currentCourse.instructor }}</p>
-                    <p class="text-[12px] text-[#62748E]">{{ currentCourse.instructorTitle }}</p>
-                  </div>
-                  <span class="rounded-lg bg-white px-3 py-1.5 text-[11px] font-medium text-[#45556C] ring-1 ring-[#E2E8F0]">
-                    {{ currentCourse.studentCount | number }} học viên
-                  </span>
+                  <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
+                    <h2 class="text-[21.6px] font-bold leading-7 text-[#0F172B]">Yêu cầu</h2>
+                    <ul class="mt-3 list-disc space-y-2 pl-5 text-[14px] leading-[22.75px] text-[#45556C]">
+                      @for (item of requirements; track item) {
+                        <li>{{ item }}</li>
+                      }
+                    </ul>
+                  </section>
                 </div>
               }
 
               @case ('resources') {
+                <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 class="text-[18px] font-bold">Tài liệu khóa học</h2>
-                    <p class="mt-1 text-[12px] text-[#62748E]">Tải xuống các tài liệu, mã nguồn và tài nguyên hỗ trợ trong quá trình học.</p>
+                    <h2 class="text-[21.6px] font-bold leading-7">Tài liệu khóa học</h2>
+                    <p class="mt-1 text-[14px] leading-5 text-[#62748E]">Tải xuống các tài liệu, mã nguồn và tài nguyên hỗ trợ trong quá trình học.</p>
                   </div>
                   <div class="relative w-full sm:w-[280px]">
                     <svg lucideSearch class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#90A1B9]" aria-hidden="true"></svg>
@@ -337,11 +429,13 @@
                     </button>
                   </nav>
                 }
+                </section>
               }
 
               @case ('qa') {
-                <h2 class="text-[18px] font-bold">Hỏi đáp</h2>
-                <p class="mt-1 text-[12px] text-[#62748E]">Đặt câu hỏi và nhận giải đáp từ giảng viên.</p>
+                <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
+                <h2 class="text-[21.6px] font-bold leading-7">Hỏi đáp</h2>
+                <p class="mt-1 text-[14px] leading-5 text-[#62748E]">Đặt câu hỏi và nhận giải đáp từ giảng viên.</p>
 
                 <form class="mt-4 rounded-xl border border-[#C7DBFF] bg-white p-4" (ngSubmit)="submitQuestion()">
                   <h3 class="text-[13px] font-semibold">Đặt câu hỏi mới</h3>
@@ -459,102 +553,111 @@
                     </article>
                   }
                 </div>
+                </section>
               }
 
+              <!-- Figma 3173:10690 - tab "Thảo luận" của cùng trang dashboard khóa học. -->
               @case ('discussion') {
-                <h2 class="text-[18px] font-bold">Thảo luận</h2>
-                <p class="mt-1 text-[12px] text-[#62748E]">Trao đổi, chia sẻ kinh nghiệm cùng giảng viên và học viên khác.</p>
+                <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
+                  <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <h2 class="text-[21.6px] font-bold leading-7 text-[#0F172B]">Thảo luận chung</h2>
+                      <p class="mt-1 text-[16px] leading-6 text-[#62748E]">Tham gia thảo luận cùng tất cả học viên trong khóa học.</p>
+                    </div>
 
-                <div class="mt-4 flex gap-2 rounded-lg border border-[#C7DBFF] bg-[#F0F6FF] p-3">
-                  <svg lucideGlobe class="mt-0.5 h-4 w-4 shrink-0 text-[#155DFC]" aria-hidden="true"></svg>
-                  <p class="text-[12px] leading-5 text-[#35507A]">Mọi học viên trong khóa học đều có thể xem và tham gia thảo luận.</p>
-                </div>
-
-                <form class="mt-4 rounded-xl border border-[#E2E8F0] p-4" (ngSubmit)="submitComment()">
-                  <div class="flex gap-3">
-                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#155DFC] text-[12px] font-bold text-white">B</span>
-                    <textarea
-                      name="comment"
-                      rows="2"
-                      [(ngModel)]="commentDraft"
-                      placeholder="Viết bình luận của bạn..."
-                      class="min-h-[44px] flex-1 resize-none bg-transparent text-[13px] leading-5 outline-none placeholder:text-[#90A1B9]"
-                    ></textarea>
+                    <div class="relative">
+                      <select
+                        [value]="discussionSort"
+                        (change)="discussionSort = $any($event.target).value"
+                        class="h-10 w-[144px] appearance-none rounded-xl border border-[#E0E5EB] bg-white pl-4 pr-9 text-[13px] font-medium text-[#0F172B] outline-none transition focus:border-[#2076FF]"
+                        aria-label="Sắp xếp thảo luận"
+                      >
+                        <option value="newest">Mới nhất</option>
+                        <option value="popular">Nổi bật</option>
+                        <option value="oldest">Cũ nhất</option>
+                      </select>
+                      <svg lucideChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0F172B]" aria-hidden="true"></svg>
+                    </div>
                   </div>
-                  <div class="mt-2 flex items-center justify-between">
-                    <span class="text-[11px] text-[#90A1B9]">{{ commentDraft.length }}/500</span>
-                    <button type="submit" [disabled]="!commentDraft.trim()" class="h-8 rounded-lg bg-[#155DFC] px-3 text-[12px] font-semibold text-white disabled:bg-[#BFD4FF]">
+
+                  <form class="mt-5" (ngSubmit)="submitComment()">
+                    <input
+                      name="comment"
+                      [(ngModel)]="commentDraft"
+                      maxlength="500"
+                      placeholder="Chia sẻ thảo luận của bạn..."
+                      class="h-11 w-full rounded-xl border border-[#E0E5EB] px-4 text-[14px] text-[#0F172B] outline-none transition placeholder:text-[#90A1B9] focus:border-[#2076FF]"
+                    />
+                    <button
+                      type="submit"
+                      [disabled]="!commentDraft.trim()"
+                      class="mt-3 h-10 w-[168px] rounded-xl bg-[#1E64EF] text-[14px] font-semibold text-white transition hover:bg-[#1557D6] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       Đăng thảo luận
                     </button>
-                  </div>
-                </form>
+                  </form>
 
-                <div class="mt-4 space-y-3">
-                  @for (post of discussions(); track post.id) {
-                    <article class="rounded-xl border border-[#E2E8F0] p-4">
-                      <div class="flex items-start gap-3">
-                        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#E8F1FF] text-[12px] font-bold text-[#155DFC]">{{ post.initials }}</span>
-                        <div class="min-w-0 flex-1">
-                          <div class="flex flex-wrap items-center gap-1.5">
-                            <p class="text-[13px] font-semibold">{{ post.author }}</p>
-                            @if (post.role) {
-                              <span class="rounded bg-[#E8F1FF] px-1.5 py-0.5 text-[10px] font-semibold text-[#155DFC]">{{ post.role }}</span>
+                  <div class="mt-6 space-y-3">
+                    @for (post of sortedDiscussions; track post.id) {
+                      <article class="rounded-2xl border border-[#E0E5EB] bg-white p-4">
+                        <div class="flex items-start gap-3">
+                          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F1F5F9] text-[12px] font-bold text-[#45556C]">
+                            {{ post.initials }}
+                          </span>
+
+                          <div class="min-w-0 flex-1">
+                            <p class="text-[14px] font-semibold leading-5 text-[#0F172B]">{{ post.author }}</p>
+                            <p class="text-[12px] leading-4 text-[#90A1B9]">{{ post.createdAt }}</p>
+                            <p class="mt-2 text-[14px] leading-5 text-[#45556C]">{{ post.body }}</p>
+
+                            <div class="mt-3 flex flex-wrap items-center gap-6 text-[13px] text-[#56647A]">
+                              <button type="button" (click)="toggleLike(post)" class="inline-flex items-center gap-1.5 transition hover:text-[#155DFC]">
+                                <svg lucideThumbsUp class="h-4 w-4" aria-hidden="true"></svg>
+                                Thích ({{ post.likes }})
+                              </button>
+                              <button type="button" (click)="startReply(post)" class="inline-flex items-center gap-1.5 transition hover:text-[#155DFC]">
+                                <svg lucideMessageSquare class="h-4 w-4" aria-hidden="true"></svg>
+                                Trả lời ({{ post.replies.length }})
+                              </button>
+                            </div>
+
+                            @if (replyingToId === post.id) {
+                              <form class="mt-3 flex gap-2" (ngSubmit)="submitReply(post)">
+                                <input
+                                  name="reply-{{ post.id }}"
+                                  [(ngModel)]="replyDraft"
+                                  placeholder="Trả lời {{ post.author }}..."
+                                  class="h-9 min-w-0 flex-1 rounded-lg border border-[#E0E5EB] px-3 text-[13px] outline-none focus:border-[#2076FF]"
+                                />
+                                <button type="submit" [disabled]="!replyDraft.trim()" class="grid h-9 w-9 place-items-center rounded-lg bg-[#155DFC] text-white disabled:bg-[#BFD4FF]" aria-label="Gửi trả lời">
+                                  <svg lucideSend class="h-4 w-4" aria-hidden="true"></svg>
+                                </button>
+                              </form>
                             }
                           </div>
-                          <p class="text-[11px] text-[#90A1B9]">{{ post.createdAt }}</p>
-                        </div>
-                      </div>
 
-                      <p class="mt-2 text-[13px] leading-5 text-[#45556C]">{{ post.body }}</p>
-
-                      @for (reply of post.replies; track reply.id) {
-                        <div class="mt-3 border-l-2 border-[#EEF0F3] pl-3">
-                          <p class="text-[12px] font-semibold">{{ reply.author }} <span class="ml-1 text-[10px] font-medium text-[#155DFC]">{{ reply.role }}</span></p>
-                          <p class="mt-1 text-[12px] leading-5 text-[#45556C]">{{ reply.body }}</p>
-                        </div>
-                      }
-
-                      <div class="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[#62748E]">
-                        <button type="button" (click)="toggleLike(post)" class="inline-flex items-center gap-1 hover:text-[#155DFC]">
-                          <svg lucideThumbsUp class="h-3.5 w-3.5" aria-hidden="true"></svg>
-                          Thích ({{ post.likes }})
-                        </button>
-                        <button type="button" (click)="startReply(post)" class="inline-flex items-center gap-1 hover:text-[#155DFC]">
-                          <svg lucideMessageSquare class="h-3.5 w-3.5" aria-hidden="true"></svg>
-                          Trả lời ({{ post.replies.length }})
-                        </button>
-                        <button type="button" (click)="reportPost.set(post)" class="ml-auto inline-flex items-center gap-1 rounded-md border border-[#E2E8F0] px-2 py-1 hover:border-[#FCA5A5] hover:text-[#DC2626]">
-                          <svg lucideFlag class="h-3.5 w-3.5" aria-hidden="true"></svg>
-                          Báo cáo
-                        </button>
-                      </div>
-
-                      @if (replyingToId === post.id) {
-                        <form class="mt-2 flex gap-2" (ngSubmit)="submitReply(post)">
-                          <input
-                            name="reply-{{ post.id }}"
-                            [(ngModel)]="replyDraft"
-                            placeholder="Trả lời {{ post.author }}..."
-                            class="h-9 min-w-0 flex-1 rounded-lg border border-[#E2E8F0] px-3 text-[12px] outline-none focus:border-[#155DFC]"
-                          />
-                          <button type="submit" [disabled]="!replyDraft.trim()" class="grid h-9 w-9 place-items-center rounded-lg bg-[#155DFC] text-white disabled:bg-[#BFD4FF]" aria-label="Gửi trả lời">
-                            <svg lucideSend class="h-4 w-4" aria-hidden="true"></svg>
+                          <button
+                            type="button"
+                            (click)="reportPost.set(post)"
+                            class="inline-flex h-8 shrink-0 items-center rounded-lg border border-[#FCA5A5] px-3 text-[12px] font-medium text-[#EF4444] transition hover:bg-[#FEF2F2]"
+                          >
+                            Báo cáo
                           </button>
-                        </form>
-                      }
-                    </article>
-                  }
-                </div>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                </section>
               }
             }
           </div>
         </div>
 
         <!-- Right aside -->
-        <aside class="space-y-4 xl:sticky xl:top-[100px]">
+        <aside class="space-y-4">
           @if (enrollment(); as stats) {
-            <section class="rounded-xl bg-white p-5 shadow-[0_1px_3px_rgba(15,23,43,0.05)]">
-              <h2 class="text-[14px] font-bold">Tiến độ học tập</h2>
+            <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-5">
+              <h2 class="text-[16px] font-bold">Tiến độ học tập</h2>
 
               <div class="mt-4 flex items-center gap-4">
                 <div class="relative h-[92px] w-[92px] shrink-0">
@@ -607,8 +710,8 @@
             </section>
           }
 
-          <section class="rounded-xl bg-white p-5 shadow-[0_1px_3px_rgba(15,23,43,0.05)]">
-            <h2 class="text-[14px] font-bold">Hành động</h2>
+          <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-5">
+            <h2 class="text-[16px] font-bold">Hành động</h2>
             <div class="mt-3 space-y-2.5">
               <button type="button" (click)="continueLearning()" class="flex w-full items-center gap-3 rounded-xl bg-[#155DFC] p-3 text-left text-white transition hover:bg-[#0F4CD1]">
                 <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/20">
@@ -620,7 +723,7 @@
                 </span>
               </button>
 
-              <button type="button" (click)="openReviews()" class="flex w-full items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white p-3 text-left transition hover:border-[#BFD4FF] hover:bg-[#F8FAFF]">
+              <button type="button" (click)="goToReviewForm()" class="flex w-full items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white p-3 text-left transition hover:border-[#BFD4FF] hover:bg-[#F8FAFF]">
                 <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E8F1FF] text-[#155DFC]">
                   <svg lucideStar class="h-4 w-4" aria-hidden="true"></svg>
                 </span>
