@@ -1,0 +1,667 @@
+<div class="min-h-screen bg-[#F9F9FF] text-[#0F172B]">
+  <div class="mx-auto w-full max-w-[1750px] px-5 py-6 xl:px-8 2xl:px-12 2xl:py-10">
+    <nav class="flex flex-wrap items-center gap-1.5 text-[12px] text-[#62748E]" aria-label="Breadcrumb">
+      <a routerLink="/main/home" class="transition hover:text-[#155DFC]">Trang chủ</a>
+      <span aria-hidden="true">›</span>
+      <a routerLink="/main/my-courses" class="transition hover:text-[#155DFC]">Khóa học của tôi</a>
+      <span aria-hidden="true">›</span>
+      <span class="text-[#45556C]">{{ course()?.title }}</span>
+    </nav>
+
+    @if (status() === 'loading') {
+      <div class="grid min-h-[50vh] place-items-center text-[14px] text-[#62748E]">Đang tải khóa học...</div>
+    } @else if (status() === 'error' || !course()) {
+      <div class="grid min-h-[50vh] place-items-center">
+        <div class="text-center">
+          <p class="text-[15px] font-semibold">Không thể tải khóa học</p>
+          <a routerLink="/main/my-courses" class="mt-3 inline-flex h-10 items-center rounded-lg bg-[#155DFC] px-4 text-[13px] font-semibold text-white">
+            Về khóa học của tôi
+          </a>
+        </div>
+      </div>
+    } @else if (course(); as currentCourse) {
+      <div class="mt-3 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="min-w-0">
+          <!-- Hero -->
+          <div class="flex flex-col gap-5 lg:flex-row">
+            <div class="relative h-[164px] w-full shrink-0 overflow-hidden rounded-xl bg-[linear-gradient(163deg,#041348_0%,#01052c_100%)] lg:w-[240px]">
+              <div class="absolute inset-0 overflow-hidden p-3 font-mono text-[7px] leading-[10px] text-[#93C5FD]/25">
+                import sys<br />from typing import<br />def main():<br />&nbsp;&nbsp;print("ThinkUp")<br />&nbsp;&nbsp;for i in range(10):<br />&nbsp;&nbsp;&nbsp;&nbsp;print(i)<br />if __name__ == "__main__":<br />&nbsp;&nbsp;main()<br />class Course:<br />&nbsp;&nbsp;def __init__(self):<br />&nbsp;&nbsp;&nbsp;&nbsp;pass
+              </div>
+              <span class="absolute right-4 top-4 grid h-16 w-16 rotate-6 place-items-center rounded-2xl border border-[#FACC15]/40 bg-[#FACC15]/10 text-[26px] font-black text-[#FACC15]">PY</span>
+              <button type="button" (click)="openPreview()" class="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-md bg-black/40 px-2.5 text-[11px] font-medium text-white backdrop-blur transition hover:bg-black/60">
+                <span class="grid h-4 w-4 place-items-center rounded-full bg-white text-[#061543]">
+                  <svg lucidePlay class="ml-px h-2.5 w-2.5 fill-[#061543]" aria-hidden="true"></svg>
+                </span>
+                Xem giới thiệu
+              </button>
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <h1 class="text-[26px] font-bold leading-9 text-[#0F172B] 2xl:text-[28px]">{{ currentCourse.title }}</h1>
+              <p class="mt-1.5 max-w-[900px] text-[13px] leading-5 text-[#62748E]">
+                {{ currentCourse.description }}
+              </p>
+
+              <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="grid h-9 w-9 place-items-center rounded-full bg-[#E8F1FF] text-[12px] font-bold text-[#155DFC]">
+                    {{ currentCourse.instructor.charAt(0) }}
+                  </span>
+                  <div>
+                    <p class="text-[10px] text-[#62748E]">Giảng viên</p>
+                    <p class="text-[13px] font-semibold text-[#0F172B]">{{ currentCourse.instructor }}</p>
+                    <p class="text-[10px] text-[#90A1B9]">{{ currentCourse.instructorTitle }}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-[13px] font-bold">{{ currentCourse.rating }}</span>
+                    @for (star of [1, 2, 3, 4, 5]; track star) {
+                      <svg lucideStar class="h-3.5 w-3.5" [class]="star <= 4 ? 'fill-[#F59E0B] text-[#F59E0B]' : 'fill-[#E2E8F0] text-[#E2E8F0]'" aria-hidden="true"></svg>
+                    }
+                  </div>
+                  <p class="mt-0.5 text-[10px] text-[#90A1B9]">({{ currentCourse.ratingCount | number }} đánh giá)</p>
+                </div>
+
+                <div class="flex items-center gap-1.5 text-[13px] font-semibold">
+                  <svg lucideUsers class="h-4 w-4 text-[#62748E]" aria-hidden="true"></svg>
+                  {{ currentCourse.studentCount | number }}
+                  <span class="text-[11px] font-normal text-[#90A1B9]">Học viên</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <nav class="mt-6 flex gap-6 overflow-x-auto border-b border-[#E2E8F0]" role="tablist" aria-label="Nội dung khóa học">
+            @for (tab of tabs; track tab.id) {
+              <button
+                type="button"
+                role="tab"
+                (click)="selectTab(tab.id)"
+                class="-mb-px shrink-0 border-b-2 pb-3 text-[13px] font-medium transition"
+                [class]="activeTab() === tab.id ? 'border-[#155DFC] text-[#155DFC]' : 'border-transparent text-[#62748E] hover:text-[#0F172B]'"
+                [attr.aria-selected]="activeTab() === tab.id"
+              >
+                {{ tab.label }}
+              </button>
+            }
+          </nav>
+
+          <!-- Tab content -->
+          <div class="mt-4 rounded-xl bg-white p-5 shadow-[0_1px_3px_rgba(15,23,43,0.05)] 2xl:p-6">
+            @switch (activeTab()) {
+              @case ('content') {
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 class="text-[18px] font-bold">Nội dung khóa học</h2>
+                    <p class="mt-1 text-[12px] text-[#62748E]">
+                      {{ currentCourse.chapters.length }} chương · {{ enrollment()?.totalLessons }} bài học
+                    </p>
+                  </div>
+                  <span class="rounded-lg bg-[#EEF6FF] px-3 py-1.5 text-[12px] font-semibold text-[#155DFC]">
+                    Hoàn thành {{ enrollment()?.completed }}/{{ enrollment()?.totalLessons }} bài
+                  </span>
+                </div>
+
+                <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#EEF2F7]">
+                  <div class="h-full rounded-full bg-[#155DFC]" [style.width.%]="enrollment()?.percent ?? 0"></div>
+                </div>
+
+                <div class="mt-4 divide-y divide-[#F1F5F9] border-t border-[#F1F5F9]">
+                  @for (chapter of currentCourse.chapters; track chapter.id) {
+                    <section>
+                      <button type="button" (click)="toggleChapter(chapter.id)" class="flex w-full items-center justify-between gap-3 py-3 text-left">
+                        <span class="flex min-w-0 items-center gap-2">
+                          <svg
+                            lucideChevronDown
+                            class="h-4 w-4 shrink-0 text-[#62748E] transition-transform"
+                            [class.-rotate-90]="!isChapterExpanded(chapter.id)"
+                            aria-hidden="true"
+                          ></svg>
+                          <span class="truncate text-[14px] font-semibold text-[#0F172B]">{{ chapter.title }}</span>
+                        </span>
+                        <span class="shrink-0 text-[11px] text-[#90A1B9]">{{ chapter.lessons.length }} bài học</span>
+                      </button>
+
+                      @if (isChapterExpanded(chapter.id)) {
+                        <div class="pb-2">
+                          @for (lesson of chapter.lessons; track lesson.id) {
+                            <button
+                              type="button"
+                              (click)="openLesson(lesson.id)"
+                              class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-[#F6F9FF]"
+                            >
+                              <span class="grid h-4 w-4 shrink-0 place-items-center">
+                                @if (lesson.completed) {
+                                  <svg lucideCheck class="h-4 w-4 text-[#16A34A]" aria-hidden="true"></svg>
+                                } @else if (lesson.status === 'failed') {
+                                  <svg lucideCircleAlert class="h-4 w-4 text-[#F59E0B]" aria-hidden="true"></svg>
+                                } @else {
+                                  <span class="h-3.5 w-3.5 rounded-full border border-[#CBD5E1]"></span>
+                                }
+                              </span>
+                              <span class="text-[#62748E]">
+                                @if (lesson.type === 'video') {
+                                  <svg lucideCirclePlay class="h-4 w-4" aria-hidden="true"></svg>
+                                } @else {
+                                  <svg lucideFileText class="h-4 w-4" aria-hidden="true"></svg>
+                                }
+                              </span>
+                              <span class="min-w-0 flex-1 truncate text-[13px] text-[#45556C]">{{ lesson.title }}</span>
+                              <span class="shrink-0 rounded bg-[#F1F5F9] px-1.5 py-0.5 text-[10px] font-medium text-[#62748E]">{{ lessonLabel(lesson.type) }}</span>
+                              <span class="shrink-0 text-[11px] text-[#90A1B9]">{{ lesson.duration }}</span>
+                              <span class="hidden shrink-0 text-[12px] font-semibold text-[#155DFC] sm:block">
+                                {{ lesson.completed ? 'Học lại' : 'Học' }}
+                              </span>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </section>
+                  }
+                </div>
+              }
+
+              @case ('overview') {
+                <h2 class="text-[18px] font-bold">Tổng quan khóa học</h2>
+                <p class="mt-3 max-w-[900px] text-[14px] leading-6 text-[#45556C]">
+                  {{ currentCourse.description }}
+                </p>
+                <p class="mt-2 max-w-[900px] text-[14px] leading-6 text-[#45556C]">
+                  Khóa học được thiết kế theo lộ trình từ cơ bản đến nâng cao, kết hợp video bài giảng, bài đọc, lab thực hành
+                  và bài kiểm tra. Sau mỗi chương, bạn sẽ có cơ hội áp dụng kiến thức vào tình huống thực tế để ghi nhớ lâu hơn.
+                </p>
+
+                <h3 class="mt-6 text-[15px] font-bold">Bạn sẽ học được gì</h3>
+                <div class="mt-3 grid gap-2.5 sm:grid-cols-2">
+                  @for (outcome of outcomes; track outcome) {
+                    <div class="flex gap-2.5 rounded-lg border border-[#E2E8F0] p-3">
+                      <svg lucideCheck class="mt-0.5 h-4 w-4 shrink-0 text-[#16A34A]" aria-hidden="true"></svg>
+                      <span class="text-[13px] leading-5 text-[#45556C]">{{ outcome }}</span>
+                    </div>
+                  }
+                </div>
+
+                <h3 class="mt-6 text-[15px] font-bold">Yêu cầu</h3>
+                <ul class="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-5 text-[#45556C]">
+                  @for (item of requirements; track item) {
+                    <li>{{ item }}</li>
+                  }
+                </ul>
+
+                <div class="mt-6 flex flex-wrap items-center gap-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                  <span class="grid h-12 w-12 place-items-center rounded-full bg-[#E8F1FF] text-[16px] font-bold text-[#155DFC]">
+                    {{ currentCourse.instructor.charAt(0) }}
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[10px] uppercase tracking-wide text-[#62748E]">Giảng viên</p>
+                    <p class="text-[14px] font-bold">{{ currentCourse.instructor }}</p>
+                    <p class="text-[12px] text-[#62748E]">{{ currentCourse.instructorTitle }}</p>
+                  </div>
+                  <span class="rounded-lg bg-white px-3 py-1.5 text-[11px] font-medium text-[#45556C] ring-1 ring-[#E2E8F0]">
+                    {{ currentCourse.studentCount | number }} học viên
+                  </span>
+                </div>
+              }
+
+              @case ('resources') {
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 class="text-[18px] font-bold">Tài liệu khóa học</h2>
+                    <p class="mt-1 text-[12px] text-[#62748E]">Tải xuống các tài liệu, mã nguồn và tài nguyên hỗ trợ trong quá trình học.</p>
+                  </div>
+                  <div class="relative w-full sm:w-[280px]">
+                    <svg lucideSearch class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#90A1B9]" aria-hidden="true"></svg>
+                    <input
+                      type="search"
+                      [value]="documentSearch()"
+                      (input)="setDocumentSearch($any($event.target).value)"
+                      placeholder="Tìm kiếm tài liệu..."
+                      class="h-10 w-full rounded-lg border border-[#E2E8F0] pl-9 pr-3 text-[13px] outline-none transition placeholder:text-[#90A1B9] focus:border-[#155DFC]"
+                      aria-label="Tìm kiếm tài liệu"
+                    />
+                  </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                  @for (filter of documentFilters; track filter.id) {
+                    <button
+                      type="button"
+                      (click)="setDocumentFilter(filter.id)"
+                      class="h-8 rounded-lg px-3 text-[12px] font-medium transition"
+                      [class]="documentFilter() === filter.id ? 'bg-[#E8F1FF] text-[#155DFC]' : 'bg-[#F8FAFC] text-[#62748E] hover:text-[#0F172B]'"
+                    >
+                      {{ filter.label }}
+                    </button>
+                  }
+                </div>
+
+                <div class="mt-4 overflow-x-auto">
+                  <table class="w-full min-w-[640px] text-left">
+                    <thead>
+                      <tr class="border-b border-[#EEF0F3] text-[11px] font-medium text-[#90A1B9]">
+                        <th class="pb-2 pl-2 font-medium">Tên tài liệu</th>
+                        <th class="pb-2 font-medium">Loại</th>
+                        <th class="pb-2 font-medium">Kích thước</th>
+                        <th class="pb-2 font-medium">Cập nhật</th>
+                        <th class="pb-2 pr-2 text-right font-medium">Tải</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (document of pagedDocuments(); track document.id) {
+                        <tr class="border-b border-[#F1F5F9] text-[13px] last:border-0">
+                          <td class="py-3 pl-2">
+                            <div class="flex items-center gap-3">
+                              <span
+                                class="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+                                [class]="
+                                  document.ext === 'pdf'
+                                    ? 'bg-[#FEF2F2] text-[#EF4444]'
+                                    : document.ext === 'zip'
+                                      ? 'bg-[#F0FDF4] text-[#16A34A]'
+                                      : document.ext === 'docx'
+                                        ? 'bg-[#EFF6FF] text-[#2563EB]'
+                                        : 'bg-[#FFFBEB] text-[#D97706]'
+                                "
+                              >
+                                <svg lucideFileText class="h-4 w-4" aria-hidden="true"></svg>
+                              </span>
+                              <div class="min-w-0">
+                                <p class="truncate font-medium text-[#0F172B]">{{ document.name }}</p>
+                                <p class="text-[11px] text-[#90A1B9]">{{ document.subtitle }}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="py-3 text-[12px] text-[#62748E]">{{ document.kind }}</td>
+                          <td class="py-3 text-[12px] text-[#62748E]">{{ document.size }}</td>
+                          <td class="py-3 text-[12px] text-[#62748E]">{{ document.updated }}</td>
+                          <td class="py-3 pr-2 text-right">
+                            <button
+                              type="button"
+                              (click)="downloadDocument(document)"
+                              class="grid h-8 w-8 place-items-center rounded-md text-[#155DFC] transition hover:bg-[#E8F1FF]"
+                              [attr.aria-label]="'Tải ' + document.name"
+                            >
+                              <svg lucideDownload class="h-4 w-4" aria-hidden="true"></svg>
+                            </button>
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5" class="py-8 text-center text-[13px] text-[#62748E]">Không tìm thấy tài liệu phù hợp.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                @if (documentPageCount() > 1) {
+                  <nav class="mt-5 flex items-center justify-center gap-1.5" aria-label="Phân trang tài liệu">
+                    <button
+                      type="button"
+                      (click)="goToDocumentPage(documentPage() - 1)"
+                      [disabled]="documentPage() === 1"
+                      class="grid h-7 w-7 place-items-center rounded-md text-[#62748E] transition hover:bg-[#F1F5F9] disabled:opacity-30"
+                      aria-label="Trang trước"
+                    >
+                      <svg lucideChevronLeft class="h-4 w-4" aria-hidden="true"></svg>
+                    </button>
+
+                    @for (page of pageNumbers(); track $index) {
+                      @if (page === 'ellipsis') {
+                        <span class="grid h-7 w-7 place-items-center text-[12px] text-[#90A1B9]">…</span>
+                      } @else {
+                        <button
+                          type="button"
+                          (click)="goToDocumentPage(page)"
+                          class="grid h-7 w-7 place-items-center rounded-md text-[12px] font-medium transition"
+                          [class]="documentPage() === page ? 'bg-[#E8F1FF] text-[#155DFC]' : 'text-[#45556C] hover:bg-[#F1F5F9]'"
+                          [attr.aria-current]="documentPage() === page ? 'page' : null"
+                        >
+                          {{ page }}
+                        </button>
+                      }
+                    }
+
+                    <button
+                      type="button"
+                      (click)="goToDocumentPage(documentPage() + 1)"
+                      [disabled]="documentPage() === documentPageCount()"
+                      class="grid h-7 w-7 place-items-center rounded-md text-[#62748E] transition hover:bg-[#F1F5F9] disabled:opacity-30"
+                      aria-label="Trang sau"
+                    >
+                      <svg lucideChevronRight class="h-4 w-4" aria-hidden="true"></svg>
+                    </button>
+                  </nav>
+                }
+              }
+
+              @case ('qa') {
+                <h2 class="text-[18px] font-bold">Hỏi đáp</h2>
+                <p class="mt-1 text-[12px] text-[#62748E]">Đặt câu hỏi và nhận giải đáp từ giảng viên.</p>
+
+                <form class="mt-4 rounded-xl border border-[#C7DBFF] bg-white p-4" (ngSubmit)="submitQuestion()">
+                  <h3 class="text-[13px] font-semibold">Đặt câu hỏi mới</h3>
+                  <p class="mt-0.5 text-[11px] text-[#62748E]">Mô tả rõ vấn đề, giảng viên có thể hỗ trợ bạn tốt hơn.</p>
+                  <select
+                    name="lesson"
+                    [(ngModel)]="selectedLessonId"
+                    class="mt-3 h-10 w-full rounded-lg border border-[#E2E8F0] px-3 text-[12px] text-[#45556C] outline-none focus:border-[#155DFC]"
+                    aria-label="Chọn bài học liên quan"
+                  >
+                    @for (chapter of currentCourse.chapters; track chapter.id) {
+                      <optgroup [label]="chapter.title">
+                        @for (lesson of chapter.lessons; track lesson.id) {
+                          <option [value]="lesson.id">{{ lesson.title }}</option>
+                        }
+                      </optgroup>
+                    }
+                  </select>
+                  <textarea
+                    name="question"
+                    rows="3"
+                    [(ngModel)]="questionDraft"
+                    placeholder="Nhập câu hỏi của bạn..."
+                    class="mt-3 w-full resize-none rounded-lg border border-[#E2E8F0] px-3 py-2.5 text-[13px] outline-none transition placeholder:text-[#90A1B9] focus:border-[#155DFC]"
+                  ></textarea>
+                  <button type="submit" [disabled]="!questionDraft.trim()" class="mt-3 h-9 rounded-lg bg-[#155DFC] px-4 text-[12px] font-semibold text-white transition hover:bg-[#0F4CD1] disabled:bg-[#BFD4FF]">
+                    Gửi câu hỏi
+                  </button>
+                </form>
+
+                <div class="mt-5 space-y-5">
+                  @for (question of questions(); track question.id) {
+                    <article class="rounded-xl border border-[#EEF0F3] p-4">
+                      <div class="flex items-start gap-3">
+                        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F1F5F9] text-[12px] font-bold text-[#45556C]">{{ question.initials }}</span>
+                        <div class="min-w-0 flex-1">
+                          <p class="text-[10px] text-[#62748E]">{{ question.role }}</p>
+                          <p class="text-[13px] font-semibold">{{ question.author }}</p>
+                        </div>
+                        <span class="text-[11px] text-[#90A1B9]">{{ question.date }}</span>
+                      </div>
+
+                      <p class="mt-2 text-[13px] leading-5 text-[#45556C]">{{ question.body }}</p>
+                      @if (question.author === 'Bạn') {
+                        <button type="button" class="mt-1 text-[11px] font-medium text-[#155DFC] hover:underline">Chỉnh sửa</button>
+                      }
+
+                      @if (question.relatedLessonTitle) {
+                        <div class="mt-2.5 rounded-lg bg-[#F8FAFF] p-3">
+                          <p class="text-[10px] text-[#62748E]">Thông tin bài học liên quan</p>
+                          <div class="mt-1 flex items-center gap-2 text-[12px] font-medium text-[#155DFC]">
+                            <svg lucideCirclePlay class="h-4 w-4" aria-hidden="true"></svg>
+                            {{ question.relatedLessonTitle }}
+                          </div>
+                        </div>
+                      }
+
+                      @if (question.replies.length) {
+                        <p class="mt-4 text-[12px] font-semibold text-[#155DFC]">Trả lời ({{ question.replies.length }})</p>
+                        <div class="mt-2 space-y-3 border-l-2 border-[#EEF0F3] pl-3">
+                          @for (reply of question.replies; track $index) {
+                            <div>
+                              <div class="flex items-start gap-2.5">
+                                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#E8F1FF] text-[11px] font-bold text-[#155DFC]">{{ reply.initials }}</span>
+                                <div class="min-w-0 flex-1">
+                                  <p class="text-[10px] text-[#62748E]">{{ reply.role }}</p>
+                                  <p class="text-[12px] font-semibold">{{ reply.author }}</p>
+                                </div>
+                                <span class="text-[10px] text-[#90A1B9]">{{ reply.date }}</span>
+                              </div>
+                              <p class="mt-1.5 text-[13px] leading-5 text-[#45556C]">{{ reply.body }}</p>
+                              @if (reply.relatedLessonTitle) {
+                                <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-[#F8FAFF] p-2.5">
+                                  <div class="min-w-0">
+                                    <p class="text-[10px] text-[#62748E]">Thông tin bài học liên quan</p>
+                                    <p class="mt-0.5 flex items-center gap-1.5 truncate text-[11px] font-medium text-[#155DFC]">
+                                      <svg lucideCirclePlay class="h-3.5 w-3.5 shrink-0" aria-hidden="true"></svg>
+                                      {{ reply.relatedLessonTitle }}
+                                    </p>
+                                  </div>
+                                  <button type="button" class="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-[#155DFC] px-2 text-[11px] font-medium text-[#155DFC]">
+                                    <svg lucideMessageSquare class="h-3 w-3" aria-hidden="true"></svg>
+                                    Trả lời
+                                  </button>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      <div class="mt-3 flex items-center justify-between">
+                        <button type="button" (click)="startQuestionReply(question)" class="text-[11px] font-medium text-[#62748E] hover:text-[#155DFC]">
+                          {{ replyingQuestionId === question.id ? 'Hủy trả lời' : 'Trả lời câu hỏi' }}
+                        </button>
+                        <button type="button" (click)="startQuestionReply(question)" class="inline-flex h-7 items-center gap-1 rounded-md border border-[#E2E8F0] px-2 text-[11px] text-[#62748E] hover:border-[#155DFC] hover:text-[#155DFC]">
+                          <svg lucideMessageSquare class="h-3 w-3" aria-hidden="true"></svg>
+                          Trả lời
+                        </button>
+                      </div>
+
+                      @if (replyingQuestionId === question.id) {
+                        <form class="mt-2 flex gap-2" (ngSubmit)="submitQuestionReply(question)">
+                          <input
+                            name="question-reply-{{ question.id }}"
+                            [(ngModel)]="questionReplyDraft"
+                            placeholder="Nhập câu trả lời của bạn..."
+                            class="h-9 min-w-0 flex-1 rounded-lg border border-[#E2E8F0] px-3 text-[12px] outline-none focus:border-[#155DFC]"
+                          />
+                          <button type="submit" [disabled]="!questionReplyDraft.trim()" class="grid h-9 w-9 place-items-center rounded-lg bg-[#155DFC] text-white disabled:bg-[#BFD4FF]" aria-label="Gửi trả lời">
+                            <svg lucideSend class="h-4 w-4" aria-hidden="true"></svg>
+                          </button>
+                        </form>
+                      }
+                    </article>
+                  }
+                </div>
+              }
+
+              @case ('discussion') {
+                <h2 class="text-[18px] font-bold">Thảo luận</h2>
+                <p class="mt-1 text-[12px] text-[#62748E]">Trao đổi, chia sẻ kinh nghiệm cùng giảng viên và học viên khác.</p>
+
+                <div class="mt-4 flex gap-2 rounded-lg border border-[#C7DBFF] bg-[#F0F6FF] p-3">
+                  <svg lucideGlobe class="mt-0.5 h-4 w-4 shrink-0 text-[#155DFC]" aria-hidden="true"></svg>
+                  <p class="text-[12px] leading-5 text-[#35507A]">Mọi học viên trong khóa học đều có thể xem và tham gia thảo luận.</p>
+                </div>
+
+                <form class="mt-4 rounded-xl border border-[#E2E8F0] p-4" (ngSubmit)="submitComment()">
+                  <div class="flex gap-3">
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#155DFC] text-[12px] font-bold text-white">B</span>
+                    <textarea
+                      name="comment"
+                      rows="2"
+                      [(ngModel)]="commentDraft"
+                      placeholder="Viết bình luận của bạn..."
+                      class="min-h-[44px] flex-1 resize-none bg-transparent text-[13px] leading-5 outline-none placeholder:text-[#90A1B9]"
+                    ></textarea>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between">
+                    <span class="text-[11px] text-[#90A1B9]">{{ commentDraft.length }}/500</span>
+                    <button type="submit" [disabled]="!commentDraft.trim()" class="h-8 rounded-lg bg-[#155DFC] px-3 text-[12px] font-semibold text-white disabled:bg-[#BFD4FF]">
+                      Đăng thảo luận
+                    </button>
+                  </div>
+                </form>
+
+                <div class="mt-4 space-y-3">
+                  @for (post of discussions(); track post.id) {
+                    <article class="rounded-xl border border-[#E2E8F0] p-4">
+                      <div class="flex items-start gap-3">
+                        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#E8F1FF] text-[12px] font-bold text-[#155DFC]">{{ post.initials }}</span>
+                        <div class="min-w-0 flex-1">
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <p class="text-[13px] font-semibold">{{ post.author }}</p>
+                            @if (post.role) {
+                              <span class="rounded bg-[#E8F1FF] px-1.5 py-0.5 text-[10px] font-semibold text-[#155DFC]">{{ post.role }}</span>
+                            }
+                          </div>
+                          <p class="text-[11px] text-[#90A1B9]">{{ post.createdAt }}</p>
+                        </div>
+                      </div>
+
+                      <p class="mt-2 text-[13px] leading-5 text-[#45556C]">{{ post.body }}</p>
+
+                      @for (reply of post.replies; track reply.id) {
+                        <div class="mt-3 border-l-2 border-[#EEF0F3] pl-3">
+                          <p class="text-[12px] font-semibold">{{ reply.author }} <span class="ml-1 text-[10px] font-medium text-[#155DFC]">{{ reply.role }}</span></p>
+                          <p class="mt-1 text-[12px] leading-5 text-[#45556C]">{{ reply.body }}</p>
+                        </div>
+                      }
+
+                      <div class="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[#62748E]">
+                        <button type="button" (click)="toggleLike(post)" class="inline-flex items-center gap-1 hover:text-[#155DFC]">
+                          <svg lucideThumbsUp class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                          Thích ({{ post.likes }})
+                        </button>
+                        <button type="button" (click)="startReply(post)" class="inline-flex items-center gap-1 hover:text-[#155DFC]">
+                          <svg lucideMessageSquare class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                          Trả lời ({{ post.replies.length }})
+                        </button>
+                        <button type="button" (click)="reportPost.set(post)" class="ml-auto inline-flex items-center gap-1 rounded-md border border-[#E2E8F0] px-2 py-1 hover:border-[#FCA5A5] hover:text-[#DC2626]">
+                          <svg lucideFlag class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                          Báo cáo
+                        </button>
+                      </div>
+
+                      @if (replyingToId === post.id) {
+                        <form class="mt-2 flex gap-2" (ngSubmit)="submitReply(post)">
+                          <input
+                            name="reply-{{ post.id }}"
+                            [(ngModel)]="replyDraft"
+                            placeholder="Trả lời {{ post.author }}..."
+                            class="h-9 min-w-0 flex-1 rounded-lg border border-[#E2E8F0] px-3 text-[12px] outline-none focus:border-[#155DFC]"
+                          />
+                          <button type="submit" [disabled]="!replyDraft.trim()" class="grid h-9 w-9 place-items-center rounded-lg bg-[#155DFC] text-white disabled:bg-[#BFD4FF]" aria-label="Gửi trả lời">
+                            <svg lucideSend class="h-4 w-4" aria-hidden="true"></svg>
+                          </button>
+                        </form>
+                      }
+                    </article>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Right aside -->
+        <aside class="space-y-4 xl:sticky xl:top-[100px]">
+          @if (enrollment(); as stats) {
+            <section class="rounded-xl bg-white p-5 shadow-[0_1px_3px_rgba(15,23,43,0.05)]">
+              <h2 class="text-[14px] font-bold">Tiến độ học tập</h2>
+
+              <div class="mt-4 flex items-center gap-4">
+                <div class="relative h-[92px] w-[92px] shrink-0">
+                  <svg viewBox="0 0 80 80" class="h-full w-full -rotate-90" aria-hidden="true">
+                    <circle cx="40" cy="40" r="32" fill="none" stroke="#EEF2F7" stroke-width="8"></circle>
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="32"
+                      fill="none"
+                      stroke="#155DFC"
+                      stroke-width="8"
+                      stroke-linecap="round"
+                      [attr.stroke-dasharray]="201.06"
+                      [attr.stroke-dashoffset]="dashOffset(stats.percent)"
+                    ></circle>
+                  </svg>
+                  <div class="absolute inset-0 grid place-items-center text-center">
+                    <div>
+                      <p class="text-[16px] font-bold leading-5">{{ stats.percent }}%</p>
+                      <p class="text-[9px] text-[#90A1B9]">Hoàn thành</p>
+                    </div>
+                  </div>
+                </div>
+
+                <dl class="min-w-0 flex-1 space-y-3 text-[12px]">
+                  <div class="flex items-center gap-2">
+                    <svg lucideBookOpen class="h-4 w-4 shrink-0 text-[#155DFC]" aria-hidden="true"></svg>
+                    <div>
+                      <dt class="text-[11px] text-[#62748E]">{{ stats.completed }}/{{ stats.totalLessons }}</dt>
+                      <dd class="font-medium text-[#0F172B]">Bài đã học</dd>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <svg lucideFileText class="h-4 w-4 shrink-0 text-[#155DFC]" aria-hidden="true"></svg>
+                    <div>
+                      <dt class="text-[11px] text-[#62748E]">{{ stats.remaining }}</dt>
+                      <dd class="font-medium text-[#0F172B]">Bài còn lại</dd>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <svg lucideClock class="h-4 w-4 shrink-0 text-[#155DFC]" aria-hidden="true"></svg>
+                    <div>
+                      <dt class="text-[11px] text-[#62748E]">{{ stats.studyTime }}</dt>
+                      <dd class="font-medium text-[#0F172B]">Thời gian học</dd>
+                    </div>
+                  </div>
+                </dl>
+              </div>
+            </section>
+          }
+
+          <section class="rounded-xl bg-white p-5 shadow-[0_1px_3px_rgba(15,23,43,0.05)]">
+            <h2 class="text-[14px] font-bold">Hành động</h2>
+            <div class="mt-3 space-y-2.5">
+              <button type="button" (click)="continueLearning()" class="flex w-full items-center gap-3 rounded-xl bg-[#155DFC] p-3 text-left text-white transition hover:bg-[#0F4CD1]">
+                <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/20">
+                  <svg lucidePlay class="ml-0.5 h-4 w-4 fill-white" aria-hidden="true"></svg>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[13px] font-semibold">Tiếp tục học</span>
+                  <span class="block truncate text-[10px] text-white/75">{{ enrollment()?.nextLessonTitle }}</span>
+                </span>
+              </button>
+
+              <button type="button" (click)="openReviews()" class="flex w-full items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white p-3 text-left transition hover:border-[#BFD4FF] hover:bg-[#F8FAFF]">
+                <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E8F1FF] text-[#155DFC]">
+                  <svg lucideStar class="h-4 w-4" aria-hidden="true"></svg>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[13px] font-semibold text-[#0F172B]">Đánh giá khóa học</span>
+                  <span class="block text-[10px] text-[#62748E]">Chia sẻ cảm nhận của bạn</span>
+                </span>
+              </button>
+
+              <button type="button" disabled class="flex w-full cursor-not-allowed items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white p-3 text-left opacity-60" title="Hoàn thành khóa học để nhận chứng chỉ">
+                <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F1F5F9] text-[#90A1B9]">
+                  <svg lucideAward class="h-4 w-4" aria-hidden="true"></svg>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[13px] font-semibold text-[#62748E]">Xem chứng chỉ</span>
+                  <span class="block text-[10px] text-[#90A1B9]">Học hoàn tất để nhận chứng chỉ</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      @if (reviewOpen() && reviewSummary(); as summary) {
+        <app-review-modal
+          [courseTitle]="currentCourse.title"
+          [summary]="summary"
+          (closed)="reviewOpen.set(false)"
+          (editRequested)="goToReviewForm()"
+        />
+      }
+
+      @if (reportPost(); as post) {
+        <app-report-modal
+          [author]="post.author"
+          [content]="post.body"
+          [reasons]="reasons"
+          (closed)="reportPost.set(null)"
+          (submitted)="submitReport($event)"
+        />
+      }
+    }
+  </div>
+</div>

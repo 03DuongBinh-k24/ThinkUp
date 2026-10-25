@@ -1,0 +1,118 @@
+﻿<div class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-6" role="presentation" (click)="closed.emit()">
+  <section
+    class="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="report-modal-title"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="flex items-start justify-between gap-4 px-6 pb-2 pt-6">
+      <div class="min-w-0">
+        <h2 id="report-modal-title" class="text-[20px] font-bold leading-7 text-[#0F172B]">Báo cáo nội dung</h2>
+        <p class="mt-2 text-[12px] leading-5 text-[#62748E]">
+          Vui lòng chọn lý do bạn muốn báo cáo nội dung này:
+        </p>
+        @if (author) {
+          <p class="mt-1 truncate text-[11px] text-[#90A1B9]">Nội dung của {{ author }}{{ content ? ': ' + content : '' }}</p>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="closed.emit()"
+        class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#62748E] transition hover:bg-[#F1F5F9] hover:text-[#0F172B]"
+        aria-label="Đóng"
+      >
+        <svg lucideX class="h-5 w-5" aria-hidden="true"></svg>
+      </button>
+    </header>
+
+    <div class="px-6 py-3">
+      <div class="space-y-1">
+        @for (reason of reasons; track reason.id) {
+          <label
+            class="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition"
+            [class]="selectedReasonId === reason.id ? 'border-[#BFD4FF] bg-[#F6F9FF]' : 'border-transparent hover:bg-[#F8FAFC]'"
+          >
+            <input
+              type="radio"
+              name="report-reason"
+              class="mt-1 h-4 w-4 shrink-0 accent-[#155DFC]"
+              [value]="reason.id"
+              [checked]="selectedReasonId === reason.id"
+              (change)="selectReason(reason.id)"
+            />
+            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full"
+              [class]="
+                reason.tone === 'danger'
+                  ? 'bg-[#FEE2E2] text-[#DC2626]'
+                  : reason.tone === 'warning'
+                    ? 'bg-[#FEF3C7] text-[#D97706]'
+                    : reason.tone === 'info'
+                      ? 'bg-[#E8F1FF] text-[#155DFC]'
+                      : 'bg-[#F1F5F9] text-[#64748B]'
+              "
+            >
+              @switch (reason.tone) {
+                @case ('danger') {
+                  <svg lucideCircleAlert class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                }
+                @case ('warning') {
+                  <svg lucideShieldAlert class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                }
+                @case ('info') {
+                  <svg lucideInfo class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                }
+                @default {
+                  <svg lucideFlag class="h-3.5 w-3.5" aria-hidden="true"></svg>
+                }
+              }
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[13px] font-semibold text-[#0F172B]">{{ reason.label }}</span>
+              <span class="mt-0.5 block text-[11px] leading-4 text-[#62748E]">{{ reason.description }}</span>
+            </span>
+          </label>
+        }
+      </div>
+
+      <div class="mt-3">
+        <label for="report-detail" class="text-[12px] font-semibold text-[#0F172B]">
+          Mô tả chi tiết <span class="text-[#DC2626]">*</span>
+        </label>
+        <textarea
+          id="report-detail"
+          name="detail"
+          rows="4"
+          maxlength="500"
+          [(ngModel)]="detail"
+          (ngModelChange)="error = ''"
+          placeholder="Vui lòng cung cấp thêm thông tin để chúng tôi có thể xem xét..."
+          class="mt-1.5 w-full resize-none rounded-lg border border-[#E2E8F0] px-3 py-2.5 text-[13px] leading-5 text-[#0F172B] outline-none transition placeholder:text-[#90A1B9] focus:border-[#155DFC]"
+        ></textarea>
+        <p class="mt-1 text-right text-[11px] text-[#90A1B9]">{{ detail.length }}/500</p>
+      </div>
+
+      @if (error) {
+        <p class="mt-1 text-[12px] text-[#DC2626]">{{ error }}</p>
+      }
+    </div>
+
+    <footer class="flex items-center gap-3 px-6 pb-6 pt-2">
+      <button
+        type="button"
+        (click)="closed.emit()"
+        class="h-11 flex-1 rounded-lg border border-[#E2E8F0] bg-white text-[14px] font-semibold text-[#45556C] transition hover:bg-[#F8FAFC]"
+      >
+        Hủy
+      </button>
+      <button
+        type="button"
+        (click)="submit()"
+        [disabled]="submitting"
+        class="h-11 flex-1 rounded-lg bg-[#155DFC] text-[14px] font-semibold text-white transition hover:bg-[#0F4CD1] disabled:cursor-not-allowed disabled:bg-[#BFD4FF]"
+      >
+        Gửi báo cáo
+      </button>
+    </footer>
+  </section>
+</div>
