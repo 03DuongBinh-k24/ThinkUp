@@ -302,6 +302,11 @@
   color: var(--pay-primary);
 }
 
+.cart-action.is-active {
+  border-color: #FECACA;
+  color: #EF4444;
+}
+
 .cart-action:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);

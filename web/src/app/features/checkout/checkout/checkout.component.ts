@@ -183,6 +183,11 @@ export class CheckoutComponent implements OnInit {
 
   voucherCode = signal('');
   voucherError = signal('');
+  readonly voucherErrorText = computed(() => {
+    const message = this.voucherError();
+    if (!message) return '';
+    return /không hợp lệ|hết hạn/i.test(message) ? 'Vui lòng kiểm tra lại và thử mã khác.' : message;
+  });
   voucherLoading = signal(false);
 
   cardNumber = signal('');

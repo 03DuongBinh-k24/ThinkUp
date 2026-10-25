@@ -454,8 +454,9 @@
             @if (voucher(); as appliedVoucher) {
               <div class="voucher-card voucher-card--success checkout-voucher__banner" role="status">
                 <span class="voucher-card__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="m7 12.5 3.2 3.2L17.5 8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.333" />
+                    <path d="m6 8 1.333 1.333L10 6.667" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </span>
                 <span class="checkout-voucher__code">{{ appliedVoucher.code }}</span>
@@ -470,14 +471,14 @@
             @if (voucherError()) {
               <div class="voucher-card voucher-card--error checkout-voucher__banner" role="alert">
                 <span class="voucher-card__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 8.5v4.25M12 16.2v.05" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.333" />
+                    <path d="M8 5.333V8M8 10.667h.007" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" />
                   </svg>
                 </span>
                 <span class="checkout-voucher__copy">
                   <strong>Mã giảm giá không hợp lệ hoặc đã hết hạn.</strong>
-                  <span>{{ voucherError() }} Vui lòng kiểm tra lại và thử mã khác.</span>
+                  <span>{{ voucherErrorText() }}</span>
                 </span>
               </div>
             }
