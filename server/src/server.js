@@ -33,6 +33,7 @@ import { createRoadmapRouter } from './user/roadmap/roadmap.user.js';
 import { createFlashcardRouter } from './user/flashcard/flashcard.user.js';
 import { createPaymentRouter } from './user/payment/payment.router.js';
 import { createCartRouter } from './user/cart/cart.user.js';
+import { createAdminAuthRouter } from './admin/auth/auth.admin.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -456,6 +457,11 @@ const cartRouter = createCartRouter(express, requireAuth, optionalAuth);
 app.use('/api/user/cart', cartRouter);
 app.use('/api/v1/user/cart', cartRouter); // Hỗ trợ tiền tố v1
 app.use('/api/cart', cartRouter); // Alias tương thích trực tiếp
+
+// ─── 5j. Router Quản Trị Viên (Admin Auth & Security): /api/admin/auth ───────
+const adminAuthRouter = createAdminAuthRouter(express);
+app.use('/api/admin/auth', adminAuthRouter);
+app.use('/api/v1/admin/auth', adminAuthRouter); // Hỗ trợ tiền tố v1
 
 // ─── 6. Bộ Xử Lý Lỗi Tập Trung (Tương thích quy tắc bảo mật writing-block) ──
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars

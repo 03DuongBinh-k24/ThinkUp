@@ -374,6 +374,8 @@
 
 /* ---------- Hộp thoại quên mật khẩu (node 4061-18965) ---------- */
 .help-card {
+  box-sizing: border-box;
+  height: 359px; /* Together with the modal border: 361px, matching Figma 4081:17588. */
   padding: 55px 96px 72px;
   text-align: center;
 }
