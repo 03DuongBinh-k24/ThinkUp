@@ -565,10 +565,10 @@ export const MOCK_LESSON_RESOURCES: LearningResource[] = [
 
 export const MOCK_REPORT_REASONS: ReportReason[] = [
   { id: 'irrelevant', label: 'Nội dung không phù hợp', description: 'Nội dung phản cảm, bạo lực, khiêu dâm, hoặc vi phạm thuần phong mỹ tục.', tone: 'danger' },
-  { id: 'spam', label: 'Spam hoặc quảng cáo', description: 'Nội dung quảng cáo, spam, hoặc không liên quan đến khóa học.', tone: 'warning' },
+  { id: 'spam', label: 'Spam hoặc quảng cáo', description: 'Nội dung quảng cáo, spam, hoặc không liên quan đến khóa học.', tone: 'spam' },
   { id: 'misleading', label: 'Thông tin sai lệch', description: 'Nội dung chứa thông tin sai, gây hiểu nhầm hoặc không chính xác.', tone: 'warning' },
-  { id: 'privacy', label: 'Vi phạm bản quyền', description: 'Nội dung sao chép, vi phạm bản quyền tài liệu, hình ảnh hoặc video.', tone: 'info' },
-  { id: 'harassment', label: 'Hành vi quấy rối', description: 'Nội dung có tính chất quấy rối, phân biệt đối xử hoặc công kích cá nhân.', tone: 'info' },
+  { id: 'privacy', label: 'Vi phạm bản quyền', description: 'Nội dung sao chép, vi phạm bản quyền tài liệu, hình ảnh hoặc video.', tone: 'copyright' },
+  { id: 'harassment', label: 'Hành vi quấy rối', description: 'Nội dung có tính chất quấy rối, phân biệt đối xử hoặc công kích cá nhân.', tone: 'harassment' },
   { id: 'other', label: 'Lý do khác', description: 'Các lý do khác không được liệt kê ở trên.', tone: 'neutral' },
 ];
 

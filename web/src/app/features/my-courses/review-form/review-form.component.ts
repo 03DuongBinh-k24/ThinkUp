@@ -5,8 +5,6 @@ import {
   LucideBookOpen,
   LucideCheck,
   LucideCircleAlert,
-  LucideCloudUpload,
-  LucideFileText,
   LucideGlobe,
   LucideInfo,
   LucideLightbulb,
@@ -28,8 +26,6 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
     LucideBookOpen,
     LucideCheck,
     LucideCircleAlert,
-    LucideCloudUpload,
-    LucideFileText,
     LucideGlobe,
     LucideInfo,
     LucideLightbulb,
@@ -52,8 +48,6 @@ export class ReviewFormComponent implements OnDestroy {
   comment = '';
   nps = 9;
   selectedTags = new Set<string>();
-  files: { name: string; size: number; type: string }[] = [];
-  dropActive = false;
   formError = '';
   private forceFailure = false;
 
@@ -125,10 +119,6 @@ export class ReviewFormComponent implements OnDestroy {
       this.formError = 'Vui lòng chọn số sao đánh giá.';
       return;
     }
-    if (this.comment.trim().length < 10) {
-      this.formError = 'Vui lòng chia sẻ cảm nhận ít nhất 10 ký tự.';
-      return;
-    }
     this.formError = '';
     this.submitState.set('submitting');
 
@@ -143,7 +133,11 @@ export class ReviewFormComponent implements OnDestroy {
       .subscribe((result) => {
         if (this.forceFailure || !result.success) {
           this.submitState.set('error');
-          this.errorMessage.set(result.message || 'Đã xảy ra lỗi trong quá trình gửi đánh giá.');
+          this.errorMessage.set(
+            this.forceFailure
+              ? 'Không thể gửi đánh giá. Vui lòng kiểm tra kết nối và thử lại sau.'
+              : result.message || 'Đã xảy ra lỗi trong quá trình gửi đánh giá.'
+          );
         } else {
           this.submitState.set('success');
         }
@@ -162,42 +156,5 @@ export class ReviewFormComponent implements OnDestroy {
   goToDashboard(): void {
     const courseId = this.course()?.id ?? 'python-co-ban';
     void this.router.navigate(['/main/my-courses', courseId]);
-  }
-
-  addFiles(fileList: FileList | null): void {
-    if (!fileList) return;
-    const allowed = ['image/', 'video/', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument'];
-    for (const file of Array.from(fileList)) {
-      if (file.size > 50 * 1024 * 1024) {
-        this.formError = `Tệp ${file.name} vượt quá 50MB.`;
-        continue;
-      }
-      if (!allowed.some((prefix) => file.type.startsWith(prefix))) {
-        this.formError = `Định dạng tệp ${file.name} không được hỗ trợ.`;
-        continue;
-      }
-      this.files = [...this.files, { name: file.name, size: file.size, type: file.type }];
-    }
-  }
-
-  onFileInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.addFiles(input.files);
-    input.value = '';
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    this.dropActive = false;
-    this.addFiles(event.dataTransfer?.files ?? null);
-  }
-
-  removeFile(index: number): void {
-    this.files = this.files.filter((_, itemIndex) => itemIndex !== index);
-  }
-
-  formatSize(bytes: number): string {
-    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
 }

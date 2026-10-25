@@ -93,7 +93,7 @@ export class LearningService {
   }
 
   submitReview(payload: SubmitReviewPayload): Observable<{ success: boolean; message: string }> {
-    const valid = payload.rating > 0 && payload.comment.trim().length > 0;
+    const valid = payload.rating > 0;
     return of(
       valid
         ? { success: true, message: 'Đánh giá thành công!' }

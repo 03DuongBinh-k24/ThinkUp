@@ -300,135 +300,144 @@
 
               @case ('resources') {
                 <section class="rounded-[20px] border border-[#E0E5EB] bg-white p-6">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 class="text-[21.6px] font-bold leading-7">Tài liệu khóa học</h2>
-                    <p class="mt-1 text-[14px] leading-5 text-[#62748E]">Tải xuống các tài liệu, mã nguồn và tài nguyên hỗ trợ trong quá trình học.</p>
-                  </div>
-                  <div class="relative w-full sm:w-[280px]">
-                    <svg lucideSearch class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#90A1B9]" aria-hidden="true"></svg>
-                    <input
-                      type="search"
-                      [value]="documentSearch()"
-                      (input)="setDocumentSearch($any($event.target).value)"
-                      placeholder="Tìm kiếm tài liệu..."
-                      class="h-10 w-full rounded-lg border border-[#E2E8F0] pl-9 pr-3 text-[13px] outline-none transition placeholder:text-[#90A1B9] focus:border-[#155DFC]"
-                      aria-label="Tìm kiếm tài liệu"
-                    />
-                  </div>
-                </div>
+                  <div class="flex flex-col gap-5">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <h2 class="text-[21.6px] font-bold leading-7 text-[#0F1926]">Tài liệu khóa học</h2>
+                        <p class="mt-1 text-[14px] leading-5 text-[#677383]">Tải xuống các tài liệu, mã nguồn và tài nguyên hỗ trợ trong quá trình học.</p>
+                      </div>
+                      <div class="relative w-full sm:w-[256px]">
+                        <input
+                          type="search"
+                          [value]="documentSearch()"
+                          (input)="setDocumentSearch($any($event.target).value)"
+                          placeholder="Tìm kiếm tài liệu..."
+                          class="h-10 w-full rounded-xl border border-[#E0E5EB] bg-white pl-4 pr-10 text-[14px] text-[#0F1926] outline-none transition placeholder:text-[#677383] focus:border-[#2076FF]"
+                          aria-label="Tìm kiếm tài liệu"
+                        />
+                        <svg lucideSearch class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#677383]" aria-hidden="true"></svg>
+                      </div>
+                    </div>
 
-                <div class="mt-4 flex flex-wrap gap-2">
-                  @for (filter of documentFilters; track filter.id) {
-                    <button
-                      type="button"
-                      (click)="setDocumentFilter(filter.id)"
-                      class="h-8 rounded-lg px-3 text-[12px] font-medium transition"
-                      [class]="documentFilter() === filter.id ? 'bg-[#E8F1FF] text-[#155DFC]' : 'bg-[#F8FAFC] text-[#62748E] hover:text-[#0F172B]'"
-                    >
-                      {{ filter.label }}
-                    </button>
-                  }
-                </div>
-
-                <div class="mt-4 overflow-x-auto">
-                  <table class="w-full min-w-[640px] text-left">
-                    <thead>
-                      <tr class="border-b border-[#EEF0F3] text-[11px] font-medium text-[#90A1B9]">
-                        <th class="pb-2 pl-2 font-medium">Tên tài liệu</th>
-                        <th class="pb-2 font-medium">Loại</th>
-                        <th class="pb-2 font-medium">Kích thước</th>
-                        <th class="pb-2 font-medium">Cập nhật</th>
-                        <th class="pb-2 pr-2 text-right font-medium">Tải</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (document of pagedDocuments(); track document.id) {
-                        <tr class="border-b border-[#F1F5F9] text-[13px] last:border-0">
-                          <td class="py-3 pl-2">
-                            <div class="flex items-center gap-3">
-                              <span
-                                class="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
-                                [class]="
-                                  document.ext === 'pdf'
-                                    ? 'bg-[#FEF2F2] text-[#EF4444]'
-                                    : document.ext === 'zip'
-                                      ? 'bg-[#F0FDF4] text-[#16A34A]'
-                                      : document.ext === 'docx'
-                                        ? 'bg-[#EFF6FF] text-[#2563EB]'
-                                        : 'bg-[#FFFBEB] text-[#D97706]'
-                                "
-                              >
-                                <svg lucideFileText class="h-4 w-4" aria-hidden="true"></svg>
-                              </span>
-                              <div class="min-w-0">
-                                <p class="truncate font-medium text-[#0F172B]">{{ document.name }}</p>
-                                <p class="text-[11px] text-[#90A1B9]">{{ document.subtitle }}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td class="py-3 text-[12px] text-[#62748E]">{{ document.kind }}</td>
-                          <td class="py-3 text-[12px] text-[#62748E]">{{ document.size }}</td>
-                          <td class="py-3 text-[12px] text-[#62748E]">{{ document.updated }}</td>
-                          <td class="py-3 pr-2 text-right">
-                            <button
-                              type="button"
-                              (click)="downloadDocument(document)"
-                              class="grid h-8 w-8 place-items-center rounded-md text-[#155DFC] transition hover:bg-[#E8F1FF]"
-                              [attr.aria-label]="'Tải ' + document.name"
-                            >
-                              <svg lucideDownload class="h-4 w-4" aria-hidden="true"></svg>
-                            </button>
-                          </td>
-                        </tr>
-                      } @empty {
-                        <tr>
-                          <td colspan="5" class="py-8 text-center text-[13px] text-[#62748E]">Không tìm thấy tài liệu phù hợp.</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-
-                @if (documentPageCount() > 1) {
-                  <nav class="mt-5 flex items-center justify-center gap-1.5" aria-label="Phân trang tài liệu">
-                    <button
-                      type="button"
-                      (click)="goToDocumentPage(documentPage() - 1)"
-                      [disabled]="documentPage() === 1"
-                      class="grid h-7 w-7 place-items-center rounded-md text-[#62748E] transition hover:bg-[#F1F5F9] disabled:opacity-30"
-                      aria-label="Trang trước"
-                    >
-                      <svg lucideChevronLeft class="h-4 w-4" aria-hidden="true"></svg>
-                    </button>
-
-                    @for (page of pageNumbers(); track $index) {
-                      @if (page === 'ellipsis') {
-                        <span class="grid h-7 w-7 place-items-center text-[12px] text-[#90A1B9]">…</span>
-                      } @else {
+                    <div class="flex flex-wrap items-center gap-2">
+                      @for (filter of documentFilters; track filter.id) {
                         <button
                           type="button"
-                          (click)="goToDocumentPage(page)"
-                          class="grid h-7 w-7 place-items-center rounded-md text-[12px] font-medium transition"
-                          [class]="documentPage() === page ? 'bg-[#E8F1FF] text-[#155DFC]' : 'text-[#45556C] hover:bg-[#F1F5F9]'"
-                          [attr.aria-current]="documentPage() === page ? 'page' : null"
+                          (click)="setDocumentFilter(filter.id)"
+                          class="inline-flex h-9 items-center rounded-xl px-4 text-[14px] font-medium transition"
+                          [class]="documentFilter() === filter.id ? 'bg-[#E2F0FF] text-[#144BB7]' : 'text-[#677383] hover:bg-[#F6F9FC] hover:text-[#0F1926]'"
                         >
-                          {{ page }}
+                          {{ filter.label }}
                         </button>
                       }
-                    }
+                    </div>
 
-                    <button
-                      type="button"
-                      (click)="goToDocumentPage(documentPage() + 1)"
-                      [disabled]="documentPage() === documentPageCount()"
-                      class="grid h-7 w-7 place-items-center rounded-md text-[#62748E] transition hover:bg-[#F1F5F9] disabled:opacity-30"
-                      aria-label="Trang sau"
-                    >
-                      <svg lucideChevronRight class="h-4 w-4" aria-hidden="true"></svg>
-                    </button>
-                  </nav>
-                }
+                    <div class="overflow-x-auto">
+                      <table class="w-full min-w-[760px] table-fixed text-left">
+                        <colgroup>
+                          <col />
+                          <col class="w-[170px]" />
+                          <col class="w-[150px]" />
+                          <col class="w-[160px]" />
+                          <col class="w-[52px]" />
+                        </colgroup>
+                        <thead>
+                          <tr class="border-b border-[#E0E5EB] text-[14px] font-medium text-[#677383]">
+                            <th class="pb-[13px] font-medium">Tên tài liệu</th>
+                            <th class="pb-[13px] font-medium">Loại</th>
+                            <th class="pb-[13px] font-medium">Kích thước</th>
+                            <th class="pb-[13px] font-medium">Cập nhật</th>
+                            <th class="pb-[13px] text-right font-medium"><span class="sr-only">Tải</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (document of pagedDocuments(); track document.id) {
+                            <tr class="border-b border-[#E0E5EB]/70 last:border-0">
+                              <td class="py-[26px] pr-4">
+                                <div class="flex items-center gap-3">
+                                  <span
+                                    class="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                                    [class]="
+                                      document.ext === 'pdf'
+                                        ? 'bg-[#FEF2F2] text-[#EF4444]'
+                                        : document.ext === 'zip'
+                                          ? 'bg-[#F0FDF4] text-[#16A34A]'
+                                          : document.ext === 'docx'
+                                            ? 'bg-[#EFF6FF] text-[#2563EB]'
+                                            : 'bg-[#FFFBEB] text-[#D97706]'
+                                    "
+                                  >
+                                    <svg lucideFileText class="h-5 w-5" aria-hidden="true"></svg>
+                                  </span>
+                                  <div class="min-w-0">
+                                    <p class="truncate text-[14px] font-semibold leading-5 text-[#0F1926]">{{ document.name }}</p>
+                                    <p class="mt-0.5 truncate text-[12px] leading-4 text-[#677383]">{{ document.subtitle }}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td class="py-[26px] text-[14px] leading-5 text-[#677383]">{{ document.kind }}</td>
+                              <td class="py-[26px] text-[14px] leading-5 text-[#677383]">{{ document.size }}</td>
+                              <td class="py-[26px] text-[14px] leading-5 text-[#677383]">{{ document.updated }}</td>
+                              <td class="py-[26px] text-right">
+                                <button
+                                  type="button"
+                                  (click)="downloadDocument(document)"
+                                  class="ml-auto grid h-9 w-9 place-items-center rounded-xl text-[#0F1926] transition hover:bg-[#F6F9FC]"
+                                  [attr.aria-label]="'Tải ' + document.name"
+                                >
+                                  <svg lucideDownload class="h-5 w-5" aria-hidden="true"></svg>
+                                </button>
+                              </td>
+                            </tr>
+                          } @empty {
+                            <tr>
+                              <td colspan="5" class="py-10 text-center text-[14px] text-[#677383]">Không tìm thấy tài liệu phù hợp.</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                    @if (documentPageCount() > 1) {
+                      <nav class="flex items-center justify-center gap-2 pt-1" aria-label="Phân trang tài liệu">
+                        <button
+                          type="button"
+                          (click)="goToDocumentPage(documentPage() - 1)"
+                          [disabled]="documentPage() === 1"
+                          class="grid h-9 w-9 place-items-center rounded-xl text-[#677383] transition hover:bg-[#F6F9FC] disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Trang trước"
+                        >
+                          <svg lucideChevronLeft class="h-4 w-4" aria-hidden="true"></svg>
+                        </button>
+
+                        @for (page of pageNumbers(); track $index) {
+                          @if (page === 'ellipsis') {
+                            <span class="grid h-9 w-9 place-items-center text-[14px] text-[#677383]">…</span>
+                          } @else {
+                            <button
+                              type="button"
+                              (click)="goToDocumentPage(page)"
+                              class="grid h-9 min-w-9 place-items-center rounded-xl px-3 text-[14px] font-medium transition"
+                              [class]="documentPage() === page ? 'bg-[#E2F0FF] text-[#144BB7]' : 'text-[#677383] hover:bg-[#F6F9FC]'"
+                              [attr.aria-current]="documentPage() === page ? 'page' : null"
+                            >
+                              {{ page }}
+                            </button>
+                          }
+                        }
+
+                        <button
+                          type="button"
+                          (click)="goToDocumentPage(documentPage() + 1)"
+                          [disabled]="documentPage() === documentPageCount()"
+                          class="grid h-9 w-9 place-items-center rounded-xl text-[#677383] transition hover:bg-[#F6F9FC] disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Trang sau"
+                        >
+                          <svg lucideChevronRight class="h-4 w-4" aria-hidden="true"></svg>
+                        </button>
+                      </nav>
+                    }
+                  </div>
                 </section>
               }
 
@@ -611,8 +620,25 @@
                             <p class="mt-2 text-[14px] leading-5 text-[#45556C]">{{ post.body }}</p>
 
                             <div class="mt-3 flex flex-wrap items-center gap-6 text-[13px] text-[#56647A]">
-                              <button type="button" (click)="toggleLike(post)" class="inline-flex items-center gap-1.5 transition hover:text-[#155DFC]">
-                                <svg lucideThumbsUp class="h-4 w-4" aria-hidden="true"></svg>
+                              <button
+                                type="button"
+                                (click)="toggleLike(post)"
+                                class="-ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors duration-200"
+                                [class]="
+                                  post.liked
+                                    ? 'bg-[#EAF2FF] font-semibold text-[#0B73FF]'
+                                    : 'text-[#56647A] hover:bg-[#F4F7FB] hover:text-[#0B73FF]'
+                                "
+                                [attr.aria-pressed]="post.liked"
+                                [attr.title]="post.liked ? 'Bỏ thích nội dung này' : 'Thích nội dung này'"
+                              >
+                                <svg
+                                  lucideThumbsUp
+                                  class="h-4 w-4 transition-transform duration-200"
+                                  [class.fill-current]="post.liked"
+                                  [class.like-pop]="post.liked"
+                                  aria-hidden="true"
+                                ></svg>
                                 Thích ({{ post.likes }})
                               </button>
                               <button type="button" (click)="startReply(post)" class="inline-flex items-center gap-1.5 transition hover:text-[#155DFC]">

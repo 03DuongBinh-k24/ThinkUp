@@ -153,7 +153,7 @@ export interface ReportReason {
   id: string;
   label: string;
   description: string;
-  tone: 'danger' | 'warning' | 'info' | 'neutral';
+  tone: 'danger' | 'spam' | 'warning' | 'copyright' | 'harassment' | 'neutral';
 }
 
 export interface LessonInfoContent {

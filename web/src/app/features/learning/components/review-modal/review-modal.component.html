@@ -94,8 +94,25 @@
                   Chỉnh sửa
                 </button>
               } @else {
-                <button type="button" (click)="toggleLike(review)" class="inline-flex items-center gap-1.5 transition hover:text-[#155DFC]">
-                  <svg lucideThumbsUp class="h-3.5 w-3.5" [class.text-[#155DFC]]="isLiked(review)" aria-hidden="true"></svg>
+                <button
+                  type="button"
+                  (click)="toggleLike(review)"
+                  class="-ml-1.5 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors duration-200"
+                  [class]="
+                    isLiked(review)
+                      ? 'bg-[#EAF2FF] font-semibold text-[#0B73FF]'
+                      : 'text-[#62748E] hover:bg-[#F4F7FB] hover:text-[#0B73FF]'
+                  "
+                  [attr.aria-pressed]="isLiked(review)"
+                  [attr.title]="isLiked(review) ? 'Bỏ đánh dấu hữu ích' : 'Đánh dấu đánh giá này hữu ích'"
+                >
+                  <svg
+                    lucideThumbsUp
+                    class="h-3.5 w-3.5 transition-transform duration-200"
+                    [class.fill-current]="isLiked(review)"
+                    [class.like-pop]="isLiked(review)"
+                    aria-hidden="true"
+                  ></svg>
                   Hữu ích ({{ review.helpful + (isLiked(review) ? 1 : 0) }})
                 </button>
                 <span></span>

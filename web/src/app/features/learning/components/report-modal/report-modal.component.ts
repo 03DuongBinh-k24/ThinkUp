@@ -2,9 +2,11 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   LucideCircleAlert,
-  LucideFlag,
-  LucideInfo,
-  LucideShieldAlert,
+  LucideCopyright,
+  LucideEllipsis,
+  LucideMail,
+  LucideTriangleAlert,
+  LucideUserRound,
   LucideX,
 } from '@lucide/angular';
 import { ReportReason } from '../../models/learning.model';
@@ -15,9 +17,11 @@ import { ReportReason } from '../../models/learning.model';
   imports: [
     FormsModule,
     LucideCircleAlert,
-    LucideFlag,
-    LucideInfo,
-    LucideShieldAlert,
+    LucideCopyright,
+    LucideEllipsis,
+    LucideMail,
+    LucideTriangleAlert,
+    LucideUserRound,
     LucideX,
   ],
   templateUrl: './report-modal.component.html',

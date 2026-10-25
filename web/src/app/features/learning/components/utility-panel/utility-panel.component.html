@@ -204,8 +204,21 @@
                 }
 
                 <div class="mt-2.5 flex flex-wrap items-center gap-3 text-[11px] text-[#62748E]">
-                  <button type="button" (click)="toggleLike(post)" class="inline-flex items-center gap-1 transition hover:text-[#155DFC]">
-                    <svg lucideThumbsUp class="h-3.5 w-3.5" [class.text-[#155DFC]]="post.liked" aria-hidden="true"></svg>
+                  <button
+                    type="button"
+                    (click)="toggleLike(post)"
+                    class="-ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors duration-200"
+                    [class]="post.liked ? 'bg-[#EAF2FF] font-semibold text-[#0B73FF]' : 'text-[#62748E] hover:bg-[#F4F7FB] hover:text-[#0B73FF]'"
+                    [attr.aria-pressed]="post.liked"
+                    [attr.title]="post.liked ? 'Bỏ thích nội dung này' : 'Thích nội dung này'"
+                  >
+                    <svg
+                      lucideThumbsUp
+                      class="h-3.5 w-3.5 transition-transform duration-200"
+                      [class.fill-current]="post.liked"
+                      [class.like-pop]="post.liked"
+                      aria-hidden="true"
+                    ></svg>
                     Thích ({{ post.likes }})
                   </button>
                   <button type="button" (click)="startReply(post)" class="inline-flex items-center gap-1 transition hover:text-[#155DFC]">
