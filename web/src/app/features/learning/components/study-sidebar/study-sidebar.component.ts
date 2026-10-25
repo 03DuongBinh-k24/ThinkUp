@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import {
-  LucideBookOpen,
   LucideCheck,
   LucideChevronDown,
   LucideCircle,
@@ -9,18 +8,14 @@ import {
   LucideCircleQuestionMark,
   LucideCode2,
   LucideFileText,
-  LucideFlaskConical,
-  LucideNotebookText,
-  LucidePanelLeftClose,
-  LucidePanelLeftOpen,
+  LucidePanelLeft,
 } from '@lucide/angular';
-import { LearningChapter, LearningCourse, LearningLesson, UtilityTab } from '../../models/learning.model';
+import { LearningChapter, LearningCourse, LearningLesson } from '../../models/learning.model';
 
 @Component({
   selector: 'app-study-sidebar',
   standalone: true,
   imports: [
-    LucideBookOpen,
     LucideCheck,
     LucideChevronDown,
     LucideCircle,
@@ -29,23 +24,19 @@ import { LearningChapter, LearningCourse, LearningLesson, UtilityTab } from '../
     LucideCircleQuestionMark,
     LucideCode2,
     LucideFileText,
-    LucideFlaskConical,
-    LucideNotebookText,
-    LucidePanelLeftClose,
-    LucidePanelLeftOpen,
+    LucidePanelLeft,
   ],
   templateUrl: './study-sidebar.component.html',
 })
 export class StudySidebarComponent {
   @Input({ required: true }) course!: LearningCourse;
   @Input() activeLessonId = '';
-  @Input() open = true;
+  @Input() open = false;
   @Input() openChapterIds: string[] = [];
 
   @Output() toggle = new EventEmitter<void>();
   @Output() lessonSelected = new EventEmitter<LearningLesson>();
   @Output() chapterToggled = new EventEmitter<string>();
-  @Output() utilityRequested = new EventEmitter<UtilityTab>();
 
   get progress(): number {
     const lessons = this.course.chapters.flatMap((chapter) => chapter.lessons);
@@ -61,12 +52,5 @@ export class StudySidebarComponent {
     if (lesson.completed) return 'done';
     if (lesson.status === 'failed') return 'failed';
     return 'todo';
-  }
-
-  requestLab(): void {
-    const lab = this.course.chapters
-      .flatMap((chapter) => chapter.lessons)
-      .find((lesson) => lesson.type === 'lab');
-    if (lab) this.lessonSelected.emit(lab);
   }
 }

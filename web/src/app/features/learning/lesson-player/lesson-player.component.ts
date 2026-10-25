@@ -1,7 +1,7 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { LucideCheck, LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
+import { LucideChevronLeft, LucideChevronRight, LucideCircleCheck } from '@lucide/angular';
 import {
   MOCK_DISCUSSION_POSTS,
   MOCK_QA_POSTS,
@@ -38,9 +38,9 @@ import { LearningService } from '../services/learning.service';
     StudySidebarComponent,
     UtilityPanelComponent,
     VideoViewComponent,
-    LucideCheck,
     LucideChevronLeft,
     LucideChevronRight,
+    LucideCircleCheck,
   ],
   templateUrl: './lesson-player.component.html',
 })
@@ -52,7 +52,7 @@ export class LessonPlayerComponent implements OnDestroy {
   readonly course = signal<LearningCourse | null>(null);
   readonly status = signal<'loading' | 'ready' | 'error'>('loading');
   readonly activeLessonId = signal('');
-  readonly sidebarOpen = signal(true);
+  readonly sidebarOpen = signal(false);
   readonly openChapterIds = signal<string[]>([]);
   readonly activeTab = signal<UtilityTab>('overview');
   readonly reviewOpen = signal(false);

@@ -12,9 +12,13 @@ import {
 } from '@angular/core';
 import {
   LucideChevronDown,
+  LucideFlaskConical,
+  LucideLayoutGrid,
+  LucideLightbulb,
   LucideMaximize,
   LucidePause,
   LucidePlay,
+  LucideSearch,
   LucideSettings,
   LucideVolume2,
   LucideVolumeX,
@@ -26,9 +30,13 @@ import { LearningLesson } from '../../models/learning.model';
   standalone: true,
   imports: [
     LucideChevronDown,
+    LucideFlaskConical,
+    LucideLayoutGrid,
+    LucideLightbulb,
     LucideMaximize,
     LucidePause,
     LucidePlay,
+    LucideSearch,
     LucideSettings,
     LucideVolume2,
     LucideVolumeX,

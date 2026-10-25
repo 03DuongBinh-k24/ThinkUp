@@ -36,6 +36,7 @@ export interface SubmitReviewPayload {
 @Injectable({ providedIn: 'root' })
 export class LearningService {
   private readonly lessonCompletion = new Map<string, boolean>();
+  private readonly reviewOverrides = new Map<string, { rating: number; comment: string }>();
 
   getCourse(_courseId: string): Observable<LearningCourse> {
     const course = structuredClone(MOCK_LEARNING_COURSE);
@@ -61,7 +62,14 @@ export class LearningService {
   }
 
   getReviews(_courseId: string): Observable<CourseReviewSummary> {
-    return of(structuredClone(MOCK_COURSE_REVIEWS)).pipe(delay(100));
+    const summary = structuredClone(MOCK_COURSE_REVIEWS);
+    const mine = summary.reviews.find((review) => review.mine);
+    const override = mine ? this.reviewOverrides.get(mine.id) : undefined;
+    if (mine && override) {
+      mine.rating = override.rating;
+      mine.comment = override.comment;
+    }
+    return of(summary).pipe(delay(100));
   }
 
   getResources(): LearningResource[] {
@@ -94,11 +102,28 @@ export class LearningService {
 
   submitReview(payload: SubmitReviewPayload): Observable<{ success: boolean; message: string }> {
     const valid = payload.rating > 0;
+    if (valid) {
+      this.reviewOverrides.set('rv-mine', {
+        rating: payload.rating,
+        comment: payload.comment.trim(),
+      });
+    }
     return of(
       valid
         ? { success: true, message: 'Đánh giá thành công!' }
         : { success: false, message: 'Đánh giá thất bại' }
     ).pipe(delay(450));
+  }
+
+  updateMyReview(payload: { rating: number; comment: string }): Observable<{ success: boolean }> {
+    if (payload.rating < 1) {
+      return of({ success: false }).pipe(delay(250));
+    }
+    this.reviewOverrides.set('rv-mine', {
+      rating: payload.rating,
+      comment: payload.comment.trim(),
+    });
+    return of({ success: true }).pipe(delay(250));
   }
 
   submitReport(reasonIds: string[], detail: string): Observable<{ success: boolean }> {
