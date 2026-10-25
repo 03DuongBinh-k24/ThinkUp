@@ -154,6 +154,7 @@ const BANK_FULL_NAMES: Record<string, string> = {
     './checkout.component.css',
     './checkout-controls.css',
     './checkout-summary.css',
+    './checkout-qr.css',
   ],
 })
 export class CheckoutComponent implements OnInit {

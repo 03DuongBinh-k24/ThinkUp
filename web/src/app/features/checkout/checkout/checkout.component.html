@@ -641,6 +641,94 @@
     <div class="pay-modal" role="dialog" aria-modal="true" [attr.aria-label]="pendingTitle()">
       <div class="pay-modal__backdrop" (click)="closePending()"></div>
 
+      @if (pendingKind() === 'qr') {
+        <div class="pay-qr-panel" role="document">
+          <header class="pay-qr-panel__head">
+            <span class="pay-qr-panel__radio" aria-hidden="true"></span>
+            <span class="pay-qr-panel__icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M3.33333 2.5H5.83333C6.29357 2.5 6.66667 2.8731 6.66667 3.33333V5.83333C6.66667 6.29357 6.29357 6.66667 5.83333 6.66667H3.33333C2.8731 6.66667 2.5 6.29357 2.5 5.83333V3.33333C2.5 2.8731 2.8731 2.5 3.33333 2.5Z" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M14.1693 2.5H16.6693C17.1295 2.5 17.5026 2.8731 17.5026 3.33333V5.83333C17.5026 6.29357 17.1295 6.66667 16.6693 6.66667H14.1693C13.709 6.66667 13.3359 6.29357 13.3359 5.83333V3.33333C13.3359 2.8731 13.709 2.5 14.1693 2.5Z" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M3.33333 13.3333H5.83333C6.29357 13.3333 6.66667 13.7063 6.66667 14.1666V16.6666C6.66667 17.1268 6.29357 17.4999 5.83333 17.4999H3.33333C2.8731 17.4999 2.5 17.1268 2.5 16.6666V14.1666C2.5 13.7063 2.8731 13.3333 3.33333 13.3333Z" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M17.5026 13.3333H15.0026C14.5606 13.3333 14.1367 13.5088 13.8241 13.8214C13.5115 14.134 13.3359 14.5579 13.3359 14.9999V17.4999" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M17.5 17.5V17.5083" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M10.0026 5.83325V8.33325C10.0026 8.77528 9.82701 9.1992 9.51445 9.51176C9.20189 9.82432 8.77796 9.99992 8.33594 9.99992H5.83594" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M2.5 10H2.50833" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M10 2.5H10.0083" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M10 13.3333V13.3416" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M13.3359 10H14.1693" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M17.5 10V10.0083" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M10 17.5001V16.6667" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <div class="pay-qr-panel__heading">
+              <strong>QR Code (VNPAY-QR)</strong>
+              <span>Quét mã QR để thanh toán nhanh chóng</span>
+            </div>
+            <span class="pay-qr-panel__brand">VNPAY<span>GR</span></span>
+            <button type="button" class="pay-qr-panel__close" aria-label="Đóng" (click)="closePending()">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6.5 6.5 11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+            </button>
+          </header>
+
+          <div class="pay-qr-panel__body">
+            <section class="pay-qr-card">
+              <h4>Quét mã QR để thanh toán</h4>
+              <div class="pay-qr-card__code">
+                @if (current.qrCodeUrl) {
+                  <img [src]="current.qrCodeUrl" alt="Mã QR thanh toán VNPAY" />
+                } @else {
+                  <span class="pay-qr-card__placeholder" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <rect x="4" y="4" width="6.2" height="6.2" rx="1.4" stroke="currentColor" stroke-width="1.5" />
+                      <rect x="13.8" y="4" width="6.2" height="6.2" rx="1.4" stroke="currentColor" stroke-width="1.5" />
+                      <rect x="4" y="13.8" width="6.2" height="6.2" rx="1.4" stroke="currentColor" stroke-width="1.5" />
+                      <path d="M13.8 13.8h2.6v2.6h-2.6zM17.4 17.4h2.6v2.6h-2.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    </svg>
+                  </span>
+                }
+              </div>
+              <div class="pay-qr-card__timer">
+                <span class="pay-qr-card__timer-label">
+                  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.333" />
+                    <path d="M8 4v4l2.667 1.333" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  Mã QR hết hạn sau
+                </span>
+                <strong>{{ formatCountdown(remaining()) }}</strong>
+              </div>
+            </section>
+
+            <section class="pay-qr-guide">
+              <h4>Hướng dẫn thanh toán</h4>
+              <ol class="pay-qr-guide__steps">
+                <li>Mở ứng dụng ngân hàng hoặc ví điện tử hỗ trợ VNPAY-QR</li>
+                <li>Chọn tính năng quét mã QR</li>
+                <li>Quét mã QR bên cạnh</li>
+                <li>Kiểm tra thông tin và xác nhận thanh toán</li>
+              </ol>
+              <div class="pay-qr-guide__note">
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.333" />
+                  <path d="M8 10.667V8M8 5.333h.007" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" />
+                </svg>
+                <span>Đơn hàng sẽ được xác nhận ngay sau khi thanh toán thành công.</span>
+              </div>
+            </section>
+          </div>
+
+          <div class="pay-qr-panel__foot">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.331 8.667c0 3.333-2.334 5-5.107 5.966a.833.833 0 0 1-.447-.006C4.997 13.667 2.664 12 2.664 8.667V4c0-.177.07-.346.195-.471a.667.667 0 0 1 .471-.196c1.334 0 3-0.8 4.16-1.813a.667.667 0 0 1 1.013 0c1.167 1.02 2.827 1.813 4.16 1.813.177 0 .347.07.472.196a.667.667 0 0 1 .195.47v4.667Z" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="m6 8 1.333 1.333L10 6.667" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>Bảo mật bởi NAPAS. Thông tin giao dịch của bạn được mã hóa và bảo vệ tuyệt đối.</span>
+          </div>
+        </div>
+      } @else {
       <div class="pay-modal__panel pay-modal__panel--pending">
         <header class="pay-modal__head">
           <div class="pay-modal__heading">
@@ -655,24 +743,6 @@
         </header>
 
         <div class="pay-pending" [class.pay-pending--wide]="pendingKind() === 'swift'">
-          @if (pendingKind() === 'qr') {
-            <div class="pay-qr">
-              @if (current.qrCodeUrl) {
-                <img class="pay-qr__image" [src]="current.qrCodeUrl" alt="Mã QR thanh toán" />
-              } @else {
-                <span class="pay-qr__placeholder" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <rect x="4" y="4" width="6.2" height="6.2" rx="1.4" stroke="currentColor" stroke-width="1.5" />
-                    <rect x="13.8" y="4" width="6.2" height="6.2" rx="1.4" stroke="currentColor" stroke-width="1.5" />
-                    <rect x="4" y="13.8" width="6.2" height="6.2" rx="1.4" stroke="currentColor" stroke-width="1.5" />
-                    <path d="M13.8 13.8h2.6v2.6h-2.6zM17.4 17.4h2.6v2.6h-2.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-                  </svg>
-                </span>
-              }
-              <span class="pay-qr__caption">Quét mã bằng ứng dụng ngân hàng hoặc ví điện tử</span>
-            </div>
-          }
-
           <div class="pay-pending__info">
             <div class="pay-pending__amount">
               <span>Số tiền cần thanh toán</span>
@@ -770,6 +840,7 @@
           </button>
         </footer>
       </div>
+      }
     </div>
   }
 
