@@ -258,28 +258,27 @@
 .voucher-card {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: 8px;
   margin-top: 10px;
-  padding: 10px 12px;
+  padding: 16px 12px 12px;
   border: 1px solid transparent;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 17px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 19.5px;
 }
 
 .voucher-card__icon {
   display: grid;
   place-items: center;
   flex: none;
-  width: 20px;
-  height: 20px;
-  border: 1.5px solid currentColor;
-  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
 }
 
 .voucher-card__icon svg {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 
 .voucher-card__body {
@@ -288,7 +287,7 @@
 
 .voucher-card__body strong {
   display: block;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -299,15 +298,19 @@
 }
 
 .voucher-card--success {
-  border-color: #A7F3D0;
+  border-color: #D0FAE5;
   background: #ECFDF5;
+  color: #007A55;
+}
+
+.voucher-card--success .voucher-card__body span {
   color: #009966;
 }
 
 .voucher-card--error {
-  border-color: #FECACA;
-  background: #FEF3F2;
-  color: #D92D20;
+  border-color: #FFE4E6;
+  background: #FFF1F2;
+  color: #EC003F;
 }
 
 /* ─── Ghi chú bảo mật ────────────────────────────────────────────────────── */

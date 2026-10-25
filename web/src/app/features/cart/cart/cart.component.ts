@@ -57,6 +57,11 @@ export class CartComponent implements OnInit {
   voucherApplied = signal(false);
   voucherMessage = signal('');
   voucherError = signal('');
+  readonly voucherErrorText = computed(() => {
+    const message = this.voucherError();
+    if (!message) return '';
+    return /không hợp lệ|hết hạn/i.test(message) ? 'Vui lòng kiểm tra lại và thử mã khác.' : message;
+  });
   voucherLoading = signal(false);
   removingIds = signal<string[]>([]);
   thumbnailErrors = signal<Set<string>>(new Set());
@@ -188,21 +193,24 @@ export class CartComponent implements OnInit {
       });
   }
 
-  moveToFavorites(item: CartItem): void {
+  /** Lưu/bỏ yêu thích nhưng giữ nguyên khóa học trong giỏ hàng. */
+  toggleCartFavorite(item: CartItem): void {
     if (this.removingIds().includes(item.id)) return;
 
     this.favorites
       .toggleFavorite(item)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: result => {
+          const isFavorite = result?.isFavorite ?? !this.isFavorite(item.courseId || item.id);
           this.toast.showToast({
             type: 'success',
-            message: `Đã chuyển “${item.displayTitle || item.title}” vào danh sách yêu thích.`,
+            message: isFavorite
+              ? `Đã lưu “${item.displayTitle || item.title}” vào danh sách yêu thích.`
+              : `Đã bỏ “${item.displayTitle || item.title}” khỏi danh sách yêu thích.`,
           });
-          this.removeItem(item, false);
         },
-        error: () => this.toast.showToast({ type: 'error', message: 'Không thể lưu khóa học yêu thích.' }),
+        error: () => this.toast.showToast({ type: 'error', message: 'Không thể cập nhật danh sách yêu thích.' }),
       });
   }
 

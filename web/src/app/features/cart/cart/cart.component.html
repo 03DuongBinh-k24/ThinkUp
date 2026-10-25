@@ -161,11 +161,12 @@
                     <button
                       type="button"
                       class="cart-action"
-                      [attr.aria-label]="'Lưu ' + (item.displayTitle || item.title) + ' vào yêu thích'"
-                      title="Lưu vào yêu thích"
-                      (click)="moveToFavorites(item)"
+                      [class.is-active]="isFavorite(item.courseId || item.id)"
+                      [attr.aria-label]="(isFavorite(item.courseId || item.id) ? 'Bỏ ' : 'Lưu ') + (item.displayTitle || item.title) + (isFavorite(item.courseId || item.id) ? ' khỏi' : ' vào') + ' yêu thích'"
+                      [title]="isFavorite(item.courseId || item.id) ? 'Bỏ khỏi yêu thích' : 'Lưu vào yêu thích'"
+                      (click)="toggleCartFavorite(item)"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" [attr.fill]="isFavorite(item.courseId || item.id) ? 'currentColor' : 'none'" aria-hidden="true">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
                       </svg>
                     </button>
@@ -245,8 +246,9 @@
               @if (voucherApplied()) {
                 <div class="voucher-card voucher-card--success" role="status">
                   <span class="voucher-card__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <path d="m7 12.5 3.2 3.2L17.5 8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.333" />
+                      <path d="m6 8 1.333 1.333L10 6.667" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </span>
                   <div class="voucher-card__body">
@@ -259,14 +261,14 @@
               @if (voucherError()) {
                 <div class="voucher-card voucher-card--error" role="alert">
                   <span class="voucher-card__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <path d="M12 8.5v4.25M12 16.2v.05" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.333" />
+                      <path d="M8 5.333V8M8 10.667h.007" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" />
                     </svg>
                   </span>
                   <div class="voucher-card__body">
                     <strong>Mã giảm giá không hợp lệ hoặc đã hết hạn.</strong>
-                    <span>{{ voucherError() }} Vui lòng kiểm tra lại và thử mã khác.</span>
+                    <span>{{ voucherErrorText() }}</span>
                   </div>
                 </div>
               }
