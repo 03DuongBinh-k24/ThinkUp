@@ -105,16 +105,6 @@
           </div>
         </form>
 
-        @if (demoEnabled) {
-          <!-- TODO(pre-deploy): xoá khối tài khoản demo khi backend đã có tài khoản role 'admin'. -->
-          <div class="demo-note">
-            <span>
-              Demo: <strong>{{ demoAccount.email }}</strong> / <strong>{{ demoAccount.password }}</strong>
-              · OTP <strong>123456</strong>
-            </span>
-            <button class="link-button" type="button" (click)="fillDemoAccount()">Điền nhanh</button>
-          </div>
-        }
       </div>
     </section>
   </main>

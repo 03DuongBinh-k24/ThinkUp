@@ -17,6 +17,8 @@
     "test:studyroom": "node --test src/user/studyroom/test/studyroom.user.test.js",
     "test:roadmap": "node --test src/user/roadmap/test/roadmap.user.test.js",
     "test:flashcard": "node --test src/user/flashcard/test/flashcard.user.test.js",
+    "test:payment": "node --test src/user/payment/test/payment.test.js",
+    "test:admin-auth": "node --test src/admin/auth/test/auth.admin.test.js",
     "seed:purchase": "node recheck/seed-purchase-history.js",
     "recheck": "node recheck/recheck-auth.js",
     "recheck:signup": "node recheck/test-signup.js",

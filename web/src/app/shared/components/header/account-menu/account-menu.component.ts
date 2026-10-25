@@ -31,15 +31,17 @@ export class AccountMenuComponent {
   readonly isOpen = signal(false);
 
   readonly menuItems: MenuItem[] = [
-    { label: 'Hồ sơ học viên', href: '/main/profile', icon: 'user' },
     { label: 'Khóa học yêu thích', href: '/main/favorites', icon: 'heart' },
     { label: 'Khóa học của tôi', href: '/main/my-courses', icon: 'book' },
+    // TODO(pre-deploy): Flashcard chưa có route riêng, tạm trỏ về danh sách khóa học.
+    { label: 'Flashcard', href: '/main/courses', icon: 'cards' },
     { label: 'Quản lý bài viết', href: '/main/blog', icon: 'newspaper' },
     { label: 'Lịch sử thanh toán', href: '/main/profile/billing', icon: 'credit-card' },
-    { label: 'Chứng chỉ', href: '/main/profile', icon: 'badge' },
+    { label: 'Chứng chỉ', href: '/main/certificates', icon: 'badge' },
     { label: 'Thông báo', href: '/main/profile', icon: 'bell', badge: 3, dividerBefore: true },
     { label: 'Cài đặt', href: '/main/profile/edit', icon: 'settings' },
-    { label: 'Liên hệ hỗ trợ', href: '/main/contact', icon: 'lifebuoy', dividerBefore: true },
+    { label: 'Hồ sơ học viên', href: '/main/profile', icon: 'user', dividerBefore: true },
+    { label: 'Liên hệ hỗ trợ', href: '/main/contact', icon: 'lifebuoy' },
     { label: 'Trung tâm trợ giúp', href: '/main/help-center', icon: 'help' },
   ];
 

@@ -1,8 +1,10 @@
 import { Routes } from '@angular/router';
 import { onboardingRequiredGuard, onboardingCompletedGuard } from './core/guards/onboarding.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { authGuard } from './core/guards/auth.guard';
 import { BlogService } from './features/blog/services/blog.service';
 import { BLOG_PROVIDERS } from './features/blog/services/blog.providers';
+import { unsavedChangesGuard } from './features/profile/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   // Email links may point to the client origin when the backend public URL is not configured.
@@ -52,12 +54,25 @@ export const routes: Routes = [
       { path: 'favorites', loadComponent: () => import('./features/favorites/favorites-list/favorites-list.component').then(m => m.FavoritesListComponent) },
       { path: 'cart', loadComponent: () => import('./features/cart/cart/cart.component').then(m => m.CartComponent) },
       { path: 'checkout', loadComponent: () => import('./features/checkout/checkout/checkout.component').then(m => m.CheckoutComponent) },
+      { path: 'checkout/result', loadComponent: () => import('./features/checkout/checkout-success/checkout-success.component').then(m => m.CheckoutSuccessComponent) },
       { path: 'checkout/success', loadComponent: () => import('./features/checkout/checkout-success/checkout-success.component').then(m => m.CheckoutSuccessComponent) },
       { path: 'profile', loadComponent: () => import('./features/profile/profile-overview/profile-overview.component').then(m => m.ProfileOverviewComponent) },
-      { path: 'profile/edit', loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
+      { path: 'profile/edit', canDeactivate: [unsavedChangesGuard], loadComponent: () => import('./features/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent) },
       { path: 'profile/billing', loadComponent: () => import('./features/profile/purchase-history/purchase-history.component').then(m => m.PurchaseHistoryComponent) },
       { path: 'profile/billing/:id', loadComponent: () => import('./features/profile/purchase-transaction-detail/purchase-transaction-detail.component').then(m => m.PurchaseTransactionDetailComponent) },
+      { path: 'settings', loadComponent: () => import('./features/settings/settings-home/settings-home.component').then(m => m.SettingsHomeComponent) },
+      { path: 'settings/account-security', loadComponent: () => import('./features/settings/account-security/account-security.component').then(m => m.AccountSecurityComponent) },
+      { path: 'settings/learning-options', loadComponent: () => import('./features/settings/learning-options/learning-options.component').then(m => m.LearningOptionsComponent) },
+      { path: 'settings/notifications', loadComponent: () => import('./features/settings/notifications/notifications.component').then(m => m.NotificationsComponent) },
+      { path: 'settings/payment', loadComponent: () => import('./features/settings/payment/payment.component').then(m => m.PaymentComponent) },
+      { path: 'my-courses/:courseId/review', loadComponent: () => import('./features/my-courses/review-form/review-form.component').then(m => m.ReviewFormComponent) },
+      { path: 'my-courses/:courseId', loadComponent: () => import('./features/my-courses/course-dashboard/course-dashboard.component').then(m => m.CourseDashboardComponent) },
       { path: 'my-courses', loadComponent: () => import('./features/my-courses/my-courses.component').then(m => m.MyCoursesComponent) },
+      {
+        path: 'certificates',
+        canActivate: [authGuard],
+        loadComponent: () => import('./features/certificate/my-certificates/my-certificates.component').then(m => m.MyCertificatesComponent)
+      },
       {
         path: 'blog',
         providers: [BlogService, ...BLOG_PROVIDERS],
@@ -80,12 +95,21 @@ export const routes: Routes = [
     path: 'learning',
     canActivateChild: [onboardingRequiredGuard],
     children: [
-      { path: 'learn/:courseId', data: { hideFooter: true }, loadComponent: () => import('./features/learning/lesson-player/lesson-player.component').then(m => m.LessonPlayerComponent) },
+      { path: 'learn/:courseId', loadComponent: () => import('./features/learning/lesson-player/lesson-player.component').then(m => m.LessonPlayerComponent) },
       { path: 'study-room', loadComponent: () => import('./features/study-room/study-room-lobby/study-room-lobby.component').then(m => m.StudyRoomLobbyComponent) },
       { path: 'study-room/:roomId', data: { hideShell: true }, loadComponent: () => import('./features/study-room/study-room-view/study-room-view.component').then(m => m.StudyRoomViewComponent) },
       { path: 'roadmap', loadComponent: () => import('./features/roadmap/roadmap-list/roadmap-list.component').then(m => m.RoadmapListComponent) },
       { path: 'roadmap/:id', loadComponent: () => import('./features/roadmap/roadmap-detail/roadmap-detail.component').then(m => m.RoadmapDetailComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId', loadComponent: () => import('./features/roadmap/roadmap-test/roadmap-test.component').then(m => m.RoadmapTestComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId/processing', loadComponent: () => import('./features/roadmap/roadmap-test-processing/roadmap-test-processing.component').then(m => m.RoadmapTestProcessingComponent) },
+      { path: 'roadmap/:roadmapId/test/:stageId/result', loadComponent: () => import('./features/roadmap/roadmap-survey-complete/roadmap-survey-complete.component').then(m => m.RoadmapSurveyCompleteComponent) },
       { path: 'roadmap/:roadmapId/:skillId', loadComponent: () => import('./features/roadmap/roadmap-skill-detail/roadmap-skill-detail.component').then(m => m.RoadmapSkillDetailComponent) },
+      { path: 'flashcards', loadComponent: () => import('./features/roadmap/flashcard-list/flashcard-list.component').then(m => m.FlashcardListComponent) },
+      { path: 'flashcards/new', loadComponent: () => import('./features/roadmap/flashcard-form/flashcard-form.component').then(m => m.FlashcardFormComponent) },
+      { path: 'flashcards/:id', loadComponent: () => import('./features/roadmap/flashcard-detail/flashcard-detail.component').then(m => m.FlashcardDetailComponent) },
+      { path: 'flashcards/:id/edit', loadComponent: () => import('./features/roadmap/flashcard-form/flashcard-form.component').then(m => m.FlashcardFormComponent) },
+      { path: 'flashcards/:id/study', loadComponent: () => import('./features/roadmap/flashcard-study/flashcard-study.component').then(m => m.FlashcardStudyComponent) },
+      { path: 'flashcards/:id/complete', loadComponent: () => import('./features/roadmap/flashcard-complete/flashcard-complete.component').then(m => m.FlashcardCompleteComponent) },
     ]
   },
   // Legal routes
@@ -97,7 +121,25 @@ export const routes: Routes = [
     ]
   },
   // User profile alias
+  { path: 'profile/me/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
+  { path: 'profile/me', redirectTo: 'main/profile', pathMatch: 'full' },
+  { path: 'profile/edit', redirectTo: 'main/profile/edit', pathMatch: 'full' },
   { path: 'profile', redirectTo: 'main/profile', pathMatch: 'full' },
+  // Tra cứu chứng chỉ công khai (không cần đăng nhập)
+  {
+    path: 'tra-cuu',
+    loadComponent: () => import('./features/certificate/certificate-verify/certificate-verify.component').then(m => m.CertificateVerifyComponent)
+  },
+  // Alias in trên artwork chứng chỉ (thinkup.vn/verify)
+  {
+    path: 'verify',
+    loadComponent: () => import('./features/certificate/certificate-verify/certificate-verify.component').then(m => m.CertificateVerifyComponent)
+  },
+  // Link chia sẻ dạng /chung-chi/{Mã} -> trang tra cứu kèm mã
+  {
+    path: 'chung-chi/:code',
+    redirectTo: route => `/tra-cuu?code=${encodeURIComponent(route.params['code'] ?? '')}`
+  },
   // Default fallbacks: khách chưa đăng nhập xem Landing page chuẩn
   { path: 'main', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
   { path: '', redirectTo: 'main', pathMatch: 'full' },
