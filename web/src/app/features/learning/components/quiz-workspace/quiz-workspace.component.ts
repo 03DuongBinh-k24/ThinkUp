@@ -7,13 +7,17 @@ import {
   LucideCheck,
   LucideChevronRight,
   LucideCircleAlert,
+  LucideCircleCheck,
   LucideCircleQuestionMark,
+  LucideCircleX,
+  LucideClipboardList,
   LucideClock,
   LucideFlag,
   LucideLightbulb,
   LucidePanelLeft,
   LucideRotateCcw,
-  LucideTrophy,
+  LucideStar,
+  LucideX,
 } from '@lucide/angular';
 import { LearningChapter, LearningCourse, LearningLesson, QuizQuestion } from '../../models/learning.model';
 
@@ -30,13 +34,17 @@ type QuizPhase = 'intro' | 'running' | 'result';
     LucideCheck,
     LucideChevronRight,
     LucideCircleAlert,
+    LucideCircleCheck,
     LucideCircleQuestionMark,
+    LucideCircleX,
+    LucideClipboardList,
     LucideClock,
     LucideFlag,
     LucideLightbulb,
     LucidePanelLeft,
     LucideRotateCcw,
-    LucideTrophy,
+    LucideStar,
+    LucideX,
   ],
   templateUrl: './quiz-workspace.component.html',
 })
@@ -210,10 +218,11 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
     else this.backToCourse.emit();
   }
 
-  dashboardMessage(): string {
+  get resultMessage(): string {
+    const total = this.questions.length;
     return this.passed
-      ? 'Bạn đã hoàn thành bài kiểm tra. Hãy tiếp tục bài học tiếp theo để giữ nhịp học tập.'
-      : 'Đừng lo lắng, hãy xem lại bài học và thử lại. Bạn có thể làm lại không giới hạn.';
+      ? `Bạn đã đạt ${this.correctCount}/${total} câu đúng và hoàn thành bài kiểm tra.`
+      : `Bạn đã đạt ${this.correctCount}/${total} câu đúng. Điểm tối thiểu để đạt là ${this.quiz?.passingScore ?? 70}%.`;
   }
 
   dashOffset(percent: number): number {
