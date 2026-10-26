@@ -29,59 +29,61 @@
       }
 
       <!-- Tab chuyên đề + sắp xếp (chỉ tab Tất cả) -->
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Nhóm thông báo">
-          @for (tabItem of tabs(); track tabItem.id) {
-            <a
-              [routerLink]="tabItem.path"
-              role="tab"
-              class="n-tab"
-              [class.is-active]="tabItem.id === tab()"
-              [attr.aria-selected]="tabItem.id === tab()"
-            >
-              {{ tabItem.label }} ({{ tabItem.count }})
-            </a>
-          }
-        </div>
-
-        @if (tab() === 'all') {
-          <div class="relative" data-sort-root>
-            <button
-              type="button"
-              class="n-sort-trigger"
-              aria-haspopup="listbox"
-              [attr.aria-expanded]="sortOpen()"
-              (click)="toggleSort($event)"
-            >
-              <span>{{ sortLabel() }}</span>
-              <svg lucideChevronDown [size]="16" [strokeWidth]="1.5"></svg>
-            </button>
-
-            @if (sortOpen()) {
-              <div class="n-sort-menu" role="listbox" aria-label="Sắp xếp thông báo">
-                @for (option of sortOptions; track option.id) {
-                  <button
-                    type="button"
-                    role="option"
-                    class="n-sort-option"
-                    [class.is-selected]="option.id === sort()"
-                    [attr.aria-selected]="option.id === sort()"
-                    (click)="selectSort(option.id)"
-                  >
-                    <span>{{ option.label }}</span>
-                    @if (option.id === sort()) {
-                      <svg lucideCheck [size]="16" [strokeWidth]="1.7"></svg>
-                    }
-                  </button>
-                }
-              </div>
+      <div class="n-center-grid items-center">
+        <div class="flex min-w-0 items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Nhóm thông báo">
+            @for (tabItem of tabs(); track tabItem.id) {
+              <a
+                [routerLink]="tabItem.path"
+                role="tab"
+                class="n-tab"
+                [class.is-active]="tabItem.id === tab()"
+                [attr.aria-selected]="tabItem.id === tab()"
+              >
+                {{ tabItem.label }} ({{ tabItem.count }})
+              </a>
             }
           </div>
-        }
+
+          @if (tab() === 'all') {
+            <div class="relative shrink-0" data-sort-root>
+              <button
+                type="button"
+                class="n-sort-trigger"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="sortOpen()"
+                (click)="toggleSort($event)"
+              >
+                <span>{{ sortLabel() }}</span>
+                <svg lucideChevronDown [size]="16" [strokeWidth]="1.5"></svg>
+              </button>
+
+              @if (sortOpen()) {
+                <div class="n-sort-menu" role="listbox" aria-label="Sắp xếp thông báo">
+                  @for (option of sortOptions; track option.id) {
+                    <button
+                      type="button"
+                      role="option"
+                      class="n-sort-option"
+                      [class.is-selected]="option.id === sort()"
+                      [attr.aria-selected]="option.id === sort()"
+                      (click)="selectSort(option.id)"
+                    >
+                      <span>{{ option.label }}</span>
+                      @if (option.id === sort()) {
+                        <svg lucideCheck [size]="16" [strokeWidth]="1.7"></svg>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
       </div>
     </header>
 
-    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_clamp(320px,23vw,442px)]">
+    <div class="n-center-grid items-start">
       <!-- Danh sách thông báo -->
       <section class="flex min-w-0 flex-col gap-3.5" aria-label="Danh sách thông báo">
         @if (groups().length === 0) {
@@ -98,7 +100,7 @@
           </div>
         } @else {
           @for (group of groups(); track group.key) {
-            <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-6">
               <h2 class="n-group-title">{{ group.label }}</h2>
               <div class="rounded-[10px] border border-[#DDE5F0] bg-white">
                 @for (item of group.items; track item.id) {
