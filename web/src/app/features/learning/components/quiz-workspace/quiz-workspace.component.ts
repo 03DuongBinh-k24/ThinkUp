@@ -112,6 +112,35 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
     return index >= 0 && index < lessons.length - 1 ? lessons[index + 1] : null;
   }
 
+  get quizDescription(): string {
+    return (
+      this.lesson.summary?.trim() ||
+      'Bài kiểm tra giúp bạn củng cố kiến thức đã học và chuẩn bị cho chương tiếp theo.'
+    );
+  }
+
+  get completionStatus(): string {
+    if (this.phase === 'running') return 'Đang làm bài';
+    if (this.phase === 'result') return this.passed ? 'Đã hoàn thành' : 'Chưa đạt';
+    return 'Chưa làm bài';
+  }
+
+  get completionStatusClass(): string {
+    if (this.phase === 'running') return 'border-[#BFD4FF] bg-[#EFF6FF] text-[#2B7FFF]';
+    if (this.phase === 'result') {
+      return this.passed
+        ? 'border-[#BBF7D0] bg-[#F0FDF4] text-[#15803D]'
+        : 'border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]';
+    }
+    return 'border-[#FEF3C6] bg-[#FFFBEB] text-[#475C78]';
+  }
+
+  get completionDotClass(): string {
+    if (this.phase === 'running') return 'bg-[#2B7FFF]';
+    if (this.phase === 'result') return this.passed ? 'bg-[#16A34A]' : 'bg-[#DC2626]';
+    return 'bg-[#FE9A00]';
+  }
+
   start(): void {
     this.phase = 'running';
     this.currentIndex = 0;
