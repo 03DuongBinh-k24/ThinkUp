@@ -140,5 +140,9 @@ export const routes: Routes = [
   // Default fallbacks: khách chưa đăng nhập xem Landing page chuẩn
   { path: 'main', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
   { path: '', redirectTo: 'main', pathMatch: 'full' },
-  { path: '**', redirectTo: 'main' },
+  {
+    path: '**',
+    data: { hideFooter: true },
+    loadComponent: () => import('./features/not-found/not-found/not-found.component').then(m => m.NotFoundComponent)
+  },
 ];
