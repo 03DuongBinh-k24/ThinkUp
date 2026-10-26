@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -11,10 +11,12 @@ import {
   LucideMessageCircle,
   LucideSettings2,
 } from '@lucide/angular';
+import { environment } from '../../../../environments/environment';
 import {
   AppNotification,
   notificationCategoryMeta,
 } from '../../../core/models/notification.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SettingsService } from '../../settings/services/settings.service';
@@ -78,6 +80,7 @@ export class NotificationCenterComponent {
   private readonly settings = inject(SettingsService);
   private readonly toast = inject(ToastService);
   private readonly notifications = inject(NotificationService);
+  private readonly auth = inject(AuthService);
 
   private readonly tabParam = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('tab'))),
@@ -123,6 +126,20 @@ export class NotificationCenterComponent {
   readonly sortLabel = computed(
     () => this.sortOptions.find((option) => option.id === this.sort())?.label ?? 'Mới nhất'
   );
+
+  constructor() {
+    if (!environment.production) {
+      // TODO(pre-deploy): Xóa fallback user và lệnh nạp mock khi Notification API sẵn sàng.
+      const testUserId = this.auth.currentUser()?.id ?? 'notification-demo-user';
+      this.notifications.loadMockDataForTesting(testUserId);
+      effect(() => {
+        // Header khách có thể xóa active user sau khi route được khởi tạo; nạp lại cho màn QA.
+        if (this.notifications.totalCount() === 0) {
+          this.notifications.loadMockDataForTesting(testUserId);
+        }
+      });
+    }
+  }
 
   /** Thông báo hiển thị theo tab và kiểu sắp xếp (chỉ tab "Tất cả" có sắp xếp). */
   readonly visibleItems = computed<AppNotification[]>(() => {

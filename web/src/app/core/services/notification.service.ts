@@ -92,6 +92,26 @@ export class NotificationService {
     if (stored) this.itemsState.set(sortByNewest(stored));
   }
 
+  /**
+   * Nạp lại các bản ghi mock còn thiếu để QA có thể mở thẳng module và kiểm thử.
+   * Giữ nguyên trạng thái đã đọc của bản ghi còn tồn tại và không xóa thông báo từ luồng khác.
+   *
+   * TODO(pre-deploy): Xóa hàm này cùng dữ liệu mock khi Notification API được tích hợp.
+   */
+  loadMockDataForTesting(userId: string): void {
+    const existing = this.readStored(userId) ?? [];
+    const existingIds = new Set(existing.map((item) => item.id));
+    const next = sortByNewest([
+      ...existing,
+      ...buildSeedNotifications().filter((item) => !existingIds.has(item.id)),
+    ]);
+
+    this.activeUserId.set(userId);
+    this.itemsState.set(next);
+    this.write(userId, next);
+    this.markSeeded(userId);
+  }
+
   addForUser(userId: string, input: NotificationInput): void {
     const existing = this.readStored(userId) ?? [];
     if (existing.some((item) => item.id === input.id)) return;
