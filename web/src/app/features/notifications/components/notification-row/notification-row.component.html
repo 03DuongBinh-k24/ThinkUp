@@ -7,9 +7,11 @@
     class="flex min-w-0 flex-1 items-center gap-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174FD6]"
     (click)="$event.stopPropagation(); onActivate()"
   >
-    @if (!item().readAt) {
-      <span class="size-2 shrink-0 rounded-full bg-[#1769FF]" aria-label="Chưa đọc"></span>
-    }
+    <span
+      class="size-2 shrink-0 rounded-full bg-[#1769FF]"
+      [class.invisible]="!!item().readAt"
+      [attr.aria-label]="item().readAt ? null : 'Chưa đọc'"
+    ></span>
 
     <span
       class="flex size-[52px] shrink-0 items-center justify-center rounded-full"
