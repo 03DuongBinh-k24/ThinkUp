@@ -186,6 +186,64 @@
   font-weight: 600;
 }
 
+.n-about-card {
+  display: flex;
+  min-height: 350px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 24px;
+}
+
+.n-about-illustration {
+  display: flex;
+  width: 100%;
+  flex: 0 0 214px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.n-about-illustration img {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
+
+.n-about-card--learning .n-about-illustration {
+  border-radius: 16px;
+  background-color: #f8faff;
+  padding: 12px;
+}
+
+.n-about-card--learning .n-about-illustration img {
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.n-about-card--transactions .n-about-illustration img {
+  width: min(379px, 100%);
+  height: auto;
+}
+
+.n-about-card--security .n-about-illustration {
+  flex-basis: 206px;
+}
+
+.n-about-card--security .n-about-illustration img {
+  width: min(317px, 100%);
+  height: auto;
+}
+
+.n-about-description {
+  width: 100%;
+  color: #536780;
+  font-size: clamp(12.5px, 0.677vw, 13px);
+  font-weight: 400;
+  line-height: 20px;
+  text-align: center;
+}
+
 .n-side-button {
   display: flex;
   align-items: center;

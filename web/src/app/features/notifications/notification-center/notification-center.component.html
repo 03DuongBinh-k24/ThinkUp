@@ -160,14 +160,21 @@
             </a>
           </section>
         } @else if (aside(); as info) {
-          <section class="rounded-[10px] border border-[#DDE5F0] bg-white px-6 py-[22px]">
-            <h2 class="n-side-title text-[#17345F]">Về nhóm thông báo này</h2>
+          <section
+            class="n-about-card rounded-[10px] border border-[#DDE5F0] bg-white"
+            [class.n-about-card--learning]="tab() === 'learning'"
+            [class.n-about-card--transactions]="tab() === 'transactions'"
+            [class.n-about-card--security]="tab() === 'security'"
+          >
+            @if (tab() !== 'transactions') {
+              <h2 class="n-side-title text-[#17345F]">Về nhóm thông báo này</h2>
+            }
 
-            <div class="mt-4 flex h-[214px] items-center justify-center rounded-2xl bg-[#F8FAFF] p-3">
-              <img [src]="info.illustration" alt="" class="max-h-full w-auto max-w-full object-contain" />
+            <div class="n-about-illustration">
+              <img [src]="info.illustration" alt="" />
             </div>
 
-            <p class="n-side-label mt-4 text-[#536780]">{{ info.description }}</p>
+            <p class="n-about-description">{{ info.description }}</p>
           </section>
 
           <section class="rounded-[10px] border border-[#DDE5F0] bg-white px-6 py-[22px]">
