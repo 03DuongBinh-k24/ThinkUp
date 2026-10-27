@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { onboardingRequiredGuard, onboardingCompletedGuard } from './core/guards/onboarding.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { guestHomeGuard, memberHomeGuard } from './core/guards/home-audience.guard';
 import { BlogService } from './features/blog/services/blog.service';
 import { BLOG_PROVIDERS } from './features/blog/services/blog.providers';
 import { unsavedChangesGuard } from './features/profile/guards/unsaved-changes.guard';
@@ -47,6 +48,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'home',
+        canActivate: [memberHomeGuard],
         loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent)
       },
       { path: 'courses', loadComponent: () => import('./features/courses/course-list/course-list.component').then(m => m.CourseListComponent) },
@@ -87,9 +89,9 @@ export const routes: Routes = [
         ]
       },
       { path: 'contact', loadComponent: () => import('./features/support/contact/contact.component').then(m => m.ContactComponent) },
-      { path: 'help-center', loadComponent: () => import('./features/support/contact/contact.component').then(m => m.ContactComponent) },
-      { path: 'instructors', loadComponent: () => import('./features/support/contact/contact.component').then(m => m.ContactComponent) },
-      { path: '', redirectTo: 'courses', pathMatch: 'full' },
+      { path: 'help-center', loadComponent: () => import('./features/support/help-center/help-center.component').then(m => m.HelpCenterComponent) },
+      { path: 'instructors', loadComponent: () => import('./features/instructors/instructor-landing/instructor-landing.component').then(m => m.InstructorLandingComponent) },
+      { path: '', canActivate: [guestHomeGuard], loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent), pathMatch: 'full' },
     ]
   },
   // Learning feature routes
@@ -143,7 +145,6 @@ export const routes: Routes = [
     redirectTo: route => `/tra-cuu?code=${encodeURIComponent(route.params['code'] ?? '')}`
   },
   // Default fallbacks: khách chưa đăng nhập xem Landing page chuẩn
-  { path: 'main', loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent) },
   { path: '', redirectTo: 'main', pathMatch: 'full' },
   {
     path: '**',
