@@ -52,9 +52,9 @@ export interface AdminLoginResponse {
     avatar_url?: string | null;
     email_verified?: boolean;
     password_expires_at?: string | null;
-    must_change_password?: boolean;
-    two_factor_setup_required?: boolean;
-  };
+  must_change_password?: boolean;
+  two_factor_setup_required?: boolean;
+};
 }
 
 /** Lỗi API đã được chuẩn hoá để component hiển thị thông điệp tiếng Việt. */

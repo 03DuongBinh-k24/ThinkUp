@@ -94,11 +94,11 @@ test('ADMIN AUTH SUITE: RFC 6238 TOTP, Base32 & Backup Codes Utils', async (t) =
     assert.strictEqual(verifyTOTP('000000', secret), false);
   });
 
-  await t.test('Sinh 10 mã dự phòng định dạng XXXX-XXXX', () => {
+  await t.test('Sinh 10 mã dự phòng định dạng 16 ký tự XXXX-XXXX-XXXX-XXXX', () => {
     const codes = generateBackupCodes(10);
     assert.strictEqual(codes.length, 10);
     codes.forEach((code) => {
-      assert.match(code, /^[2-9A-Z]{4}-[2-9A-Z]{4}$/);
+      assert.match(code, /^[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4}$/);
     });
   });
 

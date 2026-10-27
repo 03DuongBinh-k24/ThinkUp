@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
 import express from 'express';
 import cors from 'cors';
@@ -33,6 +33,8 @@ import { createRoadmapRouter } from './user/roadmap/roadmap.user.js';
 import { createFlashcardRouter } from './user/flashcard/flashcard.user.js';
 import { createPaymentRouter } from './user/payment/payment.router.js';
 import { createCartRouter } from './user/cart/cart.user.js';
+import { createCourseRouter } from './user/course/course.user.js';
+import { createFavoritesRouter } from './user/favorites/favorites.user.js';
 import { createAdminAuthRouter } from './admin/auth/auth.admin.js';
 
 const app = express();
@@ -458,7 +460,19 @@ app.use('/api/user/cart', cartRouter);
 app.use('/api/v1/user/cart', cartRouter); // Hỗ trợ tiền tố v1
 app.use('/api/cart', cartRouter); // Alias tương thích trực tiếp
 
-// ─── 5j. Router Quản Trị Viên (Admin Auth & Security): /api/admin/auth ───────
+// ─── 5j. Router Thẻ & Danh Sách Khóa Học: /api/user/courses & /api/courses ───
+const courseCardRouter = createCourseRouter(express, optionalAuth);
+app.use('/api/user/courses', courseCardRouter);
+app.use('/api/v1/user/courses', courseCardRouter);
+app.use('/api/courses', courseCardRouter); // Alias gọi trực tiếp không cần user prefix
+
+// ─── 5k. Router Khóa Học Yêu Thích: /api/user/favorites & /api/favorites ──────
+const favoritesRouter = createFavoritesRouter(express, requireAuth, optionalAuth);
+app.use('/api/user/favorites', favoritesRouter);
+app.use('/api/v1/user/favorites', favoritesRouter); // Hỗ trợ tiền tố v1
+app.use('/api/favorites', favoritesRouter); // Alias tương thích trực tiếp
+
+// ─── 5l. Router Quản Trị Viên (Admin Auth & Security): /api/admin/auth ───────
 const adminAuthRouter = createAdminAuthRouter(express);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/v1/admin/auth', adminAuthRouter); // Hỗ trợ tiền tố v1
