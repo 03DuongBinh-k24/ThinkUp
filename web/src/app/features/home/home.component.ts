@@ -1,6 +1,9 @@
 import { Component, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent, IconName } from '../../shared/components/icon/icon.component';
+import { CourseCardComponent } from '../../shared/components/course-card/course-card.component';
+import { CourseCardView } from '../../shared/components/course-card/course-card.model';
+import { formatMoney, toCourseCardView } from '../../shared/components/course-card/course-card.mapper';
 import { CommerceService } from '../../core/services/commerce.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
@@ -24,51 +27,13 @@ import {
   StreakDay,
 } from '../../core/data/mock/mock-home';
 
-interface BadgeView {
-  text: string;
-  tone: 'sale' | 'new' | 'hot';
-}
-
-/** Thẻ khóa học ở khối "Đề xuất theo sở hữu kiến thức của bạn". */
-interface FeaturedCard {
-  id: string;
-  coverTitle: string;
-  coverSubtitle: string;
-  coverSize: 'lg' | 'md';
-  coverGradient: string;
-  badge: BadgeView | null;
-  title: string;
-  author: string;
-  level: string;
-  rating: string;
-  reviews: string;
-  students: string;
-  duration: string;
-  tags: string[];
-  price: string;
-  oldPrice: string;
-  discount: string;
-  course: Course;
-}
-
-const COVER_GRADIENTS = [
-  'linear-gradient(164deg, #0092b8 0%, #005f78 100%)',
-  'linear-gradient(164deg, #0a1535 0%, #1a2a5e 100%)',
-  'linear-gradient(164deg, #2a1560 0%, #4a2590 100%)',
-  'linear-gradient(164deg, #0a1628 0%, #0f2a44 100%)',
-  'linear-gradient(159deg, #4c1d95 0%, #6d28d9 100%)',
-];
-
-const BADGE_TONES: BadgeView['tone'][] = ['sale', 'new', 'hot'];
-
-function formatMoney(value: number): string {
-  return `${new Intl.NumberFormat('vi-VN').format(value || 0)}đ`;
-}
+/** Dữ liệu thẻ khóa học ở khối "Đề xuất theo sở thích của bạn". */
+type FeaturedCard = CourseCardView;
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, CourseCardComponent],
   templateUrl: './home.component.html',
   styleUrls: ['./styles/home-ui.css', './home.component.css'],
 })
@@ -126,7 +91,9 @@ export class HomeComponent implements OnInit {
     this.showToast(saved ? 'Đã bỏ lưu khóa học.' : `Đã lưu "${card.title}" vào danh sách yêu thích!`);
 
     // TODO(pre-deploy): đồng bộ với FavoritesService khi thẻ khóa học lấy dữ liệu thật từ API.
-    if (!saved) this.favoritesService.toggleFavorite(card.course).subscribe({ error: () => undefined });
+    if (!saved && card.course) {
+      this.favoritesService.toggleFavorite(card.course).subscribe({ error: () => undefined });
+    }
   }
 
   addToCart(card: FeaturedCard): void {
@@ -206,35 +173,7 @@ export class HomeComponent implements OnInit {
   }
 
   private fromCourse(course: Course, index: number): FeaturedCard {
-    const salePrice = course.salePrice ?? 0;
-    const originalPrice = course.originalPrice ?? 0;
-    const discount = originalPrice > salePrice && salePrice > 0
-      ? `-${Math.round(((originalPrice - salePrice) / originalPrice) * 100)}%`
-      : '';
-    const badgeText = course.badge;
-
-    return {
-      id: course.id,
-      coverTitle: course.shortLabel || course.displayTitle || course.title,
-      coverSubtitle: course.category || '',
-      coverSize: index === 0 ? 'lg' : 'md',
-      coverGradient: course.bgGradient || COVER_GRADIENTS[index % COVER_GRADIENTS.length],
-      badge: badgeText
-        ? { text: badgeText, tone: BADGE_TONES[index % BADGE_TONES.length] }
-        : null,
-      title: course.displayTitle || course.title,
-      author: course.instructor,
-      level: course.level || 'Cơ bản',
-      rating: (course.rating ?? 0).toFixed(1),
-      reviews: `(${course.ratingCount ?? 0})`,
-      students: course.students || `${new Intl.NumberFormat('vi-VN').format(course.studentsCount ?? 0)} học viên`,
-      duration: course.duration || '—',
-      tags: (course.tags ?? []).slice(0, 3),
-      price: formatMoney(salePrice),
-      oldPrice: formatMoney(originalPrice),
-      discount,
-      course,
-    };
+    return toCourseCardView(course, index);
   }
 
   private buildMonthLabels(): string[] {

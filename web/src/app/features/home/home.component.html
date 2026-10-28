@@ -108,91 +108,12 @@
 
       <div class="hm-featured">
         @for (card of featured(); track card.id) {
-          <article class="hm-card">
-            <div class="hm-card__cover" [style.background]="card.coverGradient">
-              @if (card.badge) {
-                <span class="hm-badge" [class]="'hm-badge--' + card.badge.tone">{{ card.badge.text }}</span>
-              }
-
-              <button
-                type="button"
-                class="hm-card__save"
-                [class.is-saved]="isSaved(card)"
-                [attr.aria-pressed]="isSaved(card)"
-                [attr.aria-label]="'Lưu ' + card.title"
-                (click)="toggleSave(card)"
-              >
-                <app-icon name="heart" class="h-[14px] w-[14px]" />
-              </button>
-
-              <div class="hm-card__cover-text">
-                <p class="hm-card__cover-title" [class.hm-card__cover-title--lg]="card.coverSize === 'lg'">
-                  {{ card.coverTitle }}
-                </p>
-                @if (card.coverSubtitle) {
-                  <p class="hm-card__cover-sub">{{ card.coverSubtitle }}</p>
-                }
-              </div>
-
-              <span class="hm-card__glass" aria-hidden="true"></span>
-            </div>
-
-            <div class="hm-card__body">
-              <h3 class="hm-card__title">{{ card.title }}</h3>
-
-              <div class="hm-card__author">
-                <span class="hm-card__avatar">
-                  <app-icon name="user" class="h-[12px] w-[12px]" />
-                </span>
-                <span class="hm-card__author-name">{{ card.author }}</span>
-                <span class="hm-card__level">{{ card.level }}</span>
-              </div>
-
-              <div class="hm-card__meta">
-                <span class="hm-card__meta-item">
-                  <app-icon name="star" class="is-filled hm-card__star h-[12px] w-[12px]" />
-                  <b>{{ card.rating }}</b>
-                  <em>{{ card.reviews }}</em>
-                </span>
-                <span class="hm-card__meta-item hm-card__meta-item--muted">
-                  <app-icon name="users" class="hm-card__meta-icon h-[12px] w-[12px]" />
-                  {{ card.students }}
-                </span>
-              </div>
-
-              <div class="hm-card__meta hm-card__meta--single">
-                <span class="hm-card__meta-item hm-card__meta-item--muted">
-                  <app-icon name="clock" class="hm-card__meta-icon h-[12px] w-[12px]" />
-                  {{ card.duration }}
-                </span>
-              </div>
-
-              <div class="hm-card__tags">
-                @for (tag of card.tags; track tag) {
-                  <span class="hm-tag">{{ tag }}</span>
-                }
-              </div>
-
-              <div class="hm-card__footer">
-                <div class="hm-card__prices">
-                  <span class="hm-card__price">{{ card.price }}</span>
-                  <span class="hm-card__old">{{ card.oldPrice }}</span>
-                  @if (card.discount) {
-                    <span class="hm-card__discount">{{ card.discount }}</span>
-                  }
-                </div>
-
-                <div class="hm-card__actions">
-                  <button type="button" class="hm-icon-btn" (click)="addToCart(card)" aria-label="Thêm vào giỏ hàng">
-                    <app-icon name="shopping-cart" class="h-[14px] w-[14px]" />
-                  </button>
-                  <a class="hm-icon-btn" [routerLink]="['/courses', card.id]" aria-label="Xem chi tiết khóa học">
-                    <app-icon name="arrow-right" class="h-[14px] w-[14px]" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </article>
+          <app-course-card
+            [card]="card"
+            [saved]="isSaved(card)"
+            (saveToggle)="toggleSave($event)"
+            (addToCart)="addToCart($event)"
+          />
         }
       </div>
     </section>

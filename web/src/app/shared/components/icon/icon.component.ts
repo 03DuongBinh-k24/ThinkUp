@@ -43,7 +43,9 @@ export type IconName =
   | 'target'
   | 'zap'
   | 'briefcase'
-  | 'map-pin';
+  | 'map-pin'
+  | 'settings'
+  | 'code';
 
 /**
  * Icon set dùng chung (hình Lucide 24x24, stroke 2 như file Figma).
