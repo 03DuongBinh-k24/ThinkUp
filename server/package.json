@@ -19,6 +19,7 @@
     "test:flashcard": "node --test src/user/flashcard/test/flashcard.user.test.js",
     "test:payment": "node --test src/user/payment/test/payment.test.js",
     "test:course": "node --test src/user/course/test/course.user.test.js",
+    "test:lesson": "node --test src/user/lesson/test/lesson.user.test.js",
     "test:favorites": "node --test src/user/favorites/test/*.test.js",
     "test:admin-auth": "node --test src/admin/auth/test/auth.admin.test.js",
     "seed:admin": "node scripts/seed_admin.js",
