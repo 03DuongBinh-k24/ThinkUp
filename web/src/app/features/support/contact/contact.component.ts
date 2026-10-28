@@ -4,11 +4,20 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { AuthService } from '../../../core/services/auth.service';
-import { FAQ_CATEGORIES, SUPPORT_TOPICS } from '../data/support.data';
+import { IconComponent, IconName } from '../../../shared/components/icon/icon.component';
+import { SUPPORT_TOPICS } from '../data/support.data';
 
 interface Attachment { file: File; size: string; }
+interface FaqCard { title: string; text: string; icon: IconName; category: string; }
 
-@Component({ selector: 'app-contact-view', standalone: true, imports: [CommonModule, ReactiveFormsModule, RouterLink], templateUrl: './contact.component.html', styleUrl: './contact.component.css' })
+const FAQ_CARDS: FaqCard[] = [
+  { title: 'Hướng dẫn thanh toán', text: 'Các phương thức thanh toán và vấn đề liên quan', icon: 'credit-card', category: 'payment' },
+  { title: 'Hướng dẫn học tập', text: 'Cách học, xem bài giảng và làm bài tập', icon: 'book-open', category: 'learning' },
+  { title: 'Chứng chỉ', text: 'Thông tin về chứng chỉ', icon: 'award', category: 'certificate' },
+  { title: 'Kỹ thuật & Tài khoản', text: 'Lỗi kỹ thuật, tài khoản và bảo mật', icon: 'wrench', category: 'technical' },
+];
+
+@Component({ selector: 'app-contact-view', standalone: true, imports: [CommonModule, ReactiveFormsModule, RouterLink, IconComponent], templateUrl: './contact.component.html', styleUrl: './contact.component.css' })
 export class ContactComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
@@ -16,7 +25,7 @@ export class ContactComponent implements OnInit {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   readonly topics = SUPPORT_TOPICS;
-  readonly categories = FAQ_CATEGORIES.slice(1, 5);
+  readonly faqCards = FAQ_CARDS;
   readonly attachments = signal<Attachment[]>([]);
   readonly fileError = signal('');
   readonly submitted = signal(false);
