@@ -35,6 +35,8 @@ import { createPaymentRouter } from './user/payment/payment.router.js';
 import { createCartRouter } from './user/cart/cart.user.js';
 import { createCourseRouter } from './user/course/course.user.js';
 import { createFavoritesRouter } from './user/favorites/favorites.user.js';
+import { createLessonRouter } from './user/lesson/lesson.user.js';
+import { createCertificateRouter } from './user/certificate/certificate.user.js';
 import { createAdminAuthRouter } from './admin/auth/auth.admin.js';
 
 const app = express();
@@ -476,6 +478,18 @@ app.use('/api/favorites', favoritesRouter); // Alias tương thích trực tiế
 const adminAuthRouter = createAdminAuthRouter(express);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/v1/admin/auth', adminAuthRouter); // Hỗ trợ tiền tố v1
+
+// ─── 5m. Router Bài Học & Học Tập: /api/user/lessons ─────────────────────────
+const lessonRouter = createLessonRouter(express, requireAuth, optionalAuth);
+app.use('/api/user/lessons', lessonRouter);
+app.use('/api/v1/user/lessons', lessonRouter);
+app.use('/api/lessons', lessonRouter); // Alias tương thích trực tiếp
+
+// ─── 5n. Router Quản Lý & Tra Cứu Chứng Chỉ: /api/certificates & /api/v1/certificates ──
+const certificateRouter = createCertificateRouter(express, requireAuth);
+app.use('/api/certificates', certificateRouter);
+app.use('/api/v1/certificates', certificateRouter);
+app.use('/api/user/certificates', certificateRouter); // Alias tương thích user prefix
 
 // ─── 6. Bộ Xử Lý Lỗi Tập Trung (Tương thích quy tắc bảo mật writing-block) ──
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
