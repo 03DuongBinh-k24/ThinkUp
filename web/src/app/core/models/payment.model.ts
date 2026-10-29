@@ -80,27 +80,16 @@ export interface CheckoutVoucher {
 }
 
 /** Phương thức gửi lên POST /api/payment/create-session. */
-export type PaymentMethodId =
-  | 'atm'
-  | 'wallet'
-  | 'bank-transfer'
-  | 'qr'
-  | 'card'
-  | 'paypal'
-  | 'apple-pay'
-  | 'swift'
-  | 'stripe'
-  | 'international';
+export type PaymentMethodId = 'sepay' | 'vnpay' | 'stripe';
 
 export interface CreatePaymentSessionPayload {
   courses: {
     id: string;
     title: string;
-    salePrice: number;
+    price: number;
     originalPrice: number;
     thumbnail?: string;
-    thumbnail_url?: string;
-    instructor?: string;
+    instructorName?: string;
   }[];
   paymentMethod: PaymentMethodId;
   bankCode?: string;
@@ -120,8 +109,9 @@ export interface PaymentSession {
   transferContent: string;
   bankInfo: {
     bankId: string;
+    bankName?: string;
     accountNo: string;
-    accountName: string;
+    accountHolder: string;
   };
   qrCodeUrl: string;
   paymentUrl?: string;
