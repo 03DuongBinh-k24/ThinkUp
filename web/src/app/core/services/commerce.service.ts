@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { CartItem, OrderSummary, Voucher, TransactionRow, TransactionDetail } from '../models/commerce.model';
+import { CartItem, TransactionRow, TransactionDetail } from '../models/commerce.model';
 import {
   ApiCartCourse,
   CartView,
@@ -16,10 +16,6 @@ import {
 import { Course } from '../models/course.model';
 import { MOCK_COURSES } from '../data/mock/mock-courses';
 import { MOCK_BILLING_DETAILS, MOCK_BILLING_EMAIL, MOCK_BILLING_ROWS } from '../data/mock/mock-billing';
-
-function formatMoney(value: number): string {
-  return `${new Intl.NumberFormat('vi-VN').format(value)}đ`;
-}
 
 /** Chuyển khóa học của API giỏ hàng sang model dùng chung của app. */
 function mapApiCartCourse(course: ApiCartCourse): CartItem {
@@ -262,98 +258,6 @@ export class CommerceService {
     return this.http.get<PaymentStatus>(`${this.apiUrl}/payment/status/${encodeURIComponent(transactionId)}`, {
       withCredentials: true,
     });
-  }
-
-  // TODO(pre-deploy): Nhớ xóa giao dịch và hóa đơn mock khi tích hợp thanh toán thật.
-  completePurchase(params: {
-    courses: CartItem[];
-    summary: OrderSummary;
-    paymentMethod: string;
-    voucher?: Voucher;
-    orderId?: string;
-    buyerEmail?: string;
-  }): TransactionDetail {
-    const now = new Date();
-    const timestamp = now.getTime();
-    const suffix = String(timestamp).slice(-8);
-    const id = params.orderId || `GD${suffix}`;
-
-    let buyerName = 'Khách hàng ThinkUp';
-    let buyerEmail = params.buyerEmail || 'user@thinkup.vn';
-    let buyerPhone = '';
-
-    try {
-      const userStr = localStorage.getItem('thinkup_current_user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        buyerName = user.full_name || user.fullName || user.name || buyerName;
-        if (!params.buyerEmail) buyerEmail = user.email || buyerEmail;
-        buyerPhone = user.phone || user.phone_number || '';
-      }
-    } catch {}
-
-    const timeStr = now.toLocaleString('vi-VN', { hour12: false });
-    const dateStr = now.toLocaleDateString('vi-VN');
-    const timeOnly = now.toLocaleTimeString('vi-VN', { hour12: false });
-
-    const row: TransactionRow = {
-      id,
-      courses: params.courses.map(c => c.displayTitle || c.title),
-      paymentMethod: params.paymentMethod,
-      amount: formatMoney(params.summary.total),
-      status: 'success',
-      date: dateStr,
-      time: timeOnly,
-      timestamp,
-    };
-
-    const detail: TransactionDetail = {
-      id,
-      transactionCode: `THKUP-${suffix}`,
-      paymentMethod: params.paymentMethod,
-      createdAt: timeStr,
-      paidAt: timeStr,
-      completedAt: timeStr,
-      paymentContent: `Đơn hàng ${suffix}`,
-      status: 'success',
-      order: {
-        countLabel: `${params.courses.length} khóa học`,
-        courses: params.courses.map(c => ({
-          id: c.id,
-          title: c.displayTitle || c.title,
-          instructor: c.instructor,
-          price: formatMoney(c.salePrice),
-          originalPrice: formatMoney(c.originalPrice),
-          badge: c.shortLabel || c.icon || 'Course',
-          tone: 'blue',
-        })),
-        subtotal: formatMoney(params.summary.subtotal),
-        courseDiscount: formatMoney(0),
-        voucherDiscount: `-${formatMoney(params.summary.voucherDiscount)}`,
-        voucherCode: params.voucher?.code || '',
-        total: formatMoney(params.summary.total),
-      },
-      payment: {
-        bank: params.paymentMethod,
-        accountNumber: '—',
-        accountName: 'THINKUP',
-        transferContent: `THINKUP ${suffix}`,
-        paidAmount: formatMoney(params.summary.total),
-        bankTransactionCode: `FT${timestamp}`,
-        paidAt: timeStr,
-      },
-      invoice: {
-        code: `HD-${suffix}`,
-        issuedAt: timeStr,
-        status: 'Đã phát hành',
-        buyer: { name: buyerName, email: buyerEmail, phone: buyerPhone },
-      },
-    };
-
-    this._transactions.update(txs => [row, ...txs]);
-    this._transactionDetails.update(details => ({ ...details, [id]: detail }));
-    this.persistState();
-    return detail;
   }
 
   finalizeCheckout(): void {
