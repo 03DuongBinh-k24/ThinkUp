@@ -94,6 +94,12 @@ export class FlashcardDetailComponent {
     return filter === 'all' ? set.cards : set.cards.filter((card) => card.status === filter);
   });
 
+  constructor() {
+    this.flashcardService.loadSet(this.setId).subscribe({
+      error: () => this.toastService.showToast({ type: 'error', message: 'Không thể tải bộ flashcard.' })
+    });
+  }
+
   cardStatusLabel(status: FlashcardCardStatus): string {
     return CARD_STATUS_LABEL[status];
   }
@@ -124,9 +130,10 @@ export class FlashcardDetailComponent {
   }
 
   confirmDelete(): void {
-    this.flashcardService.deleteSet(this.setId);
     this.deleteConfirm.set(false);
-    this.toastService.showToast({ type: 'success', message: 'Đã xóa bộ flashcard.' });
-    this.router.navigate(['/learning/flashcards']);
+    this.toastService.showToast({
+      type: 'info',
+      message: 'Chức năng xóa đang chờ backend cung cấp API contract.'
+    });
   }
 }

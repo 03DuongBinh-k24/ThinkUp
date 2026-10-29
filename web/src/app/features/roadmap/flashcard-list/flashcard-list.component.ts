@@ -74,6 +74,10 @@ export class FlashcardListComponent {
     });
   });
 
+  constructor() {
+    this.flashcardService.loadSets().subscribe({ error: () => undefined });
+  }
+
   setFilter(filter: FlashcardListFilter): void {
     this.activeFilter.set(filter);
   }
