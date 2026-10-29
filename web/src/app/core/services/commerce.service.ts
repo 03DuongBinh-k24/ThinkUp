@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CartItem, OrderSummary, Voucher, TransactionRow, TransactionDetail } from '../models/commerce.model';
 import {
@@ -14,7 +14,6 @@ import {
   VoucherValidateResult,
 } from '../models/payment.model';
 import { Course } from '../models/course.model';
-import { MOCK_COURSES } from '../data/mock/mock-courses';
 import { MOCK_BILLING_DETAILS, MOCK_BILLING_EMAIL, MOCK_BILLING_ROWS } from '../data/mock/mock-billing';
 
 function formatMoney(value: number): string {
@@ -25,7 +24,7 @@ function formatMoney(value: number): string {
 function mapApiCartCourse(course: ApiCartCourse): CartItem {
   const instructorName = course.instructor?.name || 'Giảng viên ThinkUp';
   return {
-    id: course.course_id || course.id,
+    id: course.course_id,
     courseId: course.course_id,
     slug: course.slug,
     title: course.title,
@@ -39,22 +38,10 @@ function mapApiCartCourse(course: ApiCartCourse): CartItem {
     originalPrice: course.price?.original ?? 0,
     salePrice: course.price?.sale ?? 0,
     tags: course.tags ?? [],
-    thumbnailUrl: course.thumbnail_url || '',
+    thumbnailUrl: course.thumbnail || course.thumbnail_url || '',
     isSelected: course.is_selected,
-    isEnrolled: course.is_already_enrolled,
+    isEnrolled: course.is_owned || course.is_already_enrolled,
     isAvailable: course.is_available,
-  };
-}
-
-function normalizeCommerceCourse(course: Course): CartItem {
-  return {
-    ...course,
-    displayTitle: course.displayTitle || course.title,
-    instructorInitial: course.instructorInitial || course.instructor?.charAt(0) || 'T',
-    students: course.students || `${course.studentsCount?.toLocaleString('vi-VN') || 0} học viên`,
-    thumbnail: course.thumbnail || course.id,
-    theme: course.theme || 'from-[#155DFC] to-[#14B8A6]',
-    shortLabel: course.shortLabel || course.icon || course.title?.split(' ').slice(0, 2).join(' '),
   };
 }
 
@@ -114,15 +101,9 @@ export class CommerceService {
           return;
         }
       }
-      // TODO(pre-deploy): Nhớ xóa giỏ hàng mẫu khi có dữ liệu giỏ hàng thật.
-      // Initial sample cart items
-      const sample = MOCK_COURSES.slice(0, 2).map(normalizeCommerceCourse);
-      this._cartItems.set(sample);
-      this._checkoutIds.set(sample.map(s => s.id));
-      this.persistState();
+      this._cartItems.set([]);
     } catch {
-      const sample = MOCK_COURSES.slice(0, 2).map(normalizeCommerceCourse);
-      this._cartItems.set(sample);
+      this._cartItems.set([]);
     }
   }
 
@@ -155,14 +136,15 @@ export class CommerceService {
     if (params.voucherCode) {
       search.push(`voucherCode=${encodeURIComponent(params.voucherCode)}`);
     }
+    const guestCourseIds = this.readGuestCourseIds();
+    if (guestCourseIds.length > 0) {
+      search.push(`guestCourseIds=${encodeURIComponent(guestCourseIds.join(','))}`);
+    }
     if (search.length) query = `?${search.join('&')}`;
 
     return this.http
       .get<{ success: boolean; data: CartView }>(`${this.apiUrl}/user/cart${query}`, { withCredentials: true })
-      .pipe(
-        map(res => this.applyCartPayload(res?.data)),
-        catchError(() => of(this._cartItems())),
-      );
+      .pipe(map(res => this.applyCartPayload(res.data)));
   }
 
   /** PATCH-like refresh: đồng bộ lại danh sách khóa học sau mỗi thao tác giỏ hàng. */
@@ -171,25 +153,17 @@ export class CommerceService {
   }
 
   private applyCartPayload(payload: unknown): CartItem[] {
-    const data = payload as CartView | Course[] | null;
+    const data = payload as CartView | { items?: ApiCartCourse[] } | null;
     if (!data) return this._cartItems();
 
-    if (Array.isArray(data)) {
-      const items = data.map(normalizeCommerceCourse);
-      this._cartItems.set(items);
-      this.persistState();
-      return items;
-    }
-
-    if (Array.isArray(data.courses)) {
-      const items = data.courses.map(mapApiCartCourse);
+    if (Array.isArray(data.items)) {
+      const items = data.items.map(mapApiCartCourse);
       this._cartItems.set(items);
       this._checkoutIds.update(ids => ids.filter(id => items.some(item => item.id === id)));
       this.persistState();
       return items;
     }
-
-    return this._cartItems();
+    throw new Error('Phản hồi giỏ hàng không hợp lệ.');
   }
 
   getCart(): Observable<{ success: boolean; data: CartItem[] }> {
@@ -197,34 +171,29 @@ export class CommerceService {
   }
 
   addToCart(courseId: string): Observable<{ success: boolean; data: CartItem[]; added: boolean }> {
-    const course = MOCK_COURSES.find(c => c.id === courseId);
-    if (course) {
-      const normalized = normalizeCommerceCourse(course);
-      if (!this._cartItems().some(i => i.id === courseId)) {
-        this._cartItems.update(items => [normalized, ...items]);
-        this.persistState();
-      }
-    }
-
     return this.http.post<{ success: boolean; data: unknown; added: boolean }>(
       `${this.apiUrl}/user/cart`, { courseId }, { withCredentials: true }
     ).pipe(
-      map(res => ({ success: res?.success ?? true, data: this.applyCartPayload(res?.data), added: true })),
-      catchError(() => of({ success: true, data: this._cartItems(), added: true }))
+      map(res => ({ success: res.success, data: this.applyCartPayload(res.data), added: res.added ?? true }))
     );
   }
 
   removeFromCart(courseId: string): Observable<{ success: boolean; data: CartItem[] }> {
-    this._cartItems.update(items => items.filter(item => item.id !== courseId));
-    this._checkoutIds.update(ids => ids.filter(id => id !== courseId));
-    this.persistState();
-
     return this.http.delete<{ success: boolean; data: unknown }>(
       `${this.apiUrl}/user/cart`, { body: { courseId }, withCredentials: true }
     ).pipe(
-      map(res => ({ success: res?.success ?? true, data: this.applyCartPayload(res?.data) })),
-      catchError(() => of({ success: true, data: this._cartItems() }))
+      map(res => ({ success: res.success, data: this.applyCartPayload(res.data) }))
     );
+  }
+
+  private readGuestCourseIds(): string[] {
+    try {
+      const raw = localStorage.getItem('thinkup_guest_cart_ids');
+      const ids = raw ? JSON.parse(raw) as unknown : [];
+      return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
+    } catch {
+      return [];
+    }
   }
 
   setCheckoutCourses(courseIds: string[]): void {
