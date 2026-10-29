@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, from, map, of, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { MOCK_ADMIN_BACKUP_CODES } from '../data/mock/admin-auth.mock';
+import { MOCK_ADMIN_ACCOUNT, MOCK_ADMIN_BACKUP_CODES, MOCK_FIRST_LOGIN_ADMIN_ACCOUNT } from '../data/mock/admin-auth.mock';
 import {
   AdminAuthError,
   AdminLoginRequest,
@@ -92,6 +92,29 @@ export class AdminAuthService {
       email: (credentials.email ?? '').trim().toLowerCase(),
       password: credentials.password ?? ''
     };
+
+    // TODO(pre-deploy): Nhớ xóa nhánh đăng nhập local này khi backend Admin sẵn sàng.
+    // Không gửi email/mật khẩu ra mạng trong chế độ demo.
+    if (environment.adminDemoLogin) {
+      const account = [MOCK_ADMIN_ACCOUNT, MOCK_FIRST_LOGIN_ADMIN_ACCOUNT]
+        .find(item => item.email === payload.email && item.password === payload.password);
+      if (!account) {
+        return throwError(() => this.buildError('Email hoặc mật khẩu không chính xác. Vui lòng thử lại.', 401, 'INVALID_CREDENTIALS'));
+      }
+
+      const user: AdminUser = {
+        id: `demo-${account.email}`,
+        email: account.email,
+        fullName: account.fullName,
+        role: 'admin',
+        avatar: null,
+        passwordExpiresAt: null,
+        mustChangePassword: false,
+        twoFactorSetupRequired: false
+      };
+      this.saveSession('demo-local-access-token', user, false);
+      return of(user);
+    }
 
     return this.http.post<AdminLoginResponse>(`${this.apiUrl}/admin/auth/login`, payload).pipe(
       map(response => {
