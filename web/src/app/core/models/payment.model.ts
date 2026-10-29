@@ -5,35 +5,39 @@
 
 /** Khóa học trong giỏ hàng do API trả về (GET /api/user/cart). */
 export interface ApiCartCourse {
-  id: string;
+  id?: string;
   course_id: string;
   slug: string;
   title: string;
-  thumbnail_url: string;
+  thumbnail?: string;
+  thumbnail_url?: string;
   instructor: {
     id: string;
     name: string;
-    avatar_url: string;
+    avatar?: string;
+    avatar_url?: string;
   };
   rating: number;
   total_reviews: number;
-  total_students: number;
-  tags: string[];
+  total_students?: number;
+  tags?: string[];
   price: {
     original: number;
     original_formatted: string;
     sale: number;
     sale_formatted: string;
-    discount_amount: number;
-    discount_formatted: string;
+    discount_percent?: number;
+    discount_amount?: number;
+    discount_formatted?: string;
   };
-  status: string;
-  is_available: boolean;
+  status?: string;
+  is_available?: boolean;
   is_in_wishlist: boolean;
-  is_already_enrolled: boolean;
-  action_button_state: 'CHECKOUT' | 'GO_TO_LEARNING' | 'UNAVAILABLE';
-  action_button_label: string;
-  is_selected: boolean;
+  is_owned: boolean;
+  is_already_enrolled?: boolean;
+  action_button_state?: 'CHECKOUT' | 'GO_TO_LEARNING' | 'UNAVAILABLE';
+  action_button_label?: string;
+  is_selected?: boolean;
 }
 
 /** Tổng tiền do API tính sẵn cho giỏ hàng. */
@@ -57,11 +61,25 @@ export interface CartSummary {
 
 /** GET /api/user/cart -> { success, data: CartView } */
 export interface CartView {
-  totalCourses: number;
-  courses: ApiCartCourse[];
-  summary: CartSummary;
-  isGuest: boolean;
-  requiresAuthToCheckout: boolean;
+  is_guest: boolean;
+  user_id: string | null;
+  items_count: number;
+  items: ApiCartCourse[];
+  pricing_summary: {
+    subtotal: number;
+    subtotal_formatted: string;
+    discount_amount: number;
+    discount_amount_formatted: string;
+    total_amount: number;
+    total_amount_formatted: string;
+    currency: string;
+  };
+  voucher_applied?: {
+    code: string;
+    is_valid: boolean;
+    discount_amount: number;
+    message: string;
+  } | null;
 }
 
 /** POST /api/user/cart/voucher/validate -> { success, data } */
