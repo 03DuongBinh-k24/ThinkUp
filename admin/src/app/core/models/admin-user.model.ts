@@ -27,31 +27,6 @@ export interface AdminLoginRequest {
 export interface AdminLoginResponse {
   success: boolean;
   message?: string;
-<<<<<<< HEAD
-  accessToken?: string;
-  refreshToken?: string;
-  token?: string;
-  requiresTwoFactor?: boolean;
-  twoFactorToken?: string;
-  passwordExpiresAt?: string | null;
-  mustChangePassword?: boolean;
-  twoFactorSetupRequired?: boolean;
-  user?: {
-    id?: string;
-    studentId?: string | null;
-    name?: string | null;
-    full_name?: string | null;
-    email?: string;
-    phone?: string | null;
-    role?: string;
-    avatar?: string | null;
-    avatar_url?: string | null;
-    email_verified?: boolean;
-    password_expires_at?: string | null;
-  must_change_password?: boolean;
-  two_factor_setup_required?: boolean;
-};
-=======
   requires2FA: boolean;
   twoFactorToken: string;
   expiresInSeconds?: number;
@@ -88,7 +63,6 @@ export interface AdminOnboardingSetupResponse {
   onboardingToken: string;
   secretKey: string;
   qrUri: string;
->>>>>>> 9f3d8a1e24f775a84e87bd6904b66c129395cb37
 }
 
 /** Lỗi API đã được chuẩn hoá để component hiển thị thông điệp tiếng Việt. */

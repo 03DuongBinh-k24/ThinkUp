@@ -2,9 +2,10 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { FAQ_CATEGORIES, FaqItem } from '../data/support.data';
 
-@Component({ selector: 'app-help-center', standalone: true, imports: [RouterLink], templateUrl: './help-center.component.html', styleUrl: './help-center.component.css' })
+@Component({ selector: 'app-help-center', standalone: true, imports: [RouterLink, IconComponent], templateUrl: './help-center.component.html', styleUrl: './help-center.component.css' })
 export class HelpCenterComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly title = inject(Title);
