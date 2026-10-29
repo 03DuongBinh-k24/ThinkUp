@@ -675,7 +675,10 @@ export async function getFlashcardListStats(listId, userId) {
     progress_percentage: stats.progress_percentage,
     node_id: listDoc.node_id || null,
     roadmap_id: listDoc.roadmap_id || null,
-    is_qualified_for_roadmap: stats.total_cards >= 5 && stats.progress_percentage >= 70,
+    is_qualified_for_roadmap:
+      stats.total_cards >= 5 &&
+      stats.learned_cards === stats.total_cards &&
+      stats.progress_percentage === 100,
   };
 }
 
@@ -853,9 +856,9 @@ export async function createReviewFlashcardListFromRoadmapNode(userId, payload =
  * Quy tắc nghiệp vụ:
  * 1) Nếu người dùng KHÔNG tạo list flashcard với tối thiểu ít nhất 5 flashcard (total_cards < 5)
  *    -> GIỮ NGUYÊN trạng thái 'review' của node trên roadmap, không cập nhật!
- * 2) Khi người dùng CHƯA hoàn thành tối thiểu 70% bộ flashcard (progress_percentage < 70%)
+ * 2) Khi người dùng CHƯA hoàn thành hết tất cả các thẻ flashcard (progress_percentage < 100% hoặc learned_cards < total_cards)
  *    -> GIỮ NGUYÊN trạng thái 'review' của node trên roadmap, không cập nhật!
- * 3) Khi đáp ứng cả 2 điều kiện:
+ * 3) Khi đáp ứng cả 2 điều kiện (tối thiểu 5 thẻ và đã hoàn thành hết 100%):
  *    -> CẬP NHẬT lại node kỹ năng trên roadmap: gỡ bỏ review (is_review = false),
  *       chuyển trạng thái sang 'completed' (hoặc 'in_progress' theo điểm số), đồng bộ tiến độ roadmap.
  * @param {string} userId
@@ -894,15 +897,15 @@ export async function checkAndUpdateRoadmapFromFlashcard(userId, nodeId, listId 
     };
   }
 
-  // Điều kiện 2: Kiểm tra tỷ lệ hoàn thành (tối thiểu 70% số thẻ 'Đã học')
+  // Điều kiện 2: Kiểm tra tỷ lệ hoàn thành (yêu cầu hoàn thành hết 100% số thẻ 'Đã học')
   const stats = calculateFlashcardStats(flashcardList.cards);
-  if (stats.progress_percentage < 70) {
+  if (stats.learned_cards < stats.total_cards || stats.progress_percentage < 100) {
     return {
       updated: false,
-      reason: `Chưa hoàn thành tối thiểu 70% bộ flashcard ôn tập (hiện tại: ${stats.progress_percentage}%). Trạng thái node trên roadmap được giữ nguyên.`,
+      reason: `Chưa hoàn thành hết tất cả các thẻ trong bộ flashcard ôn tập (${stats.learned_cards}/${stats.total_cards} thẻ, hiện tại: ${stats.progress_percentage}%). Trạng thái node trên roadmap được giữ nguyên.`,
       node_status: ROADMAP_STATUS_REVIEW,
       progress_percentage: stats.progress_percentage,
-      minimum_required_percentage: 70,
+      minimum_required_percentage: 100,
       learned_cards: stats.learned_cards,
       total_cards: stats.total_cards,
     };

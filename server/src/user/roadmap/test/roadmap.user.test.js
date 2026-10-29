@@ -18,7 +18,8 @@ import {
   syncCourseProgressToRoadmap,
   getUserSubmissionHistory,
   determineNodeStatus,
-  calculateRoadmapProgress
+  calculateRoadmapProgress,
+  getNodeCourseRecommendations
 } from '../roadmap.user.js';
 import { getMongoDb, closeMongoDb } from '../../db.js';
 
@@ -319,5 +320,54 @@ test('Roadmap Backend Service Test Suite', async (t) => {
     } finally {
       await enrollmentsColl.deleteMany({ user_id: testUserId });
     }
+  });
+
+  await t.test('10. Đề xuất ~4 khóa học chưa sở hữu theo node để thúc đẩy sale (Upsell)', async () => {
+    // 10.1: Lấy đề xuất khóa học cho node fe-node-react
+    const result = await getNodeCourseRecommendations(testUserId, 'fe-node-react', {
+      limit: 4,
+      db
+    });
+
+    assert.ok(result.node, 'Phải có thông tin node');
+    assert.equal(result.node.node_id, 'fe-node-react');
+    assert.ok(Array.isArray(result.courses), 'Danh sách khóa học phải là mảng');
+    assert.ok(result.courses.length > 0 && result.courses.length <= 4, 'Số lượng khóa học đề xuất từ 1 đến 4');
+
+    // Kiểm tra tất cả các khóa đề xuất đều chưa mua
+    for (const c of result.courses) {
+      assert.equal(c.is_purchased, false, 'Khóa đề xuất bắt buộc phải là khóa chưa mua');
+      assert.ok(c.title, 'Phải có tiêu đề khóa học');
+      assert.ok(c.price, 'Phải có thông tin giá');
+      assert.ok(c.relevance_score > 0, 'Điểm liên quan phải > 0');
+    }
+
+    // 10.2: Giả lập học viên đã mua khóa đầu tiên -> Khóa đó phải bị LOẠI BỎ khỏi đề xuất
+    const firstCourseId = result.courses[0].course_id;
+    await db.collection('user_enrollments').insertOne({
+      user_id: testUserId,
+      course_id: firstCourseId,
+      enrolled_at: new Date()
+    });
+
+    try {
+      const resultAfterBuy = await getNodeCourseRecommendations(testUserId, 'fe-node-react', {
+        limit: 4,
+        db
+      });
+
+      const stillHasFirstCourse = resultAfterBuy.courses.some(c => c.course_id === firstCourseId);
+      assert.equal(stillHasFirstCourse, false, 'Khóa đã mua tuyệt đối không được xuất hiện trong danh sách đề xuất');
+    } finally {
+      await db.collection('user_enrollments').deleteMany({ user_id: testUserId });
+    }
+
+    // 10.3: Báo lỗi 404 khi nodeId không tồn tại
+    await assert.rejects(
+      async () => {
+        await getNodeCourseRecommendations(testUserId, 'non-existent-node-xyz', { db });
+      },
+      { status: 404 }
+    );
   });
 });
