@@ -39,6 +39,19 @@ export class CourseService {
         if (filters.levels?.length) {
           list = list.filter(c => c.level && filters.levels!.includes(c.level));
         }
+        if (filters.ratings) {
+          const minimumRating = Number(filters.ratings);
+          if (Number.isFinite(minimumRating)) {
+            list = list.filter(c => Number(c.rating || 0) >= minimumRating);
+          }
+        }
+        if (filters.tags?.length) {
+          const selectedTags = filters.tags.map(tag => tag.toLowerCase());
+          list = list.filter(c => (c.tags || []).some(tag => selectedTags.includes(tag.toLowerCase())));
+        }
+        if (filters.maxDuration && filters.maxDuration < 120) {
+          list = list.filter(c => this.parseDurationHours(c.duration) <= filters.maxDuration!);
+        }
         if (filters.priceType === 'free') {
           list = list.filter(c => c.salePrice === 0);
         } else if (filters.priceType === 'paid') {
@@ -257,6 +270,14 @@ export class CourseService {
     });
 
     return filtered;
+  }
+
+  private parseDurationHours(duration?: string): number {
+    if (!duration) return 0;
+
+    const hours = Number(duration.match(/(\d+)\s*giờ/i)?.[1] || 0);
+    const minutes = Number(duration.match(/(\d+)\s*phút/i)?.[1] || 0);
+    return hours + minutes / 60;
   }
 }
 
