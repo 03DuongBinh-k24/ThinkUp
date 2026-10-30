@@ -81,25 +81,48 @@
               </label>
             </div>
 
-            <label class="ct-field">
-              <span class="sr-only">Chủ đề</span>
-              <app-icon name="credit-card" class="ct-field__icon h-4 w-4" />
-              <app-icon name="chevron-down" class="ct-field__icon ct-field__icon--right h-4 w-4" />
-              <select
-                class="ct-control ct-select"
+            <div class="ct-field ct-topic" #topicField>
+              <span class="sr-only" id="ct-topic-label">Chủ đề</span>
+              <button
+                type="button"
+                class="ct-control ct-topic__trigger"
                 [class.is-invalid]="fieldInvalid('topic')"
-                [class.is-placeholder]="!form.controls.topic.value"
-                formControlName="topic"
+                [class.is-open]="topicOpen()"
+                [attr.aria-expanded]="topicOpen()"
+                aria-haspopup="listbox"
+                aria-labelledby="ct-topic-label ct-topic-value"
+                (click)="toggleTopic()"
+                (keydown)="onTopicKeydown($event)"
               >
-                <option value="" disabled>Chọn chủ đề *</option>
-                @for (topic of topics; track topic) {
-                  <option [value]="topic">{{ topic }}</option>
-                }
-              </select>
+                <app-icon name="layout-grid" class="ct-field__icon h-4 w-4" />
+                <span id="ct-topic-value" class="ct-topic__value" [class.is-placeholder]="!form.controls.topic.value">
+                  {{ form.controls.topic.value || 'Chọn chủ đề *' }}
+                </span>
+                <app-icon name="chevron-down" class="ct-field__icon ct-field__icon--right ct-topic__chevron h-4 w-4" />
+              </button>
+
+              @if (topicOpen()) {
+                <ul class="ct-topic__menu" role="listbox" aria-labelledby="ct-topic-label">
+                  @for (topic of topics; track topic; let i = $index) {
+                    <li
+                      role="option"
+                      class="ct-topic__option"
+                      [class.is-active]="activeTopic() === i"
+                      [class.is-selected]="form.controls.topic.value === topic"
+                      [attr.aria-selected]="form.controls.topic.value === topic"
+                      (mouseenter)="activeTopic.set(i)"
+                      (click)="selectTopic(topic)"
+                    >
+                      {{ topic }}
+                    </li>
+                  }
+                </ul>
+              }
+
               @if (fieldInvalid('topic')) {
                 <small class="ct-error">Vui lòng chọn chủ đề yêu cầu.</small>
               }
-            </label>
+            </div>
 
             <label class="ct-field">
               <span class="sr-only">Nội dung yêu cầu</span>
@@ -213,12 +236,13 @@
       @for (card of faqCards; track card.title) {
         <a [routerLink]="['/main/help-center']" [queryParams]="{ category: card.category }" class="ct-faq__card">
           <span class="ct-faq__icon">
-            <app-icon [name]="card.icon" class="h-[18px] w-[18px]" />
+            <app-icon [name]="card.icon" class="h-5 w-5" />
           </span>
-          <span>
+          <span class="ct-faq__body">
             <b class="ct-faq__card-title">{{ card.title }}</b>
             <span class="ct-faq__card-text">{{ card.text }}</span>
           </span>
+          <app-icon name="chevron-right" class="ct-faq__arrow h-4 w-4" />
         </a>
       }
     </div>
