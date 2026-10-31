@@ -373,32 +373,33 @@
         </section>
 
         <!-- 10. FAQ Section -->
-        <section class="bg-white px-6 py-16 md:px-16 lg:px-24 border-t border-slate-100">
-          <div class="mx-auto flex max-w-[1440px] flex-col items-center gap-12">
-            <div class="text-center flex flex-col items-center gap-4">
-              <div class="h-20 w-20 rounded-full overflow-hidden">
-                <img src="/assets/landing/faq-logo.png" alt="" class="h-full w-full object-cover" />
-              </div>
-              <h2 class="font-['Inter'] text-[32px] font-extrabold text-[#09131A]">
-                Câu hỏi thường gặp
-              </h2>
+        <section class="ln-faq">
+          <div class="ln-faq__inner">
+            <div class="ln-faq__head">
+              <img class="ln-faq__logo" src="/assets/landing/faq-logo.png" alt="" aria-hidden="true" />
+              <h2 class="ln-faq__title">Câu hỏi thường gặp</h2>
             </div>
 
-            <div class="grid gap-4 w-full md:grid-cols-2">
+            <div class="ln-faq__grid">
               @for (item of faqItems; track item.question; let i = $index) {
                 <div
-                  class="rounded-[14px] border p-5 transition-all cursor-pointer"
-                  [ngClass]="openFaq() === i ? 'border-[#BFE5FF] bg-[#E6F4FF]' : 'border-[#D3ECFF] bg-[#F1F9FF] hover:bg-[#E6F4FF]'"
-                  (click)="toggleFaq(i)"
+                  class="ln-faq__item"
+                  [class.ln-faq__item--amber]="i % 4 === 1 || i % 4 === 2"
+                  [class.is-open]="openFaq() === i"
                 >
-                  <div class="flex w-full items-center justify-between text-left">
-                    <span class="font-['Inter'] text-[15px] font-extrabold text-[#09131A]">{{ item.question }}</span>
-                    <span class="text-lg font-bold">{{ openFaq() === i ? '−' : '+' }}</span>
-                  </div>
+                  <button
+                    type="button"
+                    class="ln-faq__question"
+                    [attr.aria-expanded]="openFaq() === i"
+                    (click)="toggleFaq(i)"
+                  >
+                    <span class="ln-faq__question-text">{{ item.question }}</span>
+                    <span class="ln-faq__plus">
+                      <app-icon [name]="openFaq() === i ? 'minus' : 'plus'" class="ln-faq__plus-icon" [strokeWidth]="2" />
+                    </span>
+                  </button>
                   @if (openFaq() === i) {
-                    <p class="mt-4 font-['Inter'] text-[13px] leading-5 text-[rgba(9,19,26,0.8)]">
-                      {{ item.answer }}
-                    </p>
+                    <p class="ln-faq__answer">{{ item.answer }}</p>
                   }
                 </div>
               }

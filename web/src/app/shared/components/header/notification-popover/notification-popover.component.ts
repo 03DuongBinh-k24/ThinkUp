@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { notificationKindMeta } from '../../../../core/models/notification.model';
@@ -27,6 +27,19 @@ export class NotificationPopoverComponent {
   readonly unreadCount = this.notifications.unreadCount;
   readonly open = signal(false);
 
+  private bellElement: HTMLElement | null = null;
+
+  @ViewChild('bell')
+  set bellRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.bellElement = ref?.nativeElement ?? null;
+  }
+
+  /** Panel mới được render thì đưa focus vào để bàn phím đọc được ngay nội dung. */
+  @ViewChild('panel')
+  set panelRef(ref: ElementRef<HTMLElement> | undefined) {
+    if (ref) ref.nativeElement.focus();
+  }
+
   readonly items = computed(() =>
     this.notifications.items().map((item) => ({
       ...item,
@@ -44,11 +57,17 @@ export class NotificationPopoverComponent {
 
   @HostListener('document:keydown.escape')
   close(): void {
+    if (!this.open()) return;
     this.open.set(false);
+    this.bellElement?.focus();
   }
 
   toggle(): void {
-    this.open.update((open) => !open);
+    if (this.open()) {
+      this.close();
+      return;
+    }
+    this.open.set(true);
   }
 
   markAllRead(): void {

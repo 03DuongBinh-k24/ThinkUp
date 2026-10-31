@@ -228,5 +228,13 @@ export class CourseService {
 
     return filtered;
   }
+
+  private parseDurationHours(duration?: string): number {
+    if (!duration) return 0;
+
+    const hours = Number(duration.match(/(\d+)\s*giờ/i)?.[1] || 0);
+    const minutes = Number(duration.match(/(\d+)\s*phút/i)?.[1] || 0);
+    return hours + minutes / 60;
+  }
 }
 

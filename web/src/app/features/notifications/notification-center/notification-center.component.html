@@ -30,36 +30,46 @@
 
       <!-- Tab chuyên đề + sắp xếp (chỉ tab Tất cả) -->
       <div class="n-center-grid items-center">
-        <div class="flex min-w-0 items-center justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Nhóm thông báo">
+        <div class="n-filter-row flex min-w-0 items-center justify-between gap-3">
+          <nav class="flex flex-wrap items-center gap-2" aria-label="Nhóm thông báo">
             @for (tabItem of tabs(); track tabItem.id) {
               <a
                 [routerLink]="tabItem.path"
-                role="tab"
                 class="n-tab"
                 [class.is-active]="tabItem.id === tab()"
-                [attr.aria-selected]="tabItem.id === tab()"
+                [attr.aria-current]="tabItem.id === tab() ? 'page' : null"
               >
                 {{ tabItem.label }} ({{ tabItem.count }})
               </a>
             }
-          </div>
+          </nav>
 
           @if (tab() === 'all') {
-            <div class="relative shrink-0" data-sort-root>
+            <div class="n-sort-root relative shrink-0" data-sort-root>
               <button
+                #sortTrigger
                 type="button"
                 class="n-sort-trigger"
                 aria-haspopup="listbox"
+                aria-controls="notification-sort-menu"
                 [attr.aria-expanded]="sortOpen()"
                 (click)="toggleSort($event)"
+                (keydown)="onSortTriggerKeydown($event)"
               >
-                <span>{{ sortLabel() }}</span>
-                <svg lucideChevronDown [size]="16" [strokeWidth]="1.5"></svg>
+                <span class="min-w-0 truncate">{{ sortLabel() }}</span>
+                <svg lucideChevronDown [size]="16" [strokeWidth]="1.5" class="shrink-0"></svg>
               </button>
 
               @if (sortOpen()) {
-                <div class="n-sort-menu" role="listbox" aria-label="Sắp xếp thông báo">
+                <div
+                  #sortMenu
+                  id="notification-sort-menu"
+                  class="n-sort-menu"
+                  [class.is-above]="sortMenuAbove()"
+                  role="listbox"
+                  aria-label="Sắp xếp thông báo"
+                  (keydown)="onSortMenuKeydown($event)"
+                >
                   @for (option of sortOptions; track option.id) {
                     <button
                       type="button"
@@ -71,7 +81,7 @@
                     >
                       <span>{{ option.label }}</span>
                       @if (option.id === sort()) {
-                        <svg lucideCheck [size]="16" [strokeWidth]="1.7"></svg>
+                        <svg lucideCheck [size]="16" [strokeWidth]="1.7" class="shrink-0"></svg>
                       }
                     </button>
                   }
@@ -171,7 +181,13 @@
             }
 
             <div class="n-about-illustration">
-              <img [src]="info.illustration" alt="" />
+              <img
+                [src]="info.illustration"
+                [attr.width]="info.illustrationWidth"
+                [attr.height]="info.illustrationHeight"
+                alt=""
+                decoding="async"
+              />
             </div>
 
             <p class="n-about-description">{{ info.description }}</p>

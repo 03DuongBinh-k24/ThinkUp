@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -14,7 +14,7 @@ const FAQ_CARDS: FaqCard[] = [
   { title: 'Hướng dẫn thanh toán', text: 'Các phương thức thanh toán và vấn đề liên quan', icon: 'credit-card', category: 'payment' },
   { title: 'Hướng dẫn học tập', text: 'Cách học, xem bài giảng và làm bài tập', icon: 'book-open', category: 'learning' },
   { title: 'Chứng chỉ', text: 'Thông tin về chứng chỉ', icon: 'award', category: 'certificate' },
-  { title: 'Kỹ thuật & Tài khoản', text: 'Lỗi kỹ thuật, tài khoản và bảo mật', icon: 'wrench', category: 'technical' },
+  { title: 'Kỹ thuật & Tài khoản', text: 'Lỗi kỹ thuật, tài khoản và bảo mật', icon: 'settings', category: 'technical' },
 ];
 
 @Component({ selector: 'app-contact-view', standalone: true, imports: [CommonModule, ReactiveFormsModule, RouterLink, IconComponent], templateUrl: './contact.component.html', styleUrl: './contact.component.css' })
@@ -30,6 +30,9 @@ export class ContactComponent implements OnInit {
   readonly fileError = signal('');
   readonly submitted = signal(false);
   readonly ticketId = signal('');
+  readonly topicOpen = signal(false);
+  readonly activeTopic = signal(0);
+  private readonly topicField = viewChild<ElementRef<HTMLElement>>('topicField');
   readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.maxLength(50)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
@@ -48,6 +51,50 @@ export class ContactComponent implements OnInit {
   }
 
   fieldInvalid(name: 'fullName' | 'email' | 'topic' | 'message'): boolean { const field = this.form.controls[name]; return field.invalid && (field.touched || field.dirty); }
+
+  toggleTopic(): void {
+    const open = !this.topicOpen();
+    this.topicOpen.set(open);
+    if (!open) return;
+    const selected = this.topics.findIndex(topic => topic === this.form.controls.topic.value);
+    this.activeTopic.set(selected);
+  }
+
+  selectTopic(topic: string): void {
+    this.form.controls.topic.setValue(topic);
+    this.form.controls.topic.markAsTouched();
+    this.topicOpen.set(false);
+  }
+
+  onTopicKeydown(event: KeyboardEvent): void {
+    const count = this.topics.length;
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowUp':
+        event.preventDefault();
+        if (!this.topicOpen()) { this.toggleTopic(); return; }
+        this.activeTopic.update(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + count) % count);
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        if (this.topicOpen()) this.selectTopic(this.topics[this.activeTopic()]);
+        else this.toggleTopic();
+        break;
+      case 'Escape':
+      case 'Tab':
+        this.topicOpen.set(false);
+        break;
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.topicOpen()) return;
+    const field = this.topicField()?.nativeElement;
+    if (field && !field.contains(event.target as Node)) this.topicOpen.set(false);
+  }
+
   addFiles(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
