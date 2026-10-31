@@ -3,6 +3,9 @@ import { NotificationCategory } from '../../../core/models/notification.model';
 export interface NotificationGroupAside {
   /** Ảnh minh họa 3D trong card "Về nhóm thông báo này". */
   illustration: string;
+  /** Kích thước gốc của ảnh - dùng làm width/height attribute để tránh layout shift. */
+  illustrationWidth: number;
+  illustrationHeight: number;
   description: string;
   supportText: string;
 }
@@ -11,18 +14,24 @@ export interface NotificationGroupAside {
 export const NOTIFICATION_GROUP_ASIDE: Readonly<Record<NotificationCategory, NotificationGroupAside>> = {
   learning: {
     illustration: '/assets/notifications/illustration-learning.png',
+    illustrationWidth: 758,
+    illustrationHeight: 428,
     description:
       'Nhận thông tin về tiến độ học tập, kết quả bài tập, chứng chỉ và các cập nhật quan trọng để bạn không bỏ lỡ hành trình chinh phục kiến thức.',
     supportText: 'Gặp vấn đề với thông báo học tập? Chúng tôi luôn sẵn sàng hỗ trợ bạn!',
   },
   transactions: {
     illustration: '/assets/notifications/illustration-transactions.png',
+    illustrationWidth: 758,
+    illustrationHeight: 428,
     description:
       'Nhận thông tin về giao dịch, đơn hàng, hoàn tiền, khuyến mãi và voucher. Đừng bỏ lỡ ưu đãi hấp dẫn dành riêng cho bạn!',
     supportText: 'Gặp vấn đề với giao dịch hoặc mã khuyến mãi? Chúng tôi luôn sẵn sàng hỗ trợ bạn!',
   },
   security: {
     illustration: '/assets/notifications/illustration-security.png',
+    illustrationWidth: 634,
+    illustrationHeight: 576,
     description:
       'Nhận thông tin quan trọng về bảo mật tài khoản và các cập nhật hệ thống để bạn luôn học tập an toàn và hiệu quả.',
     supportText: 'Gặp vấn đề về bảo mật hoặc tài khoản? Chúng tôi luôn sẵn sàng hỗ trợ bạn!',

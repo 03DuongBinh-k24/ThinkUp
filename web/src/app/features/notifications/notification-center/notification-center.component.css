@@ -18,6 +18,26 @@
   }
 }
 
+/* Reflow hẹp: tab và bộ lọc xếp dọc để tab không bị ép cạnh bộ lọc. */
+@media (max-width: 640px) {
+  .n-filter-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .n-sort-root {
+    flex: 1 1 100%;
+  }
+
+  .n-sort-trigger {
+    width: 100%;
+  }
+
+  .n-sort-menu {
+    width: 100%;
+  }
+}
+
 .n-page-title {
   font-size: clamp(22px, 1.458vw, 28px);
   line-height: 1.21;
@@ -33,6 +53,9 @@
 }
 
 .n-mark-all {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
   font-size: clamp(12.5px, 0.729vw, 14px);
   line-height: 17px;
   font-weight: 600;
@@ -130,6 +153,10 @@
   flex-direction: column;
   gap: 2px;
   width: 172px;
+  max-height: min(220px, calc(100vh - 120px));
+  max-height: min(220px, calc(100dvh - 120px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -137,12 +164,18 @@
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
 }
 
+/* Viewport thấp hoặc zoom lớn: đảo menu lên trên trigger thay vì để bị cắt. */
+.n-sort-menu.is-above {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
 .n-sort-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 38px;
+  height: 40px;
   padding: 0 12px;
   border-radius: 8px;
   font-size: clamp(12.5px, 0.729vw, 14px);
