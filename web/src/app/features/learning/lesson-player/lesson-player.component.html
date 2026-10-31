@@ -39,6 +39,7 @@
           [course]="currentCourse"
           [activeLessonId]="lesson.id"
           [open]="sidebarOpen()"
+          [previewMode]="previewMode()"
           [openChapterIds]="openChapterIds()"
           (toggle)="sidebarOpen.set(!sidebarOpen())"
           (lessonSelected)="selectLesson($event)"
@@ -95,7 +96,13 @@
             </div>
           </header>
 
-          <div class="mt-5 grid items-stretch gap-6 2xl:gap-10 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_423px]">
+          <div
+            [class]="
+              sidebarOpen()
+                ? 'mt-5 grid items-stretch gap-6 min-[1800px]:grid-cols-[minmax(0,1fr)_423px] min-[1800px]:gap-10'
+                : 'mt-5 grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_423px] 2xl:gap-10'
+            "
+          >
             @if (lesson.type === 'video') {
               <app-video-view
                 [lesson]="lesson"
@@ -110,7 +117,13 @@
               />
             }
 
-            <div class="h-full max-h-[680px] min-h-0">
+            <div
+              [class]="
+                sidebarOpen()
+                  ? 'h-[520px] min-h-0 min-[1800px]:h-full min-[1800px]:max-h-[680px]'
+                  : 'h-full max-h-[680px] min-h-0'
+              "
+            >
               <app-utility-panel
                 [course]="currentCourse"
                 [lesson]="lesson"

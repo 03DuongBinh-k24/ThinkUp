@@ -240,9 +240,13 @@
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0 ml-2">
                                   @if (lesson.isPreview) {
-                                    <span class="text-[11px] font-semibold text-[#155DFC] bg-blue-50 px-2 py-0.5 rounded cursor-pointer hover:underline">
+                                    <a
+                                      [routerLink]="['/learning/learn', c.id]"
+                                      [queryParams]="{ lesson: lesson.id, preview: true }"
+                                      class="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-[#155DFC] hover:underline"
+                                    >
                                       Học thử
-                                    </span>
+                                    </a>
                                   }
                                   <span class="text-slate-400 text-xs">{{ lesson.duration }}</span>
                                 </div>
