@@ -93,20 +93,28 @@ export class NotificationService {
   }
 
   /**
-   * Nạp lại các bản ghi mock còn thiếu để QA có thể mở thẳng module và kiểm thử.
-   * Giữ nguyên trạng thái đã đọc của bản ghi còn tồn tại và không xóa thông báo từ luồng khác.
+   * Nạp dữ liệu mock cho QA, chỉ seed một lần cho mỗi user:
+   * - chưa từng seed: ghép bản ghi mock còn thiếu với dữ liệu đang có;
+   * - đã seed: chỉ đọc lại dữ liệu đã lưu, để thao tác xóa và trạng thái rỗng vẫn kiểm thử được.
    *
    * TODO(pre-deploy): Xóa hàm này cùng dữ liệu mock khi Notification API được tích hợp.
    */
   loadMockDataForTesting(userId: string): void {
-    const existing = this.readStored(userId) ?? [];
+    this.activeUserId.set(userId);
+
+    const stored = this.readStored(userId);
+    if (this.hasSeeded(userId) && stored !== null) {
+      this.itemsState.set(sortByNewest(stored));
+      return;
+    }
+
+    const existing = stored ?? [];
     const existingIds = new Set(existing.map((item) => item.id));
     const next = sortByNewest([
       ...existing,
       ...buildSeedNotifications().filter((item) => !existingIds.has(item.id)),
     ]);
 
-    this.activeUserId.set(userId);
     this.itemsState.set(next);
     this.write(userId, next);
     this.markSeeded(userId);

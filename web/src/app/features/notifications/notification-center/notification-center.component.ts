@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -31,8 +31,12 @@ import {
   NotificationTimeGroup,
   notificationTimeGroup,
 } from '../utils/notification-time';
+import { moveMenuFocus, preferMenuAbove } from '../utils/menu-placement';
 
 type SortOption = 'newest' | 'oldest' | 'unread';
+
+/** Chiều cao ước tính của menu sắp xếp 3 mục - dùng để chọn hướng mở theo viewport. */
+const SORT_MENU_ESTIMATED_HEIGHT = 140;
 
 interface NotificationGroupView {
   key: NotificationTimeGroup;
@@ -118,6 +122,8 @@ export class NotificationCenterComponent {
 
   readonly sort = signal<SortOption>('newest');
   readonly sortOpen = signal(false);
+  /** Menu sắp xếp mở lên trên khi bên dưới không đủ chỗ. */
+  readonly sortMenuAbove = signal(false);
   readonly sortOptions: ReadonlyArray<{ id: SortOption; label: string }> = [
     { id: 'newest', label: 'Mới nhất' },
     { id: 'oldest', label: 'Cũ nhất' },
@@ -130,10 +136,9 @@ export class NotificationCenterComponent {
   constructor() {
     if (!environment.production) {
       // TODO(pre-deploy): Xóa fallback user và lệnh nạp mock khi Notification API sẵn sàng.
-      const testUserId = this.auth.currentUser()?.id ?? 'notification-demo-user';
-      this.notifications.loadMockDataForTesting(testUserId);
       effect(() => {
-        // Header khách có thể xóa active user sau khi route được khởi tạo; nạp lại cho màn QA.
+        // Header có thể gọi setUser(null) khi khởi động ở chế độ khách; nạp lại một lần cho màn QA.
+        const testUserId = this.auth.currentUser()?.id ?? 'notification-demo-user';
         if (this.notifications.totalCount() === 0) {
           this.notifications.loadMockDataForTesting(testUserId);
         }
@@ -178,28 +183,96 @@ export class NotificationCenterComponent {
     return groups;
   });
 
+  private sortTriggerElement: HTMLElement | null = null;
+  private pendingSortFocus: 'first' | 'last' | null = null;
+
+  @ViewChild('sortTrigger')
+  set sortTriggerRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.sortTriggerElement = ref?.nativeElement ?? null;
+  }
+
+  @ViewChild('sortMenu')
+  set sortMenuRef(ref: ElementRef<HTMLElement> | undefined) {
+    if (!ref || !this.pendingSortFocus) return;
+    const edge = this.pendingSortFocus;
+    this.pendingSortFocus = null;
+    const options = Array.from(ref.nativeElement.querySelectorAll<HTMLElement>('[role="option"]'));
+    const target = edge === 'first' ? options[0] : options[options.length - 1];
+    target?.focus();
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.sortOpen()) return;
     const target = event.target;
     if (target instanceof Node && !this.host.nativeElement.querySelector('[data-sort-root]')?.contains(target)) {
-      this.sortOpen.set(false);
+      this.closeSort(false);
     }
   }
 
   @HostListener('document:keydown.escape')
-  closeSort(): void {
-    this.sortOpen.set(false);
+  onEscape(): void {
+    this.closeSort(true);
+  }
+
+  @HostListener('window:resize')
+  onViewportResize(): void {
+    if (this.sortOpen() && this.sortTriggerElement) {
+      this.sortMenuAbove.set(preferMenuAbove(this.sortTriggerElement, SORT_MENU_ESTIMATED_HEIGHT));
+    }
   }
 
   toggleSort(event: MouseEvent): void {
     event.stopPropagation();
-    this.sortOpen.update((open) => !open);
+    if (this.sortOpen()) {
+      this.closeSort(false);
+      return;
+    }
+
+    const trigger = event.currentTarget;
+    if (trigger instanceof HTMLElement) {
+      this.sortMenuAbove.set(preferMenuAbove(trigger, SORT_MENU_ESTIMATED_HEIGHT));
+    }
+    this.sortOpen.set(true);
+  }
+
+  /** ArrowDown/ArrowUp trên trigger mở menu và đưa focus vào mục đầu/cuối. */
+  onSortTriggerKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+
+    const trigger = event.currentTarget;
+    if (trigger instanceof HTMLElement) {
+      this.sortMenuAbove.set(preferMenuAbove(trigger, SORT_MENU_ESTIMATED_HEIGHT));
+    }
+    this.pendingSortFocus = event.key === 'ArrowDown' ? 'first' : 'last';
+    this.sortOpen.set(true);
+  }
+
+  onSortMenuKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeSort(true);
+      return;
+    }
+    if (event.key === 'Tab') {
+      this.closeSort(false);
+      return;
+    }
+
+    const container = event.currentTarget;
+    if (container instanceof HTMLElement) moveMenuFocus(event, container);
   }
 
   selectSort(option: SortOption): void {
     this.sort.set(option);
+    this.closeSort(true);
+  }
+
+  private closeSort(restoreFocus: boolean): void {
+    if (!this.sortOpen()) return;
     this.sortOpen.set(false);
+    if (restoreFocus) this.sortTriggerElement?.focus();
   }
 
   markAllRead(): void {

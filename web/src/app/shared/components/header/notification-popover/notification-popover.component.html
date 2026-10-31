@@ -1,5 +1,6 @@
 <div class="relative" data-notification-root>
   <button
+    #bell
     type="button"
     class="relative flex h-11 w-11 items-center justify-center rounded-full text-[#5B657A] transition-all duration-200 hover:bg-slate-100 hover:text-[#131927]"
     aria-label="Thông báo"
@@ -16,10 +17,12 @@
 
   @if (open()) {
     <div
+      #panel
       id="header-notifications"
       role="dialog"
       aria-label="Thông báo"
-      class="absolute right-0 top-full z-[100] mt-2 flex h-[460px] w-[400px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0px_24px_28px_rgba(15,23,42,0.16)]"
+      tabindex="-1"
+      class="n-popover-panel absolute right-0 top-full z-[100] mt-2 flex h-[460px] w-[400px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0px_24px_28px_rgba(15,23,42,0.16)] focus:outline-none"
     >
       <header class="flex h-[68px] shrink-0 items-center justify-between gap-4 px-5">
         <h3 class="text-[18px] font-semibold leading-6 text-[#111827]">Thông báo</h3>
@@ -62,7 +65,7 @@
             <button
               type="button"
               class="flex min-h-[104px] w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-[#F8FAFF]"
-              [class.bg-[#F5F8FF]]="!item.readAt"
+              [class.is-unread]="!item.readAt"
               (click)="openItem(item.id, item.href)"
             >
               <span
@@ -79,7 +82,7 @@
                   item.title
                 }}</span>
                 <span class="line-clamp-2 block text-[13px] leading-[18px] text-[#4B5563]">{{ item.message }}</span>
-                <span class="mt-1 block text-[11px] leading-4 text-[#9CA3AF]">{{ item.relativeTime }}</span>
+                <span class="mt-1 block text-[11px] leading-4 text-[#6B7280]">{{ item.relativeTime }}</span>
               </span>
 
               @if (!item.readAt) {

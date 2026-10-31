@@ -4,7 +4,8 @@
   display: block;
 }
 
-/* Token chữ co giãn có biên: 1920 giữ đúng Figma, 1440/1366 thu nhỏ vừa khung. */
+/* Token chữ co giãn có biên: 1920 giữ đúng Figma, 1440/1366 thu nhỏ vừa khung.
+   Sàn 12px cho badge/thời gian: không hạ dưới ngưỡng đọc được của token helper. */
 .n-row-title {
   font-size: clamp(14px, 0.781vw, 15px);
   line-height: 1.21;
@@ -19,13 +20,13 @@
 }
 
 .n-row-badge {
-  font-size: clamp(10.5px, 0.573vw, 11px);
+  font-size: 12px;
   line-height: 1.21;
   font-weight: 600;
 }
 
 .n-row-time {
-  font-size: clamp(10.5px, 0.573vw, 11px);
+  font-size: 12px;
   line-height: 1.21;
   color: #50709a;
 }
@@ -41,6 +42,38 @@
 }
 
 .n-row-menu-item--neutral.is-locked {
-  color: #94a3b8;
+  color: #64748b;
   cursor: not-allowed;
+}
+
+/* Menu nổi: mặc định mở xuống, đảo lên trên khi viewport thấp (class do component tính). */
+.n-row-menu {
+  top: calc(100% + 6px);
+  max-width: calc(100vw - 2rem);
+  max-height: min(220px, calc(100vh - 96px));
+  max-height: min(220px, calc(100dvh - 96px));
+  overscroll-behavior: contain;
+}
+
+.n-row-menu.is-above {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* Reflow hẹp: đưa cụm thời gian + menu xuống dòng riêng thay vì ép nội dung co lại. */
+@media (max-width: 640px) {
+  .n-row {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .n-row-main {
+    flex: 1 1 100%;
+  }
+
+  .n-row-meta {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    padding-left: 0;
+  }
 }
