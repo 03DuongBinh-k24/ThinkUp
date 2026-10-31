@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { ObjectId } from 'mongodb';
 import { getMongoDb, sendEmail } from '../db.js';
 import { renderNewsletterWelcomeEmail, renderNewBlogPostEmail } from '../email/email-templates.js';
@@ -1757,6 +1758,40 @@ export async function uploadBlogImage(payload = {}) {
   }
 
   if (payload.base64 && typeof payload.base64 === 'string') {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (cloudName && apiKey && apiSecret) {
+      try {
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        const folder = 'thinkup_blog_uploads';
+        const strToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+        const signature = crypto.createHash('sha1').update(strToSign).digest('hex');
+
+        const formData = new URLSearchParams();
+        formData.append('file', payload.base64);
+        formData.append('api_key', apiKey);
+        formData.append('timestamp', timestamp.toString());
+        formData.append('folder', folder);
+        formData.append('signature', signature);
+
+        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.secure_url) {
+          return {
+            url: uploadData.secure_url,
+            message: 'Tải ảnh lên Cloudinary thành công',
+          };
+        }
+      } catch (uploadErr) {
+        console.warn('[uploadBlogImage] Cloudinary upload fallback to raw base64:', uploadErr?.message);
+      }
+    }
+
     return {
       url: payload.base64,
       message: 'Tải ảnh lên thành công',
@@ -1764,7 +1799,7 @@ export async function uploadBlogImage(payload = {}) {
   }
 
   return {
-    url: '/assets/blog/article-1.jpg',
+    url: 'https://res.cloudinary.com/x7v2ofnh/image/upload/v1792947084/thinkup_blog_covers/cover_html_css_js.jpg',
     message: 'Tải ảnh lên thành công',
   };
 }

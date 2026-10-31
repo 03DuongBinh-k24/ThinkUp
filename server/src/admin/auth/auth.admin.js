@@ -99,18 +99,20 @@ export function getTotpUri({ secret, email, issuer = 'ThinkUp Admin' }) {
 }
 
 /**
- * Sinh 10 mã dự phòng chuẩn XXXX-XXXX (8 ký tự)
+ * Sinh 10 mã dự phòng chuẩn XXXX-XXXX-XXXX-XXXX (16 ký tự theo thiết kế Figma)
  */
 export function generateBackupCodes(count = 10) {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Loại bỏ ký tự dễ nhầm 0,O,1,I
   const codes = [];
   for (let i = 0; i < count; i++) {
-    let part1 = '';
-    let part2 = '';
-    const bytes = crypto.randomBytes(8);
-    for (let j = 0; j < 4; j++) part1 += chars[bytes[j] % chars.length];
-    for (let j = 4; j < 8; j++) part2 += chars[bytes[j] % chars.length];
-    codes.push(`${part1}-${part2}`);
+    const parts = [];
+    for (let p = 0; p < 4; p++) {
+      let part = '';
+      const bytes = crypto.randomBytes(4);
+      for (let j = 0; j < 4; j++) part += chars[bytes[j] % chars.length];
+      parts.push(part);
+    }
+    codes.push(parts.join('-'));
   }
   return codes;
 }
@@ -304,15 +306,19 @@ export async function confirmAdmin2FASetup({ onboardingToken, otp }, options = {
     throw err;
   }
 
-  // Khởi tạo 10 mã dự phòng
+  // Khởi tạo 10 mã dự phòng chuẩn 16 ký tự (Figma)
   const plainBackupCodes = generateBackupCodes(10);
   const salt = await bcrypt.genSalt(10);
   const hashedBackupCodes = await Promise.all(
-    plainBackupCodes.map(async (code) => ({
-      code_hash: await bcrypt.hash(code, salt),
-      is_used: false,
-      used_at: null,
-    }))
+    plainBackupCodes.map(async (code) => {
+      const compact = code.replace(/[^A-Z0-9]/g, '');
+      return {
+        code_hash: await bcrypt.hash(code, salt),
+        compact_hash: await bcrypt.hash(compact, salt),
+        is_used: false,
+        used_at: null,
+      };
+    })
   );
 
   // Cập nhật kích hoạt 2FA và lưu mã dự phòng đã hash
@@ -622,12 +628,20 @@ export async function verifyAdmin2FA({ twoFactorToken, otp, backupCode }, option
 
   // 1. Trường hợp sử dụng Backup Code
   if (backupCode) {
-    const cleanBackupCode = String(backupCode).trim().toUpperCase();
+    const rawBackupCode = String(backupCode).trim().toUpperCase();
+    const compactInput = rawBackupCode.replace(/[^A-Z0-9]/g, '');
     const backupList = admin.backup_codes || [];
     let matchedIndex = -1;
 
     for (let i = 0; i < backupList.length; i++) {
-      if (!backupList[i].is_used && (await bcrypt.compare(cleanBackupCode, backupList[i].code_hash))) {
+      if (backupList[i].is_used) continue;
+      // Thử compare chuỗi gốc hoặc chuỗi compact
+      const isMatch =
+        (await bcrypt.compare(rawBackupCode, backupList[i].code_hash)) ||
+        (backupList[i].compact_hash && (await bcrypt.compare(compactInput, backupList[i].compact_hash))) ||
+        (await bcrypt.compare(compactInput, backupList[i].code_hash));
+
+      if (isMatch) {
         matchedIndex = i;
         break;
       }

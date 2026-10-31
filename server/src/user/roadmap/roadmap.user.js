@@ -742,14 +742,24 @@ export async function generateDynamicTemplateForCategory(categoryId) {
 
 const _templateCache = new Map();
 
-/**
- * Lấy danh sách template lộ trình theo CategoryId
- */
 export async function getRoadmapTemplate(categoryId) {
   const numId = Number(categoryId);
+  if (!numId || isNaN(numId)) return null;
+
   if (CAREER_ROADMAP_TEMPLATES[numId]) {
     return CAREER_ROADMAP_TEMPLATES[numId];
   }
+
+  try {
+    const db = await getMongoDb();
+    const dbTpl = await db.collection('roadmap_templates').findOne({ category_id: numId });
+    if (dbTpl) {
+      return dbTpl;
+    }
+  } catch (err) {
+    console.warn(`[getRoadmapTemplate] Không thể đọc từ DB cho category ${numId}:`, err.message);
+  }
+
   if (_templateCache.has(numId)) {
     return _templateCache.get(numId);
   }
@@ -838,28 +848,26 @@ export function calculateRoadmapProgress(nodes = []) {
 export async function getCareerRoadmapsList() {
   const db = await getMongoDb();
   const categories = await db.collection('course_categories').find().sort({ category_id: 1 }).toArray();
+  const templates = await db.collection('roadmap_templates').find().toArray();
+  const tplMap = new Map(templates.map(t => [Number(t.category_id), t]));
 
   const results = [];
   for (const cat of categories) {
     const numId = Number(cat.category_id);
-    const hasCustom = Boolean(CAREER_ROADMAP_TEMPLATES[numId]);
-    let totalStages = 3;
-    let totalNodes = 10;
+    const dbTpl = tplMap.get(numId);
+    const customTpl = dbTpl || CAREER_ROADMAP_TEMPLATES[numId];
+    const hasCustom = Boolean(customTpl);
 
-    if (hasCustom) {
-      const customTpl = CAREER_ROADMAP_TEMPLATES[numId];
-      totalStages = customTpl.stages.length;
-      totalNodes = customTpl.stages.reduce((acc, s) => acc + s.nodes.length, 0);
-    } else if (_templateCache.has(numId)) {
-      const cachedTpl = _templateCache.get(numId);
-      totalStages = cachedTpl.stages.length;
-      totalNodes = cachedTpl.stages.reduce((acc, s) => acc + s.nodes.length, 0);
-    }
+    let totalStages = cat.roadmap_total_stages || (customTpl?.stages?.length || 3);
+    let totalNodes = cat.roadmap_total_skills || (customTpl?.stages ? customTpl.stages.reduce((acc, s) => acc + (s.nodes?.length || 0), 0) : 10);
 
     results.push({
       category_id: numId,
       career_name: cat.name,
-      description: cat.description || `Lộ trình phát triển sự nghiệp nghề ${cat.name}`,
+      short_code: cat.roadmap_short_code || dbTpl?.short_code || '',
+      color: cat.roadmap_color || dbTpl?.color || '#0088E8',
+      bg_color: cat.roadmap_bg_color || dbTpl?.bg_color || '#E6F4FF',
+      description: cat.description || dbTpl?.description || `Lộ trình phát triển sự nghiệp nghề ${cat.name}`,
       total_stages: totalStages,
       total_nodes: totalNodes,
       has_custom_template: hasCustom
@@ -1435,6 +1443,149 @@ export async function syncCourseProgressToRoadmap(userId) {
 }
 
 /**
+ * 8. Đề xuất ~4 khóa học chưa sở hữu theo Node để thúc đẩy sale (Upsell)
+ * @param {string} userId - ID người dùng
+ * @param {string} nodeId - ID của node kỹ năng
+ * @param {object} [options] - Tuỳ chọn { limit, db }
+ * @returns {Promise<object>}
+ */
+export async function getNodeCourseRecommendations(userId, nodeId, options = {}) {
+  const { limit = 4, db: providedDb = null } = options;
+  const db = providedDb || (await getMongoDb());
+
+  // 1. Tìm thông tin node từ các template
+  const allTemplates = await db.collection('roadmap_templates').find().toArray();
+  let targetNode = null;
+
+  for (const tpl of allTemplates) {
+    for (const stage of tpl.stages || []) {
+      const found = (stage.nodes || []).find(n => n.node_id === nodeId);
+      if (found) {
+        targetNode = found;
+        break;
+      }
+    }
+    if (targetNode) break;
+  }
+
+  if (!targetNode) {
+    for (const tpl of Object.values(CAREER_ROADMAP_TEMPLATES)) {
+      for (const stage of tpl.stages || []) {
+        const found = (stage.nodes || []).find(n => n.node_id === nodeId);
+        if (found) {
+          targetNode = found;
+          break;
+        }
+      }
+      if (targetNode) break;
+    }
+  }
+
+  if (!targetNode) {
+    const err = new Error(`Không tìm thấy node kỹ năng với ID: ${nodeId}`);
+    err.status = 404;
+    throw err;
+  }
+
+  // 2. Thu thập các khóa học đã ghi danh/đã mua của user
+  let purchasedCourseIds = new Set();
+  if (userId) {
+    const enrollments = await db.collection('user_enrollments').find({
+      $or: [{ user_id: String(userId) }, { userId: String(userId) }]
+    }).toArray();
+    enrollments.forEach(e => {
+      const cId = String(e.course_id || e.courseId || '');
+      if (cId) purchasedCourseIds.add(cId);
+    });
+
+    const userCourses = await db.collection('user_courses').find({
+      $or: [{ user_id: String(userId) }, { userId: String(userId) }]
+    }).toArray();
+    userCourses.forEach(uc => {
+      const cId = String(uc.course_id || uc.courseId || '');
+      if (cId) purchasedCourseIds.add(cId);
+    });
+  }
+
+  // 3. Tìm các tags liên quan từ node
+  const nodeKeywords = [
+    ...(targetNode.tags || []),
+    targetNode.title
+  ].map(k => String(k).toLowerCase().trim()).filter(Boolean);
+
+  // 4. Lấy tất cả khóa học published
+  const courses = await db.collection('courses').find({ status: 'published' }).toArray();
+  const courseIds = courses.map(c => String(c.course_id || c._id));
+
+  const courseTags = await db.collection('course_tags').find({ course_id: { $in: courseIds } }).toArray();
+  const allTags = await db.collection('tags').find().toArray();
+  const tagLookup = new Map(allTags.map(t => [String(t.tag_id || t.id || t._id), String(t.name).toLowerCase()]));
+
+  const courseTagsMap = new Map();
+  for (const ct of courseTags) {
+    const cId = String(ct.course_id);
+    if (!courseTagsMap.has(cId)) courseTagsMap.set(cId, []);
+    const tagName = tagLookup.get(String(ct.tag_id));
+    if (tagName) courseTagsMap.get(cId).push(tagName);
+  }
+
+  // 5. Lọc các khóa chưa mua và tính điểm liên quan
+  const scoredCourses = [];
+  for (const c of courses) {
+    const cId = String(c.course_id || c._id);
+    if (purchasedCourseIds.has(cId) || purchasedCourseIds.has(String(c._id))) {
+      continue;
+    }
+
+    const cTitle = String(c.title || '').toLowerCase();
+    const cTags = courseTagsMap.get(cId) || [];
+
+    let matchCount = 0;
+    for (const kw of nodeKeywords) {
+      if (cTitle.includes(kw)) matchCount += 2;
+      if (cTags.some(t => t.includes(kw) || kw.includes(t))) matchCount += 3;
+    }
+
+    const relevanceScore = matchCount > 0 ? matchCount : 1;
+    const rawOriginalPrice = parseFloat(c.original_price ?? c.price ?? 0) || 0;
+    const rawSalePrice = parseFloat(c.price ?? c.original_price ?? 0) || 0;
+
+    scoredCourses.push({
+      id: String(c._id),
+      course_id: cId,
+      slug: c.slug || `course-${cId}`,
+      title: c.title,
+      thumbnail_url: c.thumbnail_url || '',
+      rating: parseFloat(c.rating) || 5.0,
+      rating_count: parseInt(c.total_reviews, 10) || 0,
+      total_students: parseInt(c.total_students, 10) || 0,
+      price: {
+        original: rawOriginalPrice,
+        sale: rawSalePrice,
+        is_free: rawSalePrice === 0
+      },
+      is_purchased: false,
+      relevance_score: relevanceScore
+    });
+  }
+
+  scoredCourses.sort((a, b) => b.relevance_score - a.relevance_score || b.total_students - a.total_students);
+  const finalCourses = scoredCourses.slice(0, limit);
+
+  return {
+    success: true,
+    node: {
+      node_id: targetNode.node_id,
+      title: targetNode.title,
+      tags: targetNode.tags || []
+    },
+    total: finalCourses.length,
+    courses: finalCourses,
+    data: finalCourses
+  };
+}
+
+/**
  * 7. Lấy lịch sử làm bài test của người dùng
  */
 export async function getUserSubmissionHistory(userId, stageId = null) {
@@ -1531,6 +1682,21 @@ export function createRoadmapRouter(express, requireAuth) {
         success: true,
         data
       });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * GET /api/user/roadmap/nodes/:nodeId/recommended-courses
+   * Đề xuất 4 khóa học chưa sở hữu theo Node
+   */
+  router.get('/nodes/:nodeId/recommended-courses', requireAuth, async (req, res, next) => {
+    try {
+      const result = await getNodeCourseRecommendations(req.userId, req.params.nodeId, {
+        limit: parseInt(req.query.limit, 10) || 4
+      });
+      res.json(result);
     } catch (err) {
       next(err);
     }
