@@ -62,19 +62,9 @@
                 <!-- Background Glow -->
                 <div class="absolute -top-24 -right-24 w-96 h-96 bg-[#155DFC]/30 rounded-full blur-3xl pointer-events-none"></div>
 
-                <button
-                  type="button"
-                  (click)="toastMessage.set('Video giới thiệu khóa học sẽ sớm được cập nhật.')"
-                  class="absolute right-8 top-1/2 hidden h-20 w-20 -translate-y-1/2 place-items-center rounded-full border border-[#155DFC]/40 bg-[#155DFC]/10 text-[#60A5FA] transition hover:scale-105 hover:bg-[#155DFC]/20 lg:grid"
-                  aria-label="Xem video giới thiệu khóa học"
-                >
-                  <svg class="ml-1 h-8 w-8 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8 5v14l11-7z"></path>
-                  </svg>
-                  <span class="absolute -inset-3 rounded-full border border-[#155DFC]/20"></span>
-                </button>
-
-                <div class="relative z-10">
+                <div class="relative z-10 space-y-6">
+                  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center">
+                    <div class="min-w-0">
                   @if (c.badge) {
                     <span class="inline-block px-3 py-1 bg-[#FB2C36] text-white text-xs font-bold rounded mb-4">
                       {{ c.badge }}
@@ -112,6 +102,46 @@
                     </div>
                   </div>
 
+                    </div>
+
+                    <!-- Video preview frame -->
+                    @if (c.thumbnailUrl || c.previewVideoUrl) {
+                      <button
+                        type="button"
+                        (click)="openPreview()"
+                        class="group relative block w-full overflow-hidden rounded-xl border border-white/15 bg-[#0B2247] text-left shadow-lg transition hover:border-[#60A5FA]/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]"
+                        [attr.aria-label]="c.previewVideoUrl ? 'Xem video giới thiệu khóa học' : 'Học thử khóa học'"
+                      >
+                        <span class="block aspect-video w-full">
+                          @if (c.thumbnailUrl) {
+                            <img
+                              [src]="c.thumbnailUrl"
+                              [alt]="'Video giới thiệu ' + c.title"
+                              class="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          } @else {
+                            <span class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0B2247] to-[#071737] text-2xl font-black tracking-tight text-white/15">
+                              ThinkUp
+                            </span>
+                          }
+                        </span>
+                        <span class="absolute inset-0 bg-gradient-to-t from-[#071737]/85 via-[#071737]/10 to-transparent"></span>
+                        <span class="absolute inset-0 grid place-items-center">
+                          <span class="grid h-14 w-14 place-items-center rounded-full bg-white/95 text-[#155DFC] shadow-lg transition group-hover:scale-105">
+                            <svg class="ml-0.5 h-6 w-6 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M8 5v14l11-7z"></path>
+                            </svg>
+                          </span>
+                        </span>
+                        <span class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 py-2 text-[11px] font-semibold text-white">
+                          <span class="truncate">{{ c.previewVideoUrl ? 'Xem video giới thiệu' : 'Học thử miễn phí' }}</span>
+                          <span class="shrink-0 rounded bg-white/15 px-1.5 py-0.5">Video</span>
+                        </span>
+                      </button>
+                    }
+                  </div>
+
                   <!-- Quick Stats Grid -->
                   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-700/60">
                     <div class="bg-white/5 border border-white/10 rounded-xl p-3">
@@ -138,7 +168,7 @@
               <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:px-6">
                 <div class="flex flex-col gap-3 text-xs sm:text-sm">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="w-[104px] shrink-0 text-[#62748E]">Loại khóa học:</span>
+                    <span class="w-full shrink-0 text-[#62748E] sm:w-[104px]">Loại khóa học:</span>
                     @if (c.category) {
                       <span class="rounded-md bg-[#EBF3FF] px-2.5 py-1 text-[11px] font-medium text-[#155DFC]">{{ c.category }}</span>
                     }
@@ -147,7 +177,7 @@
                     }
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="w-[104px] shrink-0 text-[#62748E]">Trình độ:</span>
+                    <span class="w-full shrink-0 text-[#62748E] sm:w-[104px]">Trình độ:</span>
                     <span class="rounded-md bg-[#F1F5F9] px-2.5 py-1 text-[11px] font-medium text-[#45556C]">{{ c.level || 'Tất cả cấp độ' }}</span>
                     @if (c.language) {
                       <span class="rounded-md bg-[#F1F5F9] px-2.5 py-1 text-[11px] font-medium text-[#45556C]">{{ c.language }}</span>
@@ -162,25 +192,47 @@
               </div>
 
               <!-- What You Will Learn (Outcomes) -->
-              @if (c.outcomes && c.outcomes.length > 0) {
+              @if (c.outcomeGroups?.length || (c.outcomes && c.outcomes.length > 0)) {
                 <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm">
                   <h2 class="text-lg sm:text-xl font-bold mb-3 text-[#0D1C2D]">Mô tả khóa học</h2>
                   <p class="text-sm text-[#424754] leading-relaxed mb-6">
                     {{ c.description || c.shortDescription }}
                   </p>
-                  <h3 class="text-base font-bold mb-4 text-[#0D1C2D]">Mục tiêu khóa học</h3>
-                  <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5">
-                    @for (outcome of c.outcomes; track $index) {
-                      <div class="flex items-start gap-3">
-                        <div class="w-5 h-5 rounded-full bg-blue-50 text-[#155DFC] flex items-center justify-center shrink-0 mt-0.5">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                          </svg>
+                  @if (c.outcomeGroups && c.outcomeGroups.length > 0) {
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      @for (group of c.outcomeGroups; track group.title) {
+                        <div class="min-w-0">
+                          <h3 class="text-base font-bold mb-3 text-[#0D1C2D]">{{ group.title }}</h3>
+                          <div class="space-y-2.5">
+                            @for (outcome of group.items; track $index) {
+                              <div class="flex items-start gap-3">
+                                <div class="w-5 h-5 rounded-full bg-blue-50 text-[#155DFC] flex items-center justify-center shrink-0 mt-0.5">
+                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                  </svg>
+                                </div>
+                                <span class="text-sm text-[#424754] leading-relaxed">{{ outcome }}</span>
+                              </div>
+                            }
+                          </div>
                         </div>
-                        <span class="text-sm text-[#424754] leading-relaxed">{{ outcome }}</span>
-                      </div>
-                    }
-                  </div>
+                      }
+                    </div>
+                  } @else {
+                    <h3 class="text-base font-bold mb-4 text-[#0D1C2D]">Mục tiêu khóa học</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5">
+                      @for (outcome of c.outcomes; track $index) {
+                        <div class="flex items-start gap-3">
+                          <div class="w-5 h-5 rounded-full bg-blue-50 text-[#155DFC] flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                          </div>
+                          <span class="text-sm text-[#424754] leading-relaxed">{{ outcome }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
                 </div>
               }
 
@@ -247,6 +299,13 @@
                                     >
                                       Học thử
                                     </a>
+                                  } @else if (lesson.isLocked) {
+                                    <span class="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                                      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                      </svg>
+                                      Khóa
+                                    </span>
                                   }
                                   <span class="text-slate-400 text-xs">{{ lesson.duration }}</span>
                                 </div>
@@ -261,25 +320,25 @@
               }
 
               <!-- Reviews Section -->
-              @if (c.reviews && c.reviews.length > 0) {
+              @if (reviewSummary(); as summary) {
                 <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm">
                   <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
                     <h2 class="text-lg sm:text-xl font-bold text-[#0D1C2D]">Đánh giá từ học viên</h2>
                     <div class="flex items-center gap-2 text-sm text-[#62748E]">
-                      <span class="text-2xl font-black text-[#0D1C2D]">{{ c.rating }}</span>
+                      <span class="text-2xl font-black text-[#0D1C2D]">{{ summary.average }}</span>
                       <span class="text-amber-400 text-lg">★★★★★</span>
-                      <span>({{ c.ratingCount }} nhận xét)</span>
+                      <span>({{ summary.total }} nhận xét)</span>
                     </div>
                   </div>
 
                   <div class="grid gap-6 rounded-xl border border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-[140px_minmax(0,1fr)] sm:p-5">
                     <div class="text-center sm:text-left">
-                      <p class="text-4xl font-black leading-none text-[#0D1C2D]">{{ c.rating }}<span class="text-base font-semibold text-[#90A1B9]">/5</span></p>
+                      <p class="text-4xl font-black leading-none text-[#0D1C2D]">{{ summary.average }}<span class="text-base font-semibold text-[#90A1B9]">/5</span></p>
                       <div class="mt-2 text-amber-400">★★★★★</div>
-                      <p class="mt-1 text-[11px] text-[#62748E]">({{ c.ratingCount }} đánh giá)</p>
+                      <p class="mt-1 text-[11px] text-[#62748E]">({{ summary.total }} đánh giá)</p>
                     </div>
                     <div class="space-y-1.5">
-                      @for (row of reviewBreakdown; track row.stars) {
+                      @for (row of reviewBreakdown(); track row.stars) {
                         <div class="flex items-center gap-2 text-[11px] text-[#62748E]">
                           <span class="w-8 shrink-0">{{ row.stars }} sao</span>
                           <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[#E2E8F0]">
@@ -291,29 +350,76 @@
                     </div>
                   </div>
 
-                  <div class="mt-5 space-y-4">
-                    @for (review of c.reviews; track review.id) {
-                      <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                        <div class="flex items-center justify-between mb-2">
-                          <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center">
-                              {{ review.author.charAt(0) }}
-                            </div>
-                            <div>
-                              <div class="text-xs sm:text-sm font-semibold text-[#0D1C2D]">{{ review.author }}</div>
-                              <div class="text-[11px] text-[#62748E]">{{ review.date }}</div>
-                            </div>
-                          </div>
-                          <div class="text-amber-400 text-xs font-bold">
-                            ★ {{ review.rating }}
-                          </div>
-                        </div>
-                        <p class="text-xs sm:text-sm text-[#424754] leading-relaxed">
-                          {{ review.comment }}
-                        </p>
-                      </div>
+                  <div class="mt-5 flex flex-wrap items-end gap-3">
+                    <label class="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[#62748E]">
+                      <span>Sắp xếp</span>
+                      <select
+                        [value]="reviewSort()"
+                        (change)="onReviewSortChange($event)"
+                        class="h-10 min-w-[170px] rounded-lg border border-slate-200 bg-white px-3 text-xs text-[#0D1C2D]"
+                      >
+                        @for (option of reviewSortOptions(); track option.value) {
+                          <option [value]="option.value">{{ option.label }}</option>
+                        }
+                      </select>
+                    </label>
+                    @if (reviewFilterOptions().length > 0) {
+                      <label class="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[#62748E]">
+                        <span>Lọc theo số sao</span>
+                        <select
+                          [value]="reviewFilter()"
+                          (change)="onReviewFilterChange($event)"
+                          class="h-10 min-w-[150px] rounded-lg border border-slate-200 bg-white px-3 text-xs text-[#0D1C2D]"
+                        >
+                          @for (option of reviewFilterOptions(); track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
+                      </label>
                     }
                   </div>
+
+                  @if (reviewsLoading()) {
+                    <p class="mt-5 rounded-xl bg-slate-50 p-4 text-center text-xs text-[#62748E]">Đang tải đánh giá...</p>
+                  } @else if (reviews().length === 0) {
+                    <p class="mt-5 rounded-xl bg-slate-50 p-4 text-center text-xs text-[#62748E]">Chưa có đánh giá phù hợp với bộ lọc.</p>
+                  } @else {
+                    <div class="mt-5 space-y-4">
+                      @for (review of reviews(); track review.id) {
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                          <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2.5">
+                              <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center">
+                                {{ review.author.charAt(0) }}
+                              </div>
+                              <div>
+                                <div class="text-xs sm:text-sm font-semibold text-[#0D1C2D]">{{ review.author }}</div>
+                                <div class="text-[11px] text-[#62748E]">{{ review.date }}</div>
+                              </div>
+                            </div>
+                            <div class="text-amber-400 text-xs font-bold">
+                              ★ {{ review.rating }}
+                            </div>
+                          </div>
+                          <p class="text-xs sm:text-sm text-[#424754] leading-relaxed">
+                            {{ review.comment }}
+                          </p>
+                        </div>
+                      }
+                    </div>
+                    @if (reviewHasNext()) {
+                      <div class="mt-5 text-center">
+                        <button
+                          type="button"
+                          (click)="loadMoreReviews()"
+                          [disabled]="reviewsLoadingMore()"
+                          class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-xs font-semibold text-[#0D1C2D] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {{ reviewsLoadingMore() ? 'Đang tải...' : 'Xem thêm đánh giá' }}
+                        </button>
+                      </div>
+                    }
+                  }
                 </div>
               }
             </div>
@@ -326,9 +432,13 @@
               @if (c.instructorProfile; as ins) {
                 <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <h3 class="text-sm font-bold text-[#0D1C2D]">Giảng viên</h3>
-                  <div class="mt-3 flex items-center gap-3">
-                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#155DFC] to-indigo-600 text-lg font-bold text-white">
-                      {{ c.instructorInitial || ins.name.charAt(0) }}
+                  <div class="mt-3 flex items-center gap-3" [appInstructorTrigger]="ins.id || c.instructorId || ins.name">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-tr from-[#155DFC] to-indigo-600 text-lg font-bold text-white">
+                      @if (ins.avatar) {
+                        <img [src]="ins.avatar" [alt]="ins.name" class="h-full w-full object-cover" />
+                      } @else {
+                        {{ c.instructorInitial || ins.name.charAt(0) }}
+                      }
                     </div>
                     <div class="min-w-0">
                       <p class="truncate text-sm font-bold text-[#0D1C2D]">{{ ins.name }}</p>
@@ -351,26 +461,64 @@
                       <p class="text-[9px] text-[#90A1B9]">Hài lòng</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    (click)="toastMessage.set('Hồ sơ giảng viên sẽ sớm được cập nhật.')"
-                    class="mt-3 h-9 w-full rounded-lg border border-[#155DFC] text-[11px] font-semibold text-[#155DFC] transition hover:bg-[#EBF3FF]"
+                  <a
+                    [routerLink]="['/instructors', ins.id || c.instructorId || ins.name]"
+                    class="mt-3 flex h-9 w-full items-center justify-center rounded-lg border border-[#155DFC] text-[11px] font-semibold text-[#155DFC] transition hover:bg-[#EBF3FF]"
                   >
                     Xem hồ sơ giảng viên
-                  </button>
+                  </a>
                 </div>
               }
 
               <!-- Sample certificate -->
-              <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-                <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBEB] text-[#D97706]">
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-                  </svg>
+              @if (c.certificateSample; as cert) {
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-[11px] font-bold text-[#0D1C2D]">Chứng chỉ mẫu</p>
+                    <span class="rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">Mẫu</span>
+                  </div>
+                  <div class="relative mt-2 overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+                    @if (cert.templateImageUrl) {
+                      <img
+                        [src]="cert.templateImageUrl"
+                        [alt]="cert.title || 'Chứng chỉ mẫu ThinkUP'"
+                        class="h-auto w-full object-contain"
+                        loading="lazy"
+                      />
+                      @if (cert.watermarkText) {
+                        <span class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          <span class="rotate-[-18deg] text-center text-[10px] font-black uppercase tracking-[0.18em] text-slate-500/40">{{ cert.watermarkText }}</span>
+                        </span>
+                      }
+                    } @else {
+                      <div class="flex aspect-[4/3] flex-col items-center justify-center gap-1.5 px-2 text-center">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBEB] text-[#D97706]">
+                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                          </svg>
+                        </span>
+                        <p class="text-[10px] font-semibold text-[#62748E]">{{ cert.title || 'Chứng chỉ hoàn thành khóa học' }}</p>
+                      </div>
+                    }
+                  </div>
+                  @if (cert.title) {
+                    <p class="mt-2 line-clamp-2 text-[10px] leading-4 text-[#62748E]">{{ cert.title }}</p>
+                  }
+                  @if (cert.verifyUrl) {
+                    <p class="mt-1 truncate text-[10px] font-semibold text-[#155DFC]" [title]="cert.verifyUrl">{{ cert.verifyUrl }}</p>
+                  }
                 </div>
-                <p class="mt-2 text-[11px] font-bold text-[#0D1C2D]">Chứng chỉ mẫu</p>
-                <p class="mt-0.5 text-[10px] text-[#90A1B9]">thinkup.vn/verify</p>
-              </div>
+              } @else {
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+                  <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBEB] text-[#D97706]">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                    </svg>
+                  </div>
+                  <p class="mt-2 text-[11px] font-bold text-[#0D1C2D]">Chứng chỉ mẫu</p>
+                  <p class="mt-0.5 text-[10px] text-[#90A1B9]">thinkup.vn/verify</p>
+                </div>
+              }
 
               <!-- Guarantee Badge Card -->
               <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm text-center">
@@ -395,27 +543,35 @@
       <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
         <!-- Pricing -->
         <div>
-          <div class="flex items-baseline gap-3">
-            <span class="text-3xl font-extrabold text-[#0D1C2D]">
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+            <span class="min-w-0 break-words text-3xl font-extrabold text-[#0D1C2D]">
               {{ formatPrice(c.salePrice) }}
             </span>
             @if (c.originalPrice && c.originalPrice > c.salePrice) {
               <span class="text-base text-slate-400 line-through">
                 {{ formatPrice(c.originalPrice) }}
               </span>
-              <span class="px-2 py-0.5 rounded bg-red-50 text-red-600 font-bold text-xs">
+              <span class="shrink-0 whitespace-nowrap rounded bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
                 -{{ getDiscountPercent(c) }}%
               </span>
             }
           </div>
-          @if (c.countdown) {
+          @if (!c.isPurchased && countdown()) {
             <div class="flex items-center gap-1.5 text-xs text-red-500 font-semibold mt-2">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
                 <polyline points="12 6 12 12 16 14" stroke-width="2"></polyline>
               </svg>
-              <span>Ưu đãi kết thúc sau: {{ c.countdown }}</span>
+              <span>Ưu đãi kết thúc sau: {{ countdown() }}</span>
             </div>
+          }
+          @if (c.isPurchased) {
+            <p class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Bạn đã sở hữu khóa học này
+            </p>
           }
         </div>
 
@@ -423,33 +579,36 @@
         <div class="space-y-3">
           <button
             type="button"
-            (click)="handleBuyNow()"
+            (click)="handlePrimaryAction()"
             class="w-full h-12 bg-[#155DFC] hover:bg-[#0F4CD1] active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-[#155DFC]/20 flex items-center justify-center gap-2"
           >
-            Mua ngay
+            {{ c.isPurchased ? 'Tiếp tục học' : 'Mua ngay' }}
           </button>
 
-          <button
-            type="button"
-            (click)="handleAddToCart()"
-            class="w-full h-12 bg-[#EBF3FF] hover:bg-[#D8E8FF] active:scale-[0.99] text-[#155DFC] font-bold text-sm rounded-xl transition-all border border-[#D0E2FF] flex items-center justify-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-            {{ isInCart() ? '✓ Đã có trong giỏ hàng' : 'Thêm vào giỏ hàng' }}
-          </button>
+          @if (!c.isPurchased) {
+            <button
+              type="button"
+              (click)="handleAddToCart()"
+              [disabled]="!cartVerified() || isInCart() || addingCart"
+              class="w-full h-12 bg-[#EBF3FF] hover:bg-[#D8E8FF] active:scale-[0.99] text-[#155DFC] font-bold text-sm rounded-xl transition-all border border-[#D0E2FF] flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+              {{ cartVerified() && isInCart() ? '✓ Đã có trong giỏ hàng' : 'Thêm vào giỏ hàng' }}
+            </button>
 
-          <button
-            type="button"
-            (click)="handleToggleWishlist()"
-            class="w-full h-10 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 transition-colors"
-          >
-            <svg class="w-4 h-4" [class.fill-rose-500]="isWishlisted()" [class.text-rose-500]="isWishlisted()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-            </svg>
-            {{ isWishlisted() ? 'Đã lưu vào danh sách yêu thích' : 'Lưu vào danh sách yêu thích' }}
-          </button>
+            <button
+              type="button"
+              (click)="handleToggleWishlist()"
+              class="w-full h-10 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 transition-colors"
+            >
+              <svg class="w-4 h-4" [class.fill-rose-500]="isWishlisted()" [class.text-rose-500]="isWishlisted()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+              </svg>
+              {{ isWishlisted() ? 'Đã lưu vào danh sách yêu thích' : 'Lưu vào danh sách yêu thích' }}
+            </button>
+          }
         </div>
 
         <!-- Course Includes List -->

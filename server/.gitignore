@@ -4,5 +4,16 @@ node_modules/
 !.env.example
 writing-block.md
 !auth_onboarding.md
+
+# Local API reference, manual test collection, and generated dependencies
+/api.md
+/postman/
+/src/user/email/index.js
+**/node_modules/
+
+# Optional maintenance and recheck scripts
 recheck/
-scripts/
+scripts/*
+!scripts/prepare_roadmap_data.js
+!scripts/seed_all_stage_questions.js
+!scripts/check_roadmaps.js

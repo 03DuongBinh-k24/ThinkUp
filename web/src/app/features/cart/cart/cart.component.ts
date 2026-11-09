@@ -10,6 +10,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { CartItem } from '../../../core/models/commerce.model';
 import { Course } from '../../../core/models/course.model';
 import { CheckoutVoucher } from '../../../core/models/payment.model';
+import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
 
 interface CourseArt {
   gradient: string;
@@ -35,7 +36,7 @@ const COURSE_ART: Record<string, { title: string; subtitle: string; icon: string
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, InstructorTriggerDirective],
   templateUrl: './cart.component.html',
   styleUrls: ['../../payment-ui.css', './cart.component.css'],
 })
@@ -100,19 +101,8 @@ export class CartComponent implements OnInit {
       if (item.courseId) inCart.add(item.courseId);
     }
 
-    const preferred = ['uiux-design', 'nodejs', 'docker', 'flutter'];
-    const pool = this.suggestionPool();
-    const ordered: Course[] = [];
-
-    for (const id of preferred) {
-      const found = pool.find(course => course.id === id);
-      if (found) ordered.push(found);
-    }
-    for (const course of pool) {
-      if (!ordered.some(item => item.id === course.id)) ordered.push(course);
-    }
-
-    return ordered.filter(course => !inCart.has(course.id)).slice(0, 4);
+    return this.courseService.filterByPreferences(this.suggestionPool(), this.auth.currentUser()?.preferences ?? null)
+      .filter(course => !inCart.has(course.id) && !course.isPurchased).slice(0, 4);
   });
 
   ngOnInit(): void {

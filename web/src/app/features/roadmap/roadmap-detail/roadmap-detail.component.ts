@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   LucideArrowRight,
@@ -43,7 +43,7 @@ const FILTERS: Array<{ id: StageFilter; label: string }> = [
   templateUrl: './roadmap-detail.component.html',
   styleUrls: ['../styles/roadmap-ui.css', './roadmap-detail.component.css']
 })
-export class RoadmapDetailComponent {
+export class RoadmapDetailComponent implements OnInit {
   private readonly roadmapService = inject(RoadmapService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
@@ -54,6 +54,9 @@ export class RoadmapDetailComponent {
 
   readonly searchKeyword = signal('');
   readonly statusFilter = signal<StageFilter>('all');
+  readonly loading = this.roadmapService.loading;
+  readonly error = signal<string | null>(null);
+  readonly enrolling = signal(false);
   private readonly expandedStageIds = signal<ReadonlySet<string>>(new Set());
 
   readonly roadmap = computed(() => this.roadmapService.getRoadmapById(this.roadmapId));
@@ -92,13 +95,24 @@ export class RoadmapDetailComponent {
     () => this.searchKeyword().trim().length > 0 || this.statusFilter() !== 'all'
   );
 
-  constructor() {
-    const firstOpenStage = this.roadmap()?.stages.find(
-      (stage) => this.roadmapService.getStageProgress(stage).percent < 100
-    );
-    if (firstOpenStage) {
-      this.expandedStageIds.set(new Set([firstOpenStage.id]));
-    }
+  ngOnInit(): void {
+    this.error.set(null);
+    this.roadmapService.loadRoadmap(this.roadmapId).subscribe({
+      next: detail => {
+        if (!detail) {
+          this.error.set('Không tìm thấy lộ trình bạn mở.');
+          return;
+        }
+
+        const firstOpenStage =
+          detail.stages.find(stage => this.roadmapService.getStageProgress(stage).percent < 100) ??
+          detail.stages[0];
+        if (firstOpenStage) {
+          this.expandedStageIds.set(new Set([firstOpenStage.id]));
+        }
+      },
+      error: () => this.error.set('Không tải được lộ trình. Vui lòng thử lại sau.')
+    });
   }
 
   private matchesFilter(skill: RoadmapSkill, filter: StageFilter): boolean {
@@ -170,16 +184,27 @@ export class RoadmapDetailComponent {
       return;
     }
 
-    if (this.isEnrolled()) {
-      this.roadmapService.unenrollRoadmap(this.roadmapId);
-      this.toastService.showToast({ type: 'success', message: 'Đã hủy chọn lộ trình học.' });
-      return;
-    }
+    if (this.enrolling()) return;
 
-    const result = this.roadmapService.enrollRoadmap(this.roadmapId);
-    this.toastService.showToast({
-      type: result.success ? 'success' : 'warning',
-      message: result.message
+    this.enrolling.set(true);
+    const action = this.isEnrolled()
+      ? this.roadmapService.unenrollRoadmap(this.roadmapId)
+      : this.roadmapService.selectRoadmap(this.roadmapId);
+    action.subscribe({
+      next: result => {
+        this.enrolling.set(false);
+        this.toastService.showToast({
+          type: result.success ? 'success' : 'warning',
+          message: result.message
+        });
+      },
+      error: (error: { error?: { message?: string } }) => {
+        this.enrolling.set(false);
+        this.toastService.showToast({
+          type: 'warning',
+          message: error?.error?.message ?? 'Không cập nhật được lựa chọn lộ trình. Vui lòng thử lại.'
+        });
+      }
     });
   }
 

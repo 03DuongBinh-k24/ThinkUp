@@ -1,4 +1,7 @@
+import { QUESTION_CONTENT } from './roadmap-question-content.js';
+import { ObjectId } from 'mongodb';
 import { getMongoDb } from '../db.js';
+import { createLearningActivityStartHandler } from '../learning-activity/learning-activity.user.js';
 
 // ─── 0. Hằng Số Nghiệp Vụ & Cấu Hình Collections ────────────────────────────
 
@@ -222,10 +225,109 @@ export const CAREER_ROADMAP_TEMPLATES = {
   }
 };
 
-// ─── 2. Ngân Hàng Câu Hỏi Mẫu Cho Bài Test Giai Đoạn (~10 câu/stage) ────────
+// Nội dung mục tiêu cho các node legacy; không đổi ID hay tiến độ đã lưu.
+const NODE_OUTCOMES = {
+  "fe-node-html": [
+    "Xây dựng cấu trúc HTML ngữ nghĩa với header, main, section và article.",
+    "Liên kết nhãn biểu mẫu, văn bản thay thế và cấu trúc heading hỗ trợ khả năng tiếp cận.",
+    "Khai báo metadata và ngôn ngữ tài liệu phục vụ SEO."
+  ],
+  "fe-node-css": [
+    "Tổ chức bố cục với Flexbox và CSS Grid.",
+    "Áp dụng cascade, specificity và box model để kiểm soát kiểu hiển thị.",
+    "Xây dựng giao diện responsive bằng media query."
+  ],
+  "fe-node-js": [
+    "Sử dụng biến, hàm và cấu trúc dữ liệu trong JavaScript ES6+.",
+    "Xử lý Promise, async/await và luồng thực thi Event Loop.",
+    "Đọc và cập nhật DOM, xử lý sự kiện người dùng."
+  ],
+  "fe-node-git": [
+    "Theo dõi thay đổi bằng commit và nhánh Git.",
+    "Làm việc với remote, pull request và quy trình review.",
+    "Giải quyết xung đột khi hợp nhất mã nguồn."
+  ],
+  "fe-node-tailwind": [
+    "Xây dựng giao diện bằng utility class của TailwindCSS.",
+    "Áp dụng các biến thể responsive, hover và focus.",
+    "Tổ chức theme và tái sử dụng mẫu giao diện."
+  ],
+  "fe-node-react": [
+    "Tạo và kết hợp component React với props và state.",
+    "Quản lý vòng đời bằng Hook và tạo custom Hook.",
+    "Chia sẻ trạng thái qua Context và cập nhật giao diện theo dữ liệu."
+  ],
+  "fe-node-typescript": [
+    "Khai báo kiểu, interface và union type.",
+    "Sử dụng generics để tái sử dụng mã có kiểm tra kiểu.",
+    "Phát hiện lỗi kiểu dữ liệu trước khi chạy ứng dụng."
+  ],
+  "fe-node-api": [
+    "Gửi yêu cầu HTTP và xử lý JSON bằng Fetch hoặc Axios.",
+    "Quản lý trạng thái tải, lỗi và hủy yêu cầu không còn cần thiết.",
+    "Áp dụng caching và retry phù hợp với tính chất request."
+  ],
+  "fe-node-nextjs": [
+    "Phân biệt rendering phía server, client và tạo trang tĩnh.",
+    "Tổ chức App Router và Server Components.",
+    "Tối ưu tải dữ liệu và metadata cho SEO."
+  ],
+  "fe-node-perf": [
+    "Đo và cải thiện Core Web Vitals.",
+    "Chia nhỏ bundle và tải tài nguyên khi cần.",
+    "Tổ chức kiến trúc frontend, kiểm tra và triển khai qua CI/CD."
+  ],
+  "be-node-nodejs": [
+    "Xây dựng HTTP API bằng Node.js và Express.",
+    "Tổ chức middleware, routing và xử lý lỗi tập trung.",
+    "Xử lý tác vụ bất đồng bộ bằng Promise và async/await."
+  ],
+  "be-node-sql": [
+    "Thiết kế bảng, khóa và quan hệ dữ liệu.",
+    "Viết truy vấn lọc, nhóm và kết nối bảng.",
+    "Áp dụng index và transaction phù hợp với yêu cầu dữ liệu."
+  ],
+  "be-node-nosql": [
+    "Mô hình hóa document và xác thực dữ liệu MongoDB.",
+    "Truy vấn, cập nhật và tổng hợp dữ liệu bằng aggregation.",
+    "Lựa chọn index và chiến lược phân chia dữ liệu phù hợp."
+  ],
+  "be-node-redis": [
+    "Lưu cache và thiết kế thời gian hết hạn dữ liệu.",
+    "Xử lý cache invalidation và hạn chế cache stampede.",
+    "Sử dụng Redis cho rate limiting và Pub/Sub."
+  ],
+  "be-node-graphql": [
+    "Thiết kế schema, query, mutation và resolver GraphQL.",
+    "Xác thực dữ liệu đầu vào và quyền truy cập ở resolver.",
+    "Tránh truy vấn N+1 và tổ chức schema liên dịch vụ."
+  ],
+  "be-node-docker": [
+    "Đóng gói ứng dụng bằng Dockerfile.",
+    "Tách các giai đoạn build và runtime trong image.",
+    "Kết nối dịch vụ, mạng và volume bằng Docker Compose."
+  ],
+  "be-node-microservices": [
+    "Xác định ranh giới và hợp đồng giữa các dịch vụ.",
+    "Tích hợp API Gateway và giao tiếp qua message broker.",
+    "Xử lý lỗi phân tán, idempotency và theo dõi request qua dịch vụ."
+  ],
+  "be-node-cloud": [
+    "Triển khai ứng dụng và phân quyền truy cập tài nguyên cloud.",
+    "Bảo vệ API bằng OAuth2/JWT và kiểm soát đầu vào.",
+    "Tổ chức pipeline CI/CD và quản lý bí mật khi triển khai."
+  ]
+};
+for (const template of Object.values(CAREER_ROADMAP_TEMPLATES)) {
+  for (const stage of template.stages) {
+    for (const node of stage.nodes) node.outcomes = NODE_OUTCOMES[node.node_id] || [];
+  }
+}
+
+// ─── 2. Ngân Hàng Câu Hỏi Mẫu Cho Bài Test Giai Đoạn (tối thiểu 5/tag) ─────
 
 /**
- * Bộ câu hỏi mẫu ~10 câu cho các giai đoạn (Stage Quiz), liên kết trực tiếp tới từng Node kỹ năng.
+ * Bộ câu hỏi mẫu cho các giai đoạn (Stage Quiz), liên kết trực tiếp tới từng Node/tag kỹ năng.
  */
 export const SEED_STAGE_QUESTIONS = [
   // ── Frontend Stage 1: Nền tảng Web & Lập trình cơ sở (10 câu) ──
@@ -655,6 +757,94 @@ export const SEED_STAGE_QUESTIONS = [
   }
 ];
 
+// Gắn tag cụ thể cho dữ liệu mẫu hiện có. Node backend có nhiều tag nên câu
+// hỏi được phân loại riêng theo nội dung, không đếm chung cho mọi tag của node.
+const seedQuestionTags = {
+  'fe-node-html': 'HTML', 'fe-node-css': 'CSS', 'fe-node-js': 'JavaScript', 'fe-node-git': 'Git',
+  'fe-node-tailwind': 'TailwindCSS', 'fe-node-react': 'ReactJS',
+  'fe-node-typescript': 'TypeScript', 'fe-node-api': 'REST API',
+  'be-node-sql': 'SQL', 'be-node-nosql': 'MongoDB',
+};
+for (const question of SEED_STAGE_QUESTIONS) {
+  question.skill_tag = question.question_id === 'be-s1-q7'
+    ? 'JavaScript'
+    : (question.stage_id === 'be-stage-1' && question.node_id === 'be-node-nodejs'
+      ? 'Node.js'
+      : seedQuestionTags[question.node_id]);
+}
+
+// Câu bổ sung để từng tag trong các stage đã có ngân hàng đạt ít nhất 5 câu.
+const additionalSeedQuestions = [
+  ['fe-s1-html-11','fe-stage-1','fe-node-html','HTML','Phần tử nào liên kết nhãn với ô nhập liệu bằng id?',['<label for="email">','<legend>','<caption>','<title>'],'A','Thuộc tính for của label phải khớp id của input.'],
+  ['fe-s1-html-12','fe-stage-1','fe-node-html','HTML','Thuộc tính nào xác định ngôn ngữ chính của tài liệu HTML?',['lang trên thẻ html','charset trên body','hreflang trên html','dir trên head'],'A','Thuộc tính lang trên phần tử html khai báo ngôn ngữ tài liệu.'],
+  ['fe-s1-css-13','fe-stage-1','fe-node-css','CSS','Trong CSS Grid, thuộc tính nào khai báo số và kích thước cột?',['grid-template-columns','grid-auto-flow','align-content','column-span'],'A','grid-template-columns định nghĩa tracks cột của lưới.'],
+  ['fe-s1-css-14','fe-stage-1','fe-node-css','CSS','Selector nào có độ ưu tiên cao nhất trong các lựa chọn?',['.card','main','#app','*'],'C','ID selector có specificity cao hơn class và type selector.'],
+  ['fe-s1-css-15','fe-stage-1','fe-node-css','CSS','Media query nào áp dụng khi viewport rộng tối đa 600px?',['@media (max-width: 600px)','@media (min-width: 600px)','@screen 600px','@viewport (width: 600px)'],'A','max-width giới hạn điều kiện áp dụng ở 600px trở xuống.'],
+  ['fe-s1-js-18','fe-stage-1','fe-node-js','JavaScript','Promise nào được gọi khi promise trước đó hoàn tất thành công?',['then()','catch()','finally()','reject()'],'A','then() nhận kết quả fulfilled của promise.'],
+  ['fe-s1-js-19','fe-stage-1','fe-node-js','JavaScript','Kết quả của typeof null trong JavaScript là gì?',['"null"','"object"','"undefined"','"boolean"'],'B','Đây là đặc điểm lịch sử của JavaScript: typeof null trả về object.'],
+  ['fe-s1-git-20','fe-stage-1','fe-node-git','Git','Lệnh nào đưa commit mới nhất của nhánh hiện tại lên remote?',['git push','git fetch','git status','git stash'],'A','git push gửi commit từ local branch lên remote.'],
+  ['fe-s1-git-21','fe-stage-1','fe-node-git','Git','Lệnh nào tải thông tin remote mà không tự merge vào nhánh hiện tại?',['git fetch','git pull','git merge','git commit'],'A','git fetch cập nhật remote-tracking refs mà không tích hợp vào working branch.'],
+  ['fe-s1-git-22','fe-stage-1','fe-node-git','Git','File nào thường dùng để loại trừ file sinh ra khỏi Git?',['.gitignore','.gitconfig','.gitattributes','README.md'],'A','.gitignore khai báo các đường dẫn Git cần bỏ qua khi chưa được track.'],
+  ['fe-s2-react-11','fe-stage-2','fe-node-react','ReactJS','Prop nào giúp React nhận diện ổn định từng phần tử trong danh sách?',['key','ref','name','index'],'A','key ổn định giúp React đối chiếu phần tử giữa các lần render.'],
+  ['fe-s2-react-12','fe-stage-2','fe-node-react','ReactJS','Hook nào lưu trạng thái cục bộ trong function component?',['useState','useEffect','useRef','useMemo'],'A','useState tạo state và hàm cập nhật cho function component.'],
+  ['fe-s2-tailwind-13','fe-stage-2','fe-node-tailwind','TailwindCSS','Class nào đặt display flex trong Tailwind mặc định?',['flex','block-flex','display-flex','d-flex'],'A','Class flex áp dụng display: flex.'],
+  ['fe-s2-tailwind-14','fe-stage-2','fe-node-tailwind','TailwindCSS','Class nào tạo khoảng cách padding 1rem theo mặc định?',['p-4','m-4','px-4','gap-4'],'A','Thang spacing mặc định ánh xạ p-4 thành 1rem padding.'],
+  ['fe-s2-tailwind-15','fe-stage-2','fe-node-tailwind','TailwindCSS','Class nào đổi màu chữ sang trắng?',['text-white','bg-white','font-white','color-white'],'A','text-white thiết lập màu văn bản trắng.'],
+  ['fe-s2-ts-13','fe-stage-2','fe-node-typescript','TypeScript','Kiểu nào biểu diễn chuỗi hoặc số?',['string | number','string & number','string / number','Union<string, number>'],'A','Dấu | tạo union type cho một trong các kiểu được liệt kê.'],
+  ['fe-s2-ts-14','fe-stage-2','fe-node-typescript','TypeScript','Từ khóa nào giúp compiler suy luận biến không thể bị gán lại?',['const','let','var','readonly'],'A','const ngăn gán lại biến; readonly dùng cho thuộc tính/collection theo ngữ cảnh.'],
+  ['fe-s2-api-11','fe-stage-2','fe-node-api','REST API','Mã HTTP nào thường trả về khi tạo tài nguyên thành công?',['201 Created','200 OK','204 No Content','304 Not Modified'],'A','201 Created biểu thị request đã tạo tài nguyên.'],
+  ['fe-s2-api-12','fe-stage-2','fe-node-api','REST API','Phương thức HTTP nào an toàn và thường dùng để đọc tài nguyên?',['GET','POST','PATCH','DELETE'],'A','GET được thiết kế để truy xuất dữ liệu mà không thay đổi trạng thái tài nguyên.'],
+  ['fe-s2-api-13','fe-stage-2','fe-node-api','REST API','Header nào thường mang loại nội dung JSON của request?',['Content-Type: application/json','Accept-Language: json','Authorization: json','Cache-Control: application/json'],'A','Content-Type mô tả định dạng phần body gửi lên.'],
+  ['be-s1-node-11','be-stage-1','be-node-nodejs','Node.js','Trong Express, middleware chuyển tiếp request thường gọi hàm nào?',['next()','return()','await()','continue()'],'A','next() chuyển quyền xử lý sang middleware tiếp theo.'],
+  ['be-s1-node-12','be-stage-1','be-node-nodejs','Node.js','API nào đọc biến môi trường trong Node.js?',['process.env','process.argv.env','node.config','global.env'],'A','process.env chứa các biến môi trường của tiến trình.'],
+  ['be-s1-js-13','be-stage-1','be-node-nodejs','JavaScript','Từ khóa nào khai báo hàm bất đồng bộ có thể dùng await?',['async','defer','promise','yield'],'A','Hàm async cho phép dùng await và luôn trả về Promise.'],
+  ['be-s1-js-14','be-stage-1','be-node-nodejs','JavaScript','Phương thức nào chuyển JSON text thành object JavaScript?',['JSON.parse()','JSON.stringify()','Object.assign()','String()'],'A','JSON.parse phân tích chuỗi JSON thành giá trị JavaScript.'],
+  ['be-s1-js-15','be-stage-1','be-node-nodejs','JavaScript','Phạm vi của biến khai báo bằng const trong block là gì?',['Block scope','Global scope luôn luôn','Function scope','Module scope'],'A','const có block scope như let.'],
+  ['be-s1-js-16','be-stage-1','be-node-nodejs','JavaScript','Promise.all() xử lý thế nào nếu một promise bị reject?',['Promise tổng bị reject','Bỏ qua promise lỗi','Tự retry promise lỗi','Chuyển lỗi thành null'],'A','Promise.all reject ngay khi một promise đầu vào reject.'],
+  ['be-s1-sql-11','be-stage-1','be-node-sql','SQL','Mệnh đề nào lọc các hàng trước khi nhóm dữ liệu?',['WHERE','HAVING','ORDER BY','LIMIT'],'A','WHERE lọc hàng trước bước GROUP BY.'],
+  ['be-s1-sql-12','be-stage-1','be-node-sql','SQL','Ràng buộc nào đảm bảo giá trị cột không bị trùng?',['UNIQUE','DEFAULT','CHECK','NOT NULL'],'A','UNIQUE yêu cầu giá trị trong cột hoặc tổ hợp cột không trùng.'],
+  ['be-s1-mongo-13','be-stage-1','be-node-nosql','MongoDB','Toán tử nào tìm document có trường age lớn hơn 18?',['{ age: { $gt: 18 } }','{ age: { $lt: 18 } }','{ age: { $eq: 18 } }','{ age: { $in: 18 } }'],'A','$gt là toán tử so sánh lớn hơn trong MongoDB.'],
+  ['be-s1-mongo-14','be-stage-1','be-node-nosql','MongoDB','Phương thức nào truy vấn một document đầu tiên khớp điều kiện?',['findOne()','findMany()','aggregateOne()','getDocument()'],'A','findOne trả về một document khớp đầu tiên hoặc null.'],
+  ['be-s1-mongo-15','be-stage-1','be-node-nosql','MongoDB','Stage nào trong aggregation sắp xếp kết quả?',['$sort','$match','$lookup','$limit'],'A','$sort sắp xếp document theo các trường chỉ định.'],
+];
+
+for (const [question_id, stage_id, node_id, skill_tag, question_text, texts, correct_option, explanation] of additionalSeedQuestions) {
+  SEED_STAGE_QUESTIONS.push({
+    question_id, stage_id, node_id, skill_tag, question_text,
+    options: texts.map((text, index) => ({ key: String.fromCharCode(65 + index), text })),
+    correct_option, explanation,
+  });
+}
+
+// Complete the remaining legacy stages from authored, tag-specific question content.
+for (const template of Object.values(CAREER_ROADMAP_TEMPLATES)) {
+  for (const stage of template.stages) {
+    for (const node of stage.nodes) {
+      for (const [tagIndex, tag] of node.tags.entries()) {
+        const existing = SEED_STAGE_QUESTIONS.filter(q => q.stage_id === stage.stage_id && q.node_id === node.node_id && q.skill_tag === tag);
+        if (existing.length >= 5) continue;
+        const authored = QUESTION_CONTENT[tag];
+        const reusable = SEED_STAGE_QUESTIONS.filter(q => q.skill_tag === tag);
+        const rows = authored || reusable.slice(0, 5).map(q => [q.question_text,
+          q.options.find(option => option.key === q.correct_option).text,
+          ...q.options.filter(option => option.key !== q.correct_option).map(option => option.text), q.explanation]);
+        for (const [index, [question_text, correct, ...rest]] of rows.entries()) {
+          const explanation = rest.pop();
+          const texts = [correct, ...rest];
+          const offset = index % texts.length;
+          const rotated = [...texts.slice(offset), ...texts.slice(0, offset)];
+          SEED_STAGE_QUESTIONS.push({
+            question_id: ['curated', stage.stage_id, node.node_id, tagIndex, index].join('-'),
+            stage_id: stage.stage_id, node_id: node.node_id, skill_tag: tag, question_text,
+            options: rotated.map((text, i) => ({ key: String.fromCharCode(65 + i), text })),
+            correct_option: String.fromCharCode(65 + rotated.indexOf(correct)), explanation
+          });
+        }
+      }
+    }
+  }
+}
+
 // ─── 3. Các Hàm Tiện Ích Nghiệp Vụ Roadmap ───────────────────────────────────
 
 /**
@@ -742,32 +932,91 @@ export async function generateDynamicTemplateForCategory(categoryId) {
 
 const _templateCache = new Map();
 
+export function assessmentTags(node, careerName = '') {
+  const tags = node.assessment_tags || node.tags || [];
+  return [...new Set(tags.filter(tag => typeof tag === 'string' && tag.trim()
+    && tag.trim().toLowerCase() !== careerName.trim().toLowerCase()))];
+}
+
+export function inspectStageBank(stage, careerName, records) {
+  const nodes = new Map((stage.nodes || []).map(node => [String(node.node_id), node]));
+  const questions = [];
+  const seen = new Set();
+  const counts = new Map();
+  for (const question of records) {
+    const node = nodes.get(String(question.node_id));
+    const keys = (question.options || []).map(option => option.key);
+    if (!node || !assessmentTags(node, careerName).includes(question.skill_tag)
+      || typeof question.question_id !== 'string' || !question.question_text?.trim()
+      || keys.length < 2 || new Set(keys).size !== keys.length
+      || !question.options.every(option => typeof option.text === 'string' && option.text.trim())
+      || !keys.includes(question.correct_option) || seen.has(question.question_id)) continue;
+    seen.add(question.question_id);
+    questions.push(question);
+    const key = JSON.stringify([node.node_id, question.skill_tag]);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const missing = [];
+  for (const node of nodes.values()) {
+    const tags = assessmentTags(node, careerName);
+    if (!tags.length) missing.push({ node_id: node.node_id, tag: null, available: 0 });
+    for (const tag of tags) {
+      const available = counts.get(JSON.stringify([node.node_id, tag])) || 0;
+      if (available < 5) missing.push({ node_id: node.node_id, tag, available });
+    }
+  }
+  return { available: nodes.size > 0 && missing.length === 0, questions, missing,
+    rejected: records.length - questions.length };
+}
+
+export async function getStageDefinition(stageId) {
+  const db = await getMongoDb();
+  const template = await db.collection('roadmap_templates').findOne({ 'stages.stage_id': String(stageId) });
+  const stage = template?.stages?.find(item => item.stage_id === String(stageId));
+  if (!stage) throw Object.assign(new Error('Không tìm thấy giai đoạn học.'), { status: 404, code: 'STAGE_NOT_FOUND' });
+  return { stage, careerName: template.career_name || '' };
+}
+
+async function readStageBank(stageId) {
+  const { stage, careerName } = await getStageDefinition(stageId);
+  const db = await getMongoDb();
+  const records = await db.collection(COLLECTION_ROADMAP_QUESTIONS)
+    .find({ stage_id: String(stageId) }).sort({ question_id: 1 }).toArray();
+  const bank = inspectStageBank(stage, careerName, records);
+  if (!bank.available) {
+    console.error('[Roadmap question bank unavailable]', { stage_id: stageId, missing: bank.missing });
+    throw Object.assign(new Error('Bài kiểm tra đang được chuẩn bị. Bạn có thể tiếp tục học các kỹ năng.'),
+      { status: 503, code: 'STAGE_TEST_UNAVAILABLE' });
+  }
+  return bank.questions;
+}
+
 export async function getRoadmapTemplate(categoryId) {
   const numId = Number(categoryId);
-  if (!numId || isNaN(numId)) return null;
+  if (!Number.isSafeInteger(numId) || numId <= 0) return null;
+  const db = await getMongoDb();
+  const template = await db.collection('roadmap_templates').findOne({ category_id: numId });
+  if (!template) return null;
+  return enrichRoadmapTemplate(template, db);
+}
 
-  if (CAREER_ROADMAP_TEMPLATES[numId]) {
-    return CAREER_ROADMAP_TEMPLATES[numId];
+async function enrichRoadmapTemplate(template, db) {
+  const stages = template.stages || [];
+  const stageIds = stages.map(stage => stage.stage_id);
+  const nodeIds = stages.flatMap(stage => (stage.nodes || []).map(node => node.node_id));
+  if (stageIds.some(id => typeof id !== 'string' || !id.trim())
+    || nodeIds.some(id => typeof id !== 'string' || !id.trim())
+    || new Set(stageIds).size !== stageIds.length || new Set(nodeIds).size !== nodeIds.length) {
+    throw Object.assign(new Error('Cấu trúc lộ trình có ID giai đoạn hoặc kỹ năng không hợp lệ.'),
+      { status: 503, code: 'ROADMAP_TEMPLATE_INVALID' });
   }
-
-  try {
-    const db = await getMongoDb();
-    const dbTpl = await db.collection('roadmap_templates').findOne({ category_id: numId });
-    if (dbTpl) {
-      return dbTpl;
-    }
-  } catch (err) {
-    console.warn(`[getRoadmapTemplate] Không thể đọc từ DB cho category ${numId}:`, err.message);
-  }
-
-  if (_templateCache.has(numId)) {
-    return _templateCache.get(numId);
-  }
-  const tpl = await generateDynamicTemplateForCategory(categoryId);
-  if (tpl) {
-    _templateCache.set(numId, tpl);
-  }
-  return tpl;
+  const records = await db.collection(COLLECTION_ROADMAP_QUESTIONS)
+    .find({ stage_id: { $in: stageIds } }).toArray();
+  return { ...template, stages: stages.map(stage => ({
+    ...stage,
+    test_available: inspectStageBank(stage, template.career_name || '', records.filter(q => q.stage_id === stage.stage_id)).available,
+    nodes: (stage.nodes || []).map(node => ({ ...node, outcomes: node.outcomes || node.topics || [] }))
+  })) };
 }
 
 /**
@@ -777,13 +1026,21 @@ export async function ensureSeedQuestions() {
   const db = await getMongoDb();
   const questionsColl = db.collection(COLLECTION_ROADMAP_QUESTIONS);
 
-  const count = await questionsColl.countDocuments();
-  if (count === 0) {
-    await questionsColl.insertMany(SEED_STAGE_QUESTIONS.map(q => ({
-      ...q,
-      created_at: new Date()
-    })));
-  }
+  const existingIds = new Set((await questionsColl.find(
+    { question_id: { $in: SEED_STAGE_QUESTIONS.map(question => question.question_id) } },
+    { projection: { question_id: 1 } },
+  ).toArray()).map(question => question.question_id));
+  const missingQuestions = SEED_STAGE_QUESTIONS
+    .filter(question => !existingIds.has(question.question_id))
+    .map(question => ({ ...question, created_at: new Date() }));
+  if (missingQuestions.length > 0) await questionsColl.insertMany(missingQuestions);
+  // Bổ sung nhãn cho các câu seed cũ mà không ghi đè nội dung đã có trong DB.
+  await questionsColl.bulkWrite(SEED_STAGE_QUESTIONS.map(question => ({
+    updateOne: {
+      filter: { question_id: question.question_id },
+      update: { $set: { skill_tag: question.skill_tag, node_id: question.node_id, stage_id: question.stage_id } },
+    },
+  })), { ordered: false });
 }
 
 /**
@@ -855,11 +1112,12 @@ export async function getCareerRoadmapsList() {
   for (const cat of categories) {
     const numId = Number(cat.category_id);
     const dbTpl = tplMap.get(numId);
-    const customTpl = dbTpl || CAREER_ROADMAP_TEMPLATES[numId];
+    const customTpl = dbTpl;
     const hasCustom = Boolean(customTpl);
+    if (!hasCustom) continue;
 
-    let totalStages = cat.roadmap_total_stages || (customTpl?.stages?.length || 3);
-    let totalNodes = cat.roadmap_total_skills || (customTpl?.stages ? customTpl.stages.reduce((acc, s) => acc + (s.nodes?.length || 0), 0) : 10);
+    const totalStages = (customTpl.stages || []).length;
+    const totalNodes = (customTpl.stages || []).reduce((acc, s) => acc + (s.nodes?.length || 0), 0);
 
     results.push({
       category_id: numId,
@@ -960,12 +1218,102 @@ export async function selectUserRoadmap(userId, categoryId) {
     userRoadmap.is_active = true;
   }
 
-  return userRoadmap;
+  return reconcileUserRoadmap(userRoadmap, template, db);
+}
+
+// Match progress only by stable node ID. Removed nodes remain archived rather than
+// transferring scores/review flags to a different skill with a similar title.
+export async function reconcileUserRoadmap(roadmap, template, db) {
+  const prior = new Map((roadmap.archived_nodes || []).map(node => [node.node_id, node]));
+  for (const node of roadmap.nodes || []) prior.set(node.node_id, node);
+  const nodes = (template.stages || []).flatMap(stage => (stage.nodes || []).map(node => ({
+    ...(prior.get(node.node_id) || {
+      status: STATUS_NOT_STARTED, score: 0, is_review: false,
+      last_quiz_score: null, course_score: null,
+    }),
+    node_id: node.node_id, stage_id: stage.stage_id, title: node.title,
+    level: node.level, tags: node.tags || [],
+  })));
+  const ids = new Set(nodes.map(node => node.node_id));
+  const archived = [...prior.values()].filter(node => !ids.has(node.node_id));
+  const currentStage = template.stages.some(stage => stage.stage_id === roadmap.current_stage_id)
+    ? roadmap.current_stage_id : template.stages[0]?.stage_id || null;
+  const progress = calculateRoadmapProgress(nodes);
+  const fields = {
+    nodes, archived_nodes: archived, career_name: template.career_name,
+    current_stage_id: currentStage, progress_percentage: progress.progress_percentage,
+  };
+  if (Object.entries(fields).every(([key, value]) => JSON.stringify(roadmap[key]) === JSON.stringify(value))) return roadmap;
+  const result = await db.collection(COLLECTION_USER_ROADMAPS).updateOne(
+    { _id: roadmap._id, user_id: roadmap.user_id, nodes: roadmap.nodes },
+    { $set: { ...fields, updated_at: new Date() } }
+  );
+  if (!result.matchedCount) throw Object.assign(new Error('Lộ trình vừa thay đổi. Vui lòng tải lại.'),
+    { status: 409, code: 'NODE_UPDATE_CONFLICT' });
+  return { ...roadmap, ...fields };
 }
 
 /**
- * 3. Lấy thông tin lộ trình hiện tại của người dùng
+ * Hủy chọn lộ trình, giữ nguyên tiến độ và dữ liệu liên kết.
  */
+export async function unselectUserRoadmap(userId, categoryId) {
+  if (!userId) {
+    throw Object.assign(new Error('Thiếu thông tin người dùng.'), { status: 401 });
+  }
+  if (typeof categoryId !== 'number' || !Number.isSafeInteger(categoryId) || categoryId <= 0) {
+    throw Object.assign(new Error('category_id phải là số nguyên dương.'), {
+      status: 400, code: 'INVALID_CATEGORY_ID', field: 'category_id'
+    });
+  }
+  const db = await getMongoDb();
+  const result = await db.collection(COLLECTION_USER_ROADMAPS).updateMany(
+    { user_id: String(userId), category_id: categoryId, is_active: true },
+    { $set: { is_active: false, updated_at: new Date() } }
+  );
+  return { category_id: categoryId, is_active: false, changed: result.modifiedCount > 0 };
+}
+
+/** Lấy lộ trình đang kích hoạt cùng tiến độ đã lưu của học viên. */
+export function manualStatusPermission(node) {
+  if (node.is_review || (node.status === STATUS_REVIEW && node.status_source !== 'manual')) {
+    return { manual_status_allowed: false, status_lock_reason: 'REVIEW_REQUIRED' };
+  }
+  if (node.last_quiz_score != null || node.course_score != null || Number(node.score) > 0) {
+    return { manual_status_allowed: false, status_lock_reason: 'LEARNING_RESULT_EXISTS' };
+  }
+  return { manual_status_allowed: true, status_lock_reason: null };
+}
+
+export async function setManualNodeStatus(userId, nodeId, status) {
+  if (!userId) throw Object.assign(new Error('Yêu cầu đăng nhập.'), { status: 401 });
+  if (![STATUS_NOT_STARTED, STATUS_IN_PROGRESS, STATUS_COMPLETED, STATUS_REVIEW].includes(status)) {
+    throw Object.assign(new Error('Trạng thái kỹ năng không hợp lệ.'), { status: 400, code: 'INVALID_NODE_STATUS' });
+  }
+  const db = await getMongoDb();
+  const coll = db.collection(COLLECTION_USER_ROADMAPS);
+  const roadmap = await coll.findOne({ user_id: String(userId), is_active: true, 'nodes.node_id': String(nodeId) });
+  const node = roadmap?.nodes?.find(item => item.node_id === String(nodeId));
+  if (!node) throw Object.assign(new Error('Hãy chọn lộ trình chứa kỹ năng này trước.'), { status: 404, code: 'ACTIVE_NODE_NOT_FOUND' });
+  const permission = manualStatusPermission(node);
+  if (!permission.manual_status_allowed) {
+    throw Object.assign(new Error(permission.status_lock_reason === 'REVIEW_REQUIRED'
+      ? 'Kỹ năng cần hoàn thành ôn tập flashcard trước khi cập nhật trạng thái.'
+      : 'Trạng thái kỹ năng được cập nhật theo kết quả bài test hoặc khóa học.'),
+    { status: 409, code: permission.status_lock_reason });
+  }
+  const now = new Date();
+  const updatedNodes = roadmap.nodes.map(item => item.node_id === String(nodeId)
+    ? { ...item, status, status_source: 'manual', is_review: false, updated_at: now } : item);
+  const progress = calculateRoadmapProgress(updatedNodes);
+  const result = await coll.updateOne(
+    { _id: roadmap._id, user_id: String(userId), is_active: true, nodes: roadmap.nodes },
+    { $set: { nodes: updatedNodes, progress_percentage: progress.progress_percentage, updated_at: now } }
+  );
+  if (!result.matchedCount) throw Object.assign(new Error('Dữ liệu vừa thay đổi. Vui lòng tải lại và thử lại.'),
+    { status: 409, code: 'NODE_UPDATE_CONFLICT' });
+  return { node_id: nodeId, status, status_source: 'manual', is_review: false, ...permission, ...progress };
+}
+
 export async function getMyRoadmap(userId) {
   if (!userId) {
     const err = new Error('Thiếu thông tin người dùng.');
@@ -977,7 +1325,7 @@ export async function getMyRoadmap(userId) {
   const roadmapsColl = db.collection(COLLECTION_USER_ROADMAPS);
 
   // Tìm roadmap đang active hoặc roadmap mới nhất
-  const userRoadmap = await roadmapsColl.findOne(
+  let userRoadmap = await roadmapsColl.findOne(
     { user_id: String(userId), is_active: true },
     { sort: { updated_at: -1 } }
   );
@@ -990,6 +1338,9 @@ export async function getMyRoadmap(userId) {
   }
 
   const template = await getRoadmapTemplate(userRoadmap.category_id);
+  if (!template) throw Object.assign(new Error('Lộ trình này chưa có nội dung trong cơ sở dữ liệu.'),
+    { status: 404, code: 'ROADMAP_TEMPLATE_NOT_FOUND' });
+  userRoadmap = await reconcileUserRoadmap(userRoadmap, template, db);
 
   // Gắn trạng thái node hiện tại vào cấu trúc template stage để trả về cây kỹ năng trực quan
   const nodeMap = {};
@@ -1002,7 +1353,9 @@ export async function getMyRoadmap(userId) {
         ...node,
         status: userNode.status || STATUS_NOT_STARTED,
         score: userNode.score || 0,
-        is_review: Boolean(userNode.is_review || userNode.status === STATUS_REVIEW),
+        is_review: Boolean(userNode.is_review || (userNode.status === STATUS_REVIEW && userNode.status_source !== 'manual')),
+        status_source: userNode.status_source || null,
+        ...manualStatusPermission(userNode),
         last_quiz_score: userNode.last_quiz_score ?? null,
         course_score: userNode.course_score ?? null,
         updated_at: userNode.updated_at || null
@@ -1017,6 +1370,7 @@ export async function getMyRoadmap(userId) {
       title: stage.title,
       description: stage.description,
       order: stage.order,
+      test_available: stage.test_available && stage.nodes.every(node => Boolean(nodeMap[node.node_id])),
       progress_percentage: stageProg.progress_percentage,
       total_nodes: stageProg.total_nodes,
       completed_nodes: stageProg.completed_nodes,
@@ -1046,60 +1400,36 @@ export async function getMyRoadmap(userId) {
  * 4. Lấy bộ câu hỏi (~10 câu) cho bài test giai đoạn.
  * Quan trọng: Không trả về `correct_option` và `explanation` để chống gian lận.
  */
-export async function getStageTestQuestions(stageId) {
+export async function getStageTestQuestions(stageId, userId = null) {
   if (!stageId) {
     const err = new Error('Thiếu stageId.');
     err.status = 400;
     throw err;
   }
 
-  await ensureSeedQuestions();
-  const db = await getMongoDb();
-  const questionsColl = db.collection(COLLECTION_ROADMAP_QUESTIONS);
-
-  let questions = await questionsColl.find({ stage_id: String(stageId) }).toArray();
-
-  // Nếu stage này chưa có câu hỏi trong database, tạo 10 câu hỏi suy luận dựa trên node của stage
-  if (questions.length === 0) {
-    // Tìm stage trong các template
-    let foundStage = null;
-    for (const key of Object.keys(CAREER_ROADMAP_TEMPLATES)) {
-      const t = CAREER_ROADMAP_TEMPLATES[key];
-      const s = t.stages.find(st => st.stage_id === stageId);
-      if (s) { foundStage = s; break; }
-    }
-
-    if (foundStage && foundStage.nodes?.length > 0) {
-      const generated = [];
-      const nodes = foundStage.nodes;
-      for (let i = 0; i < 10; i++) {
-        const node = nodes[i % nodes.length];
-        generated.push({
-          question_id: `${stageId}-gen-q${i + 1}`,
-          stage_id: stageId,
-          node_id: node.node_id,
-          question_text: `Câu hỏi đánh giá năng lực ${i + 1}: Hãy xác định kỹ thuật chính xác nhất liên quan đến "${node.title}"?`,
-          options: [
-            { key: 'A', text: `Áp dụng chuẩn phương pháp cho ${node.title}` },
-            { key: 'B', text: `Thực hiện cấu hình sai phạm vi của ${node.title}` },
-            { key: 'C', text: `Bỏ qua kiểm tra ràng buộc của ${node.title}` },
-            { key: 'D', text: `Không khuyến nghị sử dụng ${node.title}` }
-          ],
-          correct_option: 'A',
-          explanation: `Lựa chọn A là thực hành chuẩn mực cho kỹ năng ${node.title}.`,
-          created_at: new Date()
-        });
-      }
-      await questionsColl.insertMany(generated);
-      questions = generated;
-    }
+  let activeNodeIds = null;
+  if (userId) {
+    const db = await getMongoDb();
+    const roadmap = await db.collection(COLLECTION_USER_ROADMAPS).findOne({
+      user_id: String(userId), is_active: true, 'nodes.stage_id': String(stageId)
+    });
+    if (!roadmap) throw Object.assign(new Error('Hãy chọn lộ trình chứa giai đoạn này trước khi làm bài test.'),
+      { status: 404, code: 'ACTIVE_STAGE_NOT_FOUND' });
+    activeNodeIds = new Set(roadmap.nodes.filter(node => node.stage_id === String(stageId)).map(node => node.node_id));
+  }
+  const questions = await readStageBank(stageId);
+  if (activeNodeIds && questions.some(question => !activeNodeIds.has(question.node_id))) {
+    console.error('[Roadmap enrollment requires curriculum reconciliation]', { stage_id: stageId });
+    throw Object.assign(new Error('Bài kiểm tra đang được chuẩn bị. Bạn có thể tiếp tục học các kỹ năng.'),
+      { status: 503, code: 'STAGE_TEST_UNAVAILABLE' });
   }
 
-  // Giới hạn khoảng 10 câu hỏi và ẩn đáp án
-  const safeQuestions = questions.slice(0, 10).map(q => ({
+  // Trả toàn bộ câu hỏi đã gắn tag; không cắt ngắn theo số câu của stage.
+  const safeQuestions = questions.map(q => ({
     question_id: q.question_id,
     stage_id: q.stage_id,
     node_id: q.node_id,
+    skill_tag: q.skill_tag,
     question_text: q.question_text,
     options: q.options
   }));
@@ -1128,23 +1458,77 @@ export async function submitStageTest(userId, stageId, answers = []) {
     throw err;
   }
 
-  if (!Array.isArray(answers) || answers.length === 0) {
+  if (!Array.isArray(answers) || answers.length === 0 || answers.some(answer =>
+    !answer || typeof answer !== 'object' || Array.isArray(answer)
+      || typeof answer.question_id !== 'string' || !answer.question_id.trim()
+      || typeof answer.selected_option !== 'string' || !answer.selected_option.trim()
+  )) {
     const err = new Error('Danh sách câu trả lời không hợp lệ hoặc đang rỗng.');
     err.status = 400;
+    err.code = 'INVALID_STAGE_ANSWERS';
     throw err;
   }
 
-  await ensureSeedQuestions();
   const db = await getMongoDb();
-  const questionsColl = db.collection(COLLECTION_ROADMAP_QUESTIONS);
   const roadmapsColl = db.collection(COLLECTION_USER_ROADMAPS);
   const submissionsColl = db.collection(COLLECTION_ROADMAP_SUBMISSIONS);
 
-  // Tìm các câu hỏi gốc trong DB có đáp án đúng
-  const questionIds = answers.map(a => a.question_id);
-  const rawQuestions = await questionsColl.find({ question_id: { $in: questionIds } }).toArray();
+  const userRoadmap = await roadmapsColl.findOne({
+    user_id: String(userId),
+    is_active: true,
+  });
+  if (!userRoadmap) {
+    const err = new Error('Người dùng chưa kích hoạt lộ trình học nào.');
+    err.status = 404;
+    err.code = 'ACTIVE_ROADMAP_NOT_FOUND';
+    throw err;
+  }
+
+  const stageNodeIds = new Set((userRoadmap.nodes || [])
+    .filter(node => String(node.stage_id) === String(stageId))
+    .map(node => String(node.node_id)));
+  if (stageNodeIds.size === 0) {
+    const err = new Error('Giai đoạn không thuộc lộ trình đang hoạt động.');
+    err.status = 404;
+    err.code = 'STAGE_NOT_FOUND';
+    throw err;
+  }
+
+  const expectedQuestions = await readStageBank(stageId);
+
+  const questionIds = answers.map(answer => answer.question_id.trim());
+  if (new Set(questionIds).size !== questionIds.length
+    || questionIds.length !== expectedQuestions.length
+    || expectedQuestions.some(question => !questionIds.includes(String(question.question_id)))) {
+    const err = new Error('Phải trả lời đúng một lần cho toàn bộ câu hỏi của giai đoạn.');
+    err.status = 400;
+    err.code = 'STAGE_ANSWER_SET_INVALID';
+    throw err;
+  }
+
+  if (expectedQuestions.some(question => !stageNodeIds.has(String(question.node_id)))) {
+    console.error('[Roadmap enrollment requires curriculum reconciliation]', { stage_id: stageId });
+    const err = new Error('Bài kiểm tra đang được chuẩn bị. Bạn có thể tiếp tục học các kỹ năng.');
+    err.status = 503;
+    err.code = 'STAGE_TEST_UNAVAILABLE';
+    throw err;
+  }
+
+  const rawQuestions = expectedQuestions;
   const questionMap = {};
   rawQuestions.forEach(q => { questionMap[q.question_id] = q; });
+
+  for (const answer of answers) {
+    const question = questionMap[answer.question_id.trim()];
+    const selected = answer.selected_option.trim().toUpperCase();
+    const validOption = question?.options?.some(option => String(option.key).toUpperCase() === selected);
+    if (!question || !validOption) {
+      const err = new Error('Câu hỏi hoặc phương án trả lời không hợp lệ.');
+      err.status = 400;
+      err.code = 'STAGE_ANSWER_INVALID';
+      throw err;
+    }
+  }
 
   let totalCorrect = 0;
   const detailedAnswers = [];
@@ -1152,7 +1536,7 @@ export async function submitStageTest(userId, stageId, answers = []) {
   const nodeBreakdown = {};
 
   answers.forEach(userAns => {
-    const original = questionMap[userAns.question_id];
+    const original = questionMap[String(userAns.question_id).trim()];
     if (!original) return;
 
     const isCorrect = String(userAns.selected_option).trim().toUpperCase() === String(original.correct_option).trim().toUpperCase();
@@ -1181,11 +1565,6 @@ export async function submitStageTest(userId, stageId, answers = []) {
   const overallPercentage = totalGraded > 0 ? Math.round((totalCorrect / totalGraded) * 100) : 0;
 
   // Lấy roadmap của user để cập nhật Node
-  const userRoadmap = await roadmapsColl.findOne({
-    user_id: String(userId),
-    is_active: true
-  });
-
   const nodeResults = {};
 
   if (userRoadmap && Array.isArray(userRoadmap.nodes)) {
@@ -1206,7 +1585,7 @@ export async function submitStageTest(userId, stageId, answers = []) {
       }
 
       // Xác định trạng thái mới dựa trên quy tắc bảo toàn review
-      let nextStatus = determineNodeStatus(node.status, finalNodeScore, wasFailedInTest);
+      let nextStatus = determineNodeStatus(node.status_source === 'manual' && node.status === STATUS_REVIEW ? STATUS_NOT_STARTED : node.status, finalNodeScore, wasFailedInTest);
       let isReviewFlag = node.is_review || nextStatus === STATUS_REVIEW;
 
       // Nếu đã mang cờ review thì trạng thái bắt buộc là review
@@ -1230,6 +1609,7 @@ export async function submitStageTest(userId, stageId, answers = []) {
         score: finalNodeScore,
         status: nextStatus,
         is_review: isReviewFlag,
+        status_source: 'test',
         last_quiz_score: nodeQuizScore,
         updated_at: new Date()
       };
@@ -1238,8 +1618,8 @@ export async function submitStageTest(userId, stageId, answers = []) {
     const progressStats = calculateRoadmapProgress(updatedNodes);
 
     // Cập nhật lại vào cơ sở dữ liệu
-    await roadmapsColl.updateOne(
-      { _id: userRoadmap._id },
+    const updateResult = await roadmapsColl.updateOne(
+      { _id: userRoadmap._id, user_id: String(userId), is_active: true, nodes: userRoadmap.nodes },
       {
         $set: {
           nodes: updatedNodes,
@@ -1248,6 +1628,8 @@ export async function submitStageTest(userId, stageId, answers = []) {
         }
       }
     );
+    if (!updateResult.matchedCount) throw Object.assign(new Error('Dữ liệu lộ trình vừa thay đổi. Vui lòng tải lại trước khi nộp bài.'),
+      { status: 409, code: 'NODE_UPDATE_CONFLICT' });
   }
 
   // Lưu lịch sử bài test
@@ -1271,7 +1653,11 @@ export async function submitStageTest(userId, stageId, answers = []) {
     score_percentage: overallPercentage,
     passed: overallPercentage >= 70,
     node_breakdown: nodeResults,
-    detailed_results: detailedAnswers
+    detailed_results: detailedAnswers.map(answer => ({
+      question_id: answer.question_id,
+      node_id: answer.node_id,
+      selected_option: answer.selected_option,
+    })),
   };
 }
 
@@ -1301,8 +1687,11 @@ export async function syncCourseProgressToRoadmap(userId) {
   }
 
   // 1. Tìm các khóa học người dùng đã ghi danh (enrollments)
+  const userIds = [String(userId)];
+  const numericUserId = Number(userId);
+  if (Number.isSafeInteger(numericUserId) && !userIds.includes(numericUserId)) userIds.push(numericUserId);
   const enrollments = await db.collection('user_enrollments').find({
-    $or: [{ user_id: String(userId) }, { user_id: Number(userId) }]
+    $or: [{ user_id: { $in: userIds } }, { userId: { $in: userIds } }],
   }).toArray();
 
   if (enrollments.length === 0) {
@@ -1314,7 +1703,7 @@ export async function syncCourseProgressToRoadmap(userId) {
   }
 
   // 2. Lấy tags của từng khóa học đã mua
-  const courseIds = enrollments.map(e => e.course_id);
+  const courseIds = [...new Set(enrollments.map(e => e.course_id).filter(id => id !== undefined && id !== null))];
   const courseTags = await db.collection('course_tags').find({
     $or: [
       { course_id: { $in: courseIds } },
@@ -1338,10 +1727,21 @@ export async function syncCourseProgressToRoadmap(userId) {
 
   // Map: course_id -> progress percentage (0 - 100)
   const courseProgressMap = {};
+  const storedProgressDocs = await db.collection('user_course_progress').find({
+    $and: [
+      { $or: [{ user_id: { $in: userIds } }, { userId: { $in: userIds } }] },
+      { course_id: { $in: [...courseIds, ...courseIds.map(String)] } },
+    ],
+  }).toArray();
+  storedProgressDocs.forEach(doc => {
+    const rawProgress = Number(doc.progress_percentage);
+    if (!Number.isFinite(rawProgress)) return;
+    courseProgressMap[String(doc.course_id)] = Math.min(100, Math.max(0, rawProgress));
+  });
   enrollments.forEach(e => {
     const cId = String(e.course_id);
     const progress = Math.min(100, Math.max(0, Number(e.progress_percentage) || 0));
-    courseProgressMap[cId] = progress;
+    if (!Object.hasOwn(courseProgressMap, cId)) courseProgressMap[cId] = progress;
   });
 
   // 3. Duyệt qua tất cả các roadmap của người dùng để cập nhật tiến độ theo tag
@@ -1382,8 +1782,8 @@ export async function syncCourseProgressToRoadmap(userId) {
       }
 
       // Bảo toàn trạng thái review: Nếu node đang ở trạng thái review thì giữ nguyên review
-      let nextStatus = determineNodeStatus(node.status, combinedScore, false);
-      if (node.is_review || node.status === STATUS_REVIEW) {
+      let nextStatus = determineNodeStatus(node.status_source === 'manual' && node.status === STATUS_REVIEW ? STATUS_NOT_STARTED : node.status, combinedScore, false);
+      if (node.is_review || (node.status === STATUS_REVIEW && node.status_source !== 'manual')) {
         nextStatus = STATUS_REVIEW;
       }
 
@@ -1402,6 +1802,7 @@ export async function syncCourseProgressToRoadmap(userId) {
 
       return {
         ...node,
+        status_source: 'course',
         course_score: avgCourseProgress,
         score: combinedScore,
         status: nextStatus,
@@ -1411,8 +1812,8 @@ export async function syncCourseProgressToRoadmap(userId) {
 
     const progressStats = calculateRoadmapProgress(updatedNodes);
 
-    await roadmapsColl.updateOne(
-      { _id: roadmapDoc._id },
+    const updateResult = await roadmapsColl.updateOne(
+      { _id: roadmapDoc._id, user_id: String(userId), nodes: roadmapDoc.nodes },
       {
         $set: {
           nodes: updatedNodes,
@@ -1421,6 +1822,8 @@ export async function syncCourseProgressToRoadmap(userId) {
         }
       }
     );
+    if (!updateResult.matchedCount) throw Object.assign(new Error('Dữ liệu vừa thay đổi. Vui lòng thử đồng bộ lại.'),
+      { status: 409, code: 'NODE_UPDATE_CONFLICT' });
 
     allSyncedRoadmapsProgress.push({
       category_id: roadmapDoc.category_id,
@@ -1466,19 +1869,6 @@ export async function getNodeCourseRecommendations(userId, nodeId, options = {})
       }
     }
     if (targetNode) break;
-  }
-
-  if (!targetNode) {
-    for (const tpl of Object.values(CAREER_ROADMAP_TEMPLATES)) {
-      for (const stage of tpl.stages || []) {
-        const found = (stage.nodes || []).find(n => n.node_id === nodeId);
-        if (found) {
-          targetNode = found;
-          break;
-        }
-      }
-      if (targetNode) break;
-    }
   }
 
   if (!targetNode) {
@@ -1553,10 +1943,12 @@ export async function getNodeCourseRecommendations(userId, nodeId, options = {})
     scoredCourses.push({
       id: String(c._id),
       course_id: cId,
+      instructor_id: c.instructor_id == null ? null : String(c.instructor_id),
+      instructor_name: c.instructor_name || c.instructor?.name || null,
       slug: c.slug || `course-${cId}`,
       title: c.title,
       thumbnail_url: c.thumbnail_url || '',
-      rating: parseFloat(c.rating) || 5.0,
+      rating: parseFloat(c.rating) || 0,
       rating_count: parseInt(c.total_reviews, 10) || 0,
       total_students: parseInt(c.total_students, 10) || 0,
       price: {
@@ -1570,7 +1962,37 @@ export async function getNodeCourseRecommendations(userId, nodeId, options = {})
   }
 
   scoredCourses.sort((a, b) => b.relevance_score - a.relevance_score || b.total_students - a.total_students);
-  const finalCourses = scoredCourses.slice(0, limit);
+  const selectedCourses = scoredCourses.slice(0, limit);
+
+  // Resolve names in batches only for the courses being returned.
+  const instructorIds = [...new Set(selectedCourses.map(course => course.instructor_id).filter(Boolean))];
+  const lookupIds = instructorIds.flatMap(id => {
+    const variants = [id];
+    if (/^[a-f\d]{24}$/i.test(id)) variants.push(new ObjectId(id));
+    const numericId = Number(id);
+    if (Number.isSafeInteger(numericId) && String(numericId) === id) variants.push(numericId);
+    return variants;
+  });
+  const [profiles, users] = instructorIds.length ? await Promise.all([
+    db.collection('instructor_profiles').find({ $or: [
+      { instructor_id: { $in: lookupIds } }, { user_id: { $in: lookupIds } }, { _id: { $in: lookupIds } },
+    ] }, { projection: { instructor_id: 1, user_id: 1, full_name: 1, name: 1 } }).toArray(),
+    db.collection('users').find({ $or: [
+      { id: { $in: lookupIds } }, { instructor_id: { $in: lookupIds } }, { _id: { $in: lookupIds } },
+    ] }, { projection: { id: 1, instructor_id: 1, full_name: 1, name: 1 } }).toArray(),
+  ]) : [[], []];
+  const names = new Map();
+  for (const instructor of [...profiles, ...users]) {
+    const name = (instructor.full_name || instructor.name || '').trim();
+    if (!name) continue;
+    for (const id of [instructor.instructor_id, instructor.user_id, instructor.id, instructor._id]) {
+      if (id != null && !names.has(String(id))) names.set(String(id), name);
+    }
+  }
+  const finalCourses = selectedCourses.map(course => ({
+    ...course,
+    instructor_name: names.get(course.instructor_id) || course.instructor_name || null,
+  }));
 
   return {
     success: true,
@@ -1612,8 +2034,11 @@ export async function getUserSubmissionHistory(userId, stageId = null) {
  * @param {object} express - Thư viện express
  * @param {Function} requireAuth - Middleware xác thực JWT
  */
-export function createRoadmapRouter(express, requireAuth) {
+export function createRoadmapRouter(express, requireAuth, activityOptions = {}) {
   const router = express.Router();
+
+  router.post('/stage-test/:stageId/activity-session', requireAuth,
+    createLearningActivityStartHandler('roadmap_quiz', req => ({ stage_id: req.params.stageId }), [], activityOptions));
 
   /**
    * GET /api/user/roadmap/careers
@@ -1672,9 +2097,19 @@ export function createRoadmapRouter(express, requireAuth) {
   });
 
   /**
-   * GET /api/user/roadmap/my-roadmap
-   * Lấy lộ trình hiện tại của user cùng toàn bộ node và trạng thái
+   * POST /api/user/roadmap/unselect
+   * Hủy chọn lộ trình của chính học viên, không xóa tiến độ.
    */
+  router.post('/unselect', requireAuth, async (req, res, next) => {
+    try {
+      const data = await unselectUserRoadmap(req.userId, req.body?.category_id);
+      res.json({ success: true, message: 'Đã hủy chọn lộ trình. Tiến độ học của bạn được giữ lại.', data });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // GET /api/user/roadmap/my-roadmap: lộ trình hiện tại, node và trạng thái.
   router.get('/my-roadmap', requireAuth, async (req, res, next) => {
     try {
       const data = await getMyRoadmap(req.userId);
@@ -1691,6 +2126,13 @@ export function createRoadmapRouter(express, requireAuth) {
    * GET /api/user/roadmap/nodes/:nodeId/recommended-courses
    * Đề xuất 4 khóa học chưa sở hữu theo Node
    */
+  router.patch('/nodes/:nodeId/status', requireAuth, async (req, res, next) => {
+    try {
+      const data = await setManualNodeStatus(req.userId, req.params.nodeId, req.body?.status);
+      res.json({ success: true, message: 'Đã lưu trạng thái kỹ năng.', data });
+    } catch (err) { next(err); }
+  });
+
   router.get('/nodes/:nodeId/recommended-courses', requireAuth, async (req, res, next) => {
     try {
       const result = await getNodeCourseRecommendations(req.userId, req.params.nodeId, {
@@ -1708,7 +2150,7 @@ export function createRoadmapRouter(express, requireAuth) {
    */
   router.get('/stage-test/:stageId', requireAuth, async (req, res, next) => {
     try {
-      const data = await getStageTestQuestions(req.params.stageId);
+      const data = await getStageTestQuestions(req.params.stageId, req.userId);
       res.json({
         success: true,
         data

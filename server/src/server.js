@@ -1,5 +1,8 @@
 import dotenv from 'dotenv';
-dotenv.config({ quiet: true });
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+dotenv.config({ path: path.join(repoRoot, '.env'), quiet: true });
 
 import express from 'express';
 import cors from 'cors';
@@ -18,7 +21,8 @@ import {
   verifyForgotPasswordOtp,
   resendForgotPasswordOtp,
   resetPasswordWithToken,
-  verifyJwt,
+  readAuthToken, verifyAccessToken, setAuthCookie, clearAuthCookie,
+  requireCookieCsrf, createCsrfToken,
 } from './user/auth/auth.user.js';
 import {
   skipOnboarding,
@@ -32,12 +36,29 @@ import { createStudyRoomRouter } from './user/studyroom/studyroom.user.js';
 import { createRoadmapRouter } from './user/roadmap/roadmap.user.js';
 import { createFlashcardRouter } from './user/flashcard/flashcard.user.js';
 import { createPaymentRouter } from './user/payment/payment.router.js';
+import { recoverPayments } from './user/payment/payment.service.js';
 import { createCartRouter } from './user/cart/cart.user.js';
 import { createCourseRouter } from './user/course/course.user.js';
 import { createFavoritesRouter } from './user/favorites/favorites.user.js';
 import { createLessonRouter } from './user/lesson/lesson.user.js';
 import { createCertificateRouter } from './user/certificate/certificate.user.js';
-import { createAdminAuthRouter } from './admin/auth/auth.admin.js';
+import { createProfileRouter, cleanUpOldActivityLogs } from './user/profile/profile.user.js';
+import { createAdminAuthMiddleware, createAdminAuthRouter } from './admin/auth/auth.admin.js';
+import {
+  createAdminPreferencesRouter,
+  ensureAdminPreferencesIndexes,
+} from './admin/preferences/preferences.admin.js';
+import {
+  createAdminNotificationsRouter,
+  ensureAdminNotificationIndexes,
+} from './admin/notifications/notifications.admin.js';
+import { createNotificationRouter } from './user/notification/notification.user.js';
+import { createSupportRouter } from './user/support/support.user.js';
+import { createAccountSecurityRouter, logoutSecuritySession, recoverSecurityEvents } from './user/account-security/account-security.user.js';
+import { createPaymentSettingsRouter } from './user/payment-settings/payment-settings.user.js';
+import { createLearningSettingsRouter } from './user/learning-settings/learning-settings.user.js';
+import { createHomeRouter } from './user/home/home.user.js';
+import { createLearningActivityRouter } from './user/learning-activity/learning-activity.user.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -66,42 +87,66 @@ const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 app.use(cors({
   origin: (origin, callback) => {
     // Cho phép gọi không origin (như cURL, Mobile App, Postman) hoặc origin nằm trong danh sách
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(null, true); // Chế độ thoáng cho môi trường demo / kiểm thử
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-CSRF-Token', 'Idempotency-Key'],
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb', verify: (req, res, buffer) => {
+  if (/^\/api\/(?:user\/|v1\/)?payment\/webhook\/stripe\/?$/.test(req.path)) {
+    req.rawBody = Buffer.from(buffer);
+  }
+} }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && !allowedOrigins.includes(origin)) {
+    return res.status(403).json({ message: 'Origin không được phép.', code: 'ORIGIN_FORBIDDEN' });
+  }
+  next();
+});
+app.use(requireCookieCsrf);
 
 // ─── 2. Middleware Trích Xuất Token Xác Thực ─────────────────────────────────
-function extractBearerUserId(req) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return null;
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
+async function extractBearerUserId(req) {
+  const token = readAuthToken(req);
+  if (!token) return null;
   try {
-    const payload = verifyJwt(token);
-    return payload.sub || payload.userId || payload.id || null;
+    verifyAccessToken(token);
   } catch {
     return null;
   }
+  const session = await verifyAuthSession(token);
+  if (!session.isAuthenticated) req.authFailureReason = session.reason;
+  return session.isAuthenticated ? session.user.id : null;
 }
 
-function requireAuth(req, res, next) {
-  const userId = extractBearerUserId(req);
-  if (!userId) {
-    return res.status(401).json({ message: 'Yêu cầu đăng nhập để thực hiện chức năng này.' });
-  }
-  req.userId = userId;
-  next();
+async function requireAuth(req, res, next) {
+  try {
+    const userId = await extractBearerUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: 'Yêu cầu đăng nhập để thực hiện chức năng này.',
+        code: req.authFailureReason || 'AUTH_REQUIRED' });
+    }
+    req.userId = userId;
+    next();
+  } catch { next(Object.assign(new Error('Không thể xác thực phiên lúc này. Vui lòng thử lại.'),
+    { status: 503, code: 'AUTH_UNAVAILABLE' })); }
 }
 
 // ─── 3. Health Check Endpoints ───────────────────────────────────────────────
+const homeRouter = createHomeRouter(express, requireAuth);
+app.use('/api/user/home', homeRouter);
+app.use('/api/v1/user/home', homeRouter);
+const learningActivityRouter = createLearningActivityRouter(express, requireAuth);
+app.use('/api/user/learning-activity', learningActivityRouter);
+app.use('/api/v1/user/learning-activity', learningActivityRouter);
+
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
@@ -121,7 +166,7 @@ const authRouter = express.Router();
 // 4.1. Đăng ký tài khoản (Sign Up)
 authRouter.post('/register', async (req, res, next) => {
   try {
-    const result = await registerUser(req.body);
+    const result = await registerUser(req.body, { ip: req.ip });
     res.status(201).json(result);
   } catch (err) {
     next(err);
@@ -162,7 +207,7 @@ authRouter.get('/verify', async (req, res, next) => {
 // 4.3. Gửi lại liên kết xác thực (Resend Verification)
 authRouter.post('/resend-verification', async (req, res, next) => {
   try {
-    const result = await resendVerificationLink(req.body);
+    const result = await resendVerificationLink(req.body, { ip: req.ip });
     res.json(result);
   } catch (err) {
     next(err);
@@ -170,9 +215,17 @@ authRouter.post('/resend-verification', async (req, res, next) => {
 });
 
 // 4.4. Đăng ký nhanh Google OAuth
+const authRequestContext = req => ({
+  ip: req.ip,
+  userAgent: req.get('user-agent'),
+  city: req.get('x-vercel-ip-city') || req.get('cf-ipcity'),
+  region: req.get('x-vercel-ip-country-region') || req.get('cf-region'),
+  country: req.get('x-vercel-ip-country') || req.get('cf-ipcountry'),
+});
 authRouter.post('/google/signup', async (req, res, next) => {
   try {
-    const result = await registerWithGoogle(req.body);
+    const result = await registerWithGoogle(req.body, authRequestContext(req));
+    setAuthCookie(res, result, 'user', req.body.rememberMe);
     res.json(result);
   } catch (err) {
     next(err);
@@ -182,7 +235,8 @@ authRouter.post('/google/signup', async (req, res, next) => {
 // 4.5. Đăng ký nhanh Facebook OAuth
 authRouter.post('/facebook/signup', async (req, res, next) => {
   try {
-    const result = await registerWithFacebook(req.body);
+    const result = await registerWithFacebook(req.body, authRequestContext(req));
+    setAuthCookie(res, result, 'user', req.body.rememberMe);
     res.json(result);
   } catch (err) {
     next(err);
@@ -192,7 +246,8 @@ authRouter.post('/facebook/signup', async (req, res, next) => {
 // 4.6. Đăng nhập qua Email & Mật khẩu (Sign In)
 authRouter.post('/login', async (req, res, next) => {
   try {
-    const result = await loginWithCredentials(req.body);
+    const result = await loginWithCredentials(req.body, authRequestContext(req));
+    setAuthCookie(res, result, 'user', req.body.rememberMe);
     res.json(result);
   } catch (err) {
     next(err);
@@ -202,7 +257,8 @@ authRouter.post('/login', async (req, res, next) => {
 // 4.7. Đăng nhập Google OAuth
 authRouter.post('/google/login', async (req, res, next) => {
   try {
-    const result = await loginWithGoogle(req.body);
+    const result = await loginWithGoogle(req.body, authRequestContext(req));
+    setAuthCookie(res, result, 'user', req.body.rememberMe);
     res.json(result);
   } catch (err) {
     next(err);
@@ -212,7 +268,8 @@ authRouter.post('/google/login', async (req, res, next) => {
 // 4.8. Đăng nhập Facebook OAuth
 authRouter.post('/facebook/login', async (req, res, next) => {
   try {
-    const result = await loginWithFacebook(req.body);
+    const result = await loginWithFacebook(req.body, authRequestContext(req));
+    setAuthCookie(res, result, 'user', req.body.rememberMe);
     res.json(result);
   } catch (err) {
     next(err);
@@ -271,8 +328,14 @@ authRouter.put('/profile', requireAuth, async (req, res, next) => {
 // 4.10. Kiểm tra phiên đăng nhập cho Header (Session Check)
 authRouter.get('/session', async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    const result = await verifyAuthSession(authHeader);
+    const token = readAuthToken(req);
+    res.set('Cache-Control', 'no-store');
+    if (token) {
+      try { verifyAccessToken(token); } catch {
+        return res.json({ isAuthenticated: false, user: null, reason: 'TOKEN_INVALID' });
+      }
+    }
+    const result = await verifyAuthSession(token);
     res.json(result);
   } catch (err) {
     next(err);
@@ -283,7 +346,7 @@ authRouter.get('/session', async (req, res, next) => {
 authRouter.post('/forgot-password', async (req, res, next) => {
   try {
     const email = req.body.email || req.body.contact;
-    const result = await sendForgotPasswordOtp({ email });
+    const result = await sendForgotPasswordOtp({ email }, { ip: req.ip, exposeAccountExists: process.env.NODE_ENV !== 'production' });
     res.json(result);
   } catch (err) {
     next(err);
@@ -294,7 +357,7 @@ authRouter.post('/forgot-password', async (req, res, next) => {
 const verifyOtpHandler = async (req, res, next) => {
   try {
     const { email, otp } = req.body;
-    const result = await verifyForgotPasswordOtp({ email, otp });
+    const result = await verifyForgotPasswordOtp({ email, otp }, { ip: req.ip });
     res.json(result);
   } catch (err) {
     next(err);
@@ -307,7 +370,7 @@ authRouter.post('/verify-otp', verifyOtpHandler);
 const resendOtpHandler = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const result = await resendForgotPasswordOtp({ email });
+    const result = await resendForgotPasswordOtp({ email }, { ip: req.ip });
     res.json(result);
   } catch (err) {
     next(err);
@@ -322,7 +385,8 @@ authRouter.post('/reset-password', async (req, res, next) => {
     const resetToken = req.body.resetToken || req.body.token;
     const newPassword = req.body.newPassword || req.body.password;
     const confirmPassword = req.body.confirmPassword;
-    const result = await resetPasswordWithToken({ resetToken, newPassword, confirmPassword });
+    const result = await resetPasswordWithToken({ resetToken, newPassword, confirmPassword }, { ip: req.ip });
+    clearAuthCookie(res);
     res.json(result);
   } catch (err) {
     next(err);
@@ -330,18 +394,38 @@ authRouter.post('/reset-password', async (req, res, next) => {
 });
 
 // 4.15. Đăng xuất (Logout)
-authRouter.post('/logout', (req, res) => {
-  res.json({ message: 'Đăng xuất thành công' });
+authRouter.post('/logout', async (req, res, next) => {
+  try {
+    const token = readAuthToken(req);
+    let payload;
+    if (token) {
+      try { payload = verifyAccessToken(token); } catch { /* Invalid tokens cannot identify a live session. */ }
+    }
+    if (payload && (await verifyAuthSession(token)).isAuthenticated) await logoutSecuritySession(payload);
+    clearAuthCookie(res);
+    res.json({ message: 'Đăng xuất thành công' });
+  } catch { next(Object.assign(new Error('Chưa đăng xuất được phiên. Vui lòng thử lại.'),
+    { status: 503, code: 'SECURITY_UNAVAILABLE' })); }
+});
+
+authRouter.get('/csrf', requireAuth, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ csrfToken: createCsrfToken(readAuthToken(req)) });
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/user/settings/payment', createPaymentSettingsRouter(express, requireAuth));
+app.use('/api/user/settings/learning', createLearningSettingsRouter(express, requireAuth));
+app.use('/api/user/settings', createAccountSecurityRouter(express, requireAuth, {
+  readAccessPayload: req => verifyAccessToken(readAuthToken(req)), setAuthCookie,
+}));
 
 // ─── 5. Router Khảo Sát Onboarding: /api/user/onboarding ─────────────────────
 const onboardingRouter = express.Router();
 
 onboardingRouter.post('/skip', requireAuth, async (req, res, next) => {
   try {
-    const result = await skipOnboarding(req.userId);
+    const result = await skipOnboarding(req.userId, { includeCourses: req.body?.includeCourses !== false });
     res.json(result);
   } catch (err) {
     next(err);
@@ -350,7 +434,7 @@ onboardingRouter.post('/skip', requireAuth, async (req, res, next) => {
 
 onboardingRouter.post('/submit', requireAuth, async (req, res, next) => {
   try {
-    const result = await submitOnboarding(req.userId, req.body);
+    const result = await submitOnboarding(req.userId, req.body, { includeCourses: req.body?.includeCourses !== false });
     res.json(result);
   } catch (err) {
     next(err);
@@ -367,53 +451,40 @@ onboardingRouter.get('/courses', requireAuth, async (req, res, next) => {
 });
 
 app.use('/api/user/onboarding', onboardingRouter);
+const notificationRouter = createNotificationRouter(express, requireAuth);
+app.use('/api/user/notifications', notificationRouter);
+app.use('/api/v1/user/notifications', notificationRouter);
+const supportRouter = createSupportRouter(express, requireAuth, optionalAuth);
+app.use('/api/support', supportRouter);
+app.use('/api/v1/support', supportRouter);
 app.use('/api/v1/onboarding', onboardingRouter);
 app.use('/api/onboarding', onboardingRouter); // Alias gọi trực tiếp không cần tiền tố
 
 // ─── 5b2. Router Profile Học viên: /api/user/profile ─────────────────────────
-const profileRouter = express.Router();
-profileRouter.put('/', requireAuth, async (req, res, next) => {
-  try {
-    const db = await (await import('./user/db.js')).getMongoDb();
-    const { ObjectId } = await import('mongodb');
-    const { avatarUrl, avatar, full_name, name, firstName, lastName, headline, location, bio, phone } = req.body;
-    const newAvatar = avatarUrl || avatar;
-    const nextName = [firstName, lastName].filter(Boolean).join(' ').trim() || full_name || name;
-
-    const updateFields = {
-      updated_at: new Date(),
-    };
-    if (nextName) updateFields.full_name = nextName;
-    if (phone) updateFields.phone = phone;
-    if (headline !== undefined) updateFields.headline = headline;
-    if (location !== undefined) updateFields.location = location;
-    if (bio !== undefined) updateFields.bio = bio;
-
-    if (newAvatar) {
-      updateFields.avatar_url = newAvatar;
-      updateFields.is_custom_avatar = true;
-    }
-
-    await db.collection('users').updateOne(
-      { _id: new ObjectId(req.userId) },
-      { $set: updateFields }
-    );
-
-    const updatedUser = await getCurrentUser(req.userId);
-    res.json({
-      success: true,
-      message: 'Cập nhật hồ sơ thành công!',
-      data: updatedUser.user,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
+const profileRouter = createProfileRouter(express, requireAuth, getCurrentUser);
 app.use('/api/user/profile', profileRouter);
 app.use('/api/v1/user/profile', profileRouter);
 
+// BR-PRF-06: Tự động chạy ngầm dọn dẹp rác User_Activity_Logs (> 30 ngày)
+setInterval(() => {
+  cleanUpOldActivityLogs(30).catch((err) => console.error('[Garbage Collection] Lỗi dọn log hoạt động cũ:', err));
+}, 24 * 60 * 60 * 1000); // Định kỳ 24h chạy 1 lần
+
 // ─── 5c. Router Blog & Bản Tin (Newsletter): /api/blog & /api/newsletter ──────
-const blogRouter = createBlogRouter(express);
+const blogAdminAuth = createAdminAuthMiddleware();
+const requireBlogDeleteAuth = (req, res, next) => {
+  const token = readAuthToken(req, 'admin');
+  if (token) {
+    try {
+      verifyAccessToken(token, 'admin');
+      return blogAdminAuth(req, res, next);
+    } catch {
+      // A Bearer token can belong to User; let the existing User middleware decide.
+    }
+  }
+  return requireAuth(req, res, next);
+};
+const blogRouter = createBlogRouter(express, requireAuth, blogAdminAuth, requireBlogDeleteAuth, optionalAuth);
 app.use('/api/blog', blogRouter);
 app.use('/api/v1/blog', blogRouter); // Hỗ trợ tiền tố v1 nếu FE gọi
 app.use('/api/v1/posts', blogRouter); // Hỗ trợ endpoint chuẩn theo đặc tả: /api/v1/posts & /api/v1/posts/draft
@@ -451,11 +522,19 @@ app.use('/api/payment', paymentRouter);
 app.use('/api/user/payment', paymentRouter);
 app.use('/api/v1/payment', paymentRouter); // Hỗ trợ tiền tố v1
 
+// Hỗ trợ redirect fallback khi VNPay callback gọi về port backend hoặc đường dẫn cũ /payment/vnpay-return
+app.get('/payment/vnpay-return', (req, res) => {
+  const query = new URLSearchParams(req.query).toString();
+  res.redirect(`/api/payment/vnpay/callback${query ? '?' + query : ''}`);
+});
+
 // ─── 5i. Router Giỏ Hàng Học Viên & Khách: /api/user/cart ───────────────────
-function optionalAuth(req, res, next) {
-  const userId = extractBearerUserId(req);
-  if (userId) req.userId = userId;
-  next();
+async function optionalAuth(req, res, next) {
+  try {
+    const userId = await extractBearerUserId(req);
+    if (userId) req.userId = userId;
+    next();
+  } catch (error) { next(error); }
 }
 const cartRouter = createCartRouter(express, requireAuth, optionalAuth);
 app.use('/api/user/cart', cartRouter);
@@ -463,10 +542,41 @@ app.use('/api/v1/user/cart', cartRouter); // Hỗ trợ tiền tố v1
 app.use('/api/cart', cartRouter); // Alias tương thích trực tiếp
 
 // ─── 5j. Router Thẻ & Danh Sách Khóa Học: /api/user/courses & /api/courses ───
-const courseCardRouter = createCourseRouter(express, optionalAuth);
+const courseCardRouter = createCourseRouter(express, optionalAuth, requireAuth);
 app.use('/api/user/courses', courseCardRouter);
 app.use('/api/v1/user/courses', courseCardRouter);
 app.use('/api/courses', courseCardRouter); // Alias gọi trực tiếp không cần user prefix
+
+// Hỗ trợ endpoint Dashboard khóa học của tôi: /api/user/dashboard mà Frontend đang gọi
+app.get('/api/user/dashboard', requireAuth, async (req, res, next) => {
+  try {
+    const { getUserEnrolledCourses } = await import('./user/course/course.user.js');
+    const data = await getUserEnrolledCourses(req.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+app.get('/api/v1/user/dashboard', requireAuth, async (req, res, next) => {
+  try {
+    const { getUserEnrolledCourses } = await import('./user/course/course.user.js');
+    const data = await getUserEnrolledCourses(req.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Hỗ trợ endpoint Hồ sơ giảng viên công khai: /api/instructors/:id & /api/user/instructors/:id
+app.get(['/api/instructors/:id', '/api/v1/instructors/:id', '/api/user/instructors/:id', '/api/v1/user/instructors/:id'], optionalAuth, async (req, res, next) => {
+  try {
+    const { getInstructorProfileDetail } = await import('./user/course/course.user.js');
+    const data = await getInstructorProfileDetail(req.params.id, req.userId || null);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ─── 5k. Router Khóa Học Yêu Thích: /api/user/favorites & /api/favorites ──────
 const favoritesRouter = createFavoritesRouter(express, requireAuth, optionalAuth);
@@ -478,6 +588,17 @@ app.use('/api/favorites', favoritesRouter); // Alias tương thích trực tiế
 const adminAuthRouter = createAdminAuthRouter(express);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/v1/admin/auth', adminAuthRouter); // Hỗ trợ tiền tố v1
+
+// ─── 5l.1 P2 — Tuỳ chọn quản trị: /api/admin/preferences ─────────────────────
+const adminApiAuth = createAdminAuthMiddleware();
+const adminPreferencesRouter = createAdminPreferencesRouter(express, adminApiAuth);
+app.use('/api/admin/preferences', adminPreferencesRouter);
+app.use('/api/v1/admin/preferences', adminPreferencesRouter); // Hỗ trợ tiền tố v1
+
+// ─── 5l.2 P3 — Thông báo quản trị: /api/admin/notifications ──────────────────
+const adminNotificationsRouter = createAdminNotificationsRouter(express, adminApiAuth);
+app.use('/api/admin/notifications', adminNotificationsRouter);
+app.use('/api/v1/admin/notifications', adminNotificationsRouter); // Hỗ trợ tiền tố v1
 
 // ─── 5m. Router Bài Học & Học Tập: /api/user/lessons ─────────────────────────
 const lessonRouter = createLessonRouter(express, requireAuth, optionalAuth);
@@ -494,11 +615,13 @@ app.use('/api/user/certificates', certificateRouter); // Alias tương thích us
 // ─── 6. Bộ Xử Lý Lỗi Tập Trung (Tương thích quy tắc bảo mật writing-block) ──
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   const status = err.status || (err.name === 'ValidationError' ? 400 : 500);
+  const hideAuthError = req.path.startsWith('/api/auth/') && status >= 500 &&
+    !['EMAIL_DELIVERY_FAILED', 'OAUTH_NOT_CONFIGURED', 'OAUTH_UNAVAILABLE'].includes(err.code);
   const responsePayload = {
-    message: err.message || 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
+    message: hideAuthError ? 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.' : err.message || 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
   };
 
-  if (err.code) responsePayload.code = err.code;
+  if (err.code && !hideAuthError) responsePayload.code = err.code;
   if (err.field) responsePayload.field = err.field;
   if (err.retryAfter) responsePayload.retryAfter = err.retryAfter;
 
@@ -515,10 +638,39 @@ import url from 'node:url';
 
 const isDirectRun = process.argv[1] && import.meta.url === url.pathToFileURL(process.argv[1]).href;
 if (isDirectRun || process.env.NODE_ENV === 'production') {
+  // P2/P3 — index plan idempotent; lỗi kết nối không được chặn khởi động API.
+  ensureAdminPreferencesIndexes().catch((err) => {
+    console.error('[Admin preferences] Không tạo được index:', err.message);
+  });
+  ensureAdminNotificationIndexes().catch((err) => {
+    console.error('[Admin notifications] Không tạo được index:', err.message);
+  });
   app.listen(PORT, () => {
     console.log(`🚀 ThinkUp Backend Server is listening on http://localhost:${PORT}`);
     console.log(`🔗 Allowed Client Demo URL: ${CLIENT_URL}`);
   });
+  let recoveringSecurity = false;
+  const securityRecoveryTimer = setInterval(async () => {
+    if (recoveringSecurity) return;
+    recoveringSecurity = true;
+    try {
+      const result = await recoverSecurityEvents();
+      if (result.failed) console.error('[Account security] Có email bảo mật cần kiểm tra hoặc thử lại.');
+    } catch { console.error('[Account security] Chưa phục hồi được sự kiện bảo mật.'); }
+    finally { recoveringSecurity = false; }
+  }, 30000);
+  securityRecoveryTimer.unref();
+  let recoveringPayments = false;
+  const recoveryTimer = setInterval(async () => {
+    if (recoveringPayments) return;
+    recoveringPayments = true;
+    try {
+      const result = await recoverPayments();
+      if (result.failed) console.error('[Payment Recovery] Một số giao dịch cần thử lại:', result.failed);
+    } catch { console.error('[Payment Recovery] Chưa kết nối được kho thanh toán.'); }
+    finally { recoveringPayments = false; }
+  }, 60000);
+  recoveryTimer.unref();
 }
 
 export default app;

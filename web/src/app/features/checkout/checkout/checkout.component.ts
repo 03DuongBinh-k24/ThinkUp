@@ -7,6 +7,7 @@ import { CommerceService } from '../../../core/services/commerce.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CartItem } from '../../../core/models/commerce.model';
+import { ORGANIZATION_BANK_TRANSFER, ORGANIZATION_SWIFT_INFO } from '../../../core/data/organization-payment';
 import {
   BankDisplay,
   CheckoutVoucher,
@@ -15,7 +16,7 @@ import {
   PaymentStatus,
   PaymentStatusValue,
 } from '../../../core/models/payment.model';
-import { DEMO_BANK_TRANSFER, DEMO_SWIFT_INFO } from '../../../core/data/mock/mock-payment';
+import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
 
 type CheckoutTab = 'domestic' | 'international';
 
@@ -24,6 +25,9 @@ type MethodId = 'atm' | 'wallet' | 'bank-transfer' | 'qr' | 'card' | 'paypal' | 
 type PendingKind = 'qr' | 'bank' | 'swift';
 
 type BrandId = 'momo' | 'zalopay' | 'vnpay' | 'visa' | 'mastercard' | 'jcb' | 'paypal' | 'gpay' | 'applepay';
+
+/** Phương thức chuyển hướng thẳng sang cổng thanh toán, không có nội dung mở rộng. */
+const DIRECT_METHODS: readonly MethodId[] = ['paypal', 'apple-pay'];
 
 interface PaymentMethodOption {
   id: MethodId;
@@ -147,7 +151,7 @@ const BANK_FULL_NAMES: Record<string, string> = {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, InstructorTriggerDirective],
   templateUrl: './checkout.component.html',
   styleUrls: [
     '../../payment-ui.css',
@@ -180,6 +184,7 @@ export class CheckoutComponent implements OnInit {
   acceptedTerms = signal(true);
   termsWarning = signal(false);
   processing = signal(false);
+  cartReady = signal(false);
   paymentError = signal('');
 
   voucherCode = signal('');
@@ -210,14 +215,27 @@ export class CheckoutComponent implements OnInit {
   purchasedCourses = signal<CartItem[]>([]);
   paidOrderId = signal('');
   paidAmount = signal(0);
+  readonly isSimulated = signal(false);
+  readonly paidTransactionId = signal('');
+  readonly paidInvoiceCode = signal('');
+  readonly paidPaymentContent = signal('');
+  readonly receiptError = signal('');
 
   private countdownSub?: Subscription;
   private pollSub?: Subscription;
   private copyTimeout?: ReturnType<typeof setTimeout>;
+  private retryOrderId = '';
+  private pendingOrderId = '';
+  private confirmedStatus: PaymentStatusValue = 'pending';
 
-  private readonly fallbackBank: BankDisplay = DEMO_BANK_TRANSFER;
-
-  readonly swiftInfo = DEMO_SWIFT_INFO;
+  readonly swiftInfo = ORGANIZATION_SWIFT_INFO;
+  readonly swiftTransferContent = computed(() => {
+    const current = this.session();
+    if (current?.paymentMethod === 'swift' || current?.requestedPaymentMethod === 'swift') {
+      return current.transferContent || this.swiftInfo.content;
+    }
+    return this.swiftInfo.content || 'THINKUP SWIFT PAY';
+  });
 
   readonly methodOptions = computed<PaymentMethodOption[]>(() =>
     this.tab() === 'domestic' ? this.domesticMethods : this.internationalMethods,
@@ -245,11 +263,11 @@ export class CheckoutComponent implements OnInit {
 
   readonly displayBank = computed<BankDisplay>(() => {
     const current = this.session();
-    if (!current?.bankInfo) return this.fallbackBank;
+    if (!current?.bankInfo) return ORGANIZATION_BANK_TRANSFER;
     return {
       bankName: current.bankInfo.bankName || this.bankFullName(current.bankInfo.bankId),
       accountNo: current.bankInfo.accountNo,
-      accountName: current.bankInfo.accountHolder,
+      accountName: current.bankInfo.accountName,
       transferContent: current.transferContent,
     };
   });
@@ -282,6 +300,10 @@ export class CheckoutComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.commerce.refreshCart().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => this.cartReady.set(true),
+      error: () => this.paymentError.set('Không tải được giỏ hàng để thanh toán. Vui lòng tải lại trang.'),
+    });
     const existingVoucher = this.commerce.checkoutVoucher();
     if (existingVoucher) {
       this.voucherCode.set(existingVoucher.code);
@@ -301,11 +323,18 @@ export class CheckoutComponent implements OnInit {
   }
 
   selectMethod(method: MethodId): void {
+    if (this.processing()) return;
+    if (this.selectedMethod() !== method && this.pendingOrderId && this.confirmedStatus === 'pending') {
+      this.retryOrderId = this.pendingOrderId;
+    }
     if (this.selectedMethod() === method) {
       this.expandedMethod.update(current => (current === method ? null : method));
     } else {
       this.selectedMethod.set(method);
       this.expandedMethod.set(method);
+    }
+    if (this.isDirectMethod(method)) {
+      this.expandedMethod.set(null);
     }
     this.paymentError.set('');
 
@@ -314,8 +343,12 @@ export class CheckoutComponent implements OnInit {
     }
   }
 
+  isDirectMethod(method: MethodId): boolean {
+    return DIRECT_METHODS.includes(method);
+  }
+
   isExpanded(method: MethodId): boolean {
-    return this.expandedMethod() === method;
+    return !this.isDirectMethod(method) && this.expandedMethod() === method;
   }
 
   isSelectedMethod(method: MethodId): boolean {
@@ -423,7 +456,12 @@ export class CheckoutComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.processing()) return;
+    if (this.processing() || !this.cartReady()) return;
+    if (this.confirmedStatus === 'paid' || this.confirmedStatus === 'needs_review' || this.confirmedStatus === 'cancelled') return;
+    if (!this.isMethodSupported(this.selectedMethod())) {
+      this.paymentError.set('Phương thức thanh toán này hiện chưa khả dụng. Vui lòng chọn phương thức khác.');
+      return;
+    }
 
     if (!this.acceptedTerms()) {
       this.termsWarning.set(true);
@@ -447,26 +485,20 @@ export class CheckoutComponent implements OnInit {
     this.paymentError.set('');
 
     const method = this.selectedMethod();
+    if (this.retryOrderId) this.toast.showToast({ type: 'warning', message: 'Lần thanh toán mới thay thế lần cũ. Không sử dụng lại mã QR hoặc đường dẫn cũ.' });
     const bankCode = method === 'atm' && this.selectedBank()
       ? this.banks.find(bank => bank.id === this.selectedBank())?.vnpayCode
       : undefined;
 
-    this.commerce
-      .createPaymentSession({
-        courses: this.courses().map(course => ({
-          id: course.courseId || course.id,
-          title: course.displayTitle || course.title,
-          price: course.salePrice,
-          originalPrice: course.originalPrice,
-          thumbnail: course.thumbnailUrl || '',
-          instructorName: course.instructor,
-        })),
+    const request = this.retryOrderId
+      ? this.commerce.retryPaymentSession(this.retryOrderId, this.requestMethod(method), bankCode)
+      : this.commerce.createPaymentSession({
+        courseIds: this.courses().map(course => course.courseId || course.id),
         paymentMethod: this.requestMethod(method),
         bankCode,
         voucherCode: this.voucher()?.code,
-        voucherDiscount: this.voucherDiscount(),
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      });
+    request.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: session => {
           this.processing.set(false);
@@ -485,31 +517,60 @@ export class CheckoutComponent implements OnInit {
   private requestMethod(method: MethodId): PaymentMethodId {
     switch (method) {
       case 'atm':
+      case 'qr':
         return 'vnpay';
       case 'card':
-      case 'paypal':
-      case 'apple-pay':
         return 'stripe';
-      case 'swift':
-        return 'stripe';
-      case 'wallet':
       case 'bank-transfer':
-      case 'qr':
         return 'sepay';
+      case 'swift':
+        return 'swift';
+      case 'wallet':
+        return this.walletProvider();
+      case 'paypal':
+        return 'paypal';
+      case 'apple-pay':
+        return 'apple-pay';
       default:
-        return 'sepay';
+        throw new Error('Phương thức chưa được hỗ trợ.');
     }
   }
 
   private requiresRedirect(method: MethodId): boolean {
-    return method === 'atm' || method === 'card' || method === 'paypal' || method === 'apple-pay';
+    return method === 'atm' || method === 'qr' || method === 'card';
+  }
+
+  isMethodSupported(method: MethodId): boolean {
+    return this.domesticMethods.some(option => option.id === method)
+      || this.internationalMethods.some(option => option.id === method);
   }
 
   private handleSession(session: PaymentSession, method: MethodId): void {
+    this.isSimulated.set(session.isSimulated === true);
+    this.paidTransactionId.set(session.transactionId);
+    this.paidInvoiceCode.set(session.invoiceCode || '');
+    this.paidPaymentContent.set(session.paymentContent || session.transferContent);
+    this.receiptError.set('');
+    this.retryOrderId = '';
+    this.pendingOrderId = session.status === 'pending' ? session.orderId : '';
+    this.confirmedStatus = session.status;
     this.session.set(session);
     this.paidOrderId.set(session.orderId);
-    this.paidAmount.set(session.amount || this.total());
-    this.remaining.set(session.expiresInSeconds > 0 ? session.expiresInSeconds : 900);
+    this.paidAmount.set(session.amount);
+    this.remaining.set(session.expiresInSeconds);
+    if (session.status !== 'pending') {
+      if (session.status !== 'success' || session.fulfillmentStatus !== 'completed') this.startPending(session);
+      if (session.isSimulated) this.session.set(null);
+      this.handleStatus({ ...session, success: true, paidAt: null, remainingSeconds: session.expiresInSeconds });
+      return;
+    }
+
+    if (session.isSimulated) {
+      this.session.set(null);
+      this.paymentError.set('Giao dịch mô phỏng đang được xác minh. Vui lòng chờ kết quả.');
+      this.startPending(session);
+      return;
+    }
 
     if (this.requiresRedirect(method) && session.paymentUrl) {
       window.location.assign(session.paymentUrl);
@@ -517,9 +578,8 @@ export class CheckoutComponent implements OnInit {
     }
 
     if (this.requiresRedirect(method) && !session.paymentUrl) {
-      this.paymentError.set('Cổng thanh toán đang bảo trì. Bạn có thể quét mã QR bên dưới để hoàn tất.');
-      this.pendingKind.set('qr');
-      this.startPending(session);
+      this.session.set(null);
+      this.paymentError.set('Cổng thanh toán chưa cấp đường dẫn thanh toán. Vui lòng thử lại.');
       return;
     }
 
@@ -534,21 +594,23 @@ export class CheckoutComponent implements OnInit {
 
     const expiresAt = session.expiresAt
       ? new Date(session.expiresAt).getTime()
-      : Date.now() + (session.expiresInSeconds || 900) * 1000;
+      : Date.now() + session.expiresInSeconds * 1000;
 
     this.countdownSub = timer(0, 1000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
         this.remaining.set(left);
-        if (left === 0) this.expirePayment();
       });
 
     this.pollSub = timer(0, 5000)
       .pipe(
         switchMap(() =>
           this.commerce.getPaymentStatus(session.transactionId).pipe(
-            catchError(() => of(null)),
+            catchError(() => {
+              this.paymentError.set('Không xác minh được trạng thái giao dịch. Vui lòng kiểm tra lại trước khi thanh toán tiếp.');
+              return of(null);
+            }),
           ),
         ),
         takeUntilDestroyed(this.destroyRef),
@@ -559,18 +621,32 @@ export class CheckoutComponent implements OnInit {
   }
 
   private handleStatus(status: PaymentStatus): void {
+    this.confirmedStatus = status.status;
     if (typeof status.remainingSeconds === 'number') {
       this.remaining.set(Math.max(0, status.remainingSeconds));
     }
 
     switch (status.status as PaymentStatusValue) {
       case 'success':
-        this.completePayment(status);
+        if (status.fulfillmentStatus === 'completed') this.completePayment(status);
+        else this.paymentError.set('Đã nhận thanh toán, đang xác nhận quyền học.');
         break;
+      case 'paid':
+        this.session.set(null);
+        this.paymentError.set('Đã nhận thanh toán, đang cấp quyền học. Không thanh toán lại.');
+        break;
+      case 'needs_review':
+        this.stopTimers();
+        this.session.set(null);
+        this.paymentError.set('Giao dịch cần đối soát. Vui lòng liên hệ hỗ trợ và không thanh toán lại.');
+        break;
+      case 'cancelled':
       case 'failed':
+        this.commerce.resetPaymentAttempt(status.transactionId);
         this.failPayment();
         break;
       case 'expired':
+        this.commerce.resetPaymentAttempt(status.transactionId);
         this.expirePayment();
         break;
       default:
@@ -580,16 +656,28 @@ export class CheckoutComponent implements OnInit {
 
   private completePayment(status: PaymentStatus): void {
     const purchased = [...this.courses()];
-    const amount = status.amount || this.total();
+    const amount = status.amount;
     const orderId = status.orderId || this.session()?.orderId || this.paidOrderId();
 
     this.stopTimers();
+    this.commerce.resetPaymentAttempt(status.transactionId);
     this.purchasedCourses.set(purchased);
     this.paidAmount.set(amount);
     this.paidOrderId.set(orderId);
+    this.paidTransactionId.set(status.transactionId);
     this.session.set(null);
     this.commerce.finalizeCheckout();
     this.commerce.setCheckoutVoucher(null);
+    this.commerce.refreshCart().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => this.receiptError.set('Đơn đã hoàn tất nhưng chưa tải lại được giỏ hàng.') });
+    this.commerce.getPaymentReceipt(status.transactionId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: receipt => {
+        if (this.paidTransactionId() !== receipt.transactionId) return;
+        this.isSimulated.set(receipt.isSimulated);
+        this.paidInvoiceCode.set(receipt.invoiceCode);
+        this.paidPaymentContent.set(receipt.paymentContent);
+      },
+      error: () => this.receiptError.set('Đơn đã hoàn tất nhưng chưa tải được chi tiết hóa đơn. Bạn có thể kiểm tra lại trong lịch sử giao dịch.'),
+    });
     this.dialog.set('success');
   }
 
@@ -633,7 +721,10 @@ export class CheckoutComponent implements OnInit {
 
   regenerateQr(): void {
     if (this.processing()) return;
+    if (!this.session() || this.confirmedStatus !== 'pending') return;
+    this.retryOrderId = this.session()!.orderId;
     this.closePending(false);
+    this.toast.showToast({ type: 'warning', message: 'Lần thanh toán mới sẽ thay thế lần cũ. Không sử dụng lại mã QR hoặc đường dẫn cũ.' });
     this.submit();
   }
 
@@ -644,7 +735,7 @@ export class CheckoutComponent implements OnInit {
     if (notify) {
       this.toast.showToast({
         type: 'info',
-        message: 'Phiên thanh toán vẫn đang chờ. Bạn có thể bấm Thanh toán ngay để tạo phiên mới.',
+        message: 'Phiên thanh toán vẫn đang chờ. Nhấn Thanh toán ngay để mở lại phiên hiện có.',
       });
     }
   }
@@ -757,8 +848,10 @@ export class CheckoutComponent implements OnInit {
         return 'PayPal';
       case 'gpay':
         return 'G Pay';
+      case 'applepay':
+        return 'Apple Pay';
       default:
-        return ' Pay';
+        return 'Thẻ';
     }
   }
 
@@ -815,8 +908,11 @@ export class CheckoutComponent implements OnInit {
 
   private extractError(error: unknown): string {
     if (typeof error === 'object' && error !== null) {
-      const candidate = error as { error?: { message?: string }; message?: string };
-      return candidate.error?.message || candidate.message || 'Không thể tạo phiên thanh toán. Vui lòng thử lại.';
+      const candidate = error as { status?: number; error?: { message?: string; code?: string } };
+      if (candidate.error?.code === 'PAYMENT_NOT_CONFIGURED') return 'Cổng thanh toán chưa được cấu hình. Vui lòng chọn phương thức khác hoặc liên hệ hỗ trợ.';
+      if (candidate.error?.code === 'PAYMENT_STORAGE_UNAVAILABLE') return 'Hệ thống chưa sẵn sàng xử lý thanh toán. Vui lòng thử lại sau.';
+      if (candidate.status && candidate.status >= 400 && candidate.status < 500 && candidate.error?.message) return candidate.error.message;
+      return 'Không thể tạo phiên thanh toán. Vui lòng thử lại để tiếp tục cùng phiên.';
     }
     return 'Không thể tạo phiên thanh toán. Vui lòng thử lại.';
   }

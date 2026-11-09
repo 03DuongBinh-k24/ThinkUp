@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { LucideArrowLeft, LucideLayers, LucidePlus, LucideSave, LucideTrash2 } from '@lucide/angular';
 import { FlashcardCardDraft, FlashcardSetDraft } from '../models/flashcard.model';
 import { FlashcardService } from '../services/flashcard.service';
@@ -24,10 +25,26 @@ export class FlashcardFormComponent {
   readonly isEdit = computed(() => Boolean(this.editId));
   readonly set = computed(() => (this.editId ? this.flashcardService.getSet(this.editId) : null));
 
+  /**
+   * The edit screen is reached from two places (the flashcard list and the set
+   * detail). `returnUrl` preserves that origin so "Quay lại"/"Hủy" goes back to
+   * the screen the user actually came from. Direct visits fall back to the set
+   * detail, or the list when creating a new set.
+   */
+  private readonly returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+  readonly backTarget = computed(() => {
+    const requested = this.returnUrl;
+    if (requested && requested.startsWith('/learning/')) return requested;
+    return this.editId ? `/learning/flashcards/${this.editId}` : '/learning/flashcards';
+  });
+
   readonly title = signal('');
   readonly desc = signal('');
   readonly rows = signal<FlashcardCardDraft[]>([]);
   readonly submitted = signal(false);
+  private saving = false;
+  private loading = false;
+  private ready = !this.editId;
 
   readonly titleError = computed(() => this.submitted() && !this.title().trim());
   readonly cardsError = computed(() => {
@@ -39,6 +56,9 @@ export class FlashcardFormComponent {
     if (filled.some((row) => !row.front.trim() || !row.back.trim())) {
       return 'Mỗi flashcard cần có đủ kiến thức và mô tả.';
     }
+    if (this.set()?.nodeId && filled.length < 5) {
+      return 'Bộ flashcard liên kết với lộ trình phải có ít nhất 5 thẻ.';
+    }
     return '';
   });
   readonly filledCount = computed(
@@ -46,12 +66,15 @@ export class FlashcardFormComponent {
   );
 
   constructor() {
-    const set = this.set();
-    if (set) {
-      this.populateForm(set);
-    } else if (this.editId) {
-      this.flashcardService.loadSet(this.editId).subscribe({
-        next: loaded => this.populateForm(loaded),
+    // List responses contain counts, not cards. Always fetch detail before editing.
+    if (this.editId) {
+      this.loading = true;
+      this.flashcardService.loadSet(this.editId).pipe(finalize(() => this.loading = false)).subscribe({
+        next: loaded => {
+          this.populateForm(loaded);
+          if (this.route.snapshot.queryParamMap.get('add') === '1') this.addRow();
+          this.ready = true;
+        },
         error: () => this.toastService.showToast({ type: 'error', message: 'Không thể tải bộ flashcard.' })
       });
     } else {
@@ -59,11 +82,11 @@ export class FlashcardFormComponent {
     }
 
     const queryTitle = this.route.snapshot.queryParamMap.get('title');
-    if (!set && queryTitle) {
+    if (!this.editId && queryTitle) {
       this.title.set(queryTitle);
     }
 
-    if (this.route.snapshot.queryParamMap.get('add') === '1') {
+    if (!this.editId && this.route.snapshot.queryParamMap.get('add') === '1') {
       this.addRow();
     }
   }
@@ -72,7 +95,7 @@ export class FlashcardFormComponent {
     this.title.set(set.title);
     this.desc.set(set.desc);
     this.rows.set(set.cards.map(card => ({
-      key: card.id, front: card.front, back: card.back, code: card.code ?? '', note: card.note ?? ''
+      key: card.id, id: card.id, front: card.front, back: card.back, code: card.code ?? '', note: card.note ?? ''
     })));
   }
 
@@ -115,6 +138,7 @@ export class FlashcardFormComponent {
 
   save(event: Event): void {
     event.preventDefault();
+    if (this.saving || this.loading || !this.ready) return;
     this.submitted.set(true);
 
     if (!this.title().trim() || this.cardsError()) return;
@@ -125,31 +149,30 @@ export class FlashcardFormComponent {
       cards: this.rows()
     };
 
+    this.saving = true;
+
     if (this.isEdit() && this.editId) {
-      this.flashcardService.updateSet(this.editId, draft).subscribe({
+      this.flashcardService.updateSet(this.editId, draft).pipe(finalize(() => this.saving = false)).subscribe({
         next: result => {
           this.toastService.showToast({ type: 'success', message: result.message });
-          this.router.navigate(['/learning/flashcards', this.editId]);
+          void this.router.navigateByUrl(this.backTarget());
         },
         error: error => this.toastService.showToast({ type: 'error', message: error?.error?.message || 'Không thể lưu bộ flashcard.' })
       });
       return;
     }
 
-    this.flashcardService.createSet(draft).subscribe({
+    this.flashcardService.createSet(draft).pipe(finalize(() => this.saving = false)).subscribe({
       next: result => {
         this.toastService.showToast({ type: 'success', message: result.message });
-        this.router.navigate(['/learning/flashcards', result.setId]);
+        if (this.returnUrl) void this.router.navigateByUrl(this.backTarget());
+        else this.router.navigate(['/learning/flashcards', result.setId]);
       },
       error: error => this.toastService.showToast({ type: 'error', message: error?.error?.message || 'Không thể tạo bộ flashcard.' })
     });
   }
 
   cancel(): void {
-    if (this.isEdit() && this.editId) {
-      this.router.navigate(['/learning/flashcards', this.editId]);
-      return;
-    }
-    this.router.navigate(['/learning/flashcards']);
+    void this.router.navigateByUrl(this.backTarget());
   }
 }

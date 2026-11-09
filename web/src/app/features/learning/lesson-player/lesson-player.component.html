@@ -6,7 +6,7 @@
   <div class="grid min-h-[60vh] place-items-center bg-[#F9F9FF]">
     <div class="text-center">
       <p class="text-[15px] font-semibold text-[#0F172B]">Không thể tải khóa học</p>
-      <p class="mt-1 text-[13px] text-[#62748E]">Vui lòng thử lại hoặc quay về danh sách khóa học.</p>
+      <p class="mt-1 text-[13px] text-[#62748E]">{{ loadError() || 'Vui lòng thử lại hoặc quay về danh sách khóa học.' }}</p>
       <a routerLink="/main/my-courses" class="mt-4 inline-flex h-10 items-center rounded-lg bg-[#155DFC] px-4 text-[13px] font-semibold text-white">
         Về khóa học của tôi
       </a>
@@ -14,11 +14,36 @@
   </div>
 } @else if (course(); as currentCourse) {
   @if (activeLesson(); as lesson) {
-    @if (lesson.type === 'lab' && activeChapter(); as chapter) {
+    @if (lesson.isLocked) {
+      <div class="grid min-h-[calc(100vh-82px)] place-items-center bg-[#F9F9FF] px-6 py-10">
+        <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#EBF3FF] text-[#155DFC]">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h2 class="mt-4 text-lg font-bold text-[#0D1C2D]">
+            {{ currentCourse.playerConfig?.upsell?.title || 'Nội dung dành cho học viên' }}
+          </h2>
+          <p class="mt-2 text-sm leading-relaxed text-[#62748E]">
+            {{ currentCourse.playerConfig?.upsell?.message || 'Mua khóa học để mở khóa toàn bộ bài học và tính năng học tập.' }}
+          </p>
+          <a
+            [routerLink]="['/main/courses', currentCourse.id]"
+            class="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-[#155DFC] px-6 text-sm font-semibold text-white transition hover:bg-[#0F4CD1]"
+          >
+            {{ currentCourse.playerConfig?.upsell?.ctaLabel || 'Mua khóa học' }}
+          </a>
+        </div>
+      </div>
+    } @else if (lesson.type === 'lab' && activeChapter(); as chapter) {
       <app-lab-workspace
         [lesson]="lesson"
         [course]="currentCourse"
         [chapter]="chapter"
+        [qaPosts]="qaPosts"
+        [discussionPosts]="discussionPosts"
+        [reportReasons]="reportReasons"
         (lessonSelected)="selectLesson($event)"
         (completed)="completeLesson()"
         (backToCourse)="selectLesson(currentCourse.chapters[0].lessons[0])"
@@ -33,7 +58,7 @@
         (backToCourse)="selectLesson(currentCourse.chapters[0].lessons[0])"
       />
     } @else {
-      <div class="flex min-h-[calc(100vh-82px)] bg-[#F9F9FF]">
+      <div class="flex min-h-[calc(100dvh-83px)] bg-[#F9F9FF]">
         <app-study-sidebar
           class="block shrink-0 self-stretch"
           [course]="currentCourse"
@@ -50,7 +75,7 @@
           <header class="flex flex-wrap items-start justify-between gap-4">
             <div class="flex min-w-0 flex-col gap-2">
               <nav class="flex flex-wrap items-center gap-1.5 text-[12px] leading-4 text-[#62748E]" aria-label="Breadcrumb">
-                <a routerLink="/main/my-courses" class="max-w-[220px] truncate transition hover:text-[#0072F8]">
+                <a [routerLink]="['/main/my-courses', currentCourse.id]" class="max-w-[220px] truncate transition hover:text-[#0072F8]">
                   {{ currentCourse.title }}
                 </a>
                 <svg lucideChevronRight class="h-3 w-3 shrink-0 text-[#90A1B9]" aria-hidden="true"></svg>
@@ -59,17 +84,22 @@
                   <svg lucideChevronRight class="h-3 w-3 shrink-0 text-[#90A1B9]" aria-hidden="true"></svg>
                 }
                 <span class="shrink-0">Bài học {{ lesson.order }}</span>
+                @if (previewMode()) {
+                  <span class="ml-1 inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-[11px] font-semibold text-amber-700">
+                    Chế độ học thử
+                  </span>
+                }
               </nav>
 
               <h1 class="text-[24px] font-bold leading-8 tracking-[-0.025em] text-[#08152C]">{{ lesson.title }}</h1>
             </div>
 
-            <div class="flex shrink-0 items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 (click)="selectLesson(previousLesson()!)"
                 [disabled]="!previousLesson()"
-                class="inline-flex h-11 items-center gap-2 rounded-xl border border-[#E0E5EB] bg-white px-5 text-[14px] font-medium leading-5 text-[#0E1624] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed"
+                class="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#E0E5EB] bg-white px-5 text-[14px] font-medium leading-5 text-[#0E1624] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed"
               >
                 <svg lucideChevronLeft class="h-4 w-4" aria-hidden="true"></svg>
                 Bài trước
@@ -78,21 +108,23 @@
                 type="button"
                 (click)="selectLesson(nextLesson()!)"
                 [disabled]="!nextLesson()"
-                class="inline-flex h-11 items-center gap-2 rounded-xl bg-[#2076FF] px-5 text-[14px] font-semibold leading-5 text-white transition hover:bg-[#155DFC] disabled:cursor-not-allowed"
+                class="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[#2076FF] px-5 text-[14px] font-semibold leading-5 text-white transition hover:bg-[#155DFC] disabled:cursor-not-allowed"
               >
                 Bài tiếp theo
                 <svg lucideChevronRight class="h-4 w-4" aria-hidden="true"></svg>
               </button>
-              <button
-                type="button"
-                (click)="markCompleted()"
-                [attr.aria-pressed]="lesson.completed ?? false"
-                [attr.title]="lesson.completed ? 'Bỏ đánh dấu hoàn thành' : 'Đánh dấu hoàn thành'"
-                class="inline-flex h-9 items-center gap-2 rounded-xl border border-[#0072F8] bg-white px-4 text-[14px] font-bold leading-5 text-[#0072F8] transition hover:bg-[#F0F6FF]"
-              >
-                <svg lucideCircleCheck class="h-4 w-4" aria-hidden="true"></svg>
-                Đánh dấu hoàn thành
-              </button>
+              @if (currentCourse.playerConfig?.allowMarkCompleted !== false) {
+                <button
+                  type="button"
+                  (click)="markCompleted()"
+                  [attr.aria-pressed]="lesson.completed ?? false"
+                  [attr.title]="lesson.completed ? 'Bỏ đánh dấu hoàn thành' : 'Đánh dấu hoàn thành'"
+                  class="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-[#0072F8] bg-white px-4 text-[14px] font-bold leading-5 text-[#0072F8] transition hover:bg-[#F0F6FF]"
+                >
+                  <svg lucideCircleCheck class="h-4 w-4" aria-hidden="true"></svg>
+                  {{ lesson.completed ? 'Đã hoàn thành' : 'Đánh dấu hoàn thành' }}
+                </button>
+              }
             </div>
           </header>
 
@@ -104,11 +136,21 @@
             "
           >
             @if (lesson.type === 'video') {
-              <app-video-view
-                [lesson]="lesson"
-                [courseTitle]="currentCourse.title"
-                (completed)="completeLesson()"
-              />
+              @if (!lesson.videoUrl) {
+                <div class="grid min-h-[320px] place-items-center rounded-[20px] border border-dashed border-slate-300 bg-white p-8 text-center">
+                  <div>
+                    <p class="text-sm font-semibold text-[#0F172B]">Video bài học đang được cập nhật</p>
+                    <p class="mt-1 text-xs text-[#62748E]">Vui lòng quay lại sau hoặc chọn bài học khác.</p>
+                  </div>
+                </div>
+              } @else {
+                <app-video-view
+                  [lesson]="lesson"
+                  [courseTitle]="currentCourse.title"
+                  (completed)="completeLesson()"
+                  (ended)="onVideoEnded()"
+                />
+              }
             } @else {
               <app-reading-view
                 [lesson]="lesson"
@@ -131,6 +173,7 @@
                 [resources]="resources"
                 [qaPosts]="qaPosts"
                 [discussionPosts]="discussionPosts"
+                [discussionRestrictedUntil]="currentCourse.discussionRestrictedUntil"
                 (tabChange)="activeTab.set($event)"
                 (reportRequested)="openReport($event)"
               />
@@ -158,5 +201,15 @@
         (submitted)="submitReport($event)"
       />
     }
+  } @else {
+    <div class="grid min-h-[60vh] place-items-center bg-[#F9F9FF]">
+      <div class="text-center">
+        <p class="text-[15px] font-semibold text-[#0F172B]">Khóa học chưa có bài học</p>
+        <p class="mt-1 text-[13px] text-[#62748E]">Nội dung học tập của khóa học này chưa được cập nhật.</p>
+        <a routerLink="/main/my-courses" class="mt-4 inline-flex h-10 items-center rounded-lg bg-[#155DFC] px-4 text-[13px] font-semibold text-white">
+          Về khóa học của tôi
+        </a>
+      </div>
+    </div>
   }
 }

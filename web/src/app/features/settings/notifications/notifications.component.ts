@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   LucideGraduationCap,
@@ -11,6 +11,7 @@ import {
   LucideRefreshCw,
   LucideSend,
 } from '@lucide/angular';
+import { ToastService } from '../../../core/services/toast.service';
 import { SettingsService } from '../services/settings.service';
 import { DndDuration, NotificationPrefs } from '../models/settings.model';
 import { SettingsToggleComponent } from '../components/settings-toggle/settings-toggle.component';
@@ -58,9 +59,17 @@ interface CategoryRow {
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.css',
 })
-export class NotificationsComponent {
+export class NotificationsComponent implements OnInit {
   private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
+
+  private readonly toast = inject(ToastService);
+  private pending = false;
+  private showError(): void { this.toast.showToast({ type: 'error', message: 'Không cập nhật được cài đặt thông báo. Vui lòng thử lại.' }); }
+
+  ngOnInit(): void {
+    this.settingsService.getNotificationPrefs().subscribe({ error: () => this.showError() });
+  }
 
   readonly back = () => void this.router.navigate(['/main/settings']);
   readonly prefs = this.settingsService.notificationPrefs;
@@ -150,11 +159,12 @@ export class NotificationsComponent {
     return this.prefs()[key];
   }
 
-  /**
-   * Cập nhật trạng thái cục bộ ngay khi người dùng đổi tùy chọn.
-   * TODO(pre-deploy): gọi API lưu thay đổi khi backend chốt endpoint/spec thông báo.
-   */
   private updatePrefs(patch: Partial<NotificationPrefs>): void {
-    this.settingsService.setNotificationPrefs({ ...this.prefs(), ...patch });
+    if (this.pending) return;
+    this.pending = true;
+    this.settingsService.updateNotificationPrefs(patch).subscribe({
+      next: () => { this.pending = false; },
+      error: () => { this.pending = false; this.showError(); },
+    });
   }
 }

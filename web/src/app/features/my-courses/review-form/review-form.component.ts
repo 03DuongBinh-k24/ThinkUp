@@ -12,8 +12,10 @@ import {
   LucideX,
 } from '@lucide/angular';
 import { Subscription } from 'rxjs';
-import { LearningCourse } from '../../learning/models/learning.model';
+import { LearningCourse, CourseReviewSummary } from '../../learning/models/learning.model';
+import { ReviewModalComponent } from '../../learning/components/review-modal/review-modal.component';
 import { LearningService } from '../../learning/services/learning.service';
+import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -21,8 +23,10 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
   selector: 'app-review-form',
   standalone: true,
   imports: [
+    ReviewModalComponent,
     FormsModule,
     RouterLink,
+    InstructorTriggerDirective,
     LucideBookOpen,
     LucideCheck,
     LucideCircleAlert,
@@ -42,6 +46,8 @@ export class ReviewFormComponent implements OnDestroy {
   readonly course = signal<LearningCourse | null>(null);
   readonly submitState = signal<SubmitState>('idle');
   readonly errorMessage = signal('');
+  readonly reviewOpen = signal(false);
+  readonly reviewSummary = signal<CourseReviewSummary | null>(null);
 
   rating = 0;
   hoverRating = 0;
@@ -75,7 +81,18 @@ export class ReviewFormComponent implements OnDestroy {
       this.route.paramMap.subscribe((params) => {
         const courseId = params.get('courseId') ?? 'python-co-ban';
         this.subscriptions.add(
-          this.learningService.getCourse(courseId).subscribe((course) => this.course.set(course))
+          this.learningService.getCourse(courseId).subscribe({
+            next: (course) => {
+              this.course.set(course);
+              this.learningService.getReviews(courseId).subscribe((summary) => {
+                this.reviewSummary.set(summary);
+                if (summary.hasUserReviewed || summary.reviews.some(r => r.mine)) {
+                  this.reviewOpen.set(true);
+                }
+              });
+            },
+            error: () => this.course.set(null),
+          })
         );
       })
     );
@@ -140,6 +157,13 @@ export class ReviewFormComponent implements OnDestroy {
           );
         } else {
           this.submitState.set('success');
+          // Cập nhật lại review summary
+          const cId = this.course()?.id;
+          if (cId) {
+            this.learningService.getReviews(cId).subscribe((summary) => {
+              this.reviewSummary.set(summary);
+            });
+          }
         }
       });
   }

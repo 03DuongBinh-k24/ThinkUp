@@ -21,6 +21,7 @@
     "test:course": "node --test src/user/course/test/course.user.test.js",
     "test:lesson": "node --test src/user/lesson/test/lesson.user.test.js",
     "test:certificate": "node --test src/user/certificate/test/certificate.user.test.js",
+    "test:profile": "node --test src/user/profile/test/profile.user.test.js",
     "test:favorites": "node --test src/user/favorites/test/*.test.js",
     "test:admin-auth": "node --test src/admin/auth/test/auth.admin.test.js",
     "seed:admin": "node scripts/seed_admin.js",
@@ -33,6 +34,7 @@
     "recheck:email": "node recheck/test-email-templates.js"
   },
   "dependencies": {
+    "@fontsource/noto-sans": "^5.3.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -40,6 +42,7 @@
     "jsonwebtoken": "^9.0.3",
     "livekit-server-sdk": "^2.19.1",
     "mongodb": "^7.1.0",
-    "nodemailer": "^7.0.13"
+    "nodemailer": "^7.0.13",
+    "pdfkit": "^0.20.2"
   }
 }

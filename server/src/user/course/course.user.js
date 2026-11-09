@@ -1,3 +1,4 @@
+import { resolveLearningPlayback } from '../learning-settings/learning-settings.user.js';
 import { ObjectId } from 'mongodb';
 import { getMongoDb } from '../db.js';
 
@@ -204,10 +205,20 @@ export async function getCourseCards({
     .find(courseFilter)
     .collation({ locale: 'en', numericOrdering: true })
     .sort(sortOption);
-  if (!isGetAll) {
+  if (!isGetAll && sort !== 'recommended') {
     courseQuery = courseQuery.skip(skipCount).limit(pageSize);
   }
-  const courseDocs = await courseQuery.toArray();
+  let courseDocs = await courseQuery.toArray();
+  const recommendationById = new Map();
+  if (sort === 'recommended') {
+    const { getCatalogRanking } = await import('./rcm_course.js');
+    const { ranked } = await getCatalogRanking({ userId, guestCartIds, dbInstance: db });
+    ranked.forEach((item, index) => recommendationById.set(item.course_id, { ...item, index }));
+    courseDocs.sort((a, b) =>
+      (recommendationById.get(String(a.course_id || a._id))?.index ?? Infinity)
+      - (recommendationById.get(String(b.course_id || b._id))?.index ?? Infinity));
+    if (!isGetAll) courseDocs = courseDocs.slice(skipCount, skipCount + pageSize);
+  }
 
   if (courseDocs.length === 0) {
     return {
@@ -244,6 +255,7 @@ export async function getCourseCards({
     cartDocs,
     userCourseDocs,
     enrollmentDocs,
+    durationLessons,
   ] = await Promise.all([
     needInstructor && instructorIds.length > 0
       ? db.collection(COLLECTION_INSTRUCTORS).find({
@@ -288,6 +300,9 @@ export async function getCourseCards({
           $or: [{ user_id: String(userId) }, { userId: String(userId) }],
         }).toArray()
       : [],
+    courseIds.length > 0
+      ? db.collection(COLLECTION_LESSONS).find({ course_id: { $in: courseIds } }).toArray()
+      : [],
   ]);
 
   // 5. Xây dựng Maps tra cứu O(1)
@@ -323,6 +338,12 @@ export async function getCourseCards({
     if (tagInfo && tagInfo.name) {
       courseTagsMap.get(cId).push(tagInfo);
     }
+  }
+
+  const lessonDurationMap = new Map();
+  for (const lesson of durationLessons) {
+    const id = String(lesson.course_id || '');
+    lessonDurationMap.set(id, (lessonDurationMap.get(id) || 0) + (parseInt(lesson.duration_minutes, 10) || 0));
   }
 
   // Bộ Set xác thực trạng thái tương tác của người dùng
@@ -408,6 +429,10 @@ export async function getCourseCards({
     const tagNamesList = tagsObjList.map(t => t.name);
 
     const fullCard = {
+      ...(recommendationById.has(cId) ? {
+        recommend_score: recommendationById.get(cId).recommend_score,
+        recommendation_method: recommendationById.get(cId).recommendation_method,
+      } : {}),
       id: String(doc._id || cId),
       course_id: cId,
       slug: doc.slug || `course-${cId}`,
@@ -416,8 +441,8 @@ export async function getCourseCards({
       status: doc.status || 'published',
       badge: doc.badge || ((parseInt(doc.total_students, 10) || 0) > 5000 ? 'Bán chạy' : ''),
       level: doc.level || 'all_levels',
-      duration_minutes: parseInt(doc.duration_minutes, 10) || 0,
-      duration_formatted: formatDuration(doc.duration_minutes),
+      duration_minutes: parseInt(doc.duration_minutes, 10) || lessonDurationMap.get(cId) || 0,
+      duration_formatted: formatDuration(parseInt(doc.duration_minutes, 10) || lessonDurationMap.get(cId) || 0),
       is_free: isFree,
       language: doc.language || 'Tiếng Việt',
 
@@ -595,7 +620,23 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
 
   const courseIdStr = String(courseDoc.course_id || courseDoc._id);
 
-  // 1. Lấy thông tin giảng viên (kèm positive_rating, total_courses, total_students)
+  // 1. Trạng thái người dùng (Guest vs Đã đăng nhập & Đã mua)
+  let isInWishlist = false;
+  let isInCart = false;
+  let isPurchased = false;
+
+  if (userId) {
+    const isEnrolled = await hasCourseEnrollment(courseDoc, userId, { db });
+    const [favDoc, cartDoc] = await Promise.all([
+      db.collection(COLLECTION_FAVORITES).findOne({ user_id: String(userId), course_id: courseIdStr }),
+      db.collection(COLLECTION_CARTS).findOne({ user_id: String(userId), course_id: courseIdStr }),
+    ]);
+    isInWishlist = !!favDoc;
+    isInCart = !!cartDoc;
+    isPurchased = !!isEnrolled;
+  }
+
+  // 2. Lấy thông tin giảng viên (kèm positive_rating, total_courses, total_students)
   let instructor = null;
   if (courseDoc.instructor_id) {
     const instDoc = await db.collection(COLLECTION_INSTRUCTORS).findOne({
@@ -618,7 +659,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
     }
   }
 
-  // 2. Lấy cấu trúc đề cương (Sections & Lessons)
+  // 3. Lấy cấu trúc đề cương (Sections & Lessons)
   const sections = await db.collection(COLLECTION_SECTIONS)
     .find({ course_id: courseIdStr })
     .sort({ order_index: 1 })
@@ -645,7 +686,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
       secDuration += dur;
       totalVideoDuration += dur;
 
-      // Phân quyền Học thử: theo tài liệu, mở cho bài video đầu tiên ở Chương 1
+      // Phân quyền Học thử: Nếu đã mua thì mở tất cả, nếu chưa mua thì chỉ mở bài học thử (video)
       const isFreePreview = String(les.is_free) === '1' || les.is_preview === true;
       const lessonType = (les.lesson_type || 'video').toLowerCase();
 
@@ -657,9 +698,9 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
         duration_formatted: formatDuration(dur),
         order_index: parseInt(les.order_index, 10) || 1,
         is_free_preview: isFreePreview,
-        is_locked: !isFreePreview,
+        is_locked: isPurchased ? false : !isFreePreview,
         // Bảo mật: Không trả URL video trong danh sách tổng quan nếu bài bị khóa
-        can_preview_now: isFreePreview && lessonType === 'video',
+        can_preview_now: isPurchased || (isFreePreview && lessonType === 'video'),
       });
     }
 
@@ -671,7 +712,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
       lessons_count: enrichedLessons.length,
       duration_minutes: secDuration,
       duration_formatted: formatDuration(secDuration),
-      is_chapter_locked: sIdx > 0, // Theo BA: Từ chương 2 trở đi hiển thị icon khóa
+      is_chapter_locked: isPurchased ? false : sIdx > 0, // Đã mua mở hết, chưa mua thì từ chương 2 hiển thị icon khóa
       lessons: enrichedLessons,
     });
   }
@@ -712,21 +753,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
     max_discount: parseFloat(cp.max_discount) || null,
   }));
 
-  // 5. Trạng thái người dùng (Guest vs Đã đăng nhập)
-  let isInWishlist = false;
-  let isInCart = false;
-  let isPurchased = false;
-
-  if (userId) {
-    const [favDoc, cartDoc, enrollDoc] = await Promise.all([
-      db.collection(COLLECTION_FAVORITES).findOne({ user_id: String(userId), course_id: courseIdStr }),
-      db.collection(COLLECTION_CARTS).findOne({ user_id: String(userId), course_id: courseIdStr }),
-      db.collection(COLLECTION_ENROLLMENTS).findOne({ user_id: String(userId), course_id: courseIdStr }),
-    ]);
-    isInWishlist = !!favDoc;
-    isInCart = !!cartDoc;
-    isPurchased = !!enrollDoc;
-  }
+  // 5. Trạng thái người dùng đã được tính toán ở mục 1
 
   // 6. Lấy Thẻ kỹ năng (Tags) & Danh mục (Category)
   let tags = [];
@@ -944,14 +971,7 @@ export async function getCoursePreviewData(courseIdentifier, userId = null, dbIn
   const courseIdStr = String(courseDoc.course_id || courseDoc._id);
 
   // Kiểm tra người dùng đã mua khóa học hay chưa
-  let isPurchased = false;
-  if (userId) {
-    const enrollDoc = await db.collection(COLLECTION_ENROLLMENTS).findOne({
-      user_id: String(userId),
-      course_id: courseIdStr,
-    });
-    isPurchased = !!enrollDoc;
-  }
+  const isPurchased = await hasCourseEnrollment(courseDoc, userId, { db });
 
   // Lấy các Sections & Lessons
   const sections = await db.collection(COLLECTION_SECTIONS)
@@ -992,7 +1012,8 @@ export async function getCoursePreviewData(courseIdentifier, userId = null, dbIn
       if ((isPurchased || isFree) && type === 'video') {
         const vidDoc = await db.collection(COLLECTION_LESSON_VIDEOS).findOne({ lesson_id: item.lesson_id });
         if (vidDoc?.video_url) {
-          item.video_url = vidDoc.video_url;
+          item.playback = await resolveLearningPlayback(userId, vidDoc, { db });
+          item.video_url = item.playback.videoUrl;
         }
         previewLessonsList.push(item);
       }
@@ -1020,7 +1041,9 @@ export async function getCoursePreviewData(courseIdentifier, userId = null, dbIn
     lesson_name: doc.lesson_name || '',
     category_label: doc.category_label || (isPurchased ? 'Tài liệu học viên' : 'Tài liệu học thử'),
     size: doc.size || '',
-    download_url: doc.download_url,
+    can_download: Boolean(userId && (isPurchased || doc.is_free === true || String(doc.is_free) === '1' || doc.is_preview === true) && doc.file_url),
+    download_url: userId && (isPurchased || doc.is_free === true || String(doc.is_free) === '1' || doc.is_preview === true) && doc.file_url
+      ? `/api/user/lessons/documents/${encodeURIComponent(String(doc.document_id || doc._id))}/download` : null,
   }));
 
   const price = Math.max(0, parseFloat(courseDoc.price) || 0);
@@ -1104,7 +1127,7 @@ export function formatTimeAgo(dateVal) {
  * @param {import('mongodb').Db} [dbInstance]
  * @returns {Promise<object>}
  */
-export async function getCourseReviews(courseId, { rating, sort = 'newest', page = 1, limit = 10 } = {}, dbInstance = null) {
+export async function getCourseReviews(courseId, { rating, sort = 'newest', page = 1, limit = 10 } = {}, dbInstance = null, userId = null) {
   if (!courseId) {
     const err = new Error('Thiếu mã khóa học.');
     err.status = 400;
@@ -1186,21 +1209,53 @@ export async function getCourseReviews(courseId, { rating, sort = 'newest', page
       .toArray(),
   ]);
 
-  const reviews = docs.map(d => ({
-    review_id: d.course_review_id || String(d._id),
-    user_id: d.user_id,
-    reviewer_name: d.reviewer_name || 'Học viên ThinkUp',
-    rating: parseFloat(d.rating) || 5,
-    content: d.content || '',
-    created_at: d.created_at,
-    created_at_relative: formatTimeAgo(d.created_at), // "2 tuần trước", "1 tháng trước" theo hình
-    is_verified_purchase: true, // Tiêu chuẩn quốc tế: Xác nhận người mua
-    attachment: d.attachment_url ? {
-      url: d.attachment_url,
-      name: d.attachment_name,
-      type: d.attachment_type,
-    } : null,
-  }));
+  const currentUserIdStr = userId ? String(userId) : null;
+  // Truy vấn trực tiếp xem người dùng đã từng đánh giá khóa học này chưa (kể cả khi không nằm ở trang hiện tại)
+  let myReviewDoc = null;
+  if (currentUserIdStr) {
+    myReviewDoc = await db.collection(COLLECTION_REVIEWS).findOne({
+      course_id: courseIdStr,
+      user_id: currentUserIdStr,
+    });
+  }
+
+  let rawDocs = [...docs];
+  if (myReviewDoc && !rawDocs.some(d => String(d._id) === String(myReviewDoc._id) || String(d.course_review_id) === String(myReviewDoc.course_review_id))) {
+    // Đưa đánh giá của người dùng lên vị trí đầu tiên
+    rawDocs.unshift(myReviewDoc);
+  }
+
+  const reviewerIds = [...new Set(rawDocs.map(review => String(review.user_id || '')).filter(Boolean))];
+  const reviewerDocs = reviewerIds.length ? await db.collection(COLLECTION_USERS).find({ $or: [
+    { id: { $in: reviewerIds } }, { user_id: { $in: reviewerIds } },
+    ...reviewerIds.filter(id => ObjectId.isValid(id)).map(id => ({ _id: new ObjectId(id) })),
+  ] }).toArray() : [];
+  const reviewerMap = new Map();
+  for (const user of reviewerDocs) {
+    for (const value of [user._id, user.id, user.user_id].filter(Boolean)) reviewerMap.set(String(value), user);
+  }
+
+  const reviews = rawDocs.map(d => {
+    const isMine = Boolean(currentUserIdStr && (String(d.user_id) === currentUserIdStr));
+    const currentReviewer = reviewerMap.get(String(d.user_id));
+    return {
+      review_id: d.course_review_id || String(d._id),
+      user_id: d.user_id,
+      is_mine: isMine,
+      reviewer_name: isMine ? 'Bạn' : (currentReviewer?.full_name || currentReviewer?.name || d.reviewer_name || 'Học viên ThinkUp'),
+      reviewer_avatar_url: currentReviewer?.avatar_url || currentReviewer?.avatar || d.reviewer_avatar_url || '',
+      rating: parseFloat(d.rating) || 5,
+      content: d.content || '',
+      created_at: d.created_at,
+      created_at_relative: formatTimeAgo(d.created_at), // "2 tuần trước", "1 tháng trước" theo hình
+      is_verified_purchase: true, // Tiêu chuẩn quốc tế: Xác nhận người mua
+      attachment: d.attachment_url ? {
+        url: d.attachment_url,
+        name: d.attachment_name,
+        type: d.attachment_type,
+      } : null,
+    };
+  });
 
   return {
     pagination: {
@@ -1217,7 +1272,392 @@ export async function getCourseReviews(courseId, { rating, sort = 'newest', page
       filter_options: filterOptions, // Menu Dropdown lọc kèm số sao và tổng số
     },
     sort_options: sortOptions, // Menu Dropdown sắp xếp
+    has_user_reviewed: Boolean(myReviewDoc),
+    my_review: myReviewDoc ? {
+      review_id: myReviewDoc.course_review_id || String(myReviewDoc._id),
+      user_id: myReviewDoc.user_id,
+      is_mine: true,
+      reviewer_name: 'Bạn',
+      rating: parseFloat(myReviewDoc.rating) || 5,
+      content: myReviewDoc.content || '',
+      created_at: myReviewDoc.created_at,
+      created_at_relative: formatTimeAgo(myReviewDoc.created_at),
+    } : null,
     reviews,
+  };
+}
+
+/**
+ * Tạo mới hoặc cập nhật bài đánh giá khóa học của học viên (Upsert review)
+ * Tuân thủ mục H.3.2 spec api_user_2.md
+ */
+export async function submitCourseReview(courseId, userId, payload, options = {}) {
+  const fail = (message, status, code) => { throw Object.assign(new Error(message), { status, code }); };
+  if (!userId) fail('Yêu cầu đăng nhập để đánh giá khóa học.', 401, 'AUTH_REQUIRED');
+  if (!courseId) fail('Mã khóa học là bắt buộc.', 400, 'COURSE_ID_REQUIRED');
+
+  const ratingNum = Number(payload.rating);
+  if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
+    fail('Số sao đánh giá phải từ 1 đến 5.', 400, 'INVALID_RATING');
+  }
+
+  const db = options.db || await getMongoDb();
+  const cIdStr = String(courseId).trim();
+  const uIdStr = String(userId).trim();
+
+  // Tìm khóa học
+  const course = await db.collection(COLLECTION_COURSES).findOne({
+    $or: [
+      { course_id: cIdStr },
+      { id: cIdStr },
+      ...(ObjectId.isValid(cIdStr) ? [{ _id: new ObjectId(cIdStr) }] : [])
+    ]
+  });
+  if (!course) fail('Khóa học không tồn tại.', 404, 'COURSE_NOT_FOUND');
+  const targetCourseId = String(course.course_id || course.id || course._id);
+
+  // Tìm thông tin người dùng
+  const user = await db.collection(COLLECTION_USERS).findOne({
+    $or: [
+      { id: uIdStr },
+      ...(ObjectId.isValid(uIdStr) ? [{ _id: new ObjectId(uIdStr) }] : [])
+    ]
+  });
+  const reviewerName = user?.name || user?.full_name || 'Học viên ThinkUp';
+
+  // Kiểm tra review đã tồn tại chưa
+  const existingReview = await db.collection(COLLECTION_REVIEWS).findOne({
+    course_id: targetCourseId,
+    $or: [
+      { user_id: uIdStr },
+      ...(user?._id ? [{ user_id: String(user._id) }] : [])
+    ]
+  });
+
+  const nowIso = new Date().toISOString();
+  const mediaList = Array.isArray(payload.media) ? payload.media : [];
+  const tagsList = Array.isArray(payload.tags) ? payload.tags : [];
+  const npsScore = payload.nps_score != null ? Number(payload.nps_score) : (payload.nps != null ? Number(payload.nps) : 10);
+  const content = typeof payload.content === 'string' ? payload.content.trim() : (payload.comment ? String(payload.comment).trim() : '');
+
+  const reviewDoc = {
+    course_id: targetCourseId,
+    user_id: uIdStr,
+    reviewer_name: reviewerName,
+    rating: ratingNum,
+    content,
+    tags: tagsList,
+    nps_score: npsScore,
+    media: mediaList,
+    attachment_url: mediaList[0]?.url || '',
+    attachment_name: mediaList[0]?.name || '',
+    attachment_type: mediaList[0]?.type || '',
+    updated_at: nowIso,
+  };
+
+  let reviewId = '';
+  let isEdited = false;
+
+  if (existingReview) {
+    reviewId = String(existingReview.course_review_id || existingReview._id);
+    isEdited = true;
+    await db.collection(COLLECTION_REVIEWS).updateOne(
+      { _id: existingReview._id },
+      { $set: reviewDoc }
+    );
+  } else {
+    reviewId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    reviewDoc.course_review_id = reviewId;
+    reviewDoc.created_at = nowIso;
+    await db.collection(COLLECTION_REVIEWS).insertOne(reviewDoc);
+  }
+
+  // Cập nhật lại rating và total_reviews trong collection courses
+  const allReviews = await db.collection(COLLECTION_REVIEWS).find({ course_id: targetCourseId }).toArray();
+  const totalReviewsCount = allReviews.length;
+  const avgRating = totalReviewsCount > 0
+    ? Math.round((allReviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 0), 0) / totalReviewsCount) * 10) / 10
+    : ratingNum;
+
+  await db.collection(COLLECTION_COURSES).updateOne(
+    { _id: course._id },
+    { $set: { rating: avgRating, total_reviews: totalReviewsCount } }
+  );
+
+  return {
+    review_id: reviewId,
+    course_id: targetCourseId,
+    user_id: uIdStr,
+    rating: ratingNum,
+    content,
+    tags: tagsList,
+    nps_score: npsScore,
+    media: mediaList,
+    is_edited: isEdited,
+  };
+}
+
+// ─── 5b. Nghiệp vụ Khóa học của tôi (My Courses / Enrolled Courses Dashboard) ─
+
+/**
+ * Lấy danh sách toàn bộ khóa học mà học viên đã mua / ghi danh
+ * Phục vụ màn hình Khóa học của tôi (/main/my-courses) và Dashboard
+ *
+ * @param {string|import('mongodb').ObjectId} userId
+ * @returns {Promise<Array<Object>>}
+ */
+export async function getUserEnrolledCourses(userId, options = {}) {
+  if (!userId) return [];
+  const db = options.db || await getMongoDb();
+  const uidStr = String(userId);
+  const uidObj = ObjectId.isValid(uidStr) ? new ObjectId(uidStr) : null;
+  const ownerQuery = { $or: [{ user_id: uidStr }, { userId: uidStr },
+    ...(uidObj ? [{ user_id: uidObj }, { userId: uidObj }] : [])] };
+
+  // 1. Tìm các bản ghi ghi danh / sở hữu từ user_courses, user_enrollments và user_course_progress
+  const [userCoursesDocs, enrollmentDocs, progressDocs] = await Promise.all([
+    db.collection(COLLECTION_USER_COURSES).find(ownerQuery).toArray(),
+    db.collection(COLLECTION_ENROLLMENTS).find(ownerQuery).toArray(),
+    db.collection('user_course_progress').find(ownerQuery).toArray(),
+  ]);
+
+  // Tập hợp danh sách mã course_id duy nhất
+  const courseIdSet = new Set();
+  for (const doc of progressDocs) {
+    if (doc.course_id != null || doc.courseId != null) {
+      const cid = String(doc.course_id ?? doc.courseId);
+      courseIdSet.add(cid);
+    }
+  }
+  for (const doc of userCoursesDocs) {
+    if (doc.course_id != null || doc.courseId != null) courseIdSet.add(String(doc.course_id ?? doc.courseId));
+  }
+  for (const doc of enrollmentDocs) {
+    if (doc.course_id != null || doc.courseId != null) courseIdSet.add(String(doc.course_id ?? doc.courseId));
+  }
+
+  if (courseIdSet.size === 0) {
+    return [];
+  }
+
+  // 2. Tìm thông tin chi tiết các khóa học này từ collection courses
+  const courseIdArr = Array.from(courseIdSet);
+  const objectIds = courseIdArr.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
+
+  const coursesDocs = await db.collection(COLLECTION_COURSES).find({
+    $or: [
+      { _id: { $in: objectIds } },
+      { course_id: { $in: courseIdArr } },
+    ],
+  }).toArray();
+
+  // Ownership can use course_id while lessons reference the course's Mongo _id.
+  // Resolve both aliases from the actual course documents before loading lessons.
+  const variants = values => {
+    const present = values.filter(value => value != null);
+    const strings = [...new Set(present.map(String))];
+    return [...present, ...strings, ...strings.filter(value => /^[a-f\d]{24}$/i.test(value)).map(value => new ObjectId(value))];
+  };
+  const courseAliases = variants(coursesDocs.flatMap(course => [course._id, course.course_id]));
+  const instructorAliases = variants(coursesDocs.flatMap(course => [course.instructor_id, course.instructor?.id]));
+  const [sections, lessonProgress, instructorProfiles] = await Promise.all([
+    db.collection(COLLECTION_SECTIONS).find({ course_id: { $in: courseAliases } }).toArray(),
+    db.collection('user_lesson_progress').find(ownerQuery).toArray(),
+    db.collection(COLLECTION_INSTRUCTORS).find({ $or: ['_id','instructor_id','user_id','id'].map(field => ({ [field]: { $in: instructorAliases } })) }).toArray(),
+  ]);
+  const linkedInstructorAliases = variants([...instructorAliases, ...instructorProfiles.map(profile => profile.user_id)]);
+  const instructorUsers = await db.collection(COLLECTION_USERS).find({
+    $or: ['_id','instructor_id','user_id','id'].map(field => ({ [field]: { $in: linkedInstructorAliases } })),
+  }).toArray();
+  const sectionAliases = variants(sections.flatMap(section => [section._id, section.section_id]));
+  const lessons = await db.collection(COLLECTION_LESSONS).find({ $or: [
+    { course_id: { $in: courseAliases } }, { section_id: { $in: sectionAliases } },
+  ] }).toArray();
+  const instructorMap = new Map();
+  for (const instructor of [...instructorUsers, ...instructorProfiles]) {
+    const linkedUser = instructorMap.get(String(instructor.user_id));
+    const resolved = { ...linkedUser, ...instructor,
+      full_name: instructor.full_name || instructor.name || linkedUser?.full_name || linkedUser?.name || '' };
+    for (const id of [instructor._id, instructor.instructor_id, instructor.user_id, instructor.id]) {
+      if (id != null) instructorMap.set(String(id), resolved);
+    }
+  }
+  const updatedAt = row => new Date(row.updated_at || row.last_accessed_at || 0).getTime() || 0;
+
+  // 3. Chuẩn hóa format dữ liệu khớp hoàn hảo với interface EnrolledCourse
+  const enrolledList = coursesDocs.map((c) => {
+    const cidStr = String(c.course_id || c._id);
+    const aliases = new Set([c._id, c.course_id].filter(value => value != null).map(String));
+    const courseSections = new Set(sections.filter(section => aliases.has(String(section.course_id)))
+      .flatMap(section => [section._id, section.section_id]).filter(value => value != null).map(String));
+    const courseLessons = lessons.filter(lesson => aliases.has(String(lesson.course_id)) ||
+      (lesson.course_id == null && courseSections.has(String(lesson.section_id))));
+    const courseProgress = progressDocs.filter(row => aliases.has(String(row.course_id ?? row.courseId)))
+      .sort((a, b) => updatedAt(b) - updatedAt(a));
+    const prog = courseProgress[0];
+    const completedIds = new Set((prog?.completed_lesson_ids || []).map(String));
+    const perLesson = new Map();
+    for (const row of lessonProgress.filter(row => (row.course_id == null && row.courseId == null) || aliases.has(String(row.course_id ?? row.courseId)))) {
+      const id = String(row.lesson_id ?? row.lessonId);
+      if (!perLesson.has(id) || updatedAt(row) > updatedAt(perLesson.get(id))) perLesson.set(id, row);
+    }
+    const totalLessons = courseLessons.length;
+    const completedLessons = courseLessons.filter(lesson => {
+      const ids = [lesson.lesson_id, lesson._id].filter(value => value != null).map(String);
+      const rows = ids.map(id => perLesson.get(id)).filter(Boolean).sort((a, b) => updatedAt(b) - updatedAt(a));
+      if (rows.length) return rows[0].is_completed === true || rows[0].status === 'completed';
+      return ids.some(id => completedIds.has(id));
+    }).length;
+    const isCompleted = totalLessons > 0 && completedLessons === totalLessons;
+    const lastDate = [...courseProgress, ...lessonProgress.filter(row => aliases.has(String(row.course_id ?? row.courseId)))]
+      .sort((a, b) => updatedAt(b) - updatedAt(a))[0];
+    const lastStudiedAt = lastDate && updatedAt(lastDate) ? formatTimeAgo(updatedAt(lastDate)) : '';
+    const instructor = instructorMap.get(String(c.instructor_id ?? c.instructor?.id));
+
+    // Bìa thẻ khóa học (màu sắc & tiêu đề)
+    const coverColors = ['#0A1535', '#061543', '#1E293B', '#0D3D2E', '#312E81', '#1E1B4B'];
+    const colorIndex = Math.abs(cidStr.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % coverColors.length;
+
+    return {
+      id: cidStr,
+      title: c.title || c.course_name || '',
+      instructor: instructor?.full_name || instructor?.name || c.instructor_name || c.instructor?.full_name || c.instructor?.name || '',
+      totalLessons,
+      completedLessons,
+      image: c.thumbnail_url || c.thumbnail || '',
+      thumbnailUrl: c.thumbnail_url || c.thumbnail || '',
+      cover: c.cover_color || coverColors[colorIndex],
+      coverTitle: c.cover_title || c.title?.split(' - ')[0] || c.title,
+      coverSubtitle: c.cover_subtitle || c.headline || c.subtitle || '',
+      badge: isCompleted ? 'HOÀN THÀNH' : (c.badge === 'HOÀN THÀNH' ? '' : c.badge || (c.is_new ? 'MỚI' : (c.is_hot ? 'HOT' : ''))),
+      lastStudiedAt,
+    };
+  });
+
+  return enrolledList;
+}
+
+// ─── 5c. Nghiệp vụ Hồ Sơ Giảng Viên Công Khai (Public Instructor Profile) ─────
+
+/**
+ * Lấy thông tin chi tiết hồ sơ giảng viên chuyên nghiệp và danh sách khóa học đang giảng dạy
+ * Phục vụ màn hình Hồ sơ giảng viên công khai
+ *
+ * @param {string} instructorIdOrSlug
+ * @param {string|null} [currentUserId=null]
+ * @returns {Promise<Object>}
+ */
+export async function getInstructorProfileDetail(instructorIdOrSlug, currentUserId = null) {
+  if (!instructorIdOrSlug) {
+    const err = new Error('Thiếu mã định danh giảng viên');
+    err.status = 400;
+    throw err;
+  }
+
+  const db = await getMongoDb();
+  const cleanId = String(instructorIdOrSlug).trim();
+
+  // 1. Tìm thông tin trong instructor_profiles
+  let instDoc = await db.collection(COLLECTION_INSTRUCTORS).findOne({
+    $or: [
+      { instructor_id: cleanId },
+      { user_id: cleanId },
+      { slug: cleanId },
+      { full_name: new RegExp(`^${cleanId}$`, 'i') },
+      ...(ObjectId.isValid(cleanId) ? [{ _id: new ObjectId(cleanId) }] : []),
+    ],
+  });
+
+  // Nếu không có trong instructor_profiles, thử tìm trong users có vai trò instructor
+  if (!instDoc) {
+    const userDoc = await db.collection(COLLECTION_USERS).findOne({
+      $or: [
+        { _id: ObjectId.isValid(cleanId) ? new ObjectId(cleanId) : null },
+        { user_id: cleanId },
+        { full_name: new RegExp(`^${cleanId}$`, 'i') },
+      ].filter(Boolean),
+    });
+
+    if (userDoc) {
+      instDoc = {
+        instructor_id: String(userDoc._id),
+        full_name: userDoc.full_name || userDoc.name,
+        avatar_url: userDoc.avatar_url || userDoc.avatar,
+        title: userDoc.headline || '',
+        bio: userDoc.bio || '',
+        location: userDoc.location || '',
+        joined_at: userDoc.created_at ? new Date(userDoc.created_at).toISOString().slice(0, 10) : '',
+        rating: null,
+        total_reviews: null,
+        total_students: null,
+        total_courses: null,
+        github: userDoc.github || '',
+        linkedin: userDoc.linkedin || '',
+        website: userDoc.portfolio || '',
+        specializations: [],
+        experiences: [],
+      };
+    }
+  }
+
+  if (!instDoc) {
+    const err = new Error('Không tìm thấy thông tin giảng viên');
+    err.status = 404;
+    throw err;
+  }
+
+  const instIdStr = String(instDoc.instructor_id || instDoc._id);
+
+  // 2. Lấy danh sách các khóa học do giảng viên này đang giảng dạy
+  const coursesResult = await getCourseCards({
+    userId: currentUserId,
+    filters: {},
+    limit: 'all',
+  });
+
+  // Lọc các khóa học thuộc về giảng viên này (khớp instructor_id hoặc tên giảng viên)
+  const teacherCourses = (coursesResult?.courses || []).filter((c) => {
+    return (
+      String(c.instructor?.id || '') === instIdStr ||
+      String(c.instructor_id || '') === instIdStr ||
+      (c.instructor?.name && c.instructor.name.toLowerCase() === String(instDoc.full_name || '').toLowerCase())
+    );
+  });
+
+  // Tính toán số liệu thống kê thực tế nếu CSDL có dữ liệu khóa học
+  const calculatedTotalStudents = teacherCourses.reduce((sum, c) => sum + (c.total_students || 0), 0);
+  const calculatedTotalReviews = teacherCourses.reduce((sum, c) => sum + (c.total_reviews || 0), 0);
+  const calculatedTotalCourses = teacherCourses.length;
+
+  const metric = value => value == null || value === '' ? null :
+    Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
+  const totalStudents = calculatedTotalCourses > 0 ? calculatedTotalStudents : metric(instDoc.total_students);
+  const totalReviews = calculatedTotalCourses > 0 ? calculatedTotalReviews : metric(instDoc.total_reviews);
+  const totalCourses = calculatedTotalCourses;
+  const rating = metric(instDoc.rating);
+
+  return {
+    instructor: {
+      id: instIdStr,
+      instructor_id: instIdStr,
+      full_name: instDoc.full_name || '',
+      title: instDoc.title || instDoc.headline || '',
+      headline: instDoc.headline || instDoc.title || '',
+      avatar_url: instDoc.avatar_url || '',
+      location: instDoc.location || '',
+      joined_at: instDoc.joined_at || '',
+      bio: instDoc.bio || '',
+      rating,
+      total_reviews: totalReviews,
+      total_students: totalStudents,
+      total_courses: totalCourses,
+      github: instDoc.github || '',
+      linkedin: instDoc.linkedin || '',
+      website: instDoc.website || '',
+      specializations: instDoc.specializations || [],
+      experiences: instDoc.experiences || [],
+    },
+    courses: teacherCourses,
   };
 }
 
@@ -1227,11 +1667,101 @@ export async function getCourseReviews(courseId, { rating, sort = 'newest', page
  * Khởi tạo Router Quản lý & Hiển thị Khóa học cho Học viên
  * @param {import('express')} express
  * @param {Function} optionalAuth - Middleware nhận diện userId nếu có Bearer token
+ * @param {Function} [requireAuth] - Middleware bắt buộc đăng nhập cho các route của học viên
  * @returns {import('express').Router}
  */
-export function createCourseRouter(express, optionalAuth = null) {
+export async function hasCourseEnrollment(course, userId, options = {}) {
+  if (!userId) return false;
+  const db = options.db || await getMongoDb();
+  const ids = [course.course_id, course.id, course._id].filter(v => v != null);
+  const courseIds = ids.flatMap(v => [v, String(v)]);
+  const userIds = [String(userId)];
+  const conditions = [{ id: String(userId) }, { _id: userId }];
+  if (ObjectId.isValid(String(userId))) conditions.push({ _id: new ObjectId(String(userId)) });
+  const user = await db.collection(COLLECTION_USERS).findOne({ $or: conditions });
+  if (user) userIds.push(...[user.id, user._id].filter(v => v != null).flatMap(v => [v, String(v)]));
+  const query = { user_id: { $in: userIds }, course_id: { $in: courseIds } };
+  return Boolean(await db.collection(COLLECTION_ENROLLMENTS).findOne(query) ||
+    await db.collection(COLLECTION_USER_COURSES).findOne(query));
+}
+
+export async function getLessonStream(courseId, lessonId, userId = null, options = {}) {
+  const fail = (message, status, code) => { throw Object.assign(new Error(message), { status, code }); };
+  if (typeof courseId !== 'string' || !courseId.trim() || typeof lessonId !== 'string' || !lessonId.trim())
+    fail('Mã khóa học và bài học là bắt buộc.', 400, 'LESSON_STREAM_INVALID');
+  const db = options.db || await getMongoDb();
+  const id = courseId.trim();
+  const course = await db.collection(COLLECTION_COURSES).findOne({ $or: [{ course_id: id }, { slug: id },
+    ...(ObjectId.isValid(id) ? [{ _id: new ObjectId(id) }] : [])] });
+  if (!course) fail('Khóa học không tồn tại.', 404, 'COURSE_NOT_FOUND');
+  const ids = [course.course_id, course.id, course._id].filter(v => v != null).flatMap(v => [v, String(v)]);
+  let sectionIds = [];
+  if (typeof db.collection(COLLECTION_SECTIONS)?.find === 'function') {
+    const sections = await db.collection(COLLECTION_SECTIONS).find({ course_id: { $in: ids } },
+      { projection: { section_id: 1 } }).toArray();
+    sectionIds = sections.flatMap(section => [section._id, section.section_id])
+      .filter(value => value != null).flatMap(value => [value, String(value)]);
+  }
+  const lessonIds = [lessonId, ...(ObjectId.isValid(lessonId) ? [new ObjectId(lessonId)] : [])];
+  const lessonQueryConditions = [
+    { $or: [{ lesson_id: { $in: lessonIds } }, { _id: { $in: lessonIds } }, { lesson_id: lessonId }] },
+    { $or: [{ course_id: { $in: ids } }, ...(sectionIds.length ? [{ course_id: null, section_id: { $in: sectionIds } }] : [])] },
+  ];
+  let lesson = null;
+  try {
+    lesson = await db.collection(COLLECTION_LESSONS).findOne({ $and: lessonQueryConditions });
+  } catch {
+    lesson = await db.collection(COLLECTION_LESSONS).findOne({ lesson_id: lessonId, course_id: { $in: ids } });
+  }
+  if (!lesson) {
+    lesson = await db.collection(COLLECTION_LESSONS).findOne({ lesson_id: lessonId, course_id: { $in: ids } });
+  }
+  if (!lesson) fail('Bài học không tồn tại trong khóa học này.', 404, 'LESSON_NOT_FOUND');
+  const preview = String(lesson.is_free) === '1' || lesson.is_preview === true;
+  if (!preview && !await hasCourseEnrollment(course, userId, { db }))
+    fail('Bạn cần đăng ký hoặc mua khóa học để xem nội dung bài học này.', 403, 'REQUIRE_ENROLLMENT');
+  const videoLessonIds = [lesson.lesson_id, lesson._id].filter(value => value != null)
+    .flatMap(value => [value, String(value)]);
+  const video = await db.collection(COLLECTION_LESSON_VIDEOS).findOne({ lesson_id: { $in: videoLessonIds } });
+  if (!video) fail('Bài học chưa có video.', 404, 'LEARNING_VIDEO_UNAVAILABLE');
+  const playback = await resolveLearningPlayback(userId, video, { db });
+  return { lesson_id: String(lesson.lesson_id || lesson._id), video_url: playback.videoUrl, duration: video.duration,
+    provider: video.provider || 'cloudinary', is_free_preview: preview, playback };
+}
+
+export function createCourseRouter(express, optionalAuth = null, requireAuth = null) {
   const router = express.Router();
   const extractAuthOptional = optionalAuth || ((req, res, next) => next());
+  const authRequired = requireAuth || optionalAuth || ((req, res, next) => next());
+
+  // GET /api/user/courses/my-courses hoặc /api/user/dashboard: Lấy danh sách khóa học đã đăng ký
+  router.get('/my-courses', authRequired, async (req, res, next) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để xem khóa học.' });
+      }
+      const data = await getUserEnrolledCourses(req.userId);
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // GET /api/user/courses/instructors/:id: Thông tin chi tiết hồ sơ giảng viên công khai
+  router.get('/instructors/:id', extractAuthOptional, async (req, res, next) => {
+    try {
+      const data = await getInstructorProfileDetail(req.params.id, req.userId || null);
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // GET /api/user/courses hoặc /api/courses: Danh sách thẻ khóa học
   router.get('/', extractAuthOptional, async (req, res, next) => {
@@ -1302,6 +1832,7 @@ export function createCourseRouter(express, optionalAuth = null) {
   // GET /api/user/courses/:id/preview: Dữ liệu màn hình Học thử (Free Trial Player)
   router.get('/:id/preview', extractAuthOptional, async (req, res, next) => {
     try {
+      res.set('Cache-Control', 'no-store');
       const previewData = await getCoursePreviewData(req.params.id, req.userId || null);
       res.json({
         success: true,
@@ -1313,10 +1844,10 @@ export function createCourseRouter(express, optionalAuth = null) {
   });
 
   // GET /api/user/courses/:id/reviews: Danh sách đánh giá & Bộ lọc theo sao (Reviews AJAX)
-  router.get('/:id/reviews', async (req, res, next) => {
+  router.get('/:id/reviews', extractAuthOptional, async (req, res, next) => {
     try {
       const { rating, sort, page, limit } = req.query;
-      const reviews = await getCourseReviews(req.params.id, { rating, sort, page, limit });
+      const reviews = await getCourseReviews(req.params.id, { rating, sort, page, limit }, null, req.userId || null);
       res.json({
         success: true,
         data: reviews,
@@ -1326,62 +1857,26 @@ export function createCourseRouter(express, optionalAuth = null) {
     }
   });
 
+  // POST /api/user/courses/:id/reviews: Tạo mới hoặc Chỉnh sửa Đánh giá khóa học (Spec H.3.2 api_user_2.md)
+  router.post('/:id/reviews', authRequired, async (req, res, next) => {
+    try {
+      const data = await submitCourseReview(req.params.id, req.userId, req.body);
+      res.status(data.is_edited ? 200 : 201).json({
+        success: true,
+        message: 'Gửi đánh giá thành công!',
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // GET /api/user/courses/:id/lessons/:lessonId/stream: Phân quyền phát video học thử
   router.get('/:id/lessons/:lessonId/stream', extractAuthOptional, async (req, res, next) => {
     try {
-      const db = await getMongoDb();
-      const { lessonId } = req.params;
-      const lesson = await db.collection(COLLECTION_LESSONS).findOne({ lesson_id: String(lessonId) });
-
-      if (!lesson) {
-        return res.status(404).json({ success: false, message: 'Bài học không tồn tại.' });
-      }
-
-      const isFreePreview = String(lesson.is_free) === '1' || lesson.is_preview === true;
-      let hasPurchased = false;
-
-      if (req.userId) {
-        // Tìm courseDoc để lấy chuẩn course_id dù param truyền vào là slug hay course_id
-        const cleanCourseParam = String(req.params.id).trim();
-        const courseDoc = await db.collection(COLLECTION_COURSES).findOne({
-          $or: [
-            { course_id: cleanCourseParam },
-            { slug: cleanCourseParam },
-          ],
-        });
-        const targetCourseId = courseDoc ? String(courseDoc.course_id || courseDoc._id) : cleanCourseParam;
-
-        const enroll = await db.collection(COLLECTION_ENROLLMENTS).findOne({
-          user_id: String(req.userId),
-          course_id: targetCourseId,
-        });
-        hasPurchased = !!enroll;
-      }
-
-      // Kiểm soát phân quyền: Nếu không phải bài học thử và chưa mua khóa học -> Từ chối 403
-      if (!isFreePreview && !hasPurchased) {
-        return res.status(403).json({
-          success: false,
-          code: 'REQUIRE_ENROLLMENT',
-          message: 'Bạn cần đăng ký hoặc mua khóa học để xem nội dung bài học này.',
-        });
-      }
-
-      const vidDoc = await db.collection(COLLECTION_LESSON_VIDEOS).findOne({ lesson_id: String(lessonId) });
-      if (!vidDoc?.video_url) {
-        return res.status(404).json({ success: false, message: 'Bài học chưa có video trực tuyến.' });
-      }
-
-      res.json({
-        success: true,
-        data: {
-          lesson_id: lesson.lesson_id,
-          video_url: vidDoc.video_url,
-          duration: vidDoc.duration,
-          provider: vidDoc.provider || 'cloudinary',
-          is_free_preview: isFreePreview,
-        },
-      });
+      res.set('Cache-Control', 'no-store');
+      const data = await getLessonStream(req.params.id, req.params.lessonId, req.userId || null);
+      res.json({ success: true, data });
     } catch (err) {
       next(err);
     }
