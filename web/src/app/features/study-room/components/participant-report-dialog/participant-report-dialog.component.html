@@ -1,0 +1,34 @@
+<div class="shade" role="presentation" (click)="close()">
+  <section role="dialog" aria-modal="true" aria-labelledby="participant-report-title" (click)="$event.stopPropagation()">
+    <header>
+      <div class="heading-icon" aria-hidden="true"><svg lucideFlag></svg></div>
+      <div>
+        <h2 id="participant-report-title">Báo cáo thành viên</h2>
+        <p>Báo cáo {{ participant().displayName || participant().name }} nếu bạn nhận thấy hành vi vi phạm.</p>
+      </div>
+      <button #closeButton class="close" type="button" (click)="close()" aria-label="Đóng hộp thoại báo cáo"><svg lucideX></svg></button>
+    </header>
+
+    <div class="body">
+      <fieldset>
+        <legend>Lý do báo cáo</legend>
+        @for (item of reasons; track item.id) {
+          <label [class.selected]="reason() === item.id">
+            <input type="radio" name="participant-report-reason" [value]="item.id" [checked]="reason() === item.id" (change)="selectReason(item.id)" />
+            <span>{{ item.label }}</span>
+          </label>
+        }
+      </fieldset>
+
+      <label class="detail" for="participant-report-detail">Mô tả thêm <span>(không bắt buộc)</span></label>
+      <textarea id="participant-report-detail" rows="3" maxlength="500" [ngModel]="detail()" (ngModelChange)="updateDetail($event)" placeholder="Cung cấp thông tin giúp ThinkUp xem xét báo cáo..."></textarea>
+      <div class="detail-meta"><span>Không chia sẻ danh tính người báo cáo.</span><span>{{ detail().length }}/500</span></div>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+    </div>
+
+    <footer>
+      <button type="button" class="cancel" (click)="close()">Hủy</button>
+      <button type="button" class="submit" (click)="submit()">Gửi báo cáo</button>
+    </footer>
+  </section>
+</div>

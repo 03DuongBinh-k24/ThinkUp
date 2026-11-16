@@ -5,6 +5,7 @@
   <section class="shared-screen" [hidden]="!sharingScreen()" [style.left.px]="screenPosition().x" [style.top.px]="screenPosition().y" [style.width.px]="screenSize().width" [style.height.px]="screenSize().height" (pointerdown)="beginCanvasGesture($event, 'screen')"><header>Bạn đang chia sẻ màn hình</header><video #screenVideo autoplay muted playsinline></video><button type="button" class="screen-resize" aria-label="Thay đổi kích thước chia sẻ màn hình" (pointerdown)="beginCanvasGesture($event, 'screen-resize')"></button></section>
   @for (screen of remoteScreens(); track screen.participantId; let index = $index) { @if (remoteScreenLayout(screen, index).active) { <section class="shared-screen remote-screen" [style.left.px]="remoteScreenLayout(screen, index).x" [style.top.px]="remoteScreenLayout(screen, index).y" [style.width.px]="remoteScreenLayout(screen, index).width" [style.height.px]="remoteScreenLayout(screen, index).height"><header>{{ remoteScreenOwner(screen)?.displayName || remoteScreenOwner(screen)?.name || 'Thành viên' }} đang chia sẻ</header><video [srcObject]="screen.stream" autoplay playsinline></video></section> } }
   <div #remoteMedia class="remote-media" aria-label="Âm thanh của thành viên khác"></div>
+  @if (thinkUpCornerVisible()) { <app-thinkup-corner [position]="thinkUpCornerPosition()" (dismissed)="dismissThinkUpCorner($event)" /> }
   <div class="canvas-items-layer">
     @for (item of canvasItems(); track item.id) {
       <app-canvas-item [item]="item" [scale]="zoom() / 100" [canManage]="canManageItem(item)" [selected]="selectedItemId() === item.id" (activate)="bringCanvasItemToFront(item.id)" (itemChange)="updateCanvasItem(item.id, $event)" (itemCommit)="commitCanvasItem(item.id, $event)" (remove)="removeCanvasItem(item.id)" />
@@ -152,7 +153,7 @@
     @if (notice()) { <div class="permission-notice" role="status">{{ notice() }}</div> }
   </div>
   @if (selectedParticipant(); as person) {
-    <app-participant-popover #memberPopover [participant]="person" [color]="participantColor(person)" (close)="closeParticipantPopover()" />
+    <app-participant-popover #memberPopover [participant]="person" [color]="participantColor(person)" [canRemove]="currentRole() === 'owner' || (currentRole() === 'moderator' && person.role === 'member')" (report)="openParticipantReport(person)" (remove)="askParticipantToLeave(person)" (close)="closeParticipantPopover()" />
   }
   @if (addOpen()) { <app-add-to-canvas-menu (addItem)="addCanvasItem($event)" (addText)="addCanvasText($event)" (close)="closePanel(addOpen)" /> }
   <app-lofi-player [hidden]="!lofiOpen()" (playingChange)="lofiPlaying.set($event)" (close)="closePanel(lofiOpen)" />
@@ -166,6 +167,8 @@
   @if (imageOpen()) {
     <app-canvas-image-dialog [theme]="selectedTheme()" [dark]="isDarkTheme()" (addImage)="addCanvasImage($event)" (close)="imageOpen.set(false)" />
   }
+  @if (reportTarget(); as participant) { <app-participant-report-dialog [participant]="participant" (closed)="reportTarget.set(null)" (submitted)="submitParticipantReport($event)" /> }
+  @if (removeTarget(); as participant) { <div class="confirm-shade" (click)="removeTarget.set(null)"><div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="remove-participant-title" (click)="$event.stopPropagation()"><h2 id="remove-participant-title">Mời thành viên rời phòng?</h2><p>{{ participant.displayName || participant.name }} sẽ bị ngắt khỏi phiên học hiện tại và có thể tham gia lại nếu phòng vẫn cho phép.</p><div><button type="button" (click)="removeTarget.set(null)">Hủy</button><button type="button" (click)="confirmParticipantRemoval()">Mời rời phòng</button></div></div></div> }
   <dialog #leaveDialog class="confirm-modal" aria-labelledby="leave-title" (cancel)="$event.preventDefault(); cancelLeave(leaveDialog)">
     <h2 id="leave-title" class="font-semibold">Rời khỏi phòng học ảo?</h2>
     @if (extras.demo && currentRole() === 'owner') {
