@@ -157,5 +157,9 @@ export const routes: Routes = [
   },
   // Default fallback: /main phân luồng landing guest và dashboard member trong nhóm route phía trên.
   { path: '', redirectTo: 'main', pathMatch: 'full' },
-  { path: '**', redirectTo: 'main' },
+  {
+    path: '**',
+    data: { hideFooter: true },
+    loadComponent: () => import('./features/not-found/not-found/not-found.component').then(m => m.NotFoundComponent)
+  },
 ];
