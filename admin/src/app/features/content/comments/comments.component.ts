@@ -1,18 +1,17 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
-import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
 import { ContentToastComponent, ToastTone } from '../components/content-toast.component';
 import {
-  COMMENT_STATUS_LABELS, COMMENT_STATUS_TONE, formatDateTime, paginationRange, relativeTime
+  COMMENT_STATUS_LABELS, COMMENT_STATUS_TONE, formatDateTime, initials, number, paginationRange, relativeTime, ROLE_TONE
 } from '../content-utils';
-import { CommentStatus, ContentComment } from '../models/content.models';
+import { CommentSource, CommentStatus, ContentComment } from '../models/content.models';
 import { ContentStore } from '../services/content.store';
 
 @Component({
   selector: 'app-content-comments',
   standalone: true,
-  imports: [CustomSelectComponent, SearchFieldComponent, ExportMenuComponent, ContentToastComponent],
+  imports: [CustomSelectComponent, ExportMenuComponent, ContentToastComponent],
   templateUrl: './comments.component.html',
   styleUrl: '../content-page.css'
 })
@@ -22,7 +21,9 @@ export class ContentCommentsComponent {
 
   readonly comments = this.store.comments;
   readonly search = signal('');
-  readonly postFilter = signal('');
+  readonly source = signal<'all' | CommentSource>('all');
+  readonly role = signal('');
+  readonly timeRange = signal<'7d' | '30d' | '90d' | 'all'>('30d');
   readonly status = signal('');
   readonly sort = signal<'newest' | 'oldest' | 'reports'>('newest');
   readonly page = signal(1);
@@ -36,10 +37,11 @@ export class ContentCommentsComponent {
   readonly spamTarget = signal<ContentComment | null>(null);
   readonly spamDuration = signal<'24h' | '7d' | 'forever'>('24h');
   readonly transferTarget = signal<ContentComment | null>(null);
-  readonly transferSeverity = signal<'low' | 'medium' | 'high'>('high');
+  readonly transferSeverity = signal<'medium' | 'high' | 'severe'>('high');
   readonly transferReason = signal('');
   readonly transferTouched = signal(false);
   readonly toast = signal<{ message: string; tone: ToastTone } | null>(null);
+  readonly menu = signal<{ comment: ContentComment; top: number; left: number } | null>(null);
 
   readonly counts = computed(() => {
     const items = this.comments();
@@ -47,20 +49,32 @@ export class ContentCommentsComponent {
       total: items.length,
       visible: items.filter(item => item.status === 'visible').length,
       pending: items.filter(item => item.status === 'pending').length,
-      flagged: items.filter(item => item.status === 'flagged').length
+      flagged: items.filter(item => item.status === 'flagged').length,
+      hidden: items.filter(item => item.status === 'hidden' || item.status === 'spam').length,
+      course: items.filter(item => item.contextType === 'course').length,
+      blog: items.filter(item => item.contextType === 'blog').length
     };
   });
-  readonly postOptions = computed<CustomSelectOption[]>(() => {
-    const seen = new Map<string, string>();
-    this.comments().forEach(item => seen.set(item.postId, item.postTitle));
-    return [{ value: '', label: 'Tất cả bài viết' }, ...[...seen].map(([value, label]) => ({ value, label }))];
-  });
+  readonly roleOptions: CustomSelectOption[] = [
+    { value: '', label: 'Tất cả vai trò' },
+    { value: 'Học viên', label: 'Học viên' },
+    { value: 'Giảng viên', label: 'Giảng viên' },
+    { value: 'Tác giả', label: 'Tác giả' },
+    { value: 'Admin', label: 'Admin' }
+  ];
+  readonly timeOptions: CustomSelectOption[] = [
+    { value: '7d', label: '7 ngày qua' },
+    { value: '30d', label: '30 ngày qua' },
+    { value: '90d', label: '90 ngày qua' },
+    { value: 'all', label: 'Tất cả thời gian' }
+  ];
   readonly statusOptions: CustomSelectOption[] = [
     { value: '', label: 'Tất cả trạng thái' },
     { value: 'visible', label: 'Đang hiển thị' },
     { value: 'pending', label: 'Chờ duyệt' },
     { value: 'flagged', label: 'Bị báo cáo' },
-    { value: 'hidden', label: 'Đã ẩn' }
+    { value: 'hidden', label: 'Đã ẩn' },
+    { value: 'spam', label: 'Spam' }
   ];
   readonly sortOptions: CustomSelectOption[] = [
     { value: 'newest', label: 'Mới nhất' },
@@ -70,15 +84,22 @@ export class ContentCommentsComponent {
 
   readonly filtered = computed(() => {
     const term = this.search().trim().toLowerCase();
-    const postId = this.postFilter();
+    const source = this.source();
+    const role = this.role();
+    const timeRange = this.timeRange();
     const status = this.status();
     const sort = this.sort();
+    const cutoff = timeRange === 'all' ? 0 : Date.now() - Number(timeRange.replace('d', '')) * 86_400_000;
     const items = this.comments().filter(item => {
       const matches = !term
         || item.author.toLowerCase().includes(term)
         || item.content.toLowerCase().includes(term)
-        || item.postTitle.toLowerCase().includes(term);
-      return matches && (!postId || item.postId === postId) && (!status || item.status === status);
+        || item.contextTitle.toLowerCase().includes(term);
+      return matches
+        && (source === 'all' || item.contextType === source)
+        && (!role || item.authorRole === role)
+        && (!status || item.status === status)
+        && (timeRange === 'all' || Date.parse(item.createdAt) >= cutoff);
     });
     return [...items].sort((a, b) => {
       if (sort === 'reports') return b.reportCount - a.reportCount;
@@ -103,17 +124,21 @@ export class ContentCommentsComponent {
     return items.length > 0 && items.every(item => chosen.has(item.id));
   });
   readonly selectedList = computed(() => [...this.selected()]);
-  readonly replyError = computed(() => this.replyTouched() && this.replyText().trim().length < 5 ? 'Phản hồi cần tối thiểu 5 ký tự.' : '');
+  readonly replyError = computed(() => this.replyTouched() && this.replyText().trim().length < 10 ? 'Phản hồi cần tối thiểu 10 ký tự.' : '');
   readonly transferError = computed(() => this.transferTouched() && this.transferReason().trim().length < 15 ? 'Lý do chuyển hồ sơ cần tối thiểu 15 ký tự.' : '');
 
   setSearch(value: string): void { this.search.set(value); this.page.set(1); }
-  setPost(value: string): void { this.postFilter.set(value); this.page.set(1); }
+  setSource(value: string): void { this.source.set(value as 'all' | CommentSource); this.page.set(1); this.selected.set(new Set()); }
+  setRole(value: string): void { this.role.set(value); this.page.set(1); }
+  setTime(value: string): void { this.timeRange.set(value as '7d' | '30d' | '90d' | 'all'); this.page.set(1); }
   setStatus(value: string): void { this.status.set(value); this.page.set(1); this.selected.set(new Set()); }
   setSort(value: string): void { this.sort.set(value as 'newest' | 'oldest' | 'reports'); }
 
   clearFilters(): void {
     this.search.set('');
-    this.postFilter.set('');
+    this.source.set('all');
+    this.role.set('');
+    this.timeRange.set('30d');
     this.status.set('');
     this.sort.set('newest');
     this.page.set(1);
@@ -142,8 +167,45 @@ export class ContentCommentsComponent {
   closeDetail(): void { this.detailId.set(null); }
 
   changeStatus(item: ContentComment, status: CommentStatus): void {
+    const prevStatus = item.status;
     this.store.updateComment(item.id, { status }, `Chuyển trạng thái sang ${COMMENT_STATUS_LABELS[status]}.`);
-    this.notify(`Đã chuyển bình luận ${item.id} sang ${COMMENT_STATUS_LABELS[status]}.`, 'success');
+    if (status === 'hidden') {
+      this.notify('Đã ẩn bình luận khỏi giao diện công khai', 'success');
+    } else if (status === 'visible') {
+      if (prevStatus === 'hidden' || prevStatus === 'spam') {
+        this.notify('Đã khôi phục bình luận về trạng thái trước đó', 'success');
+      } else {
+        this.notify('Đã duyệt bình luận nghi vấn', 'success');
+      }
+    } else {
+      this.notify(`Đã chuyển bình luận sang ${COMMENT_STATUS_LABELS[status]}.`, 'success');
+    }
+  }
+
+  /* ---------- row action menu ---------- */
+
+  openMenu(event: MouseEvent, comment: ContentComment): void {
+    event.stopPropagation();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const width = 300;
+    const height = 180;
+    const gap = 6;
+    const margin = 12;
+    const below = window.innerHeight - rect.bottom - gap - margin;
+    const openAbove = below < height && rect.top - gap - margin > height;
+    const top = openAbove
+      ? Math.max(margin, rect.top - gap - height)
+      : Math.min(rect.bottom + gap, window.innerHeight - margin - height);
+    const left = Math.max(margin, Math.min(rect.right - width, window.innerWidth - margin - width));
+    this.menu.set({ comment, top, left });
+  }
+
+  closeMenu(): void {
+    this.menu.set(null);
+  }
+
+  isMenuOpen(id: string): boolean {
+    return this.menu()?.comment.id === id;
   }
 
   bulkStatus(status: CommentStatus): void {
@@ -180,10 +242,10 @@ export class ContentCommentsComponent {
   sendReply(): void {
     this.replyTouched.set(true);
     const target = this.replyTarget();
-    if (!target || this.replyError()) return;
-    this.store.replyComment(target.id, this.replyText().trim(), 'Quản trị viên');
+    if (!target || this.replyText().trim().length < 10) return;
+    this.store.replyComment(target.id, this.replyText().trim(), 'Ban Quản Trị');
     this.replyId.set(null);
-    this.notify(`Đã gửi phản hồi cho ${target.author}.`, 'success');
+    this.notify('Đã đăng phản hồi đại diện Admin', 'success');
   }
 
   retryLoad(): void {
@@ -205,9 +267,9 @@ export class ContentCommentsComponent {
     if (!target) return;
     const duration = this.spamDuration();
     const label = duration === '24h' ? '24 giờ' : duration === '7d' ? '7 ngày' : 'vĩnh viễn';
-    this.store.updateComment(target.id, { status: 'hidden', moderationNote: `Đánh dấu spam — hạn chế bình luận ${label}.` }, `Đánh dấu spam và hạn chế bình luận ${label}.`);
+    this.store.updateComment(target.id, { status: 'spam', moderationNote: `Đánh dấu spam — hạn chế bình luận ${label}.` }, `Đánh dấu spam và hạn chế bình luận ${label}.`);
     this.spamTarget.set(null);
-    this.notify(`Đã đánh dấu spam và hạn chế bình luận ${label}.`, 'success');
+    this.notify('Đã đánh dấu Spam và hạn chế bình luận', 'success');
   }
 
   openTransfer(item: ContentComment): void {
@@ -221,10 +283,10 @@ export class ContentCommentsComponent {
     this.transferTouched.set(true);
     const target = this.transferTarget();
     if (!target || this.transferError()) return;
-    const code = `RP-2026-${String(300 + Math.floor(Math.random() * 699)).padStart(4, '0')}`;
+    const code = `RP-2026-${String(280 + Math.floor(Math.random() * 50)).padStart(4, '0')}`;
     this.store.updateComment(target.id, { status: 'flagged', moderationNote: `Đã chuyển hồ sơ ${code} (mức độ ${this.transferSeverity()}).` }, `Chuyển hồ sơ vi phạm ${code}.`);
     this.transferTarget.set(null);
-    this.notify(`Đã bàn giao hồ sơ ${code} cho bộ phận xử lý vi phạm.`, 'success');
+    this.notify(`Đã bàn giao hồ sơ ${code}`, 'success');
   }
 
   notify(message: string, tone: ToastTone): void {
@@ -234,6 +296,20 @@ export class ContentCommentsComponent {
 
   statusLabel(status: CommentStatus): string { return COMMENT_STATUS_LABELS[status]; }
   statusTone(status: CommentStatus): string { return COMMENT_STATUS_TONE[status]; }
+  sourceLabel(type: CommentSource): string { return type === 'course' ? 'Khóa học và Bài giảng' : 'Bài viết Blog'; }
+  safetyLabel(item: ContentComment): string {
+    if (item.safety === 'blocked') return 'Đã chặn';
+    if (item.reportCount) return `Bị báo cáo (${item.reportCount})`;
+    return 'Sạch';
+  }
+  safetyTone(item: ContentComment): string {
+    if (item.safety === 'blocked') return 'danger';
+    if (item.reportCount) return 'pending';
+    return 'success';
+  }
+  roleTone(role: string): string { return ROLE_TONE[role] ?? 'neutral'; }
+  initials = initials;
+  number = number;
   dateTime = formatDateTime;
   ago = relativeTime;
   truncate(value: string): string { return value.length > 90 ? `${value.slice(0, 90)}…` : value; }

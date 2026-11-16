@@ -1,0 +1,40 @@
+<aside class="corner" [style.left.px]="position().x" [style.top.px]="position().y" [class.expanded]="expanded()" [class.surveying]="surveyOpen()" (pointerdown)="$event.stopPropagation()">
+  @if (surveyOpen()) {
+    <section class="survey" aria-labelledby="thinkup-dismiss-title">
+      <div class="survey-heading">
+        <div>
+          <h2 id="thinkup-dismiss-title">Ẩn Góc ThinkUp?</h2>
+          <p>Cho ThinkUp biết lý do để cải thiện gợi ý.</p>
+        </div>
+        <button type="button" class="survey-close" (click)="keepCorner($event)" aria-label="Đóng khảo sát"><svg lucideX></svg></button>
+      </div>
+      <fieldset>
+        <legend class="sr-only">Lý do tắt Góc ThinkUp</legend>
+        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('not-relevant')" /> Không phù hợp nhu cầu</label>
+        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('distracting')" /> Làm tôi mất tập trung</label>
+        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('already-seen')" /> Tôi đã xem nội dung này</label>
+        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('other')" /> Lý do khác</label>
+      </fieldset>
+      @if (showReasonError()) { <p class="survey-error" role="alert">Vui lòng chọn một lý do.</p> }
+      <div class="survey-actions">
+        <button type="button" class="keep" (click)="keepCorner($event)">Giữ lại</button>
+        <button type="button" class="dismiss" (click)="confirmDismiss($event)">Xác nhận tắt</button>
+      </div>
+    </section>
+  } @else {
+    <button type="button" class="corner-card" (click)="openCorner()" [attr.aria-expanded]="expanded()" aria-label="Mở Góc ThinkUp">
+      <span class="corner-mark" aria-hidden="true"><svg lucideBookOpen></svg></span>
+      <span class="corner-copy"><small><svg lucideSparkles></svg> GÓC THINKUP</small><strong>Khám phá điều mới</strong><span>Bài học và tài nguyên dành cho bạn</span></span>
+    </button>
+    <button type="button" class="dismiss-trigger" (click)="openDismissSurvey($event)" aria-label="Tắt Góc ThinkUp"><svg lucideX></svg></button>
+
+    @if (expanded()) {
+      <div class="corner-detail">
+        <span class="detail-label">Gợi ý hôm nay</span>
+        <strong>Khám phá các khóa học nổi bật trên ThinkUp</strong>
+        <p>Học thử một bài và quay lại phòng bất cứ lúc nào.</p>
+        <a routerLink="/main/courses" target="_blank" rel="noopener" (click)="$event.stopPropagation()">Xem khóa học <svg lucideExternalLink></svg></a>
+      </div>
+    }
+  }
+</aside>
