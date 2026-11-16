@@ -1,11 +1,11 @@
-import { AfterViewInit, Component, ElementRef, computed, viewChild, signal, output } from '@angular/core';
+import { Component, ElementRef, OnDestroy, computed, viewChild, signal, output } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { LucideHeart, LucidePlay, LucidePause, LucideShuffle, LucideVolume2 } from '@lucide/angular';
 
 interface Track { name: string; src: string; collection: 'lofi' | 'instrumental' | 'nature' | 'noise'; }
 
 @Component({ selector: 'app-lofi-player', standalone: true, imports: [DecimalPipe, LucideHeart, LucidePlay, LucidePause, LucideShuffle, LucideVolume2], templateUrl: './lofi-player.component.html', styleUrl: './lofi-player.component.css' })
-export class LofiPlayerComponent implements AfterViewInit {
+export class LofiPlayerComponent implements OnDestroy {
   readonly close = output<void>();
   readonly playingChange = output<boolean>();
   readonly audio = viewChild<ElementRef<HTMLAudioElement>>('audio');
@@ -13,7 +13,7 @@ export class LofiPlayerComponent implements AfterViewInit {
   readonly playing = signal(false);
   readonly collection = signal<Track['collection']>('lofi');
   readonly selected = signal(0);
-  readonly selectedAmbient = signal<number | null>(10);
+  readonly selectedAmbient = signal<number | null>(null);
   readonly volume = signal(0.32);
   readonly ambientMix = signal(0.5);
   readonly favorites = signal<ReadonlySet<number>>(new Set([0]));
@@ -33,8 +33,8 @@ export class LofiPlayerComponent implements AfterViewInit {
     { name: 'Chill Ocean Waves', collection: 'nature', src: '/assets/study-room/music/alex-morgan-ocean-waves-chill-537452.mp3' },
     { name: 'Soft Wind', collection: 'nature', src: '/assets/study-room/music/caryna67-in-the-wind-395151.mp3' },
     { name: 'Pink Noise Rain Cloud', collection: 'noise', src: '/assets/study-room/music/mrwashingt0n-static-pink-noise-rain-cloud-491916.mp3' },
-    { name: '16Hz Beta Binaural + White Noise', collection: 'noise', src: '/assets/study-room/music/purebinaural-purebinaural-16-hz-beta-binaural-beats-with-white-noise-484860.mp3' },
-    { name: '40Hz Gamma Binaural + Brown Noise', collection: 'noise', src: '/assets/study-room/music/purebinaural-purebinaural-40-hz-gamma-binaural-beats-with-brown-noise-526498.mp3' },
+    { name: 'Tiếng ồn trắng dịu', collection: 'noise', src: '/assets/study-room/music/soft-white-noise.wav' },
+    { name: 'Tiếng ồn nâu', collection: 'noise', src: '/assets/study-room/music/soft-brown-noise.wav' },
     { name: 'Meditation Ambience', collection: 'noise', src: '/assets/study-room/music/leberch-meditation-ambience-262905.mp3' }
   ];
   readonly visibleTracks = computed(() => this.tracks.map((track, index) => ({ ...track, index })).filter(track => track.collection === this.collection()));
@@ -44,21 +44,24 @@ export class LofiPlayerComponent implements AfterViewInit {
   private loadedMusicSrc = '';
   private loadedAmbientSrc = '';
 
-  ngAfterViewInit(): void {
-    this.syncMusicSource();
-    this.syncAmbientSource();
-    this.applyVolumes();
+  private playbackRequest = 0;
+
+  ngOnDestroy(): void {
+    this.playbackRequest++;
+    this.pauseAll();
   }
 
   private applyVolumes(): void {
     const music = this.audio()?.nativeElement;
     const ambient = this.ambientAudio()?.nativeElement;
-    if (music) music.volume = this.volume() * Math.max(0.1, 1 - this.ambientMix() * 0.7);
-    if (ambient) ambient.volume = this.volume() * this.ambientMix() * 0.9;
+    const mix = this.ambientTrack() ? this.ambientMix() : 0;
+    if (music) music.volume = this.volume() * (1 - mix * 0.7);
+    if (ambient) ambient.volume = this.volume() * mix * 0.9;
   }
 
   async toggle(): Promise<void> {
     if (this.playing()) {
+      this.playbackRequest++;
       this.pauseAll();
       this.setPlaying(false);
       return;
@@ -74,14 +77,13 @@ export class LofiPlayerComponent implements AfterViewInit {
     if (ambientChoice) {
       if (this.selectedAmbient() === index) {
         this.selectedAmbient.set(null);
-        this.ambientAudio()?.nativeElement.pause();
+        this.syncAmbientSource();
+        this.applyVolumes();
+        this.audioError.set('');
         return;
       }
       this.selectedAmbient.set(index);
-      this.syncAmbientSource(true);
-      this.applyVolumes();
-      if (this.playing()) await this.resumeAmbient();
-      else await this.startPlayback();
+      await this.startPlayback();
       return;
     }
 
@@ -90,10 +92,7 @@ export class LofiPlayerComponent implements AfterViewInit {
       return;
     }
     this.selected.set(index);
-    this.syncMusicSource(true);
-    this.applyVolumes();
-    if (this.playing()) await this.resumeMusic();
-    else await this.startPlayback();
+    await this.startPlayback();
   }
 
   async chooseCollection(collection: Track['collection']): Promise<void> {
@@ -103,18 +102,10 @@ export class LofiPlayerComponent implements AfterViewInit {
 
     if (collection === 'lofi' || collection === 'instrumental') {
       this.selected.set(first);
-      this.syncMusicSource(true);
-      this.applyVolumes();
-      if (this.playing()) await this.resumeMusic();
-      else await this.startPlayback();
-      return;
+    } else {
+      this.selectedAmbient.set(first);
     }
-
-    this.selectedAmbient.set(first);
-    this.syncAmbientSource(true);
-    this.applyVolumes();
-    if (this.playing()) await this.resumeAmbient();
-    else await this.startPlayback();
+    await this.startPlayback();
   }
 
   async shuffle(): Promise<void> {
@@ -130,55 +121,28 @@ export class LofiPlayerComponent implements AfterViewInit {
   setAmbientMix(event: Event): void { this.ambientMix.set(Number((event.target as HTMLInputElement).value)); this.applyVolumes(); }
 
   private async startPlayback(): Promise<void> {
+    const music = this.audio()?.nativeElement;
+    const ambient = this.ambientAudio()?.nativeElement;
+    if (!music || !ambient) return;
+
+    const request = ++this.playbackRequest;
     this.syncMusicSource();
     this.syncAmbientSource();
     this.applyVolumes();
-    try {
-      await this.playMusic();
-      if (this.ambientTrack()) await this.playAmbient();
-      this.audioError.set('');
-      this.setPlaying(true);
-    } catch {
-      this.pauseAll();
-      this.setPlaying(false);
-      this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.');
+    this.audioError.set('');
+    this.setPlaying(true);
+    // Start both layers in the same user gesture, before awaiting media loading.
+    const [musicResult, ambientResult] = await Promise.allSettled([
+      music.play(),
+      this.ambientTrack() ? ambient.play() : undefined,
+    ]);
+    if (request !== this.playbackRequest) return;
+    this.setPlaying(!music.paused || !ambient.paused);
+    if (musicResult.status === 'rejected') {
+      this.audioError.set('Không phát được bài nhạc này. Hãy chọn bài khác hoặc thử phát lại.');
+    } else if (ambientResult.status === 'rejected' && this.ambientTrack()) {
+      this.audioError.set('Không phát được âm thanh môi trường. Hãy chọn âm thanh khác.');
     }
-  }
-
-  private async resumeMusic(): Promise<void> {
-    try {
-      await this.playMusic();
-      this.audioError.set('');
-    } catch {
-      this.pauseAll();
-      this.setPlaying(false);
-      this.audioError.set('Không phát được nhạc. Hãy thử nhấn lại nút Play.');
-    }
-  }
-
-  private async resumeAmbient(): Promise<void> {
-    try {
-      if (this.ambientTrack()) await this.playAmbient();
-      this.audioError.set('');
-    } catch {
-      this.pauseAll();
-      this.setPlaying(false);
-      this.audioError.set('Không phát được âm thanh môi trường. Hãy thử nhấn lại nút Play.');
-    }
-  }
-
-  private async playMusic(): Promise<void> {
-    const music = this.audio()?.nativeElement;
-    if (!music) return;
-    this.syncMusicSource();
-    await music.play();
-  }
-
-  private async playAmbient(): Promise<void> {
-    const ambient = this.ambientAudio()?.nativeElement;
-    if (!ambient || !this.ambientTrack()) return;
-    this.syncAmbientSource();
-    await ambient.play();
   }
 
   private pauseAll(): void {
@@ -187,20 +151,20 @@ export class LofiPlayerComponent implements AfterViewInit {
   }
 
   /** Chỉ đổi nguồn của đúng phần tử vừa đổi để không làm gián đoạn track còn lại. */
-  private syncMusicSource(force = false): void {
+  private syncMusicSource(): void {
     const music = this.audio()?.nativeElement;
     const src = this.musicTrack()?.src;
-    if (!music || !src || (!force && this.loadedMusicSrc === src)) return;
+    if (!music || !src || (this.loadedMusicSrc === src && !music.error)) return;
     this.loadedMusicSrc = src;
     music.src = src;
     music.load();
   }
 
-  private syncAmbientSource(force = false): void {
+  private syncAmbientSource(): void {
     const ambient = this.ambientAudio()?.nativeElement;
     const src = this.ambientTrack()?.src || '';
     if (!ambient) return;
-    if (!force && this.loadedAmbientSrc === src) return;
+    if (this.loadedAmbientSrc === src && !ambient.error) return;
     this.loadedAmbientSrc = src;
     if (src) {
       ambient.src = src;

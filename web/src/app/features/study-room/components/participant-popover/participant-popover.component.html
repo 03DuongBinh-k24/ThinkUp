@@ -2,8 +2,10 @@
   <button class="close" type="button" (click)="close.emit()" aria-label="Đóng thông tin thành viên"><svg lucideX></svg></button>
   <div class="identity">
     <span [style.background]="color()">@if (participant().avatar && !avatarFailed()) { <img [src]="participant().avatar" [alt]="participant().displayName || participant().name" (error)="avatarFailed.set(true)" /> } @else { {{ participant().initials }} }</span>
-    <div><strong>{{ participant().displayName || participant().name }} @if (participant().isVIP) { <svg class="vip" lucideCrown></svg> }</strong><small>{{ participant().currentCourse || course() }}</small></div>
+    <div><strong>{{ participant().displayName || participant().name }}</strong><small>{{ participant().roleLabel }}</small></div>
   </div>
-  <div class="progress"><div><span>Tiến độ</span><strong>{{ participant().progress ?? progress() }}%</strong></div><i><b [style.width.%]="participant().progress ?? progress()"></b></i></div>
-  <a routerLink="/main/courses"><svg lucideExternalLink></svg> Học cùng mục tiêu — Xem khóa học</a>
+  <div class="actions">
+    <button class="report" type="button" (click)="report.emit()"><svg lucideFlag></svg> Báo cáo thành viên</button>
+    @if (canRemove()) { <button class="remove" type="button" (click)="remove.emit()"><svg lucideLogOut></svg> Mời rời phòng</button> }
+  </div>
 </aside>

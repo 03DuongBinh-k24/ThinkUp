@@ -17,6 +17,8 @@ import { RemoteScreenStream, RoomRealtimeEnvelope, StudyRoomMediaService } from 
 import { AuthService } from '../../../core/services/auth.service';
 import { ChatPanelComponent, RoomChatMessage } from '../components/chat-panel/chat-panel.component';
 import { ParticipantPopoverComponent } from '../components/participant-popover/participant-popover.component';
+import { ParticipantReportDialogComponent, ParticipantReportSubmission } from '../components/participant-report-dialog/participant-report-dialog.component';
+import { ThinkUpCornerComponent, ThinkUpCornerDismissReason } from '../components/thinkup-corner/thinkup-corner.component';
 
 interface FloatingReaction { id: string; emoji: string; x: number; y: number; }
 interface MiniMapRect { x: number; y: number; width: number; height: number; kind: 'item' | 'member' | 'timer' | 'viewport'; }
@@ -27,7 +29,7 @@ interface ScreenLayout { active: boolean; x: number; y: number; width: number; h
   selector: 'app-study-room-view',
   standalone: true,
   providers: [StudyRoomMediaService],
-  imports: [CommonModule, FormsModule, AddToCanvasMenuComponent, CanvasItemComponent, LofiPlayerComponent, RoomControlPanelComponent, ReactionPickerComponent, InkLayerComponent, ChatPanelComponent, ParticipantPopoverComponent, LucideCopy, LucidePanelRight, LucidePlus, LucideMinus, LucideLocateFixed, LucideMic, LucideMicOff, LucideVideo, LucideVideoOff, LucideScreenShare, LucideMousePointer2, LucidePencil, LucideSmile, LucideMessageCircle, LucideSettings, LucideLogOut, LucideHeadphones, LucidePlay, LucidePause, LucideRotateCcw, LucideCrown, LucideBookOpen, LucideCoffee, LucideSkipForward, LucideShieldCheck, LucideUserRound, LucideAudioLines],
+  imports: [CommonModule, FormsModule, AddToCanvasMenuComponent, CanvasItemComponent, LofiPlayerComponent, RoomControlPanelComponent, ReactionPickerComponent, InkLayerComponent, ChatPanelComponent, ParticipantPopoverComponent, ParticipantReportDialogComponent, ThinkUpCornerComponent, LucideCopy, LucidePanelRight, LucidePlus, LucideMinus, LucideLocateFixed, LucideMic, LucideMicOff, LucideVideo, LucideVideoOff, LucideScreenShare, LucideMousePointer2, LucidePencil, LucideSmile, LucideMessageCircle, LucideSettings, LucideLogOut, LucideHeadphones, LucidePlay, LucidePause, LucideRotateCcw, LucideCrown, LucideBookOpen, LucideCoffee, LucideSkipForward, LucideShieldCheck, LucideUserRound, LucideAudioLines],
   templateUrl: './study-room-view.component.html',
   styleUrl: './study-room-view.component.css'
 })
@@ -53,6 +55,8 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   readonly memberPosition = signal({ x: 300, y: 250 });
   readonly memberZ = signal(10);
   readonly timerPosition = signal({ x: 50, y: 600 });
+  readonly thinkUpCornerPosition = signal({ x: 980, y: 140 });
+  readonly thinkUpCornerVisible = signal(true);
   readonly screenPosition = signal({ x: 400, y: 180 });
   readonly screenSize = signal({ width: 640, height: 360 });
   readonly pan = signal({ x: 0, y: 0 });
@@ -84,6 +88,8 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   readonly canvasItems = signal<CanvasItem[]>([]);
   readonly selectedItemId = signal<string | null>(null);
   readonly selectedParticipantId = signal<string | null>(null);
+  readonly reportTarget = signal<RoomParticipant | null>(null);
+  readonly removeTarget = signal<RoomParticipant | null>(null);
   readonly localAvatarFailed = signal(false);
   readonly failedAvatarIds = signal<ReadonlySet<string>>(new Set());
   readonly inkStrokes = signal<InkStroke[]>([]);
@@ -191,6 +197,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
       if (this.sharingScreen()) this.broadcastScreenState(true);
     });
     this.timerPosition.set({ x: 50, y: Math.min(600, Math.max(280, this.viewportSize().height - 280)) });
+    this.updateThinkUpCornerPosition();
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('roomId') || '';
       void this.transitionToRoom(id);
@@ -214,6 +221,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     }
     this.leaving = false;
     this.roomId.set(id);
+    this.restoreThinkUpCorner(id);
     this.selectedTheme.set('white');
     this.openRoom(id, transition);
   }
@@ -247,6 +255,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   @HostListener('window:resize')
   updateViewportSize(): void {
     this.viewportSize.set({ width: window.innerWidth, height: window.innerHeight });
+    this.updateThinkUpCornerPosition();
   }
 
   private openRoom(id: string, transition: number): void {
@@ -512,6 +521,35 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   toggleParticipantPopover(event: PointerEvent, userId: string): void {
     event.stopPropagation();
     this.selectedParticipantId.update(selected => selected === userId ? null : userId);
+  }
+  openParticipantReport(participant: RoomParticipant): void {
+    this.selectedParticipantId.set(null);
+    this.reportTarget.set(participant);
+  }
+  askParticipantToLeave(participant: RoomParticipant): void {
+    this.selectedParticipantId.set(null);
+    this.removeTarget.set(participant);
+  }
+  confirmParticipantRemoval(): void {
+    const participant = this.removeTarget();
+    if (!participant) return;
+    this.removeTarget.set(null);
+    this.removeParticipant(participant);
+  }
+  submitParticipantReport(report: ParticipantReportSubmission): void {
+    // TODO(pre-deploy): Nhớ thay xác nhận cục bộ bằng API báo cáo thành viên sau khi backend chốt endpoint và hợp đồng dữ liệu.
+    void report;
+    this.reportTarget.set(null);
+    this.showNotice('Đã gửi báo cáo. ThinkUp sẽ xem xét nội dung này.');
+  }
+  dismissThinkUpCorner(reason: ThinkUpCornerDismissReason): void {
+    const roomId = this.roomId();
+    this.thinkUpCornerVisible.set(false);
+    try {
+      sessionStorage.setItem(`thinkup_corner_dismissed_${roomId}`, reason);
+    } catch { /* Keep dismissal usable when storage is unavailable. */ }
+    // TODO(pre-deploy): Nhớ gửi lý do tắt Góc ThinkUp sang analytics khi hợp đồng sự kiện được chốt.
+    this.showNotice('Đã ẩn Góc ThinkUp trong phiên phòng này.');
   }
   remoteScreenLayout(screen: RemoteScreenStream, index: number): ScreenLayout {
     return this.remoteScreenLayouts()[screen.participantId] || { active: true, x: 400 + index * 36, y: 205 + index * 36, width: 640, height: 360 };
@@ -970,6 +1008,20 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     if (this.noticeTimer) clearTimeout(this.noticeTimer);
     this.notice.set(message);
     this.noticeTimer = setTimeout(() => this.notice.set(''), 2600);
+  }
+  private restoreThinkUpCorner(roomId: string): void {
+    try {
+      this.thinkUpCornerVisible.set(!sessionStorage.getItem(`thinkup_corner_dismissed_${roomId}`));
+    } catch {
+      this.thinkUpCornerVisible.set(true);
+    }
+  }
+  private updateThinkUpCornerPosition(): void {
+    const viewport = this.viewportSize();
+    this.thinkUpCornerPosition.set({
+      x: Math.max(180, viewport.width - 340),
+      y: Math.max(80, Math.min(180, viewport.height - 330)),
+    });
   }
   private withoutRecordKey<T>(record: Record<string, T>, key: string): Record<string, T> {
     const next = { ...record };
