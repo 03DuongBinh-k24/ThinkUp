@@ -91,4 +91,35 @@ kbd { padding: 8px 12px; border: 1px solid #aac5e7; border-radius: 7px; backgrou
   .actions a { width: 245px; }
 }
 
+@media (max-width: 900px) {
+  .not-found-page { overflow: auto; }
+  .not-found-layout { display: flex; flex-direction: column; min-height: auto; }
+  .game-column { width: 100%; padding: 72px 16px 0; }
+  .scoreboard { margin: 0 0 12px; }
+  .game-track { height: 280px; }
+  .content-column { width: min(100%, 640px); max-width: none; padding: 40px 24px 72px; transform: none; }
+  .error-code { width: min(250px, 60vw); }
+  h1 { margin-top: 32px; white-space: normal; text-wrap: balance; }
+  .description { white-space: normal; }
+  .actions { flex-wrap: wrap; }
+  .actions a { width: auto; min-width: 220px; }
+}
+
+@media (max-width: 600px) {
+  .game-column { padding-top: 40px; }
+  .game-track { height: 220px; }
+  .campus-scenery { height: 160px; }
+  .dino { bottom: 42px; left: 24px; width: 132px; }
+  .obstacle { bottom: 42px; }
+  .obstacle-books { width: 88px; }
+  .obstacle-code { bottom: 31px; width: 72px; }
+  .obstacle-pencil { bottom: 33px; width: 52px; }
+  .obstacle-wifi { bottom: 34px; width: 70px; }
+  .ground { bottom: 38px; }
+  .content-column { padding-right: 16px; padding-left: 16px; }
+  .actions { flex-direction: column; align-items: stretch; }
+  .actions a { width: 100%; min-width: 0; }
+  .keyboard-hint { margin-left: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) { .actions a { transition: none; } }
