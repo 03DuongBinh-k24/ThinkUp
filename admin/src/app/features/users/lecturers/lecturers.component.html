@@ -6,6 +6,18 @@
     </div>
   </header>
 
+  @if (loadError()) {
+    <div class="info-strip info-strip--danger">
+      <strong>Không tải được dữ liệu từ máy chủ</strong>
+      <span>{{ loadError() }}</span>
+      <button class="btn btn--outline btn--sm" type="button" (click)="retryLoad()">Thử lại</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="table-loading" role="status">Đang tải danh sách giảng viên…</p>
+  }
+
   <div class="kpi-grid">
     <article class="kpi-card kpi-card--blue">
       <h2 class="kpi-title">Tổng giảng viên</h2>
@@ -73,7 +85,7 @@
         <strong>Khóa học đã sản xuất</strong>
         <span>Tra cứu nội dung và tình trạng xuất bản</span>
       </div>
-      <span class="quick-count">{{ formatCount(totalCourses()) }} khóa học</span>
+      <span class="quick-count">{{ formatCount(quickStats().publishedCourses) }} khóa học</span>
     </div>
     <div class="quick-card quick-card--green">
       <span class="quick-icon" aria-hidden="true">₫</span>
@@ -144,7 +156,7 @@
           <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
         </svg>
       </button>
-      <app-export-menu label="Xuất danh sách giảng viên" (formatChange)="exportList($event)" />
+      <app-export-menu label="Xuất danh sách giảng viên" [formats]="csvOnly" (formatChange)="exportList($event)" />
     </div>
   </div>
 
@@ -334,19 +346,21 @@
 
         <section class="modal-section">
           <h3>CV / Hồ sơ năng lực</h3>
-          <div class="file-row">
-            <span class="file-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
-            </span>
-            <div class="file-copy">
-              <strong>{{ lecturer.cv.fileName }} · {{ lecturer.cv.size }}</strong>
+          @if (lecturer.cv) {
+            <div class="file-row">
+              <span class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
+              </span>
+              <div class="file-copy">
+                <strong>{{ lecturer.cv.fileName }} · {{ lecturer.cv.size }}</strong>
+              </div>
+              <div class="file-actions">
+                <button class="btn btn--outline btn--sm" type="button" (click)="notify('Mở tab Thẩm định hồ sơ để tải tài liệu đính kèm.')">Xem tài liệu</button>
+              </div>
             </div>
-            <!-- TODO(pre-deploy): Nhớ nối API tệp đính kèm để thay hai nút xem trước/tải xuống đang chạy demo. -->
-            <div class="file-actions">
-              <button class="btn btn--outline btn--sm" type="button" (click)="notify('Bản demo chưa kèm tệp CV thật để xem trước.')">Xem trước</button>
-              <button class="btn btn--outline btn--sm" type="button" (click)="notify('Bản demo chưa kèm tệp CV thật để tải xuống.')">Tải xuống</button>
-            </div>
-          </div>
+          } @else {
+            <div class="info-strip info-strip--amber">Hồ sơ chưa có tệp CV/hồ sơ năng lực do giảng viên tải lên.</div>
+          }
         </section>
 
         <section class="modal-section">
@@ -550,7 +564,7 @@
 
         <div modalFooter class="modal-footer-actions">
           <button class="btn btn--outline" type="button" (click)="closeModal()">Hủy bỏ</button>
-          <button class="btn btn--danger" type="button" [disabled]="!canSubmitDiscipline()" (click)="submitDiscipline()">Xác nhận áp dụng kỷ luật</button>
+          <button class="btn btn--danger" type="button" [disabled]="!canSubmitDiscipline() || saving()" (click)="submitDiscipline()">{{ saving() ? 'Đang gửi…' : 'Xác nhận áp dụng kỷ luật' }}</button>
         </div>
       </app-user-modal>
     }
@@ -585,7 +599,7 @@
         </div>
 
         <div modalFooter class="modal-footer-actions">
-          <button class="btn btn--primary" type="button" [disabled]="!canSubmitUnlock()" (click)="submitUnlock()">Xác nhận mở khóa</button>
+          <button class="btn btn--primary" type="button" [disabled]="!canSubmitUnlock() || saving()" (click)="submitUnlock()">{{ saving() ? 'Đang gửi…' : 'Xác nhận mở khóa' }}</button>
         </div>
       </app-user-modal>
     }

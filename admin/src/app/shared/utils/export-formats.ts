@@ -36,6 +36,16 @@ async function downloadXlsx(filename: string, rows: (string | number)[][]): Prom
   downloadBlob(filename, buffer, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', false);
 }
 
+/** Tải một Blob đã có sẵn (dùng cho file export do backend trả về). */
+export function downloadBlobFile(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function downloadBlob(filename: string, content: BlobPart, type: string, bom = true): void {
   const blob = new Blob(bom ? ['\ufeff', content] : [content], { type });
   const url = URL.createObjectURL(blob);

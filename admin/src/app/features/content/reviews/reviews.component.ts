@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { ContentToastComponent, ToastTone } from '../components/content-toast.component';
@@ -36,7 +37,10 @@ export class ContentReviewsComponent {
   readonly response = signal('');
   readonly timeRange = signal('all');
   readonly page = signal(1);
-  readonly pageSize = 10;
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
   readonly expanded = signal<ReadonlySet<string>>(new Set());
   readonly detailId = signal<string | null>(null);
   readonly progressTarget = signal<ContentReview | null>(null);

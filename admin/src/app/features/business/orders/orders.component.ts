@@ -1,12 +1,14 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { LucideRotateCcw } from '@lucide/angular';
 import { BusinessOrder, OrderStatus } from '../models/business.models';
-import { BusinessDemoService } from '../services/business-demo.service';
+import { BUSINESS_STORE } from '../services/business.store';
 import { InvoicePdfService } from '../services/invoice-pdf.service';
 import { copyText, dateTime, matchesDates, money, paginationItems } from '../business-utils';
-import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
+import { ExportFormat } from '../../../shared/utils/export-formats';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
@@ -20,8 +22,7 @@ import { SearchFieldComponent } from '../../../shared/components/search-field/se
   styleUrl: './orders.component.css'
 })
 export class OrdersComponent {
-  // TODO(pre-deploy): Nhớ xóa dữ liệu minh họa sau khi service đơn hàng dùng API chính thức; kết nối thanh toán và hóa đơn qua backend.
-  private readonly data = inject(BusinessDemoService);
+  private readonly data = inject(BUSINESS_STORE);
   private readonly invoicePdf = inject(InvoicePdfService);
   private readonly route = inject(ActivatedRoute);
   private readonly document = inject(DOCUMENT);
@@ -58,7 +59,21 @@ export class OrdersComponent {
     { value: 'cancelled', label: 'Thất bại' }
   ];
   readonly orders = this.data.orders;
-  readonly orderSummary = this.data.orderSummary;
+  readonly loading = this.data.loading;
+  readonly loadError = this.data.error;
+  /** KPI lấy từ `GET /admin/business/orders/summary`; tỷ lệ tính từ chính các con số đó. */
+  readonly orderSummary = computed(() => {
+    const totals = this.data.orderTotals();
+    const rate = (value: number): number => totals.total ? Math.round(value / totals.total * 1000) / 10 : 0;
+    return {
+      total: totals.total,
+      success: totals.success,
+      pending: totals.pending,
+      cancelled: totals.cancelled,
+      successRate: rate(totals.success),
+      cancelledRate: rate(totals.cancelled)
+    };
+  });
   readonly filtered = computed(() => this.orders().filter(order => {
     const query = this.search().trim().toLocaleLowerCase('vi-VN');
     return (!query || [order.id, order.transactionId ?? '', order.learner, order.email].some(value => value.toLocaleLowerCase('vi-VN').includes(query)))
@@ -68,7 +83,9 @@ export class OrdersComponent {
   }).sort((a, b) => this.sort() === 'newest'
     ? b.createdAt.localeCompare(a.createdAt)
     : a.createdAt.localeCompare(b.createdAt)));
-  readonly pageSize = 8;
+  /** Số dòng mỗi trang đọc từ tham số hệ thống `orders_per_page` (mặc định 8). */
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
   readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
   readonly pagination = computed(() => paginationItems(this.page(), this.pages()));
   readonly visible = computed(() => this.filtered().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize));
@@ -84,8 +101,21 @@ export class OrdersComponent {
     // Deep link từ module người dùng: /business/orders?q=<email>
     const query = this.route.snapshot.queryParamMap.get('q');
     if (query) this.search.set(query);
+    void this.reload();
     this.destroyRef.onDestroy(() => this.removeDatePopoverListeners());
     this.destroyRef.onDestroy(() => { if (this.copiedTimeout) clearTimeout(this.copiedTimeout); });
+  }
+
+  /** Tải lại danh sách và KPI theo bộ lọc hiện tại (dùng cho lần đầu và nút thử lại). */
+  async reload(): Promise<void> {
+    await this.data.reloadOrders({
+      q: this.search().trim() || undefined,
+      status: this.status() || undefined,
+      method: this.method() || undefined,
+      from: this.from() || undefined,
+      to: this.to() || undefined,
+      sort: this.sort()
+    });
   }
 
   toggleDatePopover(): void {
@@ -190,12 +220,20 @@ export class OrdersComponent {
     this.periodDraft.set('all');
     this.page.set(1);
   }
-  clear(): void { this.search.set(''); this.status.set(''); this.method.set(''); this.clearDateRange(); this.sort.set('newest'); this.page.set(1); this.closeDatePopover(); }
-  export(format: ExportFormat): void {
-    downloadTable(format, 'thinkup-don-hang', [
-      ['Mã đơn', 'Mã giao dịch', 'Học viên', 'Email', 'Khóa học', 'Thực thu', 'Phương thức', 'Trạng thái', 'Ngày tạo'],
-      ...this.filtered().map(order => [order.id, order.transactionId ?? '', order.learner, order.email, order.courses.join('; '), order.originalAmount - order.discount, this.methodLabel(order.method), this.statusLabel(order.status), dateTime(order.createdAt)])
-    ]);
+  clear(): void { this.search.set(''); this.status.set(''); this.method.set(''); this.clearDateRange(); this.sort.set('newest'); this.page.set(1); this.closeDatePopover(); void this.reload(); }
+  async export(format: ExportFormat): Promise<void> {
+    try {
+      await this.data.exportOrders(format, {
+        q: this.search().trim() || undefined,
+        status: this.status() || undefined,
+        method: this.method() || undefined,
+        from: this.from() || undefined,
+        to: this.to() || undefined,
+        sort: this.sort()
+      });
+    } catch (error) {
+      this.invoiceError.set(apiErrorMessage(error, 'Không xuất được danh sách đơn hàng. Vui lòng thử lại.'));
+    }
   }
   methodMatches(actual: string, filter: string): boolean {
     if (filter === 'QR ThinkUp') return actual === 'QR Code' || actual === filter;

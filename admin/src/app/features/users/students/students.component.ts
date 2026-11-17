@@ -3,7 +3,8 @@ import { Router } from '@angular/router';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
-import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
+import { ExportFormat } from '../../../shared/utils/export-formats';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { AdminNumberPipe } from '../../../shared/pipes/admin-number.pipe';
 import { AdminPrivacyPipe } from '../../../shared/pipes/admin-privacy.pipe';
 import { UserRowMenuItem, UserRowMenuComponent } from '../components/user-row-menu/user-row-menu.component';
@@ -84,7 +85,11 @@ export class StudentsComponent {
   readonly statusLabels = STUDENT_STATUS_LABELS;
   readonly statusTone = STUDENT_STATUS_TONE;
   readonly levels = LEVELS;
-  readonly pageSize = 7;
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
+  /** Menu xuất chỉ mời CSV vì API người dùng chưa trả Excel (xem `exportList`). */
+  readonly csvOnly: ReadonlyArray<ExportFormat> = ['csv'];
   readonly formatCount = formatCount;
   readonly formatCurrency = formatCurrency;
   readonly formatDate = formatDate;
@@ -104,8 +109,12 @@ export class StudentsComponent {
 
   readonly level = signal<DisciplineLevel>(1);
   readonly reason = signal('');
-  readonly evidence = signal<ReadonlyArray<string>>([]);
+  readonly evidenceFiles = signal<readonly File[]>([]);
+  readonly evidence = computed(() => this.evidenceFiles().map((file) => file.name));
   readonly unlockReason = signal('');
+  readonly saving = signal(false);
+  readonly loadError = this.data.error;
+  readonly loading = this.data.loading;
   readonly showAllCourses = signal(false);
   readonly showAllViolations = signal(false);
 
@@ -322,6 +331,12 @@ export class StudentsComponent {
     this.showAllCourses.set(false);
     this.showAllViolations.set(false);
     this.modal.set('profile');
+    // Danh sách chỉ có số liệu tổng hợp; tải chi tiết để có khóa học, đơn hàng và lịch sử kỷ luật.
+    void this.data.loadStudentDetail(student.id)
+      .then((detail) => {
+        if (detail && this.modal() === 'profile' && this.selected()?.id === student.id) this.selected.set(detail);
+      })
+      .catch((error: unknown) => this.notify(error instanceof Error ? error.message : 'Không tải được hồ sơ học viên.'));
   }
 
   toggleAllCourses(): void {
@@ -341,7 +356,7 @@ export class StudentsComponent {
     this.selected.set(student);
     this.level.set(1);
     this.reason.set('');
-    this.evidence.set([]);
+    this.evidenceFiles.set([]);
     this.modal.set('lock');
   }
 
@@ -349,7 +364,7 @@ export class StudentsComponent {
     this.selected.set(null);
     this.level.set(1);
     this.reason.set('');
-    this.evidence.set([]);
+    this.evidenceFiles.set([]);
     this.modal.set('lock');
   }
 
@@ -393,51 +408,67 @@ export class StudentsComponent {
 
   onEvidenceChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const names = Array.from(input.files ?? []).map((file) => file.name).slice(0, 5);
-    this.evidence.set(names);
-    this.notify(names.length ? `Đã chọn ${names.length} tệp bằng chứng.` : 'Chưa chọn tệp bằng chứng.');
+    const files = Array.from(input.files ?? []).slice(0, 5);
+    this.evidenceFiles.set(files);
+    this.notify(files.length ? `Đã chọn ${files.length} tệp bằng chứng.` : 'Chưa chọn tệp bằng chứng.');
   }
 
-  submitLock(): void {
-    if (!this.canSubmitLock()) return;
+  async submitLock(): Promise<void> {
+    if (!this.canSubmitLock() || this.saving()) return;
     const targets = this.lockTargets();
     if (!targets.length) return;
-    this.data.lockStudents({
-      ids: targets,
-      level: this.level(),
-      reason: this.reason().trim(),
-      evidence: this.evidence()
-    });
-    this.selection.set([]);
-    this.modal.set(null);
-    this.selected.set(null);
-    this.notify(`Đã khóa ${targets.length} tài khoản học viên.`);
+    this.saving.set(true);
+    try {
+      const affected = await this.data.lockStudents({
+        ids: targets,
+        level: this.level(),
+        reason: this.reason().trim(),
+        files: this.evidenceFiles()
+      });
+      this.selection.set([]);
+      this.modal.set(null);
+      this.selected.set(null);
+      this.notify(`Đã khóa ${affected} tài khoản học viên.`);
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không khóa được tài khoản học viên.');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
-  submitUnlock(): void {
+  async submitUnlock(): Promise<void> {
     const student = this.selected();
-    if (!student || !this.canSubmitUnlock()) return;
-    this.data.unlockStudent(student.id);
-    this.modal.set(null);
-    this.selected.set(null);
-    this.notify(`Đã mở khoá tài khoản ${student.name}.`);
+    if (!student || !this.canSubmitUnlock() || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.data.unlockStudent(student.id, this.unlockReason().trim());
+      this.modal.set(null);
+      this.selected.set(null);
+      this.notify(`Đã mở khoá tài khoản ${student.name}.`);
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không mở khoá được tài khoản.');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
-  exportList(format: ExportFormat): void {
-    const rows: Array<Array<string | number>> = [
-      ['Mã học viên', 'Họ tên', 'Email', 'Số điện thoại', 'Số khóa học', 'Ngày đăng ký', 'Trạng thái'],
-      ...this.filtered().map((item) => [
-        item.id,
-        item.name,
-        item.email,
-        item.phone,
-        item.courseCount,
-        formatDate(item.registeredAt),
-        STUDENT_STATUS_LABELS[item.status]
-      ])
-    ];
-    void downloadTable(format, 'thinkup-hoc-vien', rows);
-    this.notify(`Đang xuất ${this.filtered().length} học viên.`);
+  async exportList(format: ExportFormat): Promise<void> {
+    try {
+      await this.data.exportList('students', format, {
+        q: this.query(),
+        status: this.status(),
+        courseCount: this.courseCount(),
+        from: this.from(),
+        to: this.to()
+      });
+      this.notify('Đã tải tệp học viên từ máy chủ.');
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không xuất được danh sách học viên.');
+    }
+  }
+
+  retryLoad(): void {
+    void this.data.reload();
   }
 
   notify(message: string): void {
