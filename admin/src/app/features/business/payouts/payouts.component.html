@@ -7,6 +7,9 @@
   </header>
 
   @if (error() && !dialog()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (payoutsAreDemo()) {
+    <p class="notice" role="status">Dữ liệu chi trả giảng viên đang là dữ liệu minh họa. Backend chưa có API yêu cầu/duyệt/giải ngân thật, nên các thao tác duyệt và từ chối chỉ thay đổi tạm trên màn hình.</p>
+  }
   <section class="kpi-grid" aria-label="Tổng quan rút tiền">
     <button class="kpi" type="button" [class.selected]="status() === 'pending'" (click)="filterFromKpi('pending')">
       <span class="kpi-icon pending" aria-hidden="true">

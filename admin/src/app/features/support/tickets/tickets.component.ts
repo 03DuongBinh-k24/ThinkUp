@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LucideCircleCheck, LucideClock, LucideEye, LucideFilter, LucideGauge, LucidePaperclip, LucideRefreshCw, LucideSearch, LucideTriangleAlert, LucideX } from '@lucide/angular';
 import { SUPPORT_TOPICS } from '../../../core/data/mock/support.mock';
 import { AdminAuthService } from '../../../core/services/admin-auth.service';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { ColumnVisibilityComponent, TableColumnOption } from '../../../shared/components/column-visibility/column-visibility.component';
 import { CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
@@ -36,7 +37,10 @@ function filterTickets(items: SupportTicket[], filters: TicketFilters, query: st
 @Component({ selector: 'app-support-tickets', standalone: true, imports: [FormsModule, DatePipe, SupportPaginationComponent, ColumnVisibilityComponent, DateTimePickerComponent, SupportFilterModalComponent, TableColumnResizeDirective, LucideClock, LucideRefreshCw, LucideTriangleAlert, LucideCircleCheck, LucideGauge, LucideSearch, LucidePaperclip, LucideEye, LucideFilter, LucideX], templateUrl: './tickets.component.html', styleUrls: ['../support-page.css', './tickets.component.css'] })
 export class TicketsComponent {
   private readonly data = inject(SupportDemoService); private readonly router = inject(Router); private readonly auth = inject(AdminAuthService); private readonly destroyRef = inject(DestroyRef);
-  readonly tickets = this.data.tickets; readonly queryInput = signal(''); readonly query = signal(''); readonly page = signal(1); readonly pageSize = 6;
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  readonly tickets = this.data.tickets; readonly queryInput = signal(''); readonly query = signal(''); readonly page = signal(1);
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
   readonly appliedFilters = signal<TicketFilters>({ ...EMPTY_TICKET_FILTERS }); readonly draftFilters = signal<TicketFilters>({ ...EMPTY_TICKET_FILTERS }); readonly filterOpen = signal(false);
   readonly learnerPreview = signal<SupportTicket | null>(null); readonly now = signal(Date.now()); private searchTimer?: ReturnType<typeof setTimeout>;
   readonly currentAssignee = computed(() => this.auth.currentUser()?.fullName || 'Minh Anh');

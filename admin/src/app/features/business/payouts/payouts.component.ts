@@ -1,17 +1,16 @@
 import { DOCUMENT } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { afterNextRender, Component, DestroyRef, HostListener, Injector, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideInfo, LucideUpload, LucideX } from '@lucide/angular';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { PayoutRequest, PayoutStatus } from '../models/business.models';
+import { BUSINESS_STORE } from '../services/business.store';
 import { copyText, dateTime, matchesDates, money, paginationItems } from '../business-utils';
 import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
-import { environment } from '../../../../environments/environment';
-import { firstValueFrom } from 'rxjs';
 
 /** Đơn vị nhập hạn mức rút tiền. */
 export type LimitUnit = 'vnd' | 'nghin' | 'trieu' | 'ty';
@@ -26,8 +25,7 @@ const LIMIT_UNIT_FACTORS: Record<LimitUnit, number> = {
 
 @Component({ selector: 'app-payouts', standalone: true, imports: [FormsModule, DateTimePickerComponent, CustomSelectComponent, ExportMenuComponent, SearchFieldComponent, LucideX, LucideUpload, LucideInfo], templateUrl: './payouts.component.html', styleUrl: './payouts.component.css' })
 export class PayoutsComponent {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/admin/business/payouts`;
+  private readonly data = inject(BUSINESS_STORE);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -36,7 +34,9 @@ export class PayoutsComponent {
   readonly money = money;
   readonly dateTime = dateTime;
   readonly Math = Math;
-  readonly payouts = signal<PayoutRequest[]>([]);
+  readonly payouts = this.data.payouts;
+  /** Backend chưa có luồng chi trả thật — giữ dữ liệu minh họa và ghi rõ trên giao diện. */
+  readonly payoutsAreDemo = this.data.payoutsAreDemo;
   readonly search = signal('');
   readonly status = signal<PayoutStatus | ''>('');
   readonly statusOptions: ReadonlyArray<CustomSelectOption> = [
@@ -74,7 +74,9 @@ export class PayoutsComponent {
   readonly dialog = signal<'details' | 'review' | 'reject' | null>(null);
   private readonly returnFromReject = signal<'details' | 'review'>('details');
   readonly page = signal(1);
-  readonly pageSize = 10;
+  /** Số dòng mỗi trang đọc từ tham số hệ thống `orders_per_page` (mặc định 8). */
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
   readonly quickRange = signal<'all' | 'today' | 'month' | 'quarter' | 'year' | 'custom'>('all');
   /** Khoảng thời gian đang chỉnh trong popover, chỉ áp dụng khi bấm "Áp dụng". */
   readonly fromDraft = signal('');
@@ -124,21 +126,6 @@ export class PayoutsComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.removeFilterPopoverListeners());
-    void this.loadPayouts();
-  }
-
-  private async loadPayouts(): Promise<void> {
-    try {
-      const first = await firstValueFrom(this.http.get<{ items: PayoutRequest[]; total: number }>(this.apiUrl, { params: { page: 1, pageSize: 100 } }));
-      const rows = [...first.items];
-      for (let page = 2; page <= Math.ceil(first.total / 100); page += 1) {
-        const next = await firstValueFrom(this.http.get<{ items: PayoutRequest[] }>(this.apiUrl, { params: { page, pageSize: 100 } }));
-        rows.push(...next.items);
-      }
-      this.payouts.set(rows);
-    } catch {
-      this.error.set('Không tải được dữ liệu chi trả từ CSDL. Vui lòng đăng nhập bằng tài khoản Admin có quyền SA hoặc FA.');
-    }
   }
 
   statusLabel(value: PayoutStatus): string { return { pending: 'Chờ duyệt', approved: 'Chờ giải ngân', paid: 'Đã giải ngân', rejected: 'Bị từ chối' }[value]; }
@@ -414,37 +401,26 @@ export class PayoutsComponent {
   async approve(): Promise<void> {
     const item = this.selected(); if (!item) return;
     if (!this.canApprove(item)) { this.error.set('Chưa thể duyệt. Vui lòng xử lý các cảnh báo phía trên.'); return; }
-    try {
-      await firstValueFrom(this.http.post(`${this.apiUrl}/${encodeURIComponent(item.id)}/approve`, { note: this.approvalNote() }));
-      await this.loadPayouts(); this.close(); this.toast.set('Đã duyệt yêu cầu. Chờ kế toán giải ngân.');
-    } catch { this.error.set('Không duyệt được yêu cầu. Vui lòng kiểm tra quyền và trạng thái mới nhất.'); }
+    // TODO(pre-deploy): Thay cập nhật cục bộ bằng API duyệt chi trả khi backend bàn giao luồng thật.
+    this.data.updatePayout(item.id, { status: 'approved' });
+    this.close();
+    this.toast.set('Đã duyệt yêu cầu (dữ liệu minh họa). Chờ kế toán giải ngân.');
   }
   async reject(): Promise<void> {
     const item = this.selected(); if (!item) return;
     if (!this.rejectionReason() || !this.rejectionDetails().trim()) { this.error.set('Chọn lý do và nhập giải thích chi tiết trước khi xác nhận.'); return; }
-    try {
-      let evidence = '';
-      if (this.evidenceFile) {
-        const uploaded = await firstValueFrom(this.http.post<{ evidence: { id: string } }>(`${this.apiUrl}/${encodeURIComponent(item.id)}/evidence`, this.evidenceFile, {
-          headers: { 'Content-Type': this.evidenceFile.type, 'X-File-Name': encodeURIComponent(this.evidenceFile.name) }
-        }));
-        evidence = uploaded.evidence.id;
-      }
-      await firstValueFrom(this.http.post(`${this.apiUrl}/${encodeURIComponent(item.id)}/reject`, { reason: this.rejectionReason(), details: this.rejectionDetails().trim(), evidence }));
-      await this.loadPayouts(); this.close(); this.toast.set('Đã từ chối yêu cầu.');
-    } catch { this.error.set('Không tải được minh chứng hoặc từ chối yêu cầu. Vui lòng kiểm tra tệp, quyền và trạng thái mới nhất.'); }
+    // TODO(pre-deploy): API từ chối + tải minh chứng chưa tồn tại; giữ minh chứng trong bộ nhớ.
+    this.data.updatePayout(item.id, {
+      status: 'rejected',
+      rejectionReason: `${this.rejectionReason()}: ${this.rejectionDetails().trim()}`
+    });
+    this.close();
+    this.toast.set('Đã từ chối yêu cầu (dữ liệu minh họa).');
   }
   chooseEvidence(event: Event): void { this.evidenceFile = (event.target as HTMLInputElement).files?.[0] ?? null; this.evidence.set(this.evidenceFile?.name ?? ''); }
   async downloadEvidence(id: string): Promise<void> {
-    try {
-      const blob = await firstValueFrom(this.http.get(`${this.apiUrl}/evidence/${encodeURIComponent(id)}`, { responseType: 'blob' }));
-      const url = URL.createObjectURL(blob);
-      const link = this.document.createElement('a');
-      link.href = url;
-      link.download = `minh-chung-${id}`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch { this.error.set('Không tải được tệp minh chứng.'); }
+    // TODO(pre-deploy): API tải minh chứng chi trả chưa có; dữ liệu demo không kèm tệp.
+    this.error.set(`Chưa có tệp minh chứng cho yêu cầu ${id} (dữ liệu minh họa).`);
   }
   export(format: ExportFormat): void { downloadTable(format, 'thinkup-rut-tien', [['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái', 'Dữ liệu minh họa'], ...this.filtered().map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount, item.amount - item.taxAmount, item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status), item.isDemo ? 'Có' : 'Không'])]); }
 }

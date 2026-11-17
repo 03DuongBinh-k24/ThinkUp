@@ -6,11 +6,19 @@
     </div>
   </header>
 
+  @if (loadError()) {
+    <p class="error" role="alert">
+      <span>{{ loadError() }}</span>
+      <button class="button small" type="button" (click)="reload()">Thử lại</button>
+    </p>
+  }
+  @if (loading()) { <p class="table-loading" role="status">Đang tải danh sách đơn hàng…</p> }
+
   <section class="orders-metrics" aria-label="Tổng quan đơn hàng">
-    <button class="metric" type="button" [class.is-selected]="status() === ''" (click)="setStatus('')" [attr.aria-label]="'Xem tất cả ' + orderSummary.total + ' đơn hàng'"><span class="metric-icon icon-blue"><img src="/assets/business/orders/shopping-cart.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Tổng đơn hàng</span><strong>{{ orderSummary.total.toLocaleString('vi-VN') }} <span>đơn</span></strong><small class="metric-trend trend-up">+{{ orderSummary.previousPeriodChange.toLocaleString('vi-VN') }}% <span>so với kỳ trước</span></small></span></button>
-    <button class="metric" type="button" [class.is-selected]="status() === 'success'" (click)="setStatus('success')" [attr.aria-label]="'Lọc ' + orderSummary.success + ' đơn thành công'"><span class="metric-icon icon-green"><img src="/assets/business/orders/file-check.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Đơn thành công</span><strong>{{ orderSummary.success.toLocaleString('vi-VN') }} <span>đơn</span></strong><small><b>{{ orderSummary.successRate.toLocaleString('vi-VN') }}%</b> tổng đơn</small></span></button>
-    <button class="metric" type="button" [class.is-selected]="status() === 'pending'" (click)="setStatus('pending')" [attr.aria-label]="'Lọc ' + orderSummary.pending + ' đơn chờ thanh toán'"><span class="metric-icon icon-amber"><img src="/assets/business/orders/hourglass.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Chờ thanh toán</span><strong>{{ orderSummary.pending.toLocaleString('vi-VN') }} <span>đơn</span></strong></span></button>
-    <button class="metric" type="button" [class.is-selected]="status() === 'cancelled'" (click)="setStatus('cancelled')" [attr.aria-label]="'Lọc ' + orderSummary.cancelled + ' đơn thất bại'"><span class="metric-icon icon-red"><img src="/assets/business/orders/file-x.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Thất bại</span><strong>{{ orderSummary.cancelled.toLocaleString('vi-VN') }} <span>đơn</span></strong><small><b>{{ orderSummary.cancelledRate.toLocaleString('vi-VN') }}%</b> tổng đơn</small></span></button>
+    <button class="metric" type="button" [class.is-selected]="status() === ''" (click)="setStatus('')" [attr.aria-label]="'Xem tất cả ' + orderSummary().total + ' đơn hàng'"><span class="metric-icon icon-blue"><img src="/assets/business/orders/shopping-cart.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Tổng đơn hàng</span><strong>{{ orderSummary().total.toLocaleString('vi-VN') }} <span>đơn</span></strong></span></button>
+    <button class="metric" type="button" [class.is-selected]="status() === 'success'" (click)="setStatus('success')" [attr.aria-label]="'Lọc ' + orderSummary().success + ' đơn thành công'"><span class="metric-icon icon-green"><img src="/assets/business/orders/file-check.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Đơn thành công</span><strong>{{ orderSummary().success.toLocaleString('vi-VN') }} <span>đơn</span></strong><small><b>{{ orderSummary().successRate.toLocaleString('vi-VN') }}%</b> tổng đơn</small></span></button>
+    <button class="metric" type="button" [class.is-selected]="status() === 'pending'" (click)="setStatus('pending')" [attr.aria-label]="'Lọc ' + orderSummary().pending + ' đơn chờ thanh toán'"><span class="metric-icon icon-amber"><img src="/assets/business/orders/hourglass.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Chờ thanh toán</span><strong>{{ orderSummary().pending.toLocaleString('vi-VN') }} <span>đơn</span></strong></span></button>
+    <button class="metric" type="button" [class.is-selected]="status() === 'cancelled'" (click)="setStatus('cancelled')" [attr.aria-label]="'Lọc ' + orderSummary().cancelled + ' đơn thất bại'"><span class="metric-icon icon-red"><img src="/assets/business/orders/file-x.svg" alt=""></span><span class="metric-copy"><span class="metric-label">Thất bại</span><strong>{{ orderSummary().cancelled.toLocaleString('vi-VN') }} <span>đơn</span></strong><small><b>{{ orderSummary().cancelledRate.toLocaleString('vi-VN') }}%</b> tổng đơn</small></span></button>
   </section>
 
   <section class="orders-toolbar" aria-label="Tìm kiếm và lọc đơn hàng">

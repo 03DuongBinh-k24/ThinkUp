@@ -6,6 +6,18 @@
     </div>
   </header>
 
+  @if (loadError()) {
+    <div class="info-strip info-strip--danger">
+      <strong>Không tải được dữ liệu từ máy chủ</strong>
+      <span>{{ loadError() }}</span>
+      <button class="btn btn--outline btn--sm" type="button" (click)="retryLoad()">Thử lại</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="table-loading" role="status">Đang tải danh sách học viên…</p>
+  }
+
   <div class="kpi-grid">
     <article class="kpi-card kpi-card--blue">
       <h2 class="kpi-title">Tổng học viên</h2>
@@ -112,7 +124,7 @@
           <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
         </svg>
       </button>
-      <app-export-menu label="Xuất danh sách học viên" (formatChange)="exportList($event)" />
+      <app-export-menu label="Xuất danh sách học viên" [formats]="csvOnly" (formatChange)="exportList($event)" />
     </div>
   </div>
 
@@ -451,7 +463,7 @@
       </div>
 
       <div modalFooter class="modal-footer-actions">
-        <button class="btn btn--danger" type="button" [disabled]="!canSubmitLock()" (click)="submitLock()">Xác nhận khóa tài khoản</button>
+        <button class="btn btn--danger" type="button" [disabled]="!canSubmitLock() || saving()" (click)="submitLock()">{{ saving() ? 'Đang gửi…' : 'Xác nhận khóa tài khoản' }}</button>
       </div>
     </app-user-modal>
   }
@@ -486,7 +498,7 @@
 
         <div modalFooter class="modal-footer-actions">
           <button class="btn btn--outline" type="button" (click)="closeModal()">Hủy bỏ</button>
-          <button class="btn btn--primary" type="button" [disabled]="!canSubmitUnlock()" (click)="submitUnlock()">Xác nhận mở khóa</button>
+          <button class="btn btn--primary" type="button" [disabled]="!canSubmitUnlock() || saving()" (click)="submitUnlock()">{{ saving() ? 'Đang gửi…' : 'Xác nhận mở khóa' }}</button>
         </div>
       </app-user-modal>
     }
