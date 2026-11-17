@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { calculateNodeCourseSuggestions, createAdminRoadmap, saveAdminRoadmap, publishAdminRoadmap, listAdminRoadmaps } from '../roadmaps.admin.js';
+import { calculateNodeCourseSuggestions, createAdminRoadmap, saveAdminRoadmap, publishAdminRoadmap, listAdminRoadmaps, deleteAdminRoadmap } from '../roadmaps.admin.js';
 
 function matches(row, query = {}) {
   for (const [key, condition] of Object.entries(query)) {
@@ -23,9 +23,11 @@ class Collection {
   find(query = {}) { let rows = this.rows.filter(row => matches(row, query)); const cursor = { sort(spec) { rows.sort((a,b) => { for (const [k,d] of Object.entries(spec)) if (a[k] !== b[k]) return (a[k] > b[k] ? 1 : -1) * d; return 0; }); return cursor; }, limit(n) { rows = rows.slice(0,n); return cursor; }, skip(n) { rows = rows.slice(n); return cursor; }, toArray: async () => rows }; return cursor; }
   async findOne(query = {}) { return this.rows.find(row => matches(row, query)) || null; }
   async distinct(field, query = {}) { return [...new Set(this.rows.filter(row => matches(row, query)).map(row => row[field]))]; }
+  async countDocuments(query = {}) { return this.rows.filter(row => matches(row, query)).length; }
   async insertOne(row) { const item = { ...row, _id: row._id || new ObjectId() }; this.rows.push(item); return { acknowledged: true, insertedId: item._id }; }
   async updateOne(query, update) { const row = this.rows.find(item => matches(item, query)); if (!row) return { matchedCount: 0, modifiedCount: 0 }; this.apply(row, update); return { matchedCount: 1, modifiedCount: 1 }; }
   async updateMany(query, update) { const rows = this.rows.filter(item => matches(item, query)); rows.forEach(row => this.apply(row, update)); return { matchedCount: rows.length, modifiedCount: rows.length }; }
+  async deleteOne(query = {}) { const index = this.rows.findIndex(row => matches(row, query)); if (index < 0) return { deletedCount: 0 }; this.rows.splice(index, 1); return { deletedCount: 1 }; }
   apply(row, update) { Object.assign(row, update.$set || {}); for (const [key,val] of Object.entries(update.$inc || {})) row[key] = (row[key] || 0) + val; }
 }
 function makeDb(data = {}) { const tables = Object.fromEntries(Object.entries(data).map(([key, rows]) => [key, new Collection(rows)])); return { tables, collection(name) { return tables[name] ||= new Collection(); }, client: { startSession() { return { async withTransaction(fn) { return fn(); }, async endSession() {} }; } } }; }
@@ -80,4 +82,26 @@ test('roadmap list derives node coverage and ignores fabricated UI KPI values', 
   const result = await listAdminRoadmaps({}, { db });
   assert.equal(result.items[0].coverage, 100);
   assert.equal(result.items[0].missingCourses, 0);
+});
+
+test('draft roadmap delete is transactional, audited and idempotent by explicit 404', async () => {
+  const db = makeDb({ course_categories: [{ category_id: 11, name: 'Test Roadmap' }] });
+  const created = await createAdminRoadmap({ categoryId: 11, name: 'E2E cleanup roadmap', stages: [stage] }, { db, adminId: actor, req: { adminId: actor } });
+  const deleted = await deleteAdminRoadmap(created.roadmap.versionId, { db, adminId: actor, req: { adminId: actor } });
+  assert.equal(deleted.deleted, true);
+  assert.equal(db.tables.admin_roadmap_versions.rows.length, 0);
+  assert.equal(db.tables.admin_audit_logs.rows.at(-1).action, 'ROADMAP_DRAFT_DELETED');
+  await assert.rejects(() => deleteAdminRoadmap(created.roadmap.versionId, { db, adminId: actor, req: { adminId: actor } }), { code: 'ROADMAP_NOT_FOUND' });
+});
+
+test('roadmap delete rejects published versions and learner dependencies', async () => {
+  const publishedDb = makeDb({ course_categories: [{ category_id: 12, name: 'Published Roadmap' }], courses: [], course_tags: [], lessons: [], tags: [] });
+  const published = await createAdminRoadmap({ categoryId: 12, stages: [stage] }, { db: publishedDb, adminId: actor, req: { adminId: actor } });
+  publishedDb.tables.admin_roadmap_versions.rows[0].status = 'published';
+  await assert.rejects(() => deleteAdminRoadmap(published.roadmap.versionId, { db: publishedDb, adminId: actor, req: { adminId: actor } }), { code: 'ROADMAP_DELETE_STATE_CONFLICT' });
+
+  const dependencyDb = makeDb({ course_categories: [{ category_id: 13, name: 'Referenced Roadmap' }], user_roadmaps: [] });
+  const draft = await createAdminRoadmap({ categoryId: 13, stages: [stage] }, { db: dependencyDb, adminId: actor, req: { adminId: actor } });
+  dependencyDb.tables.user_roadmaps.rows.push({ template_version_id: dependencyDb.tables.admin_roadmap_versions.rows[0].version_id });
+  await assert.rejects(() => deleteAdminRoadmap(draft.roadmap.versionId, { db: dependencyDb, adminId: actor, req: { adminId: actor } }), { code: 'ROADMAP_DELETE_DEPENDENCY' });
 });

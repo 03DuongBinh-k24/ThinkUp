@@ -14,6 +14,7 @@ import {
   listCannedResponses,
   resolveAndCloseTicket,
   processInboundEmailReply,
+  deleteAdminTicket,
 } from '../tickets.admin.js';
 import { COLLECTION_TICKETS } from '../../../user/support/support.user.js';
 
@@ -92,6 +93,12 @@ function createMockDb() {
             }
           }
           return { matchedCount: 1, modifiedCount: 1 };
+        },
+        async deleteOne(filter) {
+          const idx = rows().findIndex((item) => matches(item, filter));
+          if (idx < 0) return { deletedCount: 0 };
+          rows().splice(idx, 1);
+          return { deletedCount: 1 };
         },
         find(filter = {}) {
           let list = rows().filter((item) => matches(item, filter));
@@ -373,4 +380,27 @@ test('Support Tickets Admin: Khối 7 & 8 - Canned Responses & Giải quyết Đ
   assert.equal(updatedDoc.status, 'closed');
   assert.ok(updatedDoc.resolved_at);
   assert.ok(updatedDoc.thread.length >= 2);
+});
+
+test('Support Tickets Admin: xóa ticket chỉ khi chưa có side effect', async () => {
+  const db = createMockDb();
+  const ticketsCol = db.collection(COLLECTION_TICKETS);
+  await ticketsCol.insertOne({ _id: 'ticket_cleanup_1', ticket_code: 'TK-CLEAN-1', status: 'unassigned', thread: [], created_at: new Date() });
+  await ticketsCol.insertOne({ _id: 'ticket_cleanup_2', ticket_code: 'TK-CLEAN-2', status: 'processing', thread: [{ body: 'Đã phản hồi' }], assignee_id: 'admin_huy', created_at: new Date() });
+
+  const actor = { id: 'admin_huy', fullName: 'Gia Huy', role: 'CS' };
+
+  // Ticket chưa có side effect -> xóa được và ghi audit
+  const result = await deleteAdminTicket(actor, 'ticket_cleanup_1', { db });
+  assert.equal(result.deleted, true);
+  assert.equal(await ticketsCol.findOne({ _id: 'ticket_cleanup_1' }), null);
+  const auditRows = await db.collection('admin_audit_logs').find({}).toArray();
+  assert.ok(auditRows.some((row) => row.action === 'DELETE_TICKET'));
+
+  // Xóa lần hai -> 404, không cascade
+  await assert.rejects(() => deleteAdminTicket(actor, 'ticket_cleanup_1', { db }), (err) => err.status === 404 && err.code === 'TICKET_NOT_FOUND');
+
+  // Ticket đã có assignee/thread -> 409
+  await assert.rejects(() => deleteAdminTicket(actor, 'ticket_cleanup_2', { db }), (err) => err.status === 409 && err.code === 'TICKET_DELETE_DEPENDENCY');
+  assert.ok(await ticketsCol.findOne({ _id: 'ticket_cleanup_2' }));
 });
