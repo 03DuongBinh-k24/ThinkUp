@@ -621,6 +621,19 @@ export async function disciplineInstructor(actor, complaintId, payload = {}, opt
 /**
  * Ghi vết audit log bất biến
  */
+export async function deleteAdminComplaint(actor, complaintId, options = {}) {
+  const db = await database(options), col = db.collection(COLLECTION_COMPLAINTS);
+  const doc = await col.findOne({ $or: [{ _id: complaintId }, { complaint_code: complaintId }] });
+  if (!doc) throw bad('Không tìm thấy hồ sơ khiếu nại.', 404, 'COMPLAINT_NOT_FOUND');
+  if (doc.status !== 'pending' || doc.resolution || doc.source_ticket_id || doc.refund || doc.evidence?.length) {
+    throw bad('Hồ sơ đã có side effect nghiệp vụ, không thể xóa an toàn.', 409, 'COMPLAINT_DELETE_DEPENDENCY');
+  }
+  const deleted = await col.deleteOne({ _id: doc._id, status: 'pending' });
+  if (!deleted.deletedCount) throw bad('Hồ sơ vừa thay đổi. Tải lại rồi thử lại.', 409, 'COMPLAINT_DELETE_CONFLICT');
+  await recordDisputeAudit(db, actor, 'DELETE_COMPLAINT', doc.complaint_code, { deleted: true });
+  return { deleted: true, complaintId: String(doc._id) };
+}
+
 async function recordDisputeAudit(db, actor, action, code, details) {
   try {
     await db.collection(COLLECTION_AUDIT_LOGS).insertOne({
@@ -689,6 +702,7 @@ export function createAdminComplaintsRouter(express, adminAuthMiddleware) {
 
   // Khối 4: Xem hồ sơ đối soát 3 bên
   router.get('/:id', handle((req) => getComplaintDetail(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id)));
+  router.delete('/:id', handle((req) => deleteAdminComplaint(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id)));
 
   // Khối 5: Lệnh yêu cầu giảng viên giải trình
   router.post('/:id/request-explanation', handle((req) => requestInstructorExplanation(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id, req.body)));

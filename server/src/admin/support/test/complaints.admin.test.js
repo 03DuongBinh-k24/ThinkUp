@@ -10,6 +10,7 @@ import {
   resolveRefund,
   dismissComplaint,
   disciplineInstructor,
+  deleteAdminComplaint,
 } from '../complaints.admin.js';
 
 const clone = (val) => BSON.deserialize(BSON.serialize({ val })).val;
@@ -279,4 +280,26 @@ test('Complaints Admin: Khối 7 & 8 - Bác bỏ khiếu nại & Kỷ luật đ�
 
   assert.equal(disciplineRes.success, true);
   assert.deepEqual(disciplineRes.discipline.sanctions, ['strike', 'archive_course_14d']);
+});
+
+test('Complaints Admin: xóa hồ sơ chỉ khi chưa có side effect nghiệp vụ', async () => {
+  const db = createMockDb();
+  const col = db.collection(COLLECTION_COMPLAINTS);
+  await col.insertOne({ _id: 'complaint_cleanup_1', complaint_code: 'CP-CLEAN-1', status: 'pending', created_at: new Date() });
+  await col.insertOne({ _id: 'complaint_cleanup_2', complaint_code: 'CP-CLEAN-2', status: 'resolved', resolution: { type: 'refund' }, created_at: new Date() });
+
+  const actor = { id: 'admin_huy', fullName: 'Gia Huy', role: 'CS' };
+
+  const result = await deleteAdminComplaint(actor, 'complaint_cleanup_1', { db });
+  assert.equal(result.deleted, true);
+  assert.equal(await col.findOne({ _id: 'complaint_cleanup_1' }), null);
+  const auditRows = await db.collection('admin_audit_logs').find({}).toArray();
+  assert.ok(auditRows.some((row) => row.action === 'DELETE_COMPLAINT'));
+
+  // Xóa lần hai -> 404, không cascade
+  await assert.rejects(() => deleteAdminComplaint(actor, 'complaint_cleanup_1', { db }), (err) => err.status === 404 && err.code === 'COMPLAINT_NOT_FOUND');
+
+  // Hồ sơ đã xử lý/hoàn tiền -> 409
+  await assert.rejects(() => deleteAdminComplaint(actor, 'complaint_cleanup_2', { db }), (err) => err.status === 409 && err.code === 'COMPLAINT_DELETE_DEPENDENCY');
+  assert.ok(await col.findOne({ _id: 'complaint_cleanup_2' }));
 });
