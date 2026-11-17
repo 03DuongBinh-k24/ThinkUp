@@ -7,16 +7,10 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// The repository keeps the backend environment at `server/.env`. Keep the
-// root-level path as a backwards-compatible fallback, but do not silently
-// continue with a different MongoDB database when only server/.env exists.
-const envPaths = [
-  path.resolve(__dirname, '../../.env'),
-  path.resolve(__dirname, '../../../.env'),
-];
-for (const envPath of envPaths) {
-  const result = dotenv.config({ path: envPath, quiet: true });
-  if (!result.error) break;
+try {
+  dotenv.config({ path: path.resolve(__dirname, '../../../.env'), quiet: true });
+} catch {
+  dotenv.config({ quiet: true });
 }
 
 import dns from 'node:dns';

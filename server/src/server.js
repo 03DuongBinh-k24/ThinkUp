@@ -68,7 +68,6 @@ import { createPaymentSettingsRouter } from './user/payment-settings/payment-set
 import { createLearningSettingsRouter } from './user/learning-settings/learning-settings.user.js';
 import { createHomeRouter } from './user/home/home.user.js';
 import { createLearningActivityRouter } from './user/learning-activity/learning-activity.user.js';
-import { getMongoDb } from './user/db.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;

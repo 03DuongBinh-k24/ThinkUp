@@ -393,20 +393,6 @@ export async function getAdminTicketDetail(actor, ticketId, options = {}) {
   };
 }
 
-export async function deleteAdminTicket(actor, ticketId, options = {}) {
-  const db = await database(options);
-  const tickets = db.collection(COLLECTION_TICKETS);
-  const doc = await tickets.findOne({ $or: [{ _id: ticketId }, { ticket_code: ticketId }] });
-  if (!doc) throw bad('Không tìm thấy ticket yêu cầu.', 404, 'TICKET_NOT_FOUND');
-  if (doc.status !== 'unassigned' || (Array.isArray(doc.thread) && doc.thread.length) || doc.assignee_id || doc.linked_complaint_id) {
-    throw bad('Ticket đã có side effect nghiệp vụ, không thể xóa an toàn.', 409, 'TICKET_DELETE_DEPENDENCY');
-  }
-  const deleted = await tickets.deleteOne({ _id: doc._id, status: 'unassigned' });
-  if (!deleted.deletedCount) throw bad('Ticket vừa thay đổi. Tải lại rồi thử lại.', 409, 'TICKET_DELETE_CONFLICT');
-  await recordTicketAudit(db, actor, 'DELETE_TICKET', doc.ticket_code, { deleted: true });
-  return { deleted: true, ticketId: String(doc._id) };
-}
-
 /**
  * 4. Tự động nhận / gán ticket khi bấm Tiếp nhận (AC-32)
  */
@@ -941,7 +927,6 @@ export function createAdminTicketsRouter(express, adminAuthMiddleware) {
 
   // Khối 4: Chi tiết ticket và thread
   router.get('/:id', handle((req) => getAdminTicketDetail(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id)));
-  router.delete('/:id', handle((req) => deleteAdminTicket(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id)));
 
   // Khối 3: Tiếp nhận tự động gán
   router.post('/:id/claim', handle((req) => claimTicket(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id)));

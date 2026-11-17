@@ -288,23 +288,6 @@ export async function downloadInstructorDocumentFile(userId, documentId, options
   return { bytes, filename, mimeType };
 }
 
-/**
- * Delete an uploaded evidence file that has not been attached to any business case.
- * Evidence is stored as metadata + Mongo Binary in `admin_user_evidence`, so removing the
- * document is the physical deletion of the file in this schema.
- */
-export async function deleteAdminUserEvidence(id, req, options = {}) {
-  if (!/^uev_[a-f0-9]{32}$/.test(String(id))) throw bad('Mã bằng chứng không hợp lệ.', 400, 'EVIDENCE_INVALID');
-  const db = options.db || await getMongoDb();
-  const file = await db.collection('admin_user_evidence').findOne({ _id: id });
-  if (!file) throw bad('Không tìm thấy bằng chứng.', 404, 'EVIDENCE_NOT_FOUND');
-  if (file.linked_at || file.linked_entity) throw bad('Bằng chứng đã liên kết với nghiệp vụ, không thể xóa.', 409, 'EVIDENCE_DELETE_DEPENDENCY');
-  const deleted = await db.collection('admin_user_evidence').deleteOne({ _id: id, linked_at: null });
-  if (!deleted.deletedCount) throw bad('Bằng chứng vừa được liên kết. Tải lại rồi thử lại.', 409, 'EVIDENCE_DELETE_CONFLICT');
-  await writeAudit(db, req, 'USER_EVIDENCE_DELETED', file.owner_user_id, { metadata: { evidenceId: id, filename: file.filename, sizeBytes: file.size_bytes } });
-  return { success: true, deleted: true, evidenceId: id };
-}
-
 export function createAdminUsersRouter(express, requireAdmin) {
   const router = express.Router();
   router.use(requireAdmin);
@@ -477,11 +460,6 @@ export function createAdminUsersRouter(express, requireAdmin) {
     try { const db=await getMongoDb(),id=req.params.id; if(!/^uev_[a-f0-9]{32}$/.test(id)) throw bad('Mã bằng chứng không hợp lệ.');
       const file=await db.collection('admin_user_evidence').findOne({_id:id}); if(!file) throw bad('Không tìm thấy bằng chứng.',404,'EVIDENCE_NOT_FOUND');
       res.set('Content-Type','application/octet-stream'); res.set('Content-Disposition',`attachment; filename="${file.filename.replace(/["\r\n]/g,'_')}"`); res.send(Buffer.from(file.bytes.buffer).subarray(0,file.bytes.position));
-    }catch(e){next(e);}
-  });
-  router.delete('/evidence/:id', evidenceRead, async (req,res,next) => {
-    try {
-      res.json(await deleteAdminUserEvidence(req.params.id, req));
     }catch(e){next(e);}
   });
   router.get('/students/export', read, async (req,res,next) => {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deleteContentPost, listContentComments, moderateContentComment } from '../content.admin.js';
+import { listContentComments, moderateContentComment } from '../content.admin.js';
 
 function makeCommentDb(comment) {
   const writes = [];
@@ -37,29 +37,4 @@ test('comment list combines both configured sources and excludes hard-deleted ro
 
   assert.deepEqual(sources, ['blog_comments', 'course_comments']);
   assert.equal(result.pagination.total, 0);
-});
-
-test('draft post delete removes only owned unreferenced content and audits it', async () => {
-  const writes = [];
-  const post = { _id: 'post-e2e', owner_admin_id: '507f1f77bcf86cd799439011', status: 'draft' };
-  const db = { collection(name) {
-    if (name === 'blog_posts') return { async findOne() { return post; }, async deleteOne() { writes.push('deleted'); return { deletedCount: 1 }; } };
-    if (name === 'blog_comments' || name === 'content_reports') return { async countDocuments() { return 0; } };
-    return { async insertOne(row) { writes.push(row); return { acknowledged: true }; } };
-  } };
-  const result = await deleteContentPost('post-e2e', { adminId: post.owner_admin_id, ip: '127.0.0.1', headers: {} }, { db });
-  assert.equal(result.deleted, true);
-  assert.equal(writes.includes('deleted'), true);
-  assert.equal(writes.some(item => item?.action === 'CONTENT_POST_DELETED'), true);
-});
-
-test('content post delete rejects published state and dependencies', async () => {
-  const owner = '507f1f77bcf86cd799439011';
-  const makeDb = (post, references = 0) => ({ collection(name) {
-    if (name === 'blog_posts') return { async findOne() { return post; } };
-    if (name === 'blog_comments' || name === 'content_reports') return { async countDocuments() { return references; } };
-    return { async insertOne() { return { acknowledged: true }; } };
-  } });
-  await assert.rejects(() => deleteContentPost('post-published', { adminId: owner }, { db: makeDb({ _id: 'post-published', owner_admin_id: owner, status: 'published' }) }), { code: 'CONTENT_POST_DELETE_STATE_CONFLICT' });
-  await assert.rejects(() => deleteContentPost('post-linked', { adminId: owner }, { db: makeDb({ _id: 'post-linked', owner_admin_id: owner, status: 'draft' }, 1) }), { code: 'CONTENT_POST_DELETE_DEPENDENCY' });
 });
