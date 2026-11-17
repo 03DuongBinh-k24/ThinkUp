@@ -1,15 +1,5 @@
 import { firstValueFrom, Observable } from 'rxjs';
 
-/**
- * Số dòng mỗi trang của các bảng Admin (thống nhất 8 dòng).
- *
- * Lưu ý: hợp đồng `GET /admin/preferences` chỉ có breadcrumbs/timezone/statusBar/theme/density,
- * **không có** cấu hình số dòng mỗi trang. Vì vậy đây là hằng số dùng chung, không phải
- * preference người dùng. Nếu backend bổ sung trường này, đổi tại đây và đọc từ
- * `AdminPreferencesService` (không sửa từng bảng).
- */
-export const ADMIN_LIST_PAGE_SIZE = 8;
-
 /** Kích thước trang tối đa backend cho phép khi cần tải toàn bộ danh sách. */
 export const API_FETCH_PAGE_SIZE = 100;
 

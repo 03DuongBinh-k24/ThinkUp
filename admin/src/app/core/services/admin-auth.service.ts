@@ -598,10 +598,10 @@ export class AdminAuthService {
   }
 }
 
-/** Chuẩn hoá mã dự phòng về định dạng backend `XXXX-XXXX`. */
+/** Chuẩn hoá mã dự phòng về định dạng backend `XXXX-XXXX-XXXX-XXXX` (16 ký tự). */
 function formatBackupCode(code: string): string {
   const normalized = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}`;
+  return normalized.replace(/(.{4})(?=.)/g, '$1-');
 }
 
 function decodeBase32(value: string): ArrayBuffer {

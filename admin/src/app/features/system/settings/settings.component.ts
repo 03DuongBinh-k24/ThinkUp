@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, linkedSignal, signal } from '@angular/core';
 import { CanDeactivateFn } from '@angular/router';
 import { Observable, Subject, firstValueFrom, of } from 'rxjs';
 import { CustomSelectComponent } from '../../../shared/components/custom-select/custom-select.component';
@@ -53,7 +53,8 @@ export class SettingsComponent implements OnDestroy {
     { id: 'maintenance', label: 'Bảo trì và Cảnh báo' }
   ];
   readonly activeTab = signal<SettingsTab>('general');
-  readonly draft = signal<SystemSettings>(structuredClone(this.store.settings()));
+  // linkedSignal: đồng bộ lại từ store khi load() async hoàn tất (tránh giữ giá trị mock khởi tạo).
+  readonly draft = linkedSignal(() => structuredClone(this.store.settings()));
   readonly savedOnce = signal(false);
   readonly saveFailed = signal(false);
 
