@@ -242,6 +242,30 @@ export async function hideAdminRoadmap(id, options = {}) {
   });
 }
 
+/**
+ * Xóa bản nháp chưa được user sử dụng.
+ * Published/hidden/superseded versions are immutable history and must not be hard-deleted.
+ */
+export async function deleteAdminRoadmap(id, options = {}) {
+  const db = options.db || await getMongoDb();
+  return roadmapTransaction(db, async session => {
+    const row = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne(versionQuery(id), { session });
+    if (!row) throw FAIL('Không tìm thấy lộ trình.', 404, 'ROADMAP_NOT_FOUND');
+    if (row.status !== 'draft') throw FAIL('Chỉ được xóa bản nháp chưa phát hành.', 409, 'ROADMAP_DELETE_STATE_CONFLICT');
+    const references = await db.collection('user_roadmaps').countDocuments({
+      $or: [
+        { template_version_id: String(row.version_id) },
+        { template_version_id: row.version_id },
+      ],
+    }, { session });
+    if (references > 0) throw FAIL('Lộ trình đã được người dùng tham chiếu, không thể xóa an toàn.', 409, 'ROADMAP_DELETE_DEPENDENCY');
+    const deleted = await db.collection(ADMIN_ROADMAP_VERSIONS).deleteOne({ _id: row._id, status: 'draft' }, { session });
+    if (!deleted.deletedCount) throw FAIL('Lộ trình vừa thay đổi. Tải lại rồi thử lại.', 409, 'ROADMAP_DELETE_CONFLICT');
+    await audit(db, options.req, 'ROADMAP_DRAFT_DELETED', row, snapshot(row), { deleted: true }, {}, session);
+    return { success: true, deleted: true, roadmapId: String(row.version_id || row._id) };
+  });
+}
+
 export function createAdminRoadmapsRouter(express, requireAdmin) {
   const router = express.Router(); router.use(requireAdmin);
   const roles = createAdminRoleMiddleware(['SA', 'CA']), sa = createAdminRoleMiddleware(['SA']);
@@ -251,6 +275,7 @@ export function createAdminRoadmapsRouter(express, requireAdmin) {
   router.get('/:id', roles, async (req,res,next)=>{ try { res.json(await getAdminRoadmap(req.params.id)); } catch(e) { next(e); } });
   router.get('/:id/nodes/:nodeId/suggestions', roles, async (req,res,next)=>{ try { const { roadmap } = await getAdminRoadmap(req.params.id); const node = roadmap.stages.flatMap(stage => stage.nodes || []).find(item => item.node_id === req.params.nodeId); if (!node) throw FAIL('Không tìm thấy node.',404,'ROADMAP_NODE_NOT_FOUND'); const courses = await calculateNodeCourseSuggestions(node, { threshold: Math.max(70, roadmap.threshold || node.threshold || 70) }); res.json({ success: true, threshold: Math.max(70, roadmap.threshold || node.threshold || 70), total: courses.length, courses }); } catch(e) { next(e); } });
   router.patch('/:id', roles, async (req,res,next)=>{ try { res.json(await saveAdminRoadmap(req.params.id, req.body || {}, { adminId: req.adminId, req })); } catch(e) { next(e); } });
+  router.delete('/:id', roles, async (req,res,next)=>{ try { res.json(await deleteAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   router.post('/:id/publish', roles, async (req,res,next)=>{ try { res.json(await publishAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   router.post('/:id/hide', sa, async (req,res,next)=>{ try { res.json(await hideAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   return router;
