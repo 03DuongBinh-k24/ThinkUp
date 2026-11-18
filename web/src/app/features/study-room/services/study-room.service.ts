@@ -118,6 +118,8 @@ export class StudyRoomService {
   }
 
   randomSpawn(): Observable<StudyRoomItem> {
+    // TODO(API handoff): Xác nhận endpoint hiện tại chỉ trả phòng công khai còn chỗ
+    // và có chủ phòng hiện diện. Khi không có kết quả, trả lỗi có message cho sảnh.
     return this.http.get<{ success: boolean; data: RoomPayload }>(`${this.base}/random-spawn`).pipe(
       map(response => mapRoom(response.data))
     );
@@ -199,6 +201,8 @@ export class StudyRoomService {
   }
 
   createRoom(request: RoomCreateRequest): Observable<StudyRoomItem> {
+    // TODO(API handoff): Xác nhận API chấp nhận topic tự nhập, capacity 5/10/20/30
+    // và mật khẩu phòng riêng từ 4 ký tự. Backend cần kiểm tra các giá trị này.
     return this.http.post<{ success: boolean; data: RoomPayload }>(`${this.base}/create`, request).pipe(
       map(response => mapRoom(response.data)),
       tap(room => this.rememberJoinedRoom(room))
@@ -206,6 +210,8 @@ export class StudyRoomService {
   }
 
   joinRoom(codeOrLink: string, password = ''): Observable<StudyRoomItem> {
+    // TODO(API handoff): Kiểm tra lại sĩ số và sự hiện diện của chủ phòng khi xác nhận
+    // lượt vào. Chốt hợp đồng lỗi chủ phòng vắng mặt cho cả join và connection.
     return this.http.post<{ success: boolean; room: RoomPayload }>(`${this.base}/join`, { codeOrLink, password }).pipe(
       map(response => mapRoom(response.room)),
       tap(room => this.rememberJoinedRoom(room))

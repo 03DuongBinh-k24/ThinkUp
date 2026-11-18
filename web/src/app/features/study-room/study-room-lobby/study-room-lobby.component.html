@@ -27,7 +27,7 @@
             cộng tác trực tiếp để học cùng nhau mọi lúc, mọi nơi.
           </p>
           <div class="hero-actions">
-            <button class="primary-pill" type="button" (click)="quickJoin()" [disabled]="submitting()">
+            <button class="primary-pill" type="button" (click)="quickJoin()" [disabled]="submitting()" [attr.aria-busy]="findingRoom()">
               <svg lucideSparkles></svg>Bắt đầu học cùng nhau
               <svg lucideArrowRight></svg>
             </button>
@@ -37,6 +37,7 @@
           </div>
         </div>
         <div class="theme-carousel">
+          <div class="carousel-track">
           <div class="theme-previews">
             @for (theme of visiblePreviews(); track theme.id) {
               <button
@@ -74,7 +75,7 @@
             (click)="setPreviewPage(-1)"
             aria-label="Xem theme trước"
           >
-            <svg lucideChevronLeft></svg>
+            <svg lucideChevronLeft aria-hidden="true"></svg>
           </button>
           <button
             class="carousel-arrow right"
@@ -82,8 +83,9 @@
             (click)="setPreviewPage(1)"
             aria-label="Xem theme tiếp theo"
           >
-            <svg lucideChevronRight></svg>
+            <svg lucideChevronRight aria-hidden="true"></svg>
           </button>
+          </div>
           <div class="carousel-dots">
             <button
               type="button"
@@ -223,8 +225,12 @@
               <p>Để ThinkUp tìm cho bạn một phòng đang hoạt động và còn chỗ.</p>
             </div>
           </div>
-          <button type="button" (click)="quickJoin()" [disabled]="submitting()">
-            <svg lucideSparkles></svg>TÌM PHÒNG PHÙ HỢP
+          <button type="button" (click)="quickJoin()" [disabled]="submitting()" [attr.aria-busy]="findingRoom()">
+            @if (findingRoom()) {
+              <span class="match-spinner" aria-hidden="true"></span>Đang tìm phòng…
+            } @else {
+              <svg lucideSparkles aria-hidden="true"></svg>TÌM PHÒNG PHÙ HỢP
+            }
           </button>
         </section>
         <section class="side-card">
@@ -265,7 +271,7 @@
             </div>
           </div>
           <button type="button" (click)="openCreate()" [disabled]="submitting()">
-            <svg lucideSparkles></svg>Tạo phòng học<svg lucideArrowRight></svg>
+            <svg lucideSparkles aria-hidden="true"></svg><span>Tạo phòng học</span><svg lucideArrowRight aria-hidden="true"></svg>
           </button>
         </section>
       </aside>
@@ -278,11 +284,12 @@
 
 <dialog #lobbyDialog class="modal" aria-labelledby="lobby-dialog-title"
   [class.create-modal]="modal() === 'create'"
+  [class.match-modal]="modal() === 'matching'"
   (cancel)="$event.preventDefault(); closeModal()"
   (click)="$event.target === lobbyDialog && closeModal()">
   @if (modal()) {
     <div class="modal-content">
-      <button
+      @if (modal() !== 'matching') { <button
         class="modal-close"
         type="button"
         (click)="closeModal()"
@@ -290,11 +297,17 @@
         [disabled]="submitting()"
         data-dialog-focus
       >
-        <svg lucideX></svg>
-      </button>
-      @if (modal() === "create") {
+        @if (modal() === 'create') {
+          <img src="/assets/study-room/create-room/close.svg" alt="" />
+        } @else {
+          <svg lucideX aria-hidden="true"></svg>
+        }
+      </button> }
+      @if (modal() === 'matching') {
+        <app-room-match-loading [quote]="matchQuote()" />
+      } @else if (modal() === "create") {
         <div class="create-modal-heading">
-          <span class="panel-icon pale"><svg lucideSparkles></svg></span>
+          <span class="create-heading-icon"><img src="/assets/study-room/create-room/heading.svg" alt="" /></span>
           <div>
             <h2 id="lobby-dialog-title">Tạo phòng học</h2>
             <p>Chọn loại phòng và setup nhanh không gian học của bạn.</p>
@@ -305,27 +318,14 @@
           <fieldset class="room-type">
             <legend>Loại phòng</legend>
             <div class="room-type-options">
-              <label [class.selected]="newRoomMode === 'open'"
-                ><input
-                  type="radio"
-                  name="roomMode"
-                  value="open"
-                  [(ngModel)]="newRoomMode"
-                /><strong>Công khai</strong
-                ><small
-                  >Ai cũng có thể tham gia bằng danh sách phòng.</small
-                ></label
-              ><label [class.selected]="newRoomMode === 'password'"
-                ><input
-                  type="radio"
-                  name="roomMode"
-                  value="password"
-                  [(ngModel)]="newRoomMode"
-                /><strong>Riêng tư</strong
-                ><small
-                  >Bảo vệ bằng mật khẩu.</small
-                ></label
-              >
+              <button type="button" [attr.aria-pressed]="newRoomMode === 'open'" (click)="newRoomMode = 'open'">
+                <strong><img src="/assets/study-room/create-room/public.svg" alt="" />Công khai</strong>
+                <small>Ai cũng có thể tham gia bằng danh sách phòng.</small>
+              </button>
+              <button type="button" [attr.aria-pressed]="newRoomMode === 'password'" (click)="newRoomMode = 'password'">
+                <strong><img src="/assets/study-room/create-room/private.svg" alt="" />Riêng tư</strong>
+                <small>Bảo vệ bằng mật khẩu.</small>
+              </button>
             </div>
           </fieldset>
           <label
@@ -347,39 +347,66 @@
             ></textarea>
           </label>
           @if (newRoomMode === "password") {
-            <label
-              >Mật khẩu<input
+            <div class="create-password">
+              <label for="create-room-password">Mật khẩu</label>
+              <div class="create-password-actions">
+                <div class="create-password-input">
+                  <input id="create-room-password"
                 name="newPassword"
-                type="password"
+                [type]="showNewRoomPassword() ? 'text' : 'password'"
                 minlength="4"
+                required
+                autocomplete="new-password"
                 [(ngModel)]="newRoomPassword"
+                (ngModelChange)="passwordCopyStatus.set('')"
                 placeholder="Mật khẩu tối thiểu 4 ký tự"
-            /></label>
+                  />
+                  <button type="button" class="password-visibility"
+                    [attr.aria-label]="showNewRoomPassword() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                    (click)="showNewRoomPassword.set(!showNewRoomPassword())">
+                    @if (showNewRoomPassword()) { <svg lucideEyeOff aria-hidden="true"></svg> }
+                    @else { <svg lucideEye aria-hidden="true"></svg> }
+                  </button>
+                  <button type="button" class="password-copy" aria-label="Sao chép mật khẩu"
+                    title="Sao chép mật khẩu" [disabled]="!newRoomPassword" (click)="copyNewRoomPassword()">
+                    <svg lucideCopy aria-hidden="true"></svg>
+                  </button>
+                </div>
+                <button type="button" class="password-generate" (click)="generateRoomPassword()">Tạo ngẫu nhiên</button>
+              </div>
+              <small>Ít nhất 4 ký tự, không giới hạn loại ký tự.</small>
+              <span class="password-copy-status" role="status">{{ passwordCopyStatus() }}</span>
+            </div>
           }
           <div class="form-grid">
             <label
-              >Chủ đề<select name="topic" [(ngModel)]="newRoomTopic">
+              >Chủ đề<select class="create-select" name="topic" [(ngModel)]="newRoomTopic">
                 @for (topic of topics().slice(1); track topic) {
                   <option [value]="topic">{{ topic }}</option>
                 }
+                <option [ngValue]="null">Khác</option>
               </select></label
             ><label
-              >Sức chứa<input
-                name="limit"
-                type="number"
-                min="2"
-                max="100"
-                [(ngModel)]="newRoomLimit"
-            /></label>
+              >Sức chứa<select class="create-select" name="limit" [(ngModel)]="newRoomLimit">
+                @for (capacity of roomCapacities; track capacity) {
+                  <option [ngValue]="capacity">{{ capacity }} người</option>
+                }
+              </select></label>
           </div>
+          @if (newRoomTopic === null) {
+            <label>Tên chủ đề
+              <input name="customTopic" [(ngModel)]="newCustomTopic" required placeholder="VD: Ôn thi kinh tế" />
+            </label>
+          }
           <label
             >Tags (Kỹ năng, chủ đề phụ)<input
               name="tags"
               [(ngModel)]="newRoomTags"
-              placeholder="Nhập các tag, cách nhau bằng dấu phẩy..."
+              (keydown.enter)="addRoomTagSeparator($event)"
+              placeholder="Nhập tag rồi nhấn Enter hoặc dấu phẩy..."
           /></label>
           <fieldset class="room-themes">
-            <legend>Giao diện phòng</legend>
+            <legend>Room Theme</legend>
             <div class="room-theme-grid">
               @for (theme of roomThemes; track theme.id) {
                 <label [class.selected]="newRoomTheme === theme.id"
@@ -392,7 +419,9 @@
                     class="theme-chip"
                     [style.background]="themeBackground(theme.id)"
                   >
-                    @if (isVideoTheme(theme.id)) {
+                    @if (createRoomPreviews.has(theme.id)) {
+                      <img [src]="'/assets/study-room/create-room/' + theme.id + '.png'" alt="" loading="lazy" />
+                    } @else if (isVideoTheme(theme.id)) {
                       <video
                         [src]="themeVideo(theme.id)"
                         [poster]="themePoster(theme.id)"
@@ -423,8 +452,14 @@
               <p class="form-error" role="alert">{{ feedback }}</p>
             }
             <button class="modal-submit" type="submit" [disabled]="submitting()">
+              <img src="/assets/study-room/create-room/plus.svg" alt="" />
               {{ submitting() ? 'Đang tạo phòng…' : 'Tạo phòng' }}
+              <img src="/assets/study-room/create-room/next.svg" alt="" />
             </button>
+            <p class="create-room-note">
+              <img src="/assets/study-room/create-room/members.svg" alt="" />
+              Phòng sẽ sẵn sàng ngay sau khi tạo thành công.
+            </p>
           </footer>
         </form>
       } @else if (modal() === "password") {

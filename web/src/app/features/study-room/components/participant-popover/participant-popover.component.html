@@ -5,7 +5,7 @@
     <div><strong>{{ participant().displayName || participant().name }}</strong><small>{{ participant().roleLabel }}</small></div>
   </div>
   <div class="actions">
-    <button class="report" type="button" (click)="report.emit()"><svg lucideFlag></svg> Báo cáo thành viên</button>
-    @if (canRemove()) { <button class="remove" type="button" (click)="remove.emit()"><svg lucideLogOut></svg> Mời rời phòng</button> }
+    <button class="report" type="button" (click)="report.emit()"><svg lucideFlag></svg> Báo cáo</button>
+    @if (canRemove()) { <button class="remove" type="button" (click)="remove.emit()"><svg lucideLogOut></svg> Mời ra khỏi phòng</button> }
   </div>
 </aside>

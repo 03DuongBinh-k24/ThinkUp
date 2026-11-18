@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, defer, switchMap } from 'rxjs';
+import { Observable, defer, of, switchMap, throwError } from 'rxjs';
+import { getCartDemoAdapter } from './cart-demo.adapter';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CartItem, TransactionDetail } from '../models/commerce.model';
@@ -16,6 +17,8 @@ import {
 } from '../models/payment.model';
 import { Course } from '../models/course.model';
 import { AuthService } from './auth.service';
+
+const cartDemoAdapter = getCartDemoAdapter();
 
 /** Chuyển khóa học của API giỏ hàng sang model dùng chung của app. */
 function mapApiCartCourse(course: ApiCartCourse): CartItem {
@@ -122,6 +125,11 @@ export class CommerceService {
         if (Array.isArray(ids) && ids.every(id => typeof id === 'string')) this._checkoutIds.set(ids);
       } catch {}
     }
+    if (cartDemoAdapter) {
+      const items = cartDemoAdapter.read();
+      this._cartItems.set(items);
+      return of(items);
+    }
     let query = '';
     const search: string[] = [];
     if (params.selectedIds?.length) {
@@ -168,6 +176,16 @@ export class CommerceService {
   }
 
   addToCart(courseId: string): Observable<{ success: boolean; data: CartItem[]; added: boolean }> {
+    if (cartDemoAdapter) {
+      const course = cartDemoAdapter.find(courseId);
+      if (!course) return throwError(() => new Error('Khóa học không có trong bản demo.'));
+      const items = cartDemoAdapter.read();
+      const added = !items.some(item => item.id === courseId);
+      const data = added ? [...items, course] : items;
+      cartDemoAdapter.write(data);
+      this._cartItems.set(data);
+      return of({ success: true, data, added });
+    }
     if (!this.auth.isAuthenticated()) {
       const ids = this.readGuestCourseIds();
       const added = !ids.includes(courseId);
@@ -187,6 +205,12 @@ export class CommerceService {
   }
 
   removeFromCart(courseId: string): Observable<{ success: boolean; data: CartItem[] }> {
+    if (cartDemoAdapter) {
+      const data = cartDemoAdapter.read().filter(item => item.id !== courseId);
+      cartDemoAdapter.write(data);
+      this._cartItems.set(data);
+      return of({ success: true, data });
+    }
     if (!this.auth.isAuthenticated()) {
       localStorage.setItem('thinkup_guest_cart_ids', JSON.stringify(this.readGuestCourseIds().filter(id => id !== courseId)));
       return this.loadCartView().pipe(map(data => ({ success: true, data })));

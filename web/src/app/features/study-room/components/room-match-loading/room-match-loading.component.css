@@ -1,0 +1,44 @@
+.match-loading { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.match-emblem {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  color: #081b50;
+  background: #7dd3fc;
+  box-shadow: 0 0 24px #51baff55;
+}
+.match-emblem svg { width: 24px; height: 24px; }
+.match-loading h2 { margin: 0; font-size: 1.25rem; }
+.match-loading p { margin: 0; font-size: 13px; color: #dbeafe; }
+.match-loading blockquote {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 12px 16px;
+  border: 1px solid #b4c8ff36;
+  border-radius: 10px;
+  background: #ffffff0e;
+  color: #e8efff;
+  font-size: .875rem;
+}
+.match-progress {
+  width: min(100%, 280px);
+  height: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #ffffff26;
+}
+.match-progress::before {
+  content: '';
+  display: block;
+  width: 36%;
+  height: 100%;
+  border-radius: inherit;
+  background: #7dd3fc;
+  animation: match-sweep 1.4s ease-in-out infinite alternate;
+}
+@keyframes match-sweep { to { transform: translateX(175%); } }
+@media (prefers-reduced-motion: reduce) {
+  .match-progress::before { animation: none; }
+}

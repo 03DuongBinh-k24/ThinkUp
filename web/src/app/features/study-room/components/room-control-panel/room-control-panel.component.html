@@ -137,7 +137,7 @@
                       <label for="settings-room-password">{{ passwordEditing() ? 'Mật khẩu mới' : 'Mật khẩu phòng' }}</label>
                       <div class="password-actions">
                         <input #password id="settings-room-password" [type]="passwordVisible() ? 'text' : 'password'"
-                          [value]="displayedPassword()" [readOnly]="!passwordEditing()" autocomplete="new-password"
+                          [value]="displayedPassword()" [readOnly]="!passwordEditing()" [disabled]="!passwordEditing()" autocomplete="new-password"
                           [placeholder]="passwordEditing() ? 'Tối thiểu 4 ký tự' : info.requiresPassword ? '••••••••' : 'Chưa có mật khẩu'"
                           (keydown.enter)="$event.preventDefault(); savePassword(password)">
                         <button class="secondary save-room-name" type="button" (click)="togglePasswordVisibility()"
@@ -158,7 +158,7 @@
                             (click)="editPassword(password)"><svg lucidePencil aria-hidden="true"></svg></button>
                         }
                       </div>
-                      @if (passwordFeedback()) { <p role="status">{{ passwordFeedback() }}</p> }
+                      @if (passwordFeedback()) { <p class="password-feedback" role="status"><span aria-hidden="true">✓</span>{{ passwordFeedback() }}</p> }
                       @if (passwordError()) { <p class="error" role="alert">{{ passwordError() }}</p> }
                     </div>
                   }
