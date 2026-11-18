@@ -24,6 +24,7 @@ export class ThinkUpCornerComponent {
   readonly draggable = input(false);
   readonly dark = input(false);
   readonly theme = input('');
+  // TODO(pre-deploy): Nhớ thay ID demo bằng ID khóa học từ nguồn cấu hình quảng cáo đã thống nhất.
   readonly courseId = '73';
   readonly course = toSignal(inject(CourseService).getCourseDetail(this.courseId).pipe(catchError(() => of(null))));
   readonly addingToCart = signal(false);
