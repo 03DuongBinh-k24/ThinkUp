@@ -287,7 +287,7 @@ h2 { font-size: 23px; line-height: 26px; font-weight: 700; color: #14336b; }
 .logs-panel { margin-top: 20px; padding: 20px 0 0; overflow: hidden; }
 .logs-panel .panel-heading { padding: 0 20px; }
 .logs-heading { flex-wrap: nowrap; }
-.logs-heading-actions { display: flex; align-items: center; justify-content: flex-end; gap: clamp(8px, .8vw, 12px); min-width: 0; white-space: nowrap; }
+.logs-heading-actions { display: flex; align-items: center; justify-content: flex-end; column-gap: clamp(16px, 1.4vw, 24px); row-gap: 8px; min-width: 0; white-space: nowrap; }
 .log-filter { flex: none; width: fit-content; min-width: 0; --custom-select-trigger-height: 40px; --custom-select-max-width: 160px; }
 .logs-heading app-export-menu { flex: none; --export-trigger-size: 40px; --export-trigger-width: auto; --export-trigger-padding: 0 14px; }
 .logs-view-all { flex: none; min-height: 40px; padding: 0 4px; border: 0; background: transparent; color: var(--dashboard-primary); font: var(--admin-text-control-label); white-space: nowrap; }
@@ -367,4 +367,38 @@ h2 { font-size: 23px; line-height: 26px; font-weight: 700; color: #14336b; }
   .chart-plot { min-width: 400px; }
   .courses-panel td, .courses-panel th { overflow-wrap: anywhere; }
   .courses-panel th:nth-child(n+3) { white-space: normal; }
+}
+
+/* Dashboard refinement: softer chart palette, tighter progress legend, and readable log headings. */
+.bar-stack .original,
+.chart-legend .original { background: var(--dashboard-chart-original, var(--dashboard-primary)); }
+.bar-stack .marketplace,
+.chart-legend .marketplace { background: var(--dashboard-chart-marketplace, var(--dashboard-teal)); }
+.chart-legend .payout { border-color: var(--dashboard-chart-payout, var(--dashboard-danger)); }
+.payout-point { fill: var(--dashboard-surface, #fff); stroke: var(--dashboard-chart-payout, var(--dashboard-danger)); stroke-width: 2.5; transition: r .16s ease, stroke-width .16s ease, filter .16s ease; }
+.payout-point.is-active { r: 6.5; stroke-width: 3; filter: drop-shadow(0 2px 4px #d86d7d55); }
+.bar-slot { position: relative; transition: color .16s ease; }
+.bar-slot.is-hovered { color: var(--dashboard-ink); }
+.bar-slot.is-hovered .bar-stack { filter: brightness(1.06) drop-shadow(0 0 0.5px var(--dashboard-primary)); transform: translateY(-2px); }
+.bar-slot:focus-visible { outline: 2px solid var(--dashboard-primary); outline-offset: 3px; border-radius: 5px; }
+.chart-tooltip { position: absolute; z-index: 4; top: 18px; left: 50%; display: grid; width: min(220px, calc(100% - 24px)); gap: 6px; padding: 10px 12px; transform: translateX(-50%); border: 1px solid var(--dashboard-border-strong); border-radius: 8px; background: var(--dashboard-surface); box-shadow: 0 8px 20px #173b6d1c; color: var(--dashboard-text); font: var(--admin-text-caption); pointer-events: none; }
+.chart-tooltip strong { color: var(--dashboard-ink); font: var(--admin-text-control-label); }
+.chart-tooltip span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.chart-tooltip span b { margin-left: auto; white-space: nowrap; color: var(--dashboard-ink); }
+.tooltip-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--dashboard-chart-original); }
+.tooltip-dot.marketplace { background: var(--dashboard-chart-marketplace); }
+.tooltip-dot.payout { background: var(--dashboard-chart-payout); }
+.chart-tooltip small { padding-top: 5px; border-top: 1px solid var(--dashboard-border); color: var(--dashboard-muted); }
+.logs-panel th { text-transform: none; letter-spacing: 0; }
+.logs-panel th { text-align: center; }
+:host ::ng-deep .logs-panel .custom-select-menu { transform: translateY(calc(-100% - 6px)); }
+@media (min-width: 721px) {
+  .progress-body { justify-content: center; gap: 10px; }
+  .progress-body ul { min-width: 0; width: min(180px, 42%); }
+}
+.progress-body .donut { width: 220px; height: 220px; }
+.progress-body .donut > div { width: 116px; height: 116px; }
+@media (max-width: 1200px) {
+  .progress-body .donut { width: 200px; height: 200px; }
+  .progress-body .donut > div { width: 106px; height: 106px; }
 }

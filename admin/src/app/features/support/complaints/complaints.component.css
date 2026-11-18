@@ -195,6 +195,8 @@
 .action-modal app-custom-select { display: block; width: 100%; --custom-select-width: 100%; --custom-select-max-width: 100%; --custom-select-trigger-height: 40px; }
 .complaint-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; align-self: end; }
 .normal-case-headings th { text-transform: none; letter-spacing: 0; }
+.complaint-filters.advanced-filter-toolbar { gap: 12px; }
+.complaint-filters .filter-trigger { box-sizing: border-box; height: 44px; min-height: 44px; }
 
 @media (max-width: 1150px) {
   .complaint-metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }

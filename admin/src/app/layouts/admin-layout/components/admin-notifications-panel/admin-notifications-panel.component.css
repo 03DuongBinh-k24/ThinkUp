@@ -21,7 +21,7 @@
 .notifications__header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   padding: 14px 16px 10px;
   border-bottom: 1px solid var(--nf-border);
   background: var(--nf-surface);
@@ -60,10 +60,9 @@
 }
 
 .notifications__mark-all {
-  align-self: flex-start;
   border-color: transparent;
   background: transparent;
-  padding-left: 0;
+  padding: 0;
 }
 
 .notifications__mark-all:disabled {
