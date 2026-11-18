@@ -8,6 +8,14 @@
     <h1>Thẩm định hồ sơ giảng viên</h1>
   </header>
 
+  @if (loadError()) {
+    <div class="panel state-block">
+      <strong>Không tải được hồ sơ giảng viên</strong>
+      <p>{{ loadError() }}</p>
+      <button class="btn btn--outline btn--sm" type="button" (click)="retryLoad()">Thử lại</button>
+    </div>
+  }
+
   @if (lecturer(); as item) {
     <div class="panel profile-card">
       <div class="identity">
@@ -40,18 +48,20 @@
 
         <section class="panel detail-card">
           <h3>CV / Hồ sơ năng lực</h3>
-          <div class="file-row">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
-            <div class="file-copy">
-              <strong>{{ item.cv.fileName }} · {{ item.cv.size }}</strong>
-              <span>PDF · tải lên {{ formatDate(item.cv.uploadedAt) }}</span>
+          @if (item.cv) {
+            <div class="file-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
+              <div class="file-copy">
+                <strong>{{ item.cv.fileName }} · {{ item.cv.size }}</strong>
+                <span>Tài liệu đính kèm của hồ sơ giảng viên</span>
+              </div>
+              <div class="file-actions">
+                <button class="btn btn--outline btn--sm" type="button" (click)="downloadCv(item)">Tải xuống</button>
+              </div>
             </div>
-            <!-- TODO(pre-deploy): Nhớ nối API tệp đính kèm để thay hai nút xem trước/tải xuống đang chạy demo. -->
-            <div class="file-actions">
-              <button class="btn btn--outline btn--sm" type="button" (click)="notify('Bản demo chưa kèm tệp CV thật để xem trước.')">Xem trước</button>
-              <button class="btn btn--outline btn--sm" type="button" (click)="notify('Bản demo chưa kèm tệp CV thật để tải xuống.')">Tải xuống</button>
-            </div>
-          </div>
+          } @else {
+            <div class="info-strip info-strip--amber">Hồ sơ chưa có tệp CV/hồ sơ năng lực do giảng viên tải lên.</div>
+          }
         </section>
       </div>
 
@@ -70,9 +80,9 @@
           <h3>Quyết định thẩm định</h3>
           <p class="decision-note">Quyết định sẽ gửi thông báo cho giảng viên và lưu nhật ký kiểm toán.</p>
           <div class="decision-actions">
-            <button class="btn btn--danger" type="button" [disabled]="!canDecide()" (click)="openReject()">Từ chối hồ sơ</button>
-            <button class="btn btn--outline" type="button" [disabled]="!canDecide()" (click)="openDocuments()">Yêu cầu bổ sung</button>
-            <button class="btn btn--primary" type="button" [disabled]="!canDecide()" (click)="approve()">Duyệt chuyên môn &amp; Chuyển bước pháp lý</button>
+            <button class="btn btn--danger" type="button" [disabled]="!canDecide() || saving()" (click)="openReject()">Từ chối hồ sơ</button>
+            <button class="btn btn--outline" type="button" [disabled]="!canDecide() || saving()" (click)="openDocuments()">Yêu cầu bổ sung</button>
+            <button class="btn btn--primary" type="button" [disabled]="!canDecide() || saving()" (click)="approve()">{{ saving() ? 'Đang gửi…' : 'Duyệt chuyên môn & Chuyển bước pháp lý' }}</button>
           </div>
           @if (!canDecide()) {
             <p class="field-help">Hồ sơ đang ở trạng thái “{{ statusLabels[item.status] }}” nên không thể ra quyết định thẩm định.</p>
@@ -122,7 +132,7 @@
         </label>
 
         <div modalFooter class="modal-footer-actions">
-          <button class="btn btn--danger" type="button" [disabled]="!canReject()" (click)="submitReject()">Xác nhận từ chối</button>
+          <button class="btn btn--danger" type="button" [disabled]="!canReject() || saving()" (click)="submitReject()">{{ saving() ? 'Đang gửi…' : 'Xác nhận từ chối' }}</button>
         </div>
       </app-user-modal>
     }
@@ -183,7 +193,7 @@
 
         <div modalFooter class="modal-footer-actions">
           <button class="btn btn--outline" type="button" (click)="closeModal()">Hủy bỏ</button>
-          <button class="btn btn--primary" type="button" [disabled]="!canRequestDocuments()" (click)="submitDocuments()">Xác nhận yêu cầu</button>
+          <button class="btn btn--primary" type="button" [disabled]="!canRequestDocuments() || saving()" (click)="submitDocuments()">{{ saving() ? 'Đang gửi…' : 'Xác nhận yêu cầu' }}</button>
         </div>
       </app-user-modal>
     }

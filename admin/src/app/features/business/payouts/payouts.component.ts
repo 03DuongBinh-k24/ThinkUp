@@ -2,8 +2,9 @@ import { DOCUMENT } from '@angular/common';
 import { afterNextRender, Component, DestroyRef, HostListener, Injector, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideInfo, LucideUpload, LucideX } from '@lucide/angular';
-import { BusinessDemoService } from '../services/business-demo.service';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { PayoutRequest, PayoutStatus } from '../models/business.models';
+import { BUSINESS_STORE } from '../services/business.store';
 import { copyText, dateTime, matchesDates, money, paginationItems } from '../business-utils';
 import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
@@ -24,7 +25,7 @@ const LIMIT_UNIT_FACTORS: Record<LimitUnit, number> = {
 
 @Component({ selector: 'app-payouts', standalone: true, imports: [FormsModule, DateTimePickerComponent, CustomSelectComponent, ExportMenuComponent, SearchFieldComponent, LucideX, LucideUpload, LucideInfo], templateUrl: './payouts.component.html', styleUrl: './payouts.component.css' })
 export class PayoutsComponent {
-  private readonly data = inject(BusinessDemoService);
+  private readonly data = inject(BUSINESS_STORE);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -34,6 +35,8 @@ export class PayoutsComponent {
   readonly dateTime = dateTime;
   readonly Math = Math;
   readonly payouts = this.data.payouts;
+  /** Backend chưa có luồng chi trả thật — giữ dữ liệu minh họa và ghi rõ trên giao diện. */
+  readonly payoutsAreDemo = this.data.payoutsAreDemo;
   readonly search = signal('');
   readonly status = signal<PayoutStatus | ''>('');
   readonly statusOptions: ReadonlyArray<CustomSelectOption> = [
@@ -66,13 +69,14 @@ export class PayoutsComponent {
   readonly sort = signal<'newest' | 'oldest'>('newest');
   readonly taxOnly = signal(false);
   readonly paidMonthOnly = signal(false);
-  readonly role = this.data.payoutRole;
   readonly selected = signal<PayoutRequest | null>(null);
   readonly openActionMenuId = signal<string | null>(null);
   readonly dialog = signal<'details' | 'review' | 'reject' | null>(null);
   private readonly returnFromReject = signal<'details' | 'review'>('details');
   readonly page = signal(1);
-  readonly pageSize = 10;
+  /** Số dòng mỗi trang đọc từ tham số hệ thống `orders_per_page` (mặc định 8). */
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
   readonly quickRange = signal<'all' | 'today' | 'month' | 'quarter' | 'year' | 'custom'>('all');
   /** Khoảng thời gian đang chỉnh trong popover, chỉ áp dụng khi bấm "Áp dụng". */
   readonly fromDraft = signal('');
@@ -93,12 +97,13 @@ export class PayoutsComponent {
     { value: 'Khác', label: 'Khác' }
   ];
   readonly evidence = signal('');
+  private evidenceFile: File | null = null;
   readonly error = signal('');
   readonly toast = signal('');
   readonly copiedId = signal(false);
   readonly filtered = computed(() => this.payouts().filter(item => {
     const query = this.search().trim().toLocaleLowerCase('vi-VN');
-    return (!query || [item.id, item.instructor, item.email].some(value => value.toLocaleLowerCase('vi-VN').includes(query)))
+    return (!query || [item.id, item.instructor, item.email, item.accountNumber].some(value => value.toLocaleLowerCase('vi-VN').includes(query)))
       && (!this.status() || item.status === this.status())
       && (this.limitMin() === null || item.amount >= this.limitMin()!)
       && (this.limitMax() === null || item.amount <= this.limitMax()!)
@@ -114,9 +119,10 @@ export class PayoutsComponent {
   readonly pending = computed(() => this.payouts().filter(item => item.status === 'pending').length);
   readonly largePending = computed(() => this.payouts().filter(item => item.status === 'pending' && item.amount >= 20000000).length);
   readonly awaitingAmount = computed(() => this.payouts().filter(item => item.status === 'approved').reduce((sum, item) => sum + item.amount - item.taxAmount, 0));
-  readonly paidAmount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + item.amount - item.taxAmount, 0));
-  readonly paidCount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length);
-  readonly taxAmount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + item.taxAmount, 0));
+  private readonly vietnamMonth = (value: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit' }).format(new Date(value));
+  readonly paidAmount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt && this.vietnamMonth(item.paidAt) === this.vietnamMonth(new Date())).reduce((sum, item) => sum + item.amount - item.taxAmount, 0));
+  readonly paidCount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt && this.vietnamMonth(item.paidAt) === this.vietnamMonth(new Date())).length);
+  readonly taxAmount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt && this.vietnamMonth(item.paidAt) === this.vietnamMonth(new Date())).reduce((sum, item) => sum + item.taxAmount, 0));
 
   constructor() {
     this.destroyRef.onDestroy(() => this.removeFilterPopoverListeners());
@@ -359,16 +365,13 @@ export class PayoutsComponent {
   }
   approvalIssues(item: PayoutRequest): string[] {
     const issues: string[] = [];
-    const hasApprovalRole = this.role() === 'super' || (this.role() === 'finance' && item.amount < 20000000);
-    if (!hasApprovalRole) issues.push('Tài khoản hiện tại không có quyền duyệt khoản tiền này.');
     if (!item.verified) issues.push('Hồ sơ định danh của giảng viên chưa được xác minh.');
     if (!item.contractValid) issues.push('Hợp đồng đối tác chưa hợp lệ hoặc cần kiểm tra lại.');
     if (item.disputed) issues.push('Yêu cầu đang có tranh chấp cần được xử lý trước.');
     if (!item.bank.trim() || !item.accountNumber.trim() || !item.accountName.trim()) issues.push('Thông tin tài khoản nhận tiền chưa đầy đủ.');
-    if (item.availableBalance < item.amount) issues.push(`Số dư khả dụng không đủ để duyệt yêu cầu ${money(item.amount)}.`);
     return issues;
   }
-  open(item: PayoutRequest, dialog: 'details' | 'review' | 'reject'): void { this.selected.set(item); this.returnFromReject.set('details'); this.dialog.set(dialog); this.error.set(''); this.clearCopyToast(); this.approvalNote.set(''); this.rejectionReason.set(''); this.rejectionDetails.set(''); this.evidence.set(''); }
+  open(item: PayoutRequest, dialog: 'details' | 'review' | 'reject'): void { this.selected.set(item); this.returnFromReject.set('details'); this.dialog.set(dialog); this.error.set(''); this.clearCopyToast(); this.approvalNote.set(''); this.rejectionReason.set(''); this.rejectionDetails.set(''); this.evidence.set(''); this.evidenceFile = null; }
   openReject(): void { this.returnFromReject.set(this.dialog() === 'review' ? 'review' : 'details'); this.error.set(''); this.dialog.set('reject'); }
   cancelReject(): void { this.error.set(''); this.dialog.set(this.returnFromReject()); }
   @HostListener('document:keydown.escape')
@@ -395,17 +398,29 @@ export class PayoutsComponent {
   datePart(value: string): string { return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(value)); }
   timePart(value: string): string { return new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(value)); }
   close(): void { this.clearCopyToast(); this.selected.set(null); this.dialog.set(null); this.error.set(''); }
-  approve(): void {
+  async approve(): Promise<void> {
     const item = this.selected(); if (!item) return;
     if (!this.canApprove(item)) { this.error.set('Chưa thể duyệt. Vui lòng xử lý các cảnh báo phía trên.'); return; }
-    this.data.updatePayout(item.id, { status: 'approved' }); this.close(); this.toast.set('Đã duyệt yêu cầu. Chờ kế toán giải ngân.');
+    // TODO(pre-deploy): Thay cập nhật cục bộ bằng API duyệt chi trả khi backend bàn giao luồng thật.
+    this.data.updatePayout(item.id, { status: 'approved' });
+    this.close();
+    this.toast.set('Đã duyệt yêu cầu (dữ liệu minh họa). Chờ kế toán giải ngân.');
   }
-  reject(): void {
+  async reject(): Promise<void> {
     const item = this.selected(); if (!item) return;
     if (!this.rejectionReason() || !this.rejectionDetails().trim()) { this.error.set('Chọn lý do và nhập giải thích chi tiết trước khi xác nhận.'); return; }
-    this.data.updatePayout(item.id, { status: 'rejected', rejectionReason: `${this.rejectionReason()}: ${this.rejectionDetails().trim()}` });
-    this.close(); this.toast.set('Đã từ chối yêu cầu.');
+    // TODO(pre-deploy): API từ chối + tải minh chứng chưa tồn tại; giữ minh chứng trong bộ nhớ.
+    this.data.updatePayout(item.id, {
+      status: 'rejected',
+      rejectionReason: `${this.rejectionReason()}: ${this.rejectionDetails().trim()}`
+    });
+    this.close();
+    this.toast.set('Đã từ chối yêu cầu (dữ liệu minh họa).');
   }
-  chooseEvidence(event: Event): void { this.evidence.set((event.target as HTMLInputElement).files?.[0]?.name ?? ''); }
-  export(format: ExportFormat): void { downloadTable(format, 'thinkup-rut-tien', [['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái'], ...this.filtered().map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount, item.amount - item.taxAmount, item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status)])]); }
+  chooseEvidence(event: Event): void { this.evidenceFile = (event.target as HTMLInputElement).files?.[0] ?? null; this.evidence.set(this.evidenceFile?.name ?? ''); }
+  async downloadEvidence(id: string): Promise<void> {
+    // TODO(pre-deploy): API tải minh chứng chi trả chưa có; dữ liệu demo không kèm tệp.
+    this.error.set(`Chưa có tệp minh chứng cho yêu cầu ${id} (dữ liệu minh họa).`);
+  }
+  export(format: ExportFormat): void { downloadTable(format, 'thinkup-rut-tien', [['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái', 'Dữ liệu minh họa'], ...this.filtered().map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount, item.amount - item.taxAmount, item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status), item.isDemo ? 'Có' : 'Không'])]); }
 }

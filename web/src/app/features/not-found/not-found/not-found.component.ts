@@ -58,6 +58,11 @@ export class NotFoundComponent implements OnDestroy {
     }
   }
 
+  @HostListener('window:resize')
+  onResize(): void {
+    this.measureTrack();
+  }
+
   jump(): void {
     if (this.status() === 'gameover') {
       this.resetGame();

@@ -1,6 +1,7 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FAQ_CATEGORIES } from '../../../core/data/mock/support.mock';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { LucideBold, LucideBookOpenText, LucideChartNoAxesColumnIncreasing, LucideCircleAlert, LucideCircleHelp, LucideEyeOff, LucideFileText, LucideFolder, LucideItalic, LucideLink, LucideList, LucideListOrdered, LucidePencil, LucidePencilLine, LucidePlus, LucideSave, LucideSearch, LucideSearchX, LucideSend, LucideTag, LucideTrash2, LucideTrendingDown, LucideTriangleAlert, LucideUnderline, LucideX } from '@lucide/angular';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { FaqItem, FaqStatus, FailedSearch } from '../models/support.models';
@@ -34,7 +35,11 @@ export class FaqComponent {
     { value: 'heading', label: 'Tiêu đề nhỏ' },
     { value: 'quote', label: 'Trích dẫn' }
   ];
-  readonly queryInput=signal('');readonly query=signal('');readonly category=signal('');readonly status=signal<FaqStatus|''>('');readonly page=signal(1);readonly pageSize=7;readonly modal=signal<'editor'|'failed'|'delete'|'status'|null>(null);readonly editing=signal<FaqItem|null>(null);readonly deleting=signal<FaqItem|null>(null);readonly pendingStatusChange=signal<{item:FaqItem;target:FaqStatus}|null>(null);readonly form=signal<FaqItem>(this.blank());readonly keywordDraft=signal('');readonly answerFormat=signal('paragraph');readonly orderDrafts=signal<Record<string,number>>({});readonly attempted=signal(false);readonly toast=signal('');private searchTimer?:ReturnType<typeof setTimeout>;private modalOrigin:HTMLElement|null=null;
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  readonly queryInput=signal('');readonly query=signal('');readonly category=signal('');readonly status=signal<FaqStatus|''>('');readonly page=signal(1);
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  get pageSize():number{return this.pageSizeService.pageSize()}
+  readonly modal=signal<'editor'|'failed'|'delete'|'status'|null>(null);readonly editing=signal<FaqItem|null>(null);readonly deleting=signal<FaqItem|null>(null);readonly pendingStatusChange=signal<{item:FaqItem;target:FaqStatus}|null>(null);readonly form=signal<FaqItem>(this.blank());readonly keywordDraft=signal('');readonly answerFormat=signal('paragraph');readonly orderDrafts=signal<Record<string,number>>({});readonly attempted=signal(false);readonly toast=signal('');private searchTimer?:ReturnType<typeof setTimeout>;private modalOrigin:HTMLElement|null=null;
   readonly filtered=computed(()=>this.faqs().filter(item=>{const q=this.query().trim().toLocaleLowerCase('vi-VN');return(!q||[item.question,item.answer,...item.keywords].some(v=>v.toLocaleLowerCase('vi-VN').includes(q)))&&(!this.category()||item.category===this.category())&&(!this.status()||item.status===this.status())}).sort((a,b)=>a.category.localeCompare(b.category,'vi')||a.order-b.order));readonly pages=computed(()=>Math.max(1,Math.ceil(this.filtered().length/this.pageSize)));readonly visible=computed(()=>this.filtered().slice((this.page()-1)*this.pageSize,this.page()*this.pageSize));readonly published=computed(()=>this.faqs().filter(i=>i.status==='published').length);readonly totalViews=computed(()=>this.faqs().reduce((s,i)=>s+i.views,0));readonly failedSorted=computed(()=>[...this.failed()].sort((a,b)=>b.count-a.count||a.keyword.localeCompare(b.keyword,'vi')));readonly failedCount=computed(()=>this.failed().reduce((s,i)=>s+i.count,0));
   blank(prefillQuestion='',suggested=''):FaqItem{return{id:`FAQ-${Date.now()}`,question:prefillQuestion,answer:'',category:suggested,keywords:prefillQuestion?[prefillQuestion]:[],views:0,order:1,status:'published',updatedAt:new Date().toISOString()}}
   setSearch(v:string):void{this.queryInput.set(v);clearTimeout(this.searchTimer);this.searchTimer=setTimeout(()=>{this.query.set(v);this.page.set(1)},300)}

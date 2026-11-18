@@ -260,6 +260,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     });
     this.timerInterval = setInterval(() => this.tickTimers(), 250);
     this.timerPosition.set({ x: 50, y: Math.min(600, Math.max(144, this.viewportSize().height - 280)) });
+    this.updateThinkUpCornerPosition();
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('roomId') || '';
       void this.transitionToRoom(id);
@@ -284,8 +285,8 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     this.leaving.set(false);
     this.roomId.set(id);
     this.dragMode.set(false);
-    this.thinkUpCornerVisible.set(!sessionStorage.getItem(`thinkup_corner_dismissed_${id}`));
-    this.thinkUpCornerPosition.set({ x: 220, y: 144 });
+    this.restoreThinkUpCorner(id);
+    this.updateThinkUpCornerPosition();
     this.selectedTheme.set('white');
     this.clearCustomBackground();
     this.backgroundError.set('');
@@ -324,6 +325,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   @HostListener('window:resize')
   updateViewportSize(): void {
     this.viewportSize.set({ width: window.innerWidth, height: window.innerHeight });
+    this.updateThinkUpCornerPosition();
   }
 
   private openRoom(id: string, transition: number): void {
@@ -838,12 +840,6 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
 
   openParticipantReport(participant: RoomParticipant): void { this.reportTarget.set(participant); this.closeParticipantPopover(false); }
   submitParticipantReport(_report: ParticipantReportSubmission): void { this.reportTarget.set(null); this.showNotice('Đã gửi báo cáo thành viên.'); }
-  dismissThinkUpCorner(reason: ThinkUpCornerDismissReason): void {
-    const roomId = this.roomId();
-    if (roomId) sessionStorage.setItem(`thinkup_corner_dismissed_${roomId}`, reason);
-    this.thinkUpCornerVisible.set(false);
-    this.showNotice('Đã ẩn Góc ThinkUp cho phiên này.');
-  }
 
   private positionOverlays(): void {
     const shell = this.roomShell?.nativeElement;
@@ -1327,6 +1323,12 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     void this.media.sendRealtime({ type: 'participant-kick', payload: { userId: participant.userId } });
     this.showNotice(`Đã mời ${name} ra khỏi phòng.`);
   }
+  dismissThinkUpCorner(reason: ThinkUpCornerDismissReason): void {
+    const roomId = this.roomId();
+    this.thinkUpCornerVisible.set(false);
+    try { sessionStorage.setItem(`thinkup_corner_dismissed_${roomId}`, reason); } catch { /* Ignore storage restrictions. */ }
+    this.showNotice('Đã ẩn Góc ThinkUp trong phiên phòng này.');
+  }
   private displayReaction(emoji: string, x: number, y: number): void {
     const id = crypto.randomUUID();
     this.reactions.update(reactions => [...reactions, { id, emoji, x, y }]);
@@ -1591,6 +1593,17 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     this.remoteMediaStates.update(states => this.withoutRecordKey(states, participantId));
     this.remoteScreenLayouts.update(layouts => this.withoutRecordKey(layouts, participantId));
     if (this.selectedParticipantId() === participantId) this.closeParticipantPopover(false);
+  }
+  private restoreThinkUpCorner(roomId: string): void {
+    try { this.thinkUpCornerVisible.set(!sessionStorage.getItem(`thinkup_corner_dismissed_${roomId}`)); }
+    catch { this.thinkUpCornerVisible.set(true); }
+  }
+  private updateThinkUpCornerPosition(): void {
+    const viewport = this.viewportSize();
+    this.thinkUpCornerPosition.set({
+      x: Math.max(12, viewport.width - 472),
+      y: Math.max(80, Math.min(180, viewport.height - 330)),
+    });
   }
   private buildMiniMapModel(): MiniMapModel {
     const miniWidth = 130;

@@ -153,7 +153,7 @@
     @if (notice()) { <div class="permission-notice" role="status">{{ notice() }}</div> }
   </div>
   @if (selectedParticipant(); as person) {
-    <app-participant-popover #memberPopover [participant]="person" [color]="participantColor(person)" [canRemove]="currentRole() === 'owner'" (report)="openParticipantReport(person)" (remove)="removeParticipant(person)" (close)="closeParticipantPopover()" />
+    <app-participant-popover #memberPopover [participant]="person" [color]="participantColor(person)" [canRemove]="currentRole() === 'owner' || (currentRole() === 'moderator' && person.role === 'member')" (report)="openParticipantReport(person)" (remove)="removeParticipant(person)" (close)="closeParticipantPopover()" />
   }
   @if (addOpen()) { <app-add-to-canvas-menu (addItem)="addCanvasItem($event)" (addText)="addCanvasText($event)" (close)="closePanel(addOpen)" /> }
   <app-lofi-player [hidden]="!lofiOpen()" (playingChange)="lofiPlaying.set($event)" (close)="closePanel(lofiOpen)" />

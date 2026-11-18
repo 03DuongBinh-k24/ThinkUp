@@ -1,23 +1,21 @@
 import { Provider } from '@angular/core';
+import { environment } from '../../../../environments/environment';
 import { USER_DATA_SOURCE } from './user-management.data-source';
+import { HttpUserManagementDataSource } from './user-management.http-data-source';
 import { MockUserManagementDataSource } from './user-management.mock-data-source';
 
 /**
  * Nguồn dữ liệu của module quản lý người dùng.
  *
- * TODO(pre-deploy): Nhớ thay `MockUserManagementDataSource` bằng implementation `HttpClient`
- * khi backend sẵn sàng và xoá `MockUserManagementDataSource` cùng
- * `core/data/mock/user-management.mock.ts`. Endpoint dự kiến:
- *   GET   /admin/users/lecturers                  (danh sách + filter server-side)
- *   GET   /admin/users/students
- *   GET   /admin/users/summary                    (số liệu dải truy cập nhanh)
- *   GET   /admin/users/lecturers/:id/courses
- *   POST  /admin/users/lecturers/:id/discipline
- *   POST  /admin/users/lecturers/:id/unlock
- *   POST  /admin/users/lecturers/:id/decision     (duyệt / từ chối / yêu cầu bổ sung)
- *   POST  /admin/users/students/:id/lock
- *   POST  /admin/users/students/:id/unlock
+ * `environment.adminDataSource` quyết định dùng Admin API thật hay dữ liệu demo; component
+ * không biết và không phụ thuộc vào lựa chọn này. Mock chỉ được xoá khi chủ dự án duyệt
+ * dọn dẹp trước deploy.
  */
 export function provideUserManagementDataSource(): Provider {
-  return { provide: USER_DATA_SOURCE, useExisting: MockUserManagementDataSource };
+  return {
+    provide: USER_DATA_SOURCE,
+    useFactory: () => environment.adminDataSource === 'http'
+      ? new HttpUserManagementDataSource()
+      : new MockUserManagementDataSource()
+  };
 }

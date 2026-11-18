@@ -1,5 +1,6 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { ContentToastComponent, ToastTone } from '../components/content-toast.component';
@@ -44,7 +45,10 @@ export class ContentPostListComponent {
   readonly status = signal('');
   readonly author = signal('');
   readonly page = signal(1);
-  readonly pageSize = 5;
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
 
   readonly menu = signal<{ post: ContentPost; top: number; left: number } | null>(null);
   readonly viewTarget = signal<ContentPost | null>(null);

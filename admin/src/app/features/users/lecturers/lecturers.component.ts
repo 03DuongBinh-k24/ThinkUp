@@ -3,7 +3,8 @@ import { Router } from '@angular/router';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
-import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
+import { ExportFormat } from '../../../shared/utils/export-formats';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { AdminNumberPipe } from '../../../shared/pipes/admin-number.pipe';
 import { AdminPrivacyPipe } from '../../../shared/pipes/admin-privacy.pipe';
 import { UserRowMenuItem, UserRowMenuComponent } from '../components/user-row-menu/user-row-menu.component';
@@ -51,7 +52,11 @@ export class LecturersComponent {
   readonly quickStats = this.data.quickStats;
   readonly statusLabels = LECTURER_STATUS_LABELS;
   readonly statusTone = LECTURER_STATUS_TONE;
-  readonly pageSize = 5;
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
+  /** Menu xuất chỉ mời CSV vì API người dùng chưa trả Excel (xem `exportList`). */
+  readonly csvOnly: ReadonlyArray<ExportFormat> = ['csv'];
   readonly formatCurrency = formatCurrency;
   readonly formatCount = formatCount;
   readonly formatDate = formatDate;
@@ -71,10 +76,15 @@ export class LecturersComponent {
   readonly level = signal<DisciplineLevel>(1);
   readonly disciplineCourses = signal<readonly string[]>([]);
   readonly courseQuery = signal('');
-  readonly evidence = signal<readonly string[]>([]);
+  readonly evidenceFiles = signal<readonly File[]>([]);
+  readonly evidence = computed(() => this.evidenceFiles().map((file) => file.name));
   readonly ticket = signal('');
   readonly reason = signal('');
   readonly unlockReason = signal('');
+  readonly saving = signal(false);
+  readonly loadError = this.data.error;
+  // Trang giảng viên chờ riêng nguồn giảng viên để `/students` chậm không treo bảng này.
+  readonly loading = this.data.loadingLecturers;
 
   readonly statusOptions: ReadonlyArray<CustomSelectOption> = [
     { value: '', label: 'Tất cả trạng thái' },
@@ -88,7 +98,6 @@ export class LecturersComponent {
     { value: 'incomplete', label: 'Chưa hoàn tất hợp đồng' }
   ];
 
-  readonly totalCourses = computed(() => this.lecturers().reduce((sum, item) => sum + item.courses, 0));
   readonly activePercent = computed(() => {
     const kpi = this.kpis();
     return kpi.total ? Math.round((kpi.active / kpi.total) * 100) : 0;
@@ -96,7 +105,7 @@ export class LecturersComponent {
 
   readonly selectedCourses = computed(() => {
     const lecturer = this.selected();
-    return lecturer ? this.data.coursesForLecturer(lecturer) : [];
+    return lecturer ? this.data.coursesFor(lecturer.id) : [];
   });
 
   /** Danh sách khóa học của giảng viên đang chọn, lọc theo ô tìm kiếm ở Mức 2. */
@@ -252,11 +261,18 @@ export class LecturersComponent {
   openProfile(lecturer: Lecturer): void {
     this.selected.set(lecturer);
     this.modal.set('profile');
+    // Danh sách chỉ có dữ liệu rút gọn; tải hồ sơ chi tiết để có stack/bio/liên kết/tài liệu.
+    void this.data.loadLecturerDetail(lecturer.id)
+      .then((detail) => {
+        if (detail && this.modal() === 'profile' && this.selected()?.id === lecturer.id) this.selected.set(detail);
+      })
+      .catch((error: unknown) => this.notify(error instanceof Error ? error.message : 'Không tải được hồ sơ giảng viên.'));
   }
 
   openCourses(lecturer: Lecturer): void {
     this.selected.set(lecturer);
     this.modal.set('courses');
+    void this.loadCourses(lecturer);
   }
 
   openDiscipline(lecturer: Lecturer): void {
@@ -264,10 +280,11 @@ export class LecturersComponent {
     this.level.set(1);
     this.disciplineCourses.set([]);
     this.courseQuery.set('');
-    this.evidence.set([]);
+    this.evidenceFiles.set([]);
     this.ticket.set('');
     this.reason.set('');
     this.modal.set('discipline');
+    void this.loadCourses(lecturer);
   }
 
   openUnlock(lecturer: Lecturer): void {
@@ -336,54 +353,74 @@ export class LecturersComponent {
 
   onEvidenceChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const names = Array.from(input.files ?? []).map((file) => file.name).slice(0, 5);
-    this.evidence.set(names);
-    this.notify(names.length ? `Đã chọn ${names.length} tệp bằng chứng.` : 'Chưa chọn tệp bằng chứng.');
+    const files = Array.from(input.files ?? []).slice(0, 5);
+    this.evidenceFiles.set(files);
+    this.notify(files.length ? `Đã chọn ${files.length} tệp bằng chứng.` : 'Chưa chọn tệp bằng chứng.');
   }
 
-  submitDiscipline(): void {
+  async submitDiscipline(): Promise<void> {
     const lecturer = this.selected();
-    if (!lecturer || !this.canSubmitDiscipline()) return;
-    this.data.disciplineLecturer(lecturer.id, {
-      level: this.level(),
-      reason: this.reason().trim(),
-      courses: this.disciplineCourses(),
-      ticket: this.ticket().trim(),
-      evidence: this.evidence()
-    });
-    this.modal.set(null);
-    this.selected.set(null);
-    this.notify(`Đã áp dụng kỷ luật cho ${lecturer.name}.`);
+    if (!lecturer || !this.canSubmitDiscipline() || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.data.disciplineLecturer(lecturer.id, {
+        level: this.level(),
+        reason: this.reason().trim(),
+        courses: this.disciplineCourses(),
+        ticket: this.ticket().trim(),
+        files: this.evidenceFiles()
+      });
+      this.modal.set(null);
+      this.selected.set(null);
+      this.notify(`Đã áp dụng kỷ luật cho ${lecturer.name}.`);
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không áp dụng được kỷ luật.');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
-  submitUnlock(): void {
+  async submitUnlock(): Promise<void> {
     const lecturer = this.selected();
-    if (!lecturer || !this.canSubmitUnlock()) return;
-    this.data.unlockLecturer(lecturer.id);
-    this.modal.set(null);
-    this.selected.set(null);
-    this.notify(`Đã mở khoá tài khoản ${lecturer.name}.`);
+    if (!lecturer || !this.canSubmitUnlock() || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.data.unlockLecturer(lecturer.id, this.unlockReason().trim());
+      this.modal.set(null);
+      this.selected.set(null);
+      this.notify(`Đã mở khoá tài khoản ${lecturer.name}.`);
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không mở khoá được tài khoản.');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
-  exportList(format: ExportFormat): void {
-    const rows: Array<Array<string | number>> = [
-      ['Mã giảng viên', 'Họ tên', 'Email', 'Số điện thoại', 'Chuyên môn', 'Khóa học', 'Học viên', 'Doanh thu', 'Pháp lý', 'Trạng thái', 'Tham gia'],
-      ...this.filtered().map((item) => [
-        item.id,
-        item.name,
-        item.email,
-        item.phone,
-        item.specialty,
-        item.courses,
-        item.learners,
-        item.revenue,
-        item.legalStatus === 'signed' ? 'Đã ký hợp đồng điện tử' : 'Chưa hoàn tất hợp đồng',
-        LECTURER_STATUS_LABELS[item.status],
-        formatDate(item.joinedAt)
-      ])
-    ];
-    void downloadTable(format, 'thinkup-giang-vien', rows);
-    this.notify(`Đang xuất ${this.filtered().length} giảng viên.`);
+  async exportList(format: ExportFormat): Promise<void> {
+    try {
+      await this.data.exportList('lecturers', format, {
+        q: this.query(),
+        status: this.status(),
+        legalStatus: this.legal(),
+        from: this.from(),
+        to: this.to()
+      });
+      this.notify('Đã tải tệp giảng viên từ máy chủ.');
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không xuất được danh sách giảng viên.');
+    }
+  }
+
+  retryLoad(): void {
+    void this.data.reload();
+  }
+
+  private async loadCourses(lecturer: Lecturer): Promise<void> {
+    try {
+      await this.data.loadCoursesFor(lecturer.id);
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không tải được danh sách khóa học.');
+    }
   }
 
   notify(message: string): void {

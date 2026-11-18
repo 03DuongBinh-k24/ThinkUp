@@ -49,12 +49,21 @@ export interface BusinessOrder {
 }
 
 export interface BusinessVoucher {
+  /** ObjectId của voucher trong `business_vouchers`; voucher cũ ở collection legacy cũng có `_id`. */
+  id?: string;
   code: string;
   description: string;
   sponsor: 'thinkup' | 'instructor';
+  /** Tên giảng viên hiển thị. API chỉ trả `instructorId`, xem `instructorId`. */
   instructor?: string;
+  /** ObjectId giảng viên tài trợ — giá trị API dùng để tạo/sửa voucher. */
+  instructorId?: string;
   scope: VoucherScope;
   scopeTarget?: string;
+  /** Danh sách ObjectId khóa học/giảng viên của phạm vi áp dụng (API dùng mảng này, không dùng chuỗi). */
+  scopeTargetIds?: string[];
+  /** Ngưỡng sao tối thiểu khi `scope = 'rating'`. */
+  minRating?: number | null;
   audience: VoucherAudience;
   discountType: 'percent' | 'fixed';
   discountValue: number;
@@ -74,6 +83,9 @@ export interface BusinessVoucher {
   /** Ngân sách chiết khấu tối đa ThinkUp cam kết, tự tính từ limit × mức giảm. */
   fundedAmount: number;
   auditLog: VoucherAuditEntry[];
+  /** Phiên bản tài liệu do API trả về; PATCH bắt buộc gửi kèm để tránh ghi đè. */
+  version?: number;
+  createdAt?: string;
 }
 
 /** Multi field filter applied on the voucher list through the advanced filter popup. */
@@ -134,4 +146,6 @@ export interface PayoutRequest {
   paidAt?: string;
   bankReference?: string;
   rejectionReason?: string;
+  evidenceId?: string | null;
+  isDemo?: boolean;
 }
