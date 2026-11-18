@@ -181,6 +181,8 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
   private readonly studentDetailState = signal<ReadonlyMap<string, Student>>(new Map());
   private readonly coursesState = signal<ReadonlyMap<string, readonly LecturerCourseRow[]>>(new Map());
   private readonly loadingState = signal(false);
+  private readonly loadingLecturerState = signal(false);
+  private readonly loadingStudentState = signal(false);
   private readonly errorState = signal<string | null>(null);
 
   readonly lecturers = this.lecturerState.asReadonly();
@@ -190,6 +192,8 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
   readonly studentDetails = this.studentDetailState.asReadonly();
   readonly coursesByLecturer = this.coursesState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
+  readonly loadingLecturers = this.loadingLecturerState.asReadonly();
+  readonly loadingStudents = this.loadingStudentState.asReadonly();
   readonly error = this.errorState.asReadonly();
 
   constructor() {
@@ -197,31 +201,52 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
   }
 
   async reload(): Promise<void> {
-    this.loadingState.set(true);
     this.errorState.set(null);
+    this.loadingState.set(true);
 
     try {
-      const [lecturers, students, lecturerSummary, studentSummary] = await Promise.all([
-        this.fetchAll<LecturerApiItem, LecturerListResponse>('lecturers'),
-        this.fetchAll<StudentApiItem, StudentListResponse>('students'),
-        firstValueFrom(this.http.get<LecturerSummaryResponse>(`${this.api}/lecturers/summary`)),
-        firstValueFrom(this.http.get<StudentSummaryResponse>(`${this.api}/students/summary`))
-      ]);
+      // Hai danh sách độc lập và `/students` chậm hơn nhiều; chạy song song và bật loading riêng.
+      await Promise.all([this.reloadLecturers(), this.reloadStudents()]);
+    } finally {
+      this.loadingState.set(false);
+    }
+  }
 
+  private async reloadLecturers(): Promise<void> {
+    this.loadingLecturerState.set(true);
+    try {
+      const [lecturers, lecturerSummary] = await Promise.all([
+        this.fetchAll<LecturerApiItem, LecturerListResponse>('lecturers'),
+        firstValueFrom(this.http.get<LecturerSummaryResponse>(`${this.api}/lecturers/summary`))
+      ]);
       this.lecturerState.set(lecturers.map((item) => this.toLecturer(item)));
-      this.studentState.set(students.map((item) => this.toStudent(item)));
       this.quickStatsState.set({
         publishedCourses: Number(lecturerSummary.quickStats?.publishedCourses ?? 0),
         // Payout request API chưa tồn tại (handoff ghi rõ) — giữ 0, không giả lập số.
         payoutRequests: 0,
         openTickets: Number(lecturerSummary.quickStats?.openTickets ?? 0)
       });
+    } catch (error) {
+      this.errorState.set(apiErrorMessage(error, 'Không tải được danh sách giảng viên.'));
+    } finally {
+      this.loadingLecturerState.set(false);
+    }
+  }
+
+  private async reloadStudents(): Promise<void> {
+    this.loadingStudentState.set(true);
+    try {
+      const [students, studentSummary] = await Promise.all([
+        this.fetchAll<StudentApiItem, StudentListResponse>('students'),
+        firstValueFrom(this.http.get<StudentSummaryResponse>(`${this.api}/students/summary`))
+      ]);
+      this.studentState.set(students.map((item) => this.toStudent(item)));
       // Summary chỉ dùng để đối chiếu; KPI trong trang vẫn tính từ danh sách đang hiển thị.
       void studentSummary;
     } catch (error) {
-      this.errorState.set(apiErrorMessage(error, 'Không tải được danh sách người dùng.'));
+      this.errorState.set(apiErrorMessage(error, 'Không tải được danh sách học viên.'));
     } finally {
-      this.loadingState.set(false);
+      this.loadingStudentState.set(false);
     }
   }
 

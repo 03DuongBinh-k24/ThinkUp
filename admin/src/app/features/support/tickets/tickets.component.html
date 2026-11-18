@@ -78,7 +78,7 @@
           @for (ticket of visible(); track ticket.id) {
             <tr [class.urgent-row]="slaMs(ticket) < 0">
               <td data-column="id">
-                <div class="ticket-code-cell"><button class="ticket-code-link" type="button" (click)="open(ticket)">{{ ticket.id }}</button>@if (ticket.status === 'reopened') { <span class="reopened-badge">Cần xử lý tiếp</span> }</div>
+                <div class="ticket-code-cell"><button class="ticket-code-link" type="button" (click)="open(ticket)">{{ ticket.code || ticket.id }}</button>@if (ticket.status === 'reopened') { <span class="reopened-badge">Cần xử lý tiếp</span> }</div>
               </td>
               <td data-column="sender" class="learner-cell">
                 <div class="learner-name"><strong>{{ ticket.learner }}</strong><button class="learner-view" type="button" [attr.aria-label]="'Xem thông tin người gửi ' + ticket.learner" [attr.title]="'Xem thông tin người gửi ' + ticket.learner" (click)="learnerPreview.set(ticket)"><svg lucideEye aria-hidden="true"></svg></button></div><small [title]="ticket.email">{{ ticket.email }}</small><small>{{ ticket.phone }}</small>

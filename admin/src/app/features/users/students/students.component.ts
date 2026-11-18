@@ -114,7 +114,8 @@ export class StudentsComponent {
   readonly unlockReason = signal('');
   readonly saving = signal(false);
   readonly loadError = this.data.error;
-  readonly loading = this.data.loading;
+  // Trang học viên chỉ chờ nguồn học viên; giảng viên tải xong trước không ảnh hưởng trạng thái này.
+  readonly loading = this.data.loadingStudents;
   readonly showAllCourses = signal(false);
   readonly showAllViolations = signal(false);
 
