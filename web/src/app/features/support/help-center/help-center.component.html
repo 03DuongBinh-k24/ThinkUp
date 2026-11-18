@@ -1,6 +1,7 @@
 <main class="hc-page">
   <section class="hc-hero">
     <div class="hc-hero__inner">
+      <h1 class="hc-hero__title">Trung tâm trợ giúp</h1>
       <p class="hc-text hc-sub">Tìm kiếm câu trả lời và hướng dẫn chi tiết để sử dụng ThinkUp hiệu quả nhất.</p>
 
       <form class="hc-search" (submit)="$event.preventDefault(); search(searchInput.value)">
@@ -28,7 +29,7 @@
       <aside class="hc-aside">
         <nav class="hc-card hc-nav" aria-label="Bộ lọc chủ đề FAQ">
           <div class="hc-nav__head">
-            <h2 class="hc-nav__title">Lọc theo chủ đề</h2>
+            <h2 class="hc-nav__title">Danh mục câu hỏi</h2>
             <span class="hc-nav__count">{{ categories.length }} mục</span>
           </div>
           <div class="hc-nav__list">

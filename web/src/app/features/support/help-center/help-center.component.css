@@ -47,6 +47,16 @@
   margin-inline: auto;
 }
 
+.hc-hero__title {
+  margin: 0;
+  color: var(--hc-title);
+  font-size: clamp(30px, 2.083vw, 40px);
+  font-weight: 800;
+  line-height: 1.5;
+  letter-spacing: -1px;
+  text-align: center;
+}
+
 .hc-text {
   font-size: var(--hc-fs-14);
   line-height: 1.5;
@@ -54,6 +64,7 @@
 }
 
 .hc-sub {
+  margin: 0;
   padding-bottom: var(--hc-sp-20);
 }
 
@@ -161,6 +172,7 @@
 }
 
 .hc-nav__title {
+  margin: 0;
   font-size: var(--hc-fs-16);
   font-weight: 700;
   line-height: 1.5;
@@ -212,6 +224,13 @@
   font-weight: 600;
   line-height: 1.35;
   text-align: center;
+}
+
+/* The Figma sidebar communicates category membership through the item label;
+   counts remain in the DOM for future API data but are not part of this view. */
+.hc-nav__item-count,
+.hc-nav__count {
+  display: none;
 }
 
 .hc-nav__item:hover {
@@ -492,5 +511,37 @@
   .hc-nav__list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .hc-hero__title {
+    letter-spacing: -0.5px;
+  }
+
+  .hc-search {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hc-search__button {
+    width: 100%;
+  }
+
+  .hc-aside {
+    display: flex;
+  }
+
+  .hc-nav__list {
+    grid-template-columns: 1fr;
+  }
+
+  .hc-cta {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .hc-cta__button {
+    margin-left: 0;
   }
 }
