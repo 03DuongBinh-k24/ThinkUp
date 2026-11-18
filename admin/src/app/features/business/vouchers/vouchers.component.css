@@ -187,6 +187,8 @@ button.voucher-kpi:hover, button.voucher-kpi.selected { border-color: #91bdf1; b
 .date-range small { color: #64748b; font: var(--admin-text-caption); }
 .date-range b { display: grid; gap: 2px; min-width: 0; color: #3b5578; font: var(--admin-text-caption); font-weight: var(--admin-font-weight-semibold); }
 .date-range i { color: #64748b; font: var(--admin-text-caption); font-style: normal; font-weight: var(--admin-font-weight-regular); }
+.voucher-table-wrap td:last-child { text-align: center; }
+.voucher-table-wrap td:last-child > .voucher-status { width: 104px; box-sizing: border-box; justify-content: center; }
 .voucher-status { display: inline-flex; align-items: center; width: fit-content; padding: 6px 9px; border: 1px solid; border-radius: 5px; font: var(--admin-text-badge); white-space: nowrap; }
 .voucher-status.active { border-color: #7ccab1; background: #effaf5; color: #277e61; }
 .voucher-status.scheduled { border-color: #c0cbdc; background: #f8fafc; color: #5b6d87; }

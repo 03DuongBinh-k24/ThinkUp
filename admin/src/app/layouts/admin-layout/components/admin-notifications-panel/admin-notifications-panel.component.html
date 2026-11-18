@@ -2,14 +2,17 @@
   <header class="notifications__header">
     <div class="notifications__heading">
       <strong>Thông báo</strong>
-      <span>{{ countLabel() }}</span>
+      @if (items().length > 0) {
+        <button
+          class="notifications__mark-all"
+          type="button"
+          [disabled]="unread() === 0"
+          (click)="markAllRead()"
+        >Đánh dấu tất cả đã đọc</button>
+      } @else {
+        <span>Không có thông báo mới</span>
+      }
     </div>
-    <button
-      class="notifications__mark-all"
-      type="button"
-      [disabled]="unread() === 0"
-      (click)="markAllRead()"
-    >Đánh dấu tất cả đã đọc</button>
   </header>
 
   @if (loading() && items().length === 0) {

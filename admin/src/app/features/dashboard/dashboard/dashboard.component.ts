@@ -9,9 +9,10 @@ import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared
 import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
 import { AdminNumberPipe } from '../../../shared/pipes/admin-number.pipe';
 import { AdminPrivacyPipe } from '../../../shared/pipes/admin-privacy.pipe';
-import { AUDIT_LOGS, DASHBOARD_ACTIONS, DASHBOARD_METRICS, REVENUE_BARS, TOP_COURSES, type AuditLog } from '../../../core/data/mock/dashboard.mock';
+import { AUDIT_LOGS, DASHBOARD_ACTIONS, DASHBOARD_METRICS, REVENUE_DATASETS, TOP_COURSES, type AuditLog, type RevenuePoint } from '../../../core/data/mock/dashboard.mock';
 
 type Period = 'Ngày' | 'Tuần' | 'Tháng' | 'Năm' | 'Quý';
+interface DashboardPalette { id: string; label: string; original: string; marketplace: string; payout: string; }
 type DashboardLogColumn = 'account' | 'role' | 'action';
 
 @Component({
@@ -22,10 +23,16 @@ type DashboardLogColumn = 'account' | 'role' | 'action';
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {
+  readonly paletteOptions: DashboardPalette[] = [
+    { id: 'denim-amber', label: 'Denim · Amber', original: '#3674b5', marketplace: '#f59a2f', payout: '#d86d7d' }
+  ];
+  readonly paletteId = signal('denim-amber');
+  readonly palette = computed(() => this.paletteOptions.find(option => option.id === this.paletteId()) ?? this.paletteOptions[0]);
+  readonly hoveredBar = signal<number | null>(null);
   readonly metrics = DASHBOARD_METRICS;
   readonly actions = DASHBOARD_ACTIONS;
   readonly courses = TOP_COURSES;
-  readonly bars = REVENUE_BARS;
+  readonly bars = computed<RevenuePoint[]>(() => REVENUE_DATASETS[this.period()] ?? REVENUE_DATASETS['Tháng']);
   readonly periods: Period[] = ['Ngày', 'Tuần', 'Tháng', 'Năm', 'Quý'];
   readonly period = signal<Period>('Tháng');
   readonly filter = signal('Tất cả');
@@ -74,7 +81,11 @@ export class DashboardComponent {
     }
     return logs;
   });
-  readonly payoutPath = this.makePayoutPath();
+  readonly payoutPath = computed(() => this.makePayoutPath(this.bars()));
+  readonly payoutPoints = computed(() => this.bars().map((bar, index, bars) => ({
+    x: bars.length > 0 ? (index + 0.5) * (730 / bars.length) : 0,
+    y: 305 - bar.payout
+  })));
 
   readonly selection = signal<ReadonlySet<string>>(new Set());
   readonly selectionListOpen = signal(false);
@@ -203,8 +214,9 @@ export class DashboardComponent {
     });
   }
 
-  private makePayoutPath(): string {
-    const points = REVENUE_BARS.map((bar, index) => ({ x: 34 + index * 58, y: 305 - bar.payout }));
+  private makePayoutPath(bars: readonly RevenuePoint[]): string {
+    const step = bars.length > 0 ? 730 / bars.length : 0;
+    const points = bars.map((bar, index) => ({ x: (index + 0.5) * step, y: 305 - bar.payout }));
     return points.reduce((path, point, index) => {
       if (index === 0) return `M ${point.x} ${point.y}`;
       const previous = points[index - 1];
@@ -226,6 +238,7 @@ export class DashboardComponent {
   }
   private displayDate(value: string): string { const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; }
   chooseFilter(value: string): void { this.filter.set(value); }
+  setHoveredBar(index: number | null): void { this.hoveredBar.set(index); }
   setLogColumnFilter(kind: 'account' | 'role' | 'action', values: string[]): void {
     if (kind === 'account') this.logAccountFilter.set(values);
     if (kind === 'role') this.logRoleFilter.set(values);

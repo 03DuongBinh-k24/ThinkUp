@@ -27,18 +27,9 @@
         @if (accountStatus(); as status) {
           <span class="profile-badge profile-badge--status">{{ status }}</span>
         }
-        @if (isDemo()) {
-          <span class="profile-badge profile-badge--demo">Dữ liệu demo</span>
-        }
       </div>
     </div>
   </section>
-
-  @if (isDemo()) {
-    <p class="profile-demo-note" role="note">
-      Đang xem dữ liệu demo cục bộ — không phải tài khoản vận hành thật.
-    </p>
-  }
 
   @for (section of sections(); track section.id) {
     <section class="profile-section" [attr.aria-labelledby]="'profile-section-' + section.id">

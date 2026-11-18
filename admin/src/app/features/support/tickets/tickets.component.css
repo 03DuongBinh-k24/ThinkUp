@@ -27,6 +27,7 @@
   gap: 10px;
   padding: 15px 14px;
 }
+.advanced-filter-toolbar .filter-trigger { height: 40px; min-height: 40px; }
 .filter-control { position: relative; min-width: 0; padding-top: 3px; }
 .custom-select-control { --custom-select-width: 100%; --custom-select-max-width: 100%; --custom-select-trigger-height: 40px; }
 .custom-select-control app-custom-select { display: block; width: 100%; }

@@ -542,9 +542,15 @@
 }
 
 @media (max-width: 1250px) {
-  .orders-toolbar { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+  /* Keep the compact desktop toolbar on one row while its controls still have useful widths. */
+  .orders-toolbar { grid-template-columns: minmax(190px, 1.3fr) minmax(150px, 1fr) minmax(180px, 1.15fr) minmax(180px, 1.15fr) minmax(120px, .8fr) auto; }
   .orders-toolbar > * { min-width: 0; max-width: 100%; }
-  .toolbar-end { flex-wrap: wrap; }
+  .toolbar-end { justify-self: end; flex-wrap: nowrap; }
+}
+
+@media (max-width: 1100px) {
+  .orders-toolbar { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+  .toolbar-end { justify-self: start; flex-wrap: wrap; }
 }
 
 @media (max-width: 900px) {
@@ -562,4 +568,11 @@
   .order-detail-metadata { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .order-detail-content { overflow-wrap: anywhere; }
   .customer-information-list > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+
+/* Keep the filter frame spacing stable when the toolbar wraps. */
+.orders-toolbar {
+  gap: 12px;
+  row-gap: 16px;
+  padding: 18px;
 }
