@@ -37,6 +37,7 @@
           </div>
         </div>
         <div class="theme-carousel">
+          <div class="carousel-track">
           <div class="theme-previews">
             @for (theme of visiblePreviews(); track theme.id) {
               <button
@@ -74,7 +75,7 @@
             (click)="setPreviewPage(-1)"
             aria-label="Xem theme trước"
           >
-            <svg lucideChevronLeft></svg>
+            <svg lucideChevronLeft aria-hidden="true"></svg>
           </button>
           <button
             class="carousel-arrow right"
@@ -82,8 +83,9 @@
             (click)="setPreviewPage(1)"
             aria-label="Xem theme tiếp theo"
           >
-            <svg lucideChevronRight></svg>
+            <svg lucideChevronRight aria-hidden="true"></svg>
           </button>
+          </div>
           <div class="carousel-dots">
             <button
               type="button"
@@ -223,9 +225,19 @@
               <p>Để ThinkUp tìm cho bạn một phòng đang hoạt động và còn chỗ.</p>
             </div>
           </div>
-          <button type="button" (click)="quickJoin()" [disabled]="submitting()">
-            <svg lucideSparkles></svg>TÌM PHÒNG PHÙ HỢP
+          <button type="button" (click)="quickJoin()" [disabled]="submitting()" [attr.aria-busy]="findingRoom()">
+            @if (findingRoom()) {
+              <span class="match-spinner" aria-hidden="true"></span>Đang tìm phòng…
+            } @else {
+              <svg lucideSparkles aria-hidden="true"></svg>TÌM PHÒNG PHÙ HỢP
+            }
           </button>
+          <div class="match-status" role="status">
+            @if (findingRoom()) {
+              <span>Đang kiểm tra phòng hoạt động và còn chỗ</span>
+              <div class="match-progress" aria-hidden="true"></div>
+            }
+          </div>
         </section>
         <section class="side-card">
           <div class="panel-heading">
@@ -265,7 +277,7 @@
             </div>
           </div>
           <button type="button" (click)="openCreate()" [disabled]="submitting()">
-            <svg lucideSparkles></svg>Tạo phòng học<svg lucideArrowRight></svg>
+            <svg lucideSparkles aria-hidden="true"></svg><span>Tạo phòng học</span><svg lucideArrowRight aria-hidden="true"></svg>
           </button>
         </section>
       </aside>
@@ -290,11 +302,15 @@
         [disabled]="submitting()"
         data-dialog-focus
       >
-        <svg lucideX></svg>
+        @if (modal() === 'create') {
+          <img src="/assets/study-room/create-room/close.svg" alt="" />
+        } @else {
+          <svg lucideX aria-hidden="true"></svg>
+        }
       </button>
       @if (modal() === "create") {
         <div class="create-modal-heading">
-          <span class="panel-icon pale"><svg lucideSparkles></svg></span>
+          <span class="create-heading-icon"><img src="/assets/study-room/create-room/heading.svg" alt="" /></span>
           <div>
             <h2 id="lobby-dialog-title">Tạo phòng học</h2>
             <p>Chọn loại phòng và setup nhanh không gian học của bạn.</p>
@@ -311,7 +327,7 @@
                   name="roomMode"
                   value="open"
                   [(ngModel)]="newRoomMode"
-                /><strong>Công khai</strong
+                /><strong><img src="/assets/study-room/create-room/public.svg" alt="" />Công khai</strong
                 ><small
                   >Ai cũng có thể tham gia bằng danh sách phòng.</small
                 ></label
@@ -321,7 +337,7 @@
                   name="roomMode"
                   value="password"
                   [(ngModel)]="newRoomMode"
-                /><strong>Riêng tư</strong
+                /><strong><img src="/assets/study-room/create-room/private.svg" alt="" />Riêng tư</strong
                 ><small
                   >Bảo vệ bằng mật khẩu.</small
                 ></label
@@ -364,22 +380,21 @@
                 }
               </select></label
             ><label
-              >Sức chứa<input
-                name="limit"
-                type="number"
-                min="2"
-                max="100"
-                [(ngModel)]="newRoomLimit"
-            /></label>
+              >Sức chứa<select name="limit" [(ngModel)]="newRoomLimit">
+                @for (capacity of roomCapacities; track capacity) {
+                  <option [ngValue]="capacity">{{ capacity }} người</option>
+                }
+              </select></label>
           </div>
           <label
             >Tags (Kỹ năng, chủ đề phụ)<input
               name="tags"
               [(ngModel)]="newRoomTags"
-              placeholder="Nhập các tag, cách nhau bằng dấu phẩy..."
+              (keydown.enter)="addRoomTagSeparator($event)"
+              placeholder="Nhập tag rồi nhấn Enter hoặc dấu phẩy..."
           /></label>
           <fieldset class="room-themes">
-            <legend>Giao diện phòng</legend>
+            <legend>Room Theme</legend>
             <div class="room-theme-grid">
               @for (theme of roomThemes; track theme.id) {
                 <label [class.selected]="newRoomTheme === theme.id"
@@ -392,7 +407,9 @@
                     class="theme-chip"
                     [style.background]="themeBackground(theme.id)"
                   >
-                    @if (isVideoTheme(theme.id)) {
+                    @if (createRoomPreviews.has(theme.id)) {
+                      <img [src]="'/assets/study-room/create-room/' + theme.id + '.png'" alt="" loading="lazy" />
+                    } @else if (isVideoTheme(theme.id)) {
                       <video
                         [src]="themeVideo(theme.id)"
                         [poster]="themePoster(theme.id)"
@@ -423,8 +440,14 @@
               <p class="form-error" role="alert">{{ feedback }}</p>
             }
             <button class="modal-submit" type="submit" [disabled]="submitting()">
+              <img src="/assets/study-room/create-room/plus.svg" alt="" />
               {{ submitting() ? 'Đang tạo phòng…' : 'Tạo phòng' }}
+              <img src="/assets/study-room/create-room/next.svg" alt="" />
             </button>
+            <p class="create-room-note">
+              <img src="/assets/study-room/create-room/members.svg" alt="" />
+              Phòng sẽ sẵn sàng ngay sau khi tạo thành công.
+            </p>
           </footer>
         </form>
       } @else if (modal() === "password") {
