@@ -352,7 +352,7 @@ export function createAdminUsersRouter(express, requireAdmin) {
       if(!['pending-review','pending-docs','pending-contract'].includes(current)) throw bad('Hồ sơ không ở trạng thái có thể thẩm định.',409,'LECTURER_STATE_CONFLICT');
       const patch={updated_at:now,reviewed_by:req.adminId,reviewed_at:now};
       if(action==='approve') { if(current==='pending-contract') throw bad('Chuyên môn đã được duyệt; hồ sơ đang ở bước pháp lý.',409,'LECTURER_ALREADY_APPROVED'); patch.status='pending-contract'; patch.professional_approved_at=now; }
-      if(action==='reject') { patch.status='rejected'; patch.rejection={reason:safeText(req.body.reason,20,2000,'Lý do'),decided_at:now}; }
+      if(action==='reject') { const settings=await db.collection('system_settings').findOne({_id:'global_config'},{projection:{'parameters.course_reject_min_chars':1}}); patch.status='rejected'; patch.rejection={reason:safeText(req.body.reason,settings?.parameters?.course_reject_min_chars??20,2000,'Lý do'),decided_at:now}; }
       if(action==='request-documents') { const keys=req.body.documentKeys; if(!Array.isArray(keys)||!keys.length||keys.length>20||keys.some(k=>typeof k!=='string'||k.length>80)) throw bad('Danh sách giấy tờ cần bổ sung không hợp lệ.');
         const guidance=safeText(req.body.guidance,20,2000,'Hướng dẫn'), days=Number(req.body.deadlineDays); if(![3,7,14].includes(days)) throw bad('Thời hạn bổ sung không hợp lệ.');
         patch.documents_request={keys:[...new Set(keys)],guidance,deadline:new Date(+now+days*86400000),phase:current==='pending-contract'?'legal':'professional',created_at:now};
@@ -408,7 +408,8 @@ export function createAdminUsersRouter(express, requireAdmin) {
     try { const db=await getMongoDb(),user=await readUser(db,req.params.id),profile=await db.collection('instructor_profiles').findOne({$or:[{user_id:String(user._id)},{instructor_id:String(user._id)}]});
       if(user.role!=='instructor'||profile?.status!=='active') throw bad('Chỉ giảng viên đang hoạt động mới thuộc diện xử lý kỷ luật.',409,'LECTURER_STATE_CONFLICT');
       const level=Number(req.body?.level); if(![1,2,3].includes(level)) throw bad('Mức kỷ luật không hợp lệ.');
-      const reason=safeText(req.body.reason,15,2000,'Lý do'), evidence=cleanEvidence(req.body.evidence), files=await verifyEvidence(db,evidence,user._id);
+      const systemSettings=await db.collection('system_settings').findOne({_id:'global_config'},{projection:{'parameters.lecturer_discipline_min_chars':1}});
+      const reason=safeText(req.body.reason,systemSettings?.parameters?.lecturer_discipline_min_chars??15,2000,'Lý do'), evidence=cleanEvidence(req.body.evidence), files=await verifyEvidence(db,evidence,user._id);
       if(!evidence.length) throw bad('Cần tải lên bằng chứng.');
       const now=new Date(), courseIds=req.body.courseIds||[];
       if(level===2&&(!Array.isArray(courseIds)||!courseIds.length||courseIds.some(id=>!asId(id)))) throw bad('Mức 2 cần chọn khóa học hợp lệ.');
@@ -505,9 +506,10 @@ export function createAdminUsersRouter(express, requireAdmin) {
     try {
       const { ids, level } = req.body || {};
       if (!Array.isArray(ids) || !ids.length || ids.length>100 || ids.some(id => !asId(id)) || ![1,2,3].includes(level)) throw bad('Danh sách học viên hoặc mức khóa không hợp lệ (tối đa 100).');
-      const reason = safeText(req.body.reason, 10, 2000, 'Lý do');
-      const targets = [...new Set(ids)].map(asId), now = new Date(), until = level === 1 ? new Date(+now + 7*86400000) : level === 2 ? new Date(+now + 30*86400000) : null;
       const db = await getMongoDb();
+      const systemSettings=await db.collection('system_settings').findOne({_id:'global_config'},{projection:{'parameters.student_lock_min_chars':1}});
+      const reason = safeText(req.body.reason, systemSettings?.parameters?.student_lock_min_chars??10, 2000, 'Lý do');
+      const targets = [...new Set(ids)].map(asId), now = new Date(), until = level === 1 ? new Date(+now + 7*86400000) : level === 2 ? new Date(+now + 30*86400000) : null;
       const evidenceByTarget = req.body.evidenceByTarget || (targets.length === 1 ? { [String(targets[0])]: req.body.evidence } : null);
       if(!evidenceByTarget || typeof evidenceByTarget !== 'object' || Array.isArray(evidenceByTarget)
         || Object.keys(evidenceByTarget).length !== targets.length

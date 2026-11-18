@@ -1084,7 +1084,7 @@ export async function ensureSeedQuestions() {
  *    -> 40% <= Score < 80%: in_progress
  *    -> Score < 40%: not_started (nếu mới tinh) hoặc review (nếu rớt bài test)
  */
-export function determineNodeStatus(currentStatus, newScore, wasFailedInTest = false) {
+export function determineNodeStatus(currentStatus, newScore, wasFailedInTest = false, masteryThreshold = 80, knowledgeGapThreshold = 40) {
   // Quy tắc người dùng: Một khi đã review thì giữ nguyên review
   if (currentStatus === STATUS_REVIEW) {
     return STATUS_REVIEW;
@@ -1095,10 +1095,20 @@ export function determineNodeStatus(currentStatus, newScore, wasFailedInTest = f
     return STATUS_REVIEW;
   }
 
-  if (newScore >= 80) return STATUS_COMPLETED;
-  if (newScore >= 40) return STATUS_IN_PROGRESS;
+  if (newScore >= masteryThreshold) return STATUS_COMPLETED;
+  if (newScore >= knowledgeGapThreshold) return STATUS_IN_PROGRESS;
   if (newScore > 0) return STATUS_IN_PROGRESS;
   return STATUS_NOT_STARTED;
+}
+
+async function getRoadmapThresholds(db = null) {
+  const database = db || await getMongoDb();
+  const parameters = (await database.collection('system_settings').findOne({ _id: 'global_config' }, {
+    projection: { 'parameters.roadmap_mastery_threshold': 1, 'parameters.roadmap_knowledge_gap_threshold': 1 },
+  }))?.parameters || {};
+  const bounded = (value, fallback) => Number.isSafeInteger(value) && value >= 0 && value <= 100 ? value : fallback;
+  return { mastery: bounded(parameters.roadmap_mastery_threshold, 80),
+    knowledgeGap: bounded(parameters.roadmap_knowledge_gap_threshold, 40) };
 }
 
 /**
@@ -1606,6 +1616,7 @@ export async function submitStageTest(userId, stageId, answers = []) {
   const overallPercentage = totalGraded > 0 ? Math.round((totalCorrect / totalGraded) * 100) : 0;
   const { stage: stageDefinition } = await getStageDefinition(stageId);
   const passScore = Number(stageDefinition.test?.pass_score ?? 70);
+  const thresholds = await getRoadmapThresholds();
   const passed = overallPercentage >= passScore;
 
   // Lấy roadmap của user để cập nhật Node
@@ -1629,7 +1640,7 @@ export async function submitStageTest(userId, stageId, answers = []) {
       }
 
       // Xác định trạng thái mới dựa trên quy tắc bảo toàn review
-      let nextStatus = determineNodeStatus(node.status_source === 'manual' && node.status === STATUS_REVIEW ? STATUS_NOT_STARTED : node.status, finalNodeScore, wasFailedInTest);
+      let nextStatus = determineNodeStatus(node.status_source === 'manual' && node.status === STATUS_REVIEW ? STATUS_NOT_STARTED : node.status, finalNodeScore, wasFailedInTest, thresholds.mastery, thresholds.knowledgeGap);
       let isReviewFlag = node.is_review || nextStatus === STATUS_REVIEW;
 
       // Nếu đã mang cờ review thì trạng thái bắt buộc là review
@@ -1805,6 +1816,7 @@ export async function syncCourseProgressToRoadmap(userId) {
   const syncRoadmapsList = allUserRoadmaps.length > 0 ? allUserRoadmaps : [userRoadmap];
   const allSyncedRoadmapsProgress = [];
   const syncedNodesLog = [];
+  const thresholds = await getRoadmapThresholds(db);
 
   for (const roadmapDoc of syncRoadmapsList) {
     const updatedNodes = (roadmapDoc.nodes || []).map(node => {
@@ -1835,7 +1847,7 @@ export async function syncCourseProgressToRoadmap(userId) {
       }
 
       // Bảo toàn trạng thái review: Nếu node đang ở trạng thái review thì giữ nguyên review
-      let nextStatus = determineNodeStatus(node.status_source === 'manual' && node.status === STATUS_REVIEW ? STATUS_NOT_STARTED : node.status, combinedScore, false);
+      let nextStatus = determineNodeStatus(node.status_source === 'manual' && node.status === STATUS_REVIEW ? STATUS_NOT_STARTED : node.status, combinedScore, false, thresholds.mastery, thresholds.knowledgeGap);
       if (node.is_review || (node.status === STATUS_REVIEW && node.status_source !== 'manual')) {
         nextStatus = STATUS_REVIEW;
       }
