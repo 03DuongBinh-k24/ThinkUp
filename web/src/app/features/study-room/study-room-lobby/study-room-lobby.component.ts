@@ -19,11 +19,14 @@ import { RoomEntryRequest, RoomEntryRequestKind, StudyRoomExtras, StudyRoomIdent
 import { StudyRoomItem } from "../models/study-room.model";
 import { StudyRoomService } from "../services/study-room.service";
 import { PIXEL_DREAMLAND_MEDIA } from "../data/study-room-media";
+import { RoomMatchLoadingComponent } from "../components/room-match-loading/room-match-loading.component";
 import {
   LucideArrowRight,
   LucideChevronLeft,
   LucideChevronRight,
+  LucideCopy,
   LucideEye,
+  LucideEyeOff,
   LucideLogIn,
   LucidePlus,
   LucideRotateCcw,
@@ -51,10 +54,13 @@ interface ThemePreview {
   imports: [
     FormsModule,
     StudyRoomCardComponent,
+    RoomMatchLoadingComponent,
     LucideArrowRight,
     LucideChevronLeft,
     LucideChevronRight,
+    LucideCopy,
     LucideEye,
+    LucideEyeOff,
     LucideLogIn,
     LucidePlus,
     LucideRotateCcw,
@@ -179,7 +185,7 @@ export class StudyRoomLobbyComponent implements OnInit {
   readonly selectedTab = signal("trending");
   readonly search = signal("");
   readonly modal = signal<
-    "create" | "password" | "full" | "waitlist" | "approval" | "created" | null
+    "create" | "password" | "full" | "waitlist" | "approval" | "created" | "matching" | null
   >(null);
   private readonly requestStates = signal<Record<string, RoomEntryRequest>>({});
   readonly entryRequestState = computed(() => {
@@ -193,6 +199,14 @@ export class StudyRoomLobbyComponent implements OnInit {
   readonly rooms = this.roomsService.rooms;
   readonly submitting = signal(false);
   readonly findingRoom = signal(false);
+  private readonly matchQuotes = [
+    "Một mục tiêu nhỏ giúp bạn bắt đầu dễ hơn.",
+    "Chọn một việc bạn muốn hoàn thành trong phiên học này.",
+    "Thử để điện thoại sang một bên trong phiên tập trung đầu tiên.",
+    "Học cùng nhau, mỗi người vẫn có thể theo nhịp của mình.",
+    "Nếu thấy bí, hãy ghi lại câu hỏi để quay lại sau.",
+  ];
+  readonly matchQuote = signal("");
   readonly loading = signal(true);
   readonly loadError = signal("");
   readonly visibleTopics = computed(() => {
@@ -260,12 +274,34 @@ export class StudyRoomLobbyComponent implements OnInit {
   newRoomName = "";
   newRoomDescription = "";
   newRoomTags = "";
-  newRoomTopic = "Lập trình";
+  newRoomTopic: string | null = "Lập trình";
+  newCustomTopic = "";
   newRoomTheme = "white";
   newRoomPassword = "";
+  readonly showNewRoomPassword = signal(false);
+  readonly passwordCopyStatus = signal("");
+
+  async copyNewRoomPassword(): Promise<void> {
+    const password = this.newRoomPassword;
+    if (!password) return;
+    try {
+      await navigator.clipboard.writeText(password);
+      if (password === this.newRoomPassword) this.passwordCopyStatus.set("Đã sao chép mật khẩu.");
+    } catch {
+      if (password === this.newRoomPassword) this.passwordCopyStatus.set("Không thể sao chép mật khẩu.");
+    }
+  }
+
+  generateRoomPassword(): void {
+    this.passwordCopyStatus.set("");
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    this.newRoomPassword = Array.from(crypto.getRandomValues(new Uint8Array(8)),
+      value => alphabet[value % alphabet.length]).join("");
+    this.showNewRoomPassword.set(true);
+  }
   newRoomMode: "open" | "password" = "open";
   newRoomLimit = 20;
-  readonly roomCapacities = Array.from({ length: 99 }, (_, index) => index + 2);
+  readonly roomCapacities: readonly number[] = [5, 10, 20, 30];
   readonly createRoomPreviews = new Set([
     "lofi-night", "sky-room", "cloud-window", "cozy-window", "pragmata-horizon",
     "cherry-blossom-tree", "genshin-impact", "pixel-skyline", "pixel-quiet-night",
@@ -434,6 +470,10 @@ export class StudyRoomLobbyComponent implements OnInit {
       return;
     }
     this.feedback = "";
+    this.newRoomMode = "open";
+    this.newRoomPassword = "";
+    this.passwordCopyStatus.set("");
+    this.showNewRoomPassword.set(false);
     this.modal.set("create");
   }
   quickJoin(): void {
@@ -447,15 +487,19 @@ export class StudyRoomLobbyComponent implements OnInit {
     this.feedback = "";
     this.submitting.set(true);
     this.findingRoom.set(true);
+    this.matchQuote.set(this.matchQuotes[Math.floor(Math.random() * this.matchQuotes.length)]);
+    this.modal.set("matching");
     this.roomsService.randomSpawn().pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.findingRoom.set(false)),
     ).subscribe({
       next: room => {
+        this.modal.set(null);
         this.submitting.set(false);
         this.joinRoom(room);
       },
       error: (error: HttpErrorResponse) => {
+        this.modal.set(null);
         this.submitting.set(false);
         const body = error.error as { message?: string } | null;
         this.feedback = body?.message || "Hiện chưa có phòng phù hợp và còn chỗ.";
@@ -559,12 +603,13 @@ export class StudyRoomLobbyComponent implements OnInit {
       this.feedback = "Mật khẩu cần ít nhất 4 ký tự.";
       return;
     }
-    if (
-      !Number.isInteger(Number(this.newRoomLimit)) ||
-      Number(this.newRoomLimit) < 2 ||
-      Number(this.newRoomLimit) > 100
-    ) {
-      this.feedback = "Sức chứa phải từ 2 đến 100 người.";
+    if (!this.roomCapacities.includes(this.newRoomLimit)) {
+      this.feedback = "Chọn sức chứa 5, 10, 20 hoặc 30 người.";
+      return;
+    }
+    const topic = (this.newRoomTopic ?? this.newCustomTopic).trim();
+    if (!topic) {
+      this.feedback = "Vui lòng nhập tên chủ đề.";
       return;
     }
     this.feedback = "";
@@ -574,15 +619,15 @@ export class StudyRoomLobbyComponent implements OnInit {
         name: this.newRoomName.trim(),
         goal: this.newRoomDescription.trim(),
         type: this.newRoomMode === "open" ? "public" : "private",
-        capacity: Number(this.newRoomLimit),
+        capacity: this.newRoomLimit,
         tags: [
-          this.newRoomTopic,
+          topic,
           ...this.newRoomTags
             .split(",")
             .map((tag) => tag.trim())
             .filter(Boolean),
         ],
-        topic: this.newRoomTopic,
+        topic,
         roomTheme: this.newRoomTheme,
         creatorName: this.auth.currentUser()?.full_name || "Tôi",
         password:

@@ -163,6 +163,7 @@ class DemoStudyRoomService extends StudyRoomService {
       !room.requiresPassword && !room.approvalRequired && room.inviteMode !== 'approval' &&
       !this.extras.roomSettings(room.roomId).locked && this.hasPresentOwner(room.roomId));
     if (!matches.length) return failure('NO_MATCH', 'Hiện chưa có phòng phù hợp và còn chỗ.');
+    // TODO(pre-deploy): Nhớ xóa độ trễ demo khi bỏ mock. Bản thật chờ phản hồi API tìm phòng.
     return of(matches[Math.floor(Math.random() * matches.length)]).pipe(delay(900));
   }
   override getRoomById(roomId: string) { return this.records().find(room => room.roomId === roomId) ?? null; }
@@ -242,6 +243,7 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override permissions(roomId: string, _userId: string): ReturnType<StudyRoomService['permissions']> {
     const owner = this.role(roomId) === 'owner';
+    // TODO(API handoff): Xác nhận quyền đổi theme của thành viên trong permissions và endpoint đổi theme.
     return of({ role: this.role(roomId), roomPermissions: this.roomPermissions(roomId), effectivePermissions: { canManagePermissions: owner, canChangeTheme: true }, permissionMatrix: [] });
   }
 

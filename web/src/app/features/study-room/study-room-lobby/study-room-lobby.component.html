@@ -27,7 +27,7 @@
             cộng tác trực tiếp để học cùng nhau mọi lúc, mọi nơi.
           </p>
           <div class="hero-actions">
-            <button class="primary-pill" type="button" (click)="quickJoin()" [disabled]="submitting()">
+            <button class="primary-pill" type="button" (click)="quickJoin()" [disabled]="submitting()" [attr.aria-busy]="findingRoom()">
               <svg lucideSparkles></svg>Bắt đầu học cùng nhau
               <svg lucideArrowRight></svg>
             </button>
@@ -232,12 +232,6 @@
               <svg lucideSparkles aria-hidden="true"></svg>TÌM PHÒNG PHÙ HỢP
             }
           </button>
-          <div class="match-status" role="status">
-            @if (findingRoom()) {
-              <span>Đang kiểm tra phòng hoạt động và còn chỗ</span>
-              <div class="match-progress" aria-hidden="true"></div>
-            }
-          </div>
         </section>
         <section class="side-card">
           <div class="panel-heading">
@@ -290,11 +284,12 @@
 
 <dialog #lobbyDialog class="modal" aria-labelledby="lobby-dialog-title"
   [class.create-modal]="modal() === 'create'"
+  [class.match-modal]="modal() === 'matching'"
   (cancel)="$event.preventDefault(); closeModal()"
   (click)="$event.target === lobbyDialog && closeModal()">
   @if (modal()) {
     <div class="modal-content">
-      <button
+      @if (modal() !== 'matching') { <button
         class="modal-close"
         type="button"
         (click)="closeModal()"
@@ -307,8 +302,10 @@
         } @else {
           <svg lucideX aria-hidden="true"></svg>
         }
-      </button>
-      @if (modal() === "create") {
+      </button> }
+      @if (modal() === 'matching') {
+        <app-room-match-loading [quote]="matchQuote()" />
+      } @else if (modal() === "create") {
         <div class="create-modal-heading">
           <span class="create-heading-icon"><img src="/assets/study-room/create-room/heading.svg" alt="" /></span>
           <div>
@@ -321,27 +318,14 @@
           <fieldset class="room-type">
             <legend>Loại phòng</legend>
             <div class="room-type-options">
-              <label [class.selected]="newRoomMode === 'open'"
-                ><input
-                  type="radio"
-                  name="roomMode"
-                  value="open"
-                  [(ngModel)]="newRoomMode"
-                /><strong><img src="/assets/study-room/create-room/public.svg" alt="" />Công khai</strong
-                ><small
-                  >Ai cũng có thể tham gia bằng danh sách phòng.</small
-                ></label
-              ><label [class.selected]="newRoomMode === 'password'"
-                ><input
-                  type="radio"
-                  name="roomMode"
-                  value="password"
-                  [(ngModel)]="newRoomMode"
-                /><strong><img src="/assets/study-room/create-room/private.svg" alt="" />Riêng tư</strong
-                ><small
-                  >Bảo vệ bằng mật khẩu.</small
-                ></label
-              >
+              <button type="button" [attr.aria-pressed]="newRoomMode === 'open'" (click)="newRoomMode = 'open'">
+                <strong><img src="/assets/study-room/create-room/public.svg" alt="" />Công khai</strong>
+                <small>Ai cũng có thể tham gia bằng danh sách phòng.</small>
+              </button>
+              <button type="button" [attr.aria-pressed]="newRoomMode === 'password'" (click)="newRoomMode = 'password'">
+                <strong><img src="/assets/study-room/create-room/private.svg" alt="" />Riêng tư</strong>
+                <small>Bảo vệ bằng mật khẩu.</small>
+              </button>
             </div>
           </fieldset>
           <label
@@ -363,29 +347,57 @@
             ></textarea>
           </label>
           @if (newRoomMode === "password") {
-            <label
-              >Mật khẩu<input
+            <div class="create-password">
+              <label for="create-room-password">Mật khẩu</label>
+              <div class="create-password-actions">
+                <div class="create-password-input">
+                  <input id="create-room-password"
                 name="newPassword"
-                type="password"
+                [type]="showNewRoomPassword() ? 'text' : 'password'"
                 minlength="4"
+                required
+                autocomplete="new-password"
                 [(ngModel)]="newRoomPassword"
+                (ngModelChange)="passwordCopyStatus.set('')"
                 placeholder="Mật khẩu tối thiểu 4 ký tự"
-            /></label>
+                  />
+                  <button type="button" class="password-visibility"
+                    [attr.aria-label]="showNewRoomPassword() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                    (click)="showNewRoomPassword.set(!showNewRoomPassword())">
+                    @if (showNewRoomPassword()) { <svg lucideEyeOff aria-hidden="true"></svg> }
+                    @else { <svg lucideEye aria-hidden="true"></svg> }
+                  </button>
+                  <button type="button" class="password-copy" aria-label="Sao chép mật khẩu"
+                    title="Sao chép mật khẩu" [disabled]="!newRoomPassword" (click)="copyNewRoomPassword()">
+                    <svg lucideCopy aria-hidden="true"></svg>
+                  </button>
+                </div>
+                <button type="button" class="password-generate" (click)="generateRoomPassword()">Tạo ngẫu nhiên</button>
+              </div>
+              <small>Ít nhất 4 ký tự, không giới hạn loại ký tự.</small>
+              <span class="password-copy-status" role="status">{{ passwordCopyStatus() }}</span>
+            </div>
           }
           <div class="form-grid">
             <label
-              >Chủ đề<select name="topic" [(ngModel)]="newRoomTopic">
+              >Chủ đề<select class="create-select" name="topic" [(ngModel)]="newRoomTopic">
                 @for (topic of topics().slice(1); track topic) {
                   <option [value]="topic">{{ topic }}</option>
                 }
+                <option [ngValue]="null">Khác</option>
               </select></label
             ><label
-              >Sức chứa<select name="limit" [(ngModel)]="newRoomLimit">
+              >Sức chứa<select class="create-select" name="limit" [(ngModel)]="newRoomLimit">
                 @for (capacity of roomCapacities; track capacity) {
                   <option [ngValue]="capacity">{{ capacity }} người</option>
                 }
               </select></label>
           </div>
+          @if (newRoomTopic === null) {
+            <label>Tên chủ đề
+              <input name="customTopic" [(ngModel)]="newCustomTopic" required placeholder="VD: Ôn thi kinh tế" />
+            </label>
+          }
           <label
             >Tags (Kỹ năng, chủ đề phụ)<input
               name="tags"

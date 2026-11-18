@@ -839,6 +839,8 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   }
 
   openParticipantReport(participant: RoomParticipant): void { this.reportTarget.set(participant); this.closeParticipantPopover(false); }
+  // TODO(pre-deploy): Nhớ xóa toast thành công giả lập khi nối API báo cáo.
+  // Cần hợp đồng gửi ID phòng, ID thành viên bị báo cáo và nội dung báo cáo.
   submitParticipantReport(_report: ParticipantReportSubmission): void { this.reportTarget.set(null); this.showNotice('Đã gửi báo cáo thành viên.'); }
 
   private positionOverlays(): void {
@@ -945,6 +947,8 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     return this.remoteScreenLayouts()[screen.participantId] || { active: true, x: 400 + index * 36, y: 205 + index * 36, width: 640, height: 360 };
   }
   async setCustomBackground(file: File): Promise<void> {
+    // TODO(API handoff): Ảnh hiện chỉ dùng URL cục bộ. Nếu cần lưu hoặc đồng bộ
+    // ảnh cho cả phòng, chốt quyền tải ảnh, giới hạn tệp và URL trả về từ API.
     const request = ++this.backgroundRequest;
     this.backgroundError.set('');
     if (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type) || file.size > 10 * 1024 * 1024) {
