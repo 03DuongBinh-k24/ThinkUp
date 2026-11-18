@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { API_FETCH_PAGE_SIZE, collectAllPages } from '../../../shared/utils/api-paging';
 import { ContentComment, ContentPost, ContentReport, ContentReview, ModerationLog } from '../models/content.models';
 import { ContentStore } from './content.store';
 
@@ -27,25 +28,32 @@ export class ContentHttpService extends ContentStore {
   retry(): void { void this.load(); }
   async load(): Promise<void> {
     this.errorState.set(false);
-    try {
-      const [posts, comments, reviews, reports] = await Promise.all([
-        this.page('posts'), this.page('comments'), this.page('reviews'), this.page('reports')
-      ]);
-      this.postState.set(posts.map(toPost)); this.commentState.set(comments.map(toComment));
-      this.reviewState.set(reviews.map(toReview)); this.reportState.set(reports.map(toReport));
-    } catch { this.errorState.set(true); }
+    // Bốn danh sách độc lập và ghi state ngay khi từng danh sách xong:
+    // `reviews` có ~94 trang nên không được chặn hiển thị của posts/comments/reports.
+    const results = await Promise.allSettled([
+      this.page('posts').then(rows => this.postState.set(rows.map(toPost))),
+      this.page('comments').then(rows => this.commentState.set(rows.map(toComment))),
+      this.page('reviews').then(rows => this.reviewState.set(rows.map(toReview))),
+      this.page('reports').then(rows => this.reportState.set(rows.map(toReport)))
+    ]);
+    this.errorState.set(results.some(result => result.status === 'rejected'));
   }
 
   private async page(path: string): Promise<Array<Record<string, unknown>>> {
-    const all: Array<Record<string, unknown>> = [];
-    let page = 1; let pages = 1;
-    do {
+    // `reviews` có ~94 trang ở pageSize 100; trần 200 + tải song song để không chặn UI.
+    const { items } = await collectAllPages<Record<string, unknown>>(async (page, pageSize) => {
       const response = await firstValueFrom(this.http.get<ApiPage>(`${this.base}/${path}`, {
-        params: new HttpParams().set('page', page).set('pageSize', 100)
+        params: new HttpParams().set('page', page).set('pageSize', pageSize)
       }));
-      all.push(...(response.items ?? [])); pages = response.pagination?.pages ?? 1; page += 1;
-    } while (page <= pages);
-    return all;
+      return {
+        items: response.items ?? [],
+        total: response.pagination?.total ?? 0,
+        page,
+        pageSize,
+        pages: response.pagination?.pages ?? 1
+      };
+    }, API_FETCH_PAGE_SIZE, 200, 6);
+    return items;
   }
 
   updatePost(id: string, patch: Partial<ContentPost>, note: string): void { void this.postAction(id, patch, note); }

@@ -83,7 +83,8 @@ export class LecturersComponent {
   readonly unlockReason = signal('');
   readonly saving = signal(false);
   readonly loadError = this.data.error;
-  readonly loading = this.data.loading;
+  // Trang giảng viên chờ riêng nguồn giảng viên để `/students` chậm không treo bảng này.
+  readonly loading = this.data.loadingLecturers;
 
   readonly statusOptions: ReadonlyArray<CustomSelectOption> = [
     { value: '', label: 'Tất cả trạng thái' },
