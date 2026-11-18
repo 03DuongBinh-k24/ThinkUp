@@ -11,6 +11,7 @@ export interface StudyRoomItem {
   description: string;
   rating?: number;
   creator?: string;
+  creatorName?: string;
   waitlistCount?: number;
   waitlistEnabled?: boolean;
   password?: string;

@@ -153,13 +153,19 @@ export class StudyRoomLobbyComponent implements OnInit {
     { id: "night", name: "Night Owl" },
     { id: "nature", name: "Zen Garden" },
     { id: "space", name: "Space Lab" },
-    ...this.previews,
-    {
-      id: "pixel-dreamland",
-      name: "Pixel Dreamland",
-      src: PIXEL_DREAMLAND_MEDIA,
-    },
+    { id: "lofi-night", name: "Lofi Night" },
+    { id: "sky-room", name: "Sky Room" },
+    { id: "cloud-window", name: "Cloud Window" },
+    { id: "cozy-window", name: "Cozy Window" },
+    { id: "pragmata-horizon", name: "Pragmata Horizon" },
+    { id: "cherry-blossom-tree", name: "Cherry Blossom Tree" },
     { id: "genshin-impact", name: "Genshin Impact" },
+    { id: "pixel-dreamland", name: "Pixel Dreamland" },
+    { id: "pixel-skyline", name: "Pixel Skyline" },
+    { id: "pixel-quiet-night", name: "Pixel Quiet Night" },
+    { id: "thinkup-clean", name: "ThinkUp Clean" },
+    { id: "anime-room", name: "Anime Room" },
+    { id: "cozy-rainy-window", name: "Cửa sổ mưa lofi" },
   ];
   readonly failedThemeImages = signal<ReadonlySet<string>>(new Set<string>());
   readonly previewPage = signal(0);
@@ -186,6 +192,7 @@ export class StudyRoomLobbyComponent implements OnInit {
   readonly activeRoom = signal<StudyRoomItem | null>(null);
   readonly rooms = this.roomsService.rooms;
   readonly submitting = signal(false);
+  readonly findingRoom = signal(false);
   readonly loading = signal(true);
   readonly loadError = signal("");
   readonly visibleTopics = computed(() => {
@@ -258,6 +265,18 @@ export class StudyRoomLobbyComponent implements OnInit {
   newRoomPassword = "";
   newRoomMode: "open" | "password" = "open";
   newRoomLimit = 20;
+  readonly roomCapacities = Array.from({ length: 99 }, (_, index) => index + 2);
+  readonly createRoomPreviews = new Set([
+    "lofi-night", "sky-room", "cloud-window", "cozy-window", "pragmata-horizon",
+    "cherry-blossom-tree", "genshin-impact", "pixel-skyline", "pixel-quiet-night",
+    "thinkup-clean", "anime-room", "cozy-rainy-window",
+  ]);
+
+  addRoomTagSeparator(event: Event): void {
+    event.preventDefault();
+    const tags = this.newRoomTags.trim();
+    if (tags && !tags.endsWith(",")) this.newRoomTags = tags + ", ";
+  }
 
   constructor() {
     afterRenderEffect(() => {
@@ -427,7 +446,11 @@ export class StudyRoomLobbyComponent implements OnInit {
     }
     this.feedback = "";
     this.submitting.set(true);
-    this.roomsService.randomSpawn().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.findingRoom.set(true);
+    this.roomsService.randomSpawn().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.findingRoom.set(false)),
+    ).subscribe({
       next: room => {
         this.submitting.set(false);
         this.joinRoom(room);
