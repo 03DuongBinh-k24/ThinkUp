@@ -24,8 +24,8 @@ export class HttpBlogDataSource implements BlogDataSource {
   categories() { return this.http.get<{ topics: BlogCategory[] }>(`${this.base}/blog/topics/popular`).pipe(map(result => [{ id: 'all', label: 'Tất cả' }, ...result.topics])); }
   sidebar() { return this.http.get<BlogSidebarData>(`${this.base}/blog/sidebar`).pipe(map(result => ({ ...result, mostViewedArticles: result.mostViewedArticles.map(post => ({ ...post, id: String(post.id) })) }))); }
   detail(id: string) { return this.http.get<Omit<BlogDetailResponse, 'post'> & { post: BlogPostPayload }>(`${this.base}/blog/${encodeURIComponent(id)}`, { withCredentials: true }).pipe(map(result => ({ ...result, post: mapPost(result.post) }))); }
-  comments(id: string) { return this.http.get<{ comments: BlogComment[] }>(`${this.base}/blog/${encodeURIComponent(id)}/comments`).pipe(map(result => result.comments.map(comment => ({ ...comment, id: String(comment.id) })))); }
-  addComment(id: string, authorName: string, content: string) { return this.http.post<{ comment: BlogComment }>(`${this.base}/blog/${encodeURIComponent(id)}/comments`, { authorName, content }, { withCredentials: true }).pipe(map(result => result.comment)); }
+  comments(id: string) { return this.http.get<{ comments: BlogComment[] }>(`${this.base}/blog/${encodeURIComponent(id)}/comments`).pipe(map(result => result.comments.map(comment => ({ ...comment, id: String(comment.id), authorAvatar: comment.authorAvatar || comment.author_avatar || undefined })))); }
+  addComment(id: string, authorName: string, content: string) { return this.http.post<{ comment: BlogComment }>(`${this.base}/blog/${encodeURIComponent(id)}/comments`, { authorName, content }, { withCredentials: true }).pipe(map(result => ({ ...result.comment, authorAvatar: result.comment.authorAvatar || result.comment.author_avatar || undefined }))); }
   react(id: string, action: BlogReaction) { return this.http.post(`${this.base}/blog/${encodeURIComponent(id)}/like`, { action }, { withCredentials: true }); }
   save(request: BlogSaveRequest) {
     const isDraft = !request.id && request.status === 'draft';

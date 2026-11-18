@@ -13,7 +13,7 @@ import {
 import { HttpErrorResponse } from "@angular/common/http";
 import { FormsModule } from "@angular/forms";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { Subject, Subscription, debounceTime, finalize } from "rxjs";
+import { Subject, Subscription, debounceTime, finalize, interval } from "rxjs";
 import { ActivatedRoute, Router } from "@angular/router";
 import { RoomEntryRequest, RoomEntryRequestKind, StudyRoomExtras, StudyRoomIdentity } from "../services/study-room-extras";
 import { StudyRoomItem } from "../models/study-room.model";
@@ -357,6 +357,7 @@ export class StudyRoomLobbyComponent implements OnInit {
       error: () => { /* Keep the built-in topic choices available. */ },
     });
     this.loadRooms();
+    interval(15000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadRooms(true));
   }
 
   onSearchChange(value: string): void {
@@ -430,10 +431,12 @@ export class StudyRoomLobbyComponent implements OnInit {
     this.loadRooms();
   }
 
-  loadRooms(): void {
+  loadRooms(silent = false): void {
     this.roomsRequest?.unsubscribe();
-    this.loading.set(true);
-    this.loadError.set("");
+    if (!silent) {
+      this.loading.set(true);
+      this.loadError.set("");
+    }
     const selectedTopics = this.selectedTopics();
     const status = this.selectedTab() === "new" || this.selectedTab() === "active" || this.selectedTab() === "available"
       ? this.selectedTab() as "new" | "active" | "available"
@@ -446,10 +449,12 @@ export class StudyRoomLobbyComponent implements OnInit {
           ? this.roomsService.filterRooms(selectedTopics[0] || "", status, false)
           : this.roomsService.loadRooms({ tab: this.selectedTab() as "trending" | "new" | "active" | "available" });
     this.roomsRequest = request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.loading.set(false),
+      next: () => { if (!silent) this.loading.set(false); },
       error: () => {
-        this.loading.set(false);
-        this.loadError.set("Không thể tải danh sách phòng học.");
+        if (!silent) {
+          this.loading.set(false);
+          this.loadError.set("Không thể tải danh sách phòng học.");
+        }
       },
     });
   }
@@ -460,6 +465,9 @@ export class StudyRoomLobbyComponent implements OnInit {
   selectTheme(theme: ThemePreview): void {
     this.newRoomTheme = theme.id;
     this.openCreate();
+  }
+  selectRoomTheme(themeId: string): void {
+    this.newRoomTheme = themeId;
   }
   openCreate(): void {
     if (this.submitting()) return;
@@ -593,7 +601,9 @@ export class StudyRoomLobbyComponent implements OnInit {
       },
     });
   }
-  createRoom(): void {
+  createRoom(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
     if (this.submitting()) return;
     if (this.newRoomName.trim().length < 5) {
       this.feedback = "Tên phòng cần ít nhất 5 ký tự.";
@@ -629,7 +639,6 @@ export class StudyRoomLobbyComponent implements OnInit {
         ],
         topic,
         roomTheme: this.newRoomTheme,
-        creatorName: this.auth.currentUser()?.full_name || "Tôi",
         password:
           this.newRoomMode === "password" ? this.newRoomPassword : undefined,
       })
@@ -641,9 +650,12 @@ export class StudyRoomLobbyComponent implements OnInit {
           this.modal.set("created");
         },
         error: (error: HttpErrorResponse) => {
-          this.feedback =
-            (error.error as { message?: string } | null)?.message ||
-            "Không thể tạo phòng. Vui lòng thử lại.";
+          const body = error.error as { message?: string; code?: string } | null;
+          this.feedback = body?.message || (error.status === 0
+            ? "Không kết nối được máy chủ. Kiểm tra server và cấu hình API rồi thử lại."
+            : error.status === 401
+              ? "Phiên đăng nhập hết hạn. Hãy đăng nhập lại rồi thử tạo phòng."
+              : `Không tạo được phòng (HTTP ${error.status}${body?.code ? `, ${body.code}` : ""}). Vui lòng thử lại.`);
         },
       });
   }

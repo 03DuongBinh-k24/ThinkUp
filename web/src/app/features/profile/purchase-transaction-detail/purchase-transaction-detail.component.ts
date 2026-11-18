@@ -54,8 +54,19 @@ export class PurchaseTransactionDetailComponent implements OnInit {
     } catch { this.copied.set(''); }
   }
 
-  downloadInvoice(): void {
-    this.toast.showToast({ type: 'info', message: 'Bạn có thể in hóa đơn trực tiếp từ trình duyệt.' });
+  downloadInvoice(transaction: TransactionDetail): void {
+    if (transaction.status !== 'success') return;
+    this.purchaseHistory.downloadInvoice(transaction.transactionCode).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${transaction.invoice.code.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.showToast({ type: 'warning', message: 'Không thể tải hóa đơn PDF. Vui lòng thử lại.' }),
+    });
   }
 
   statusLabel(status: string): string {

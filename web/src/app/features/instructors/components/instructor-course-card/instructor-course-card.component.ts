@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, computed, inject } from '@angular/core';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CommonModule } from '@angular/common';
@@ -7,6 +7,7 @@ import { Course } from '../../../../core/models/course.model';
 import { FavoritesService } from '../../../../core/services/favorites.service';
 import { CommerceService } from '../../../../core/services/commerce.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
+import { AuthService } from '../../../../core/services/auth.service';
 
 /**
  * Thẻ khóa học dùng riêng trong trang hồ sơ giảng viên (Figma 5095-16772):
@@ -28,6 +29,8 @@ export class InstructorCourseCardComponent {
   private savingCart = false;
   private favoritesService = inject(FavoritesService);
   private commerceService = inject(CommerceService);
+  private readonly auth = inject(AuthService);
+  readonly isLoggedIn = computed(() => this.auth.isAuthenticated());
 
   private readonly coverColors: Record<string, string> = {
     'vuejs-3': '#0D3D2E',
@@ -92,7 +95,7 @@ export class InstructorCourseCardComponent {
   }
 
   toggleWishlist(): void {
-    if (this.savingWishlist) return;
+    if (!this.isLoggedIn() || this.savingWishlist) return;
     this.savingWishlist = true;
     this.favoritesService.toggleFavorite(this.course).pipe(finalize(() => this.savingWishlist = false)).subscribe({
       error: () => this.toast.showToast({ type: 'error', message: 'Không cập nhật được yêu thích. Vui lòng thử lại.' }),
@@ -100,6 +103,7 @@ export class InstructorCourseCardComponent {
   }
 
   addToCart(): void {
+    if (!this.isLoggedIn()) return;
     if (this.isInCart()) {
       this.router.navigate(['/main/cart']);
       return;

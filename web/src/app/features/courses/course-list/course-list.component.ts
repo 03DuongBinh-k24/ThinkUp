@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, computed, OnInit, viewChild } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -28,7 +28,6 @@ export class CourseListComponent implements OnInit {
   private router = inject(Router);
   private readonly toast = inject(ToastService);
   private catalogRequest?: Subscription;
-  private readonly resultsTop = viewChild<ElementRef<HTMLElement>>('resultsTop');
 
   courses = signal<Course[]>([]);
   loading = signal(true);
@@ -109,13 +108,12 @@ export class CourseListComponent implements OnInit {
     }, error: () => this.toast.showToast({ type: 'warning', message: 'Không tải được bộ lọc khóa học.' }) });
   }
 
-  loadCourses(scrollToResults = false): void {
+  loadCourses(): void {
     if (!this.courses().length) this.loading.set(true);
     this.catalogRequest?.unsubscribe();
     this.catalogRequest = this.courseService.getCourses(this.filters()).subscribe({ next: res => {
       this.courses.set(res.data || []);
       this.loading.set(false);
-      if (scrollToResults) queueMicrotask(() => this.resultsTop()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     }, error: () => {
       this.loading.set(false);
       this.toast.showToast({ type: 'warning', message: 'Không tải được danh sách khóa học. Vui lòng thử lại.' });
@@ -127,7 +125,7 @@ export class CourseListComponent implements OnInit {
   onSearch(query: string): void {
     this.filters.update(f => ({ ...f, query }));
     this.currentPage.set(1);
-    this.loadCourses(true);
+    this.loadCourses();
   }
 
   onTagToggle(tag: string): void {
@@ -135,13 +133,13 @@ export class CourseListComponent implements OnInit {
     const next = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag];
     this.filters.update(f => ({ ...f, tags: next }));
     this.currentPage.set(1);
-    this.loadCourses(true);
+    this.loadCourses();
   }
 
   onFilterChange(newFilters: CourseFilters): void {
     this.filters.set(newFilters);
     this.currentPage.set(1);
-    this.loadCourses(true);
+    this.loadCourses();
   }
 
   onClearFilters(): void {
@@ -157,14 +155,14 @@ export class CourseListComponent implements OnInit {
       sort: 'recommended'
     });
     this.currentPage.set(1);
-    this.loadCourses(true);
+    this.loadCourses();
   }
 
   onSortSelect(sortId: string): void {
     this.filters.update(f => ({ ...f, sort: sortId }));
     this.isSortOpen.set(false);
     this.currentPage.set(1);
-    this.loadCourses(true);
+    this.loadCourses();
   }
 
   goToPage(page: number): void {

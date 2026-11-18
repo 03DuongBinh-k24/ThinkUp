@@ -76,6 +76,7 @@ interface MyRoadmapDto {
   total_nodes?: number;
   completed_nodes?: number;
   stages?: StageDto[];
+  raw_nodes?: NodeDto[];
 }
 
 interface Envelope<T> {
@@ -90,6 +91,7 @@ interface RecommendedCourseDto {
   title: string;
   instructor_name?: string;
   instructor_id?: string | null;
+  instructor_avatar?: string | null;
   thumbnail_url?: string;
   rating: number;
   rating_count: number;
@@ -295,11 +297,19 @@ export class RoadmapService {
       return response.data.map(course => {
         const originalPrice = course.original_price ?? course.price?.original;
         const salePrice = course.sale_price ?? course.price?.sale;
+        const ratingCount = Number(course.rating_count) || 0;
+        const rating = ratingCount > 0 ? Number(course.rating) || 0 : 0;
         if (typeof originalPrice !== 'number' || typeof salePrice !== 'number') throw new Error('Khóa học gợi ý thiếu thông tin giá.');
         return {
           id: course.course_id || course.id, slug: course.slug, title: course.title,
           instructor: course.instructor_name || 'Chưa cập nhật giảng viên', instructorId: course.instructor_id || undefined,
-          thumbnailUrl: course.thumbnail_url, rating: course.rating, ratingCount: course.rating_count,
+          instructorProfile: {
+            id: course.instructor_id || undefined,
+            name: course.instructor_name || 'Chưa cập nhật giảng viên',
+            title: '', bio: '', rating: 0, studentsCount: 0, coursesCount: 0,
+            avatar: course.instructor_avatar || '',
+          },
+          thumbnailUrl: course.thumbnail_url, rating, ratingCount,
           studentsCount: course.total_students, tags: course.tags, originalPrice, salePrice,
           level: course.level ? mapDifficulty(course.level) : undefined, isInWishlist: course.is_in_wishlist,
           isInCart: course.is_in_cart, isPurchased: course.is_purchased,
@@ -310,15 +320,79 @@ export class RoadmapService {
 
   setSkillStatus(categoryId: string, nodeId: string, status: RoadmapSkillStatus): Observable<void> {
     const apiStatus = status === 'not-started' ? 'not_started' : status === 'in-progress' ? 'in_progress' : status;
-    return this.http.patch<{ success: boolean }>(`${this.base}/nodes/${encodeURIComponent(nodeId)}/status`, {
-      status: apiStatus
-    }).pipe(this.guardAccount,
-      tap(response => {
-        if (response.success !== true) throw new Error('Máy chủ chưa xác nhận trạng thái kỹ năng.');
-      }),
-      switchMap(() => this.loadRoadmap(categoryId)),
-      map(() => undefined)
-    );
+    return defer(() => {
+      const accountToken = this.auth.getToken();
+      const previousDetails = this.detailsSig()[categoryId];
+      const previousMyRoadmap = this.myRoadmapSig();
+      this.applyManualSkillStatus(categoryId, nodeId, apiStatus);
+
+      return this.http.patch<Envelope<{ node_id: string; status: string }>>(
+        `${this.base}/nodes/${encodeURIComponent(nodeId)}/status`, { status: apiStatus }
+      ).pipe(this.guardAccount,
+        tap(response => {
+          if (response.success !== true || response.data?.status !== apiStatus) {
+            throw new Error('Máy chủ chưa xác nhận trạng thái kỹ năng.');
+          }
+        }),
+        map(() => undefined),
+        catchError(error => {
+          if (accountToken === this.auth.getToken()) {
+            if (previousDetails) this.detailsSig.update(cache => ({ ...cache, [categoryId]: previousDetails }));
+            this.myRoadmapSig.set(previousMyRoadmap);
+          }
+          return throwError(() => error);
+        })
+      );
+    });
+  }
+
+  private applyManualSkillStatus(categoryId: string, nodeId: string, status: string): void {
+    const progressOf = (nodes: Array<{ status?: string }>) => {
+      const total = nodes.length;
+      const completed = nodes.filter(node => node.status === 'completed').length;
+      return { completed, total, percent: total ? Math.round(completed / total * 100) : 0 };
+    };
+    const updateState = <T extends { status?: string; status_source?: string | null; is_review?: boolean;
+      manual_status_allowed?: boolean; status_lock_reason?: string | null }>(node: T): T => ({
+      ...node, status, status_source: 'manual', is_review: false,
+      manual_status_allowed: true, status_lock_reason: null,
+    });
+
+    this.detailsSig.update(cache => {
+      const roadmap = cache[categoryId];
+      if (!roadmap) return cache;
+      const stages = roadmap.stages.map(stage => {
+        const skills = stage.skills.map(skill => skill.id === nodeId ? {
+          ...skill, status: status === 'not_started' ? 'not-started' as const
+            : status === 'in_progress' ? 'in-progress' as const : status as RoadmapSkillStatus,
+          manualStatusAllowed: true, statusLockReason: null,
+        } : skill);
+        return { ...stage, skills, apiProgress: progressOf(skills) };
+      });
+      const allSkills = stages.flatMap(stage => stage.skills);
+      return { ...cache, [categoryId]: { ...roadmap, stages, apiProgress: progressOf(allSkills) } };
+    });
+
+    this.myRoadmapSig.update(my => {
+      if (!my?.has_roadmap || String(my.category_id) !== categoryId || !my.stages) return my;
+      let changed = false;
+      const stages = my.stages.map(stage => {
+        const nodes = (stage.nodes ?? []).map(node => {
+          if (node.node_id !== nodeId) return node;
+          changed = true;
+          return updateState(node);
+        });
+        const progress = progressOf(nodes);
+        return { ...stage, nodes, total_nodes: progress.total, completed_nodes: progress.completed,
+          progress_percentage: progress.percent };
+      });
+      if (!changed) return my;
+      const rawNodes = my.raw_nodes?.map(node => node.node_id === nodeId ? updateState(node) : node);
+      const allNodes = stages.flatMap(stage => stage.nodes ?? []);
+      const overall = progressOf(allNodes);
+      return { ...my, stages, raw_nodes: rawNodes, total_nodes: overall.total, completed_nodes: overall.completed,
+        overall_progress: overall.percent, progress_percentage: overall.percent };
+    });
   }
 
   /** Hủy kích hoạt; server giữ nguyên tiến độ để có thể chọn lại. */

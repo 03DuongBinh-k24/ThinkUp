@@ -59,4 +59,10 @@ export class PurchaseHistoryService {
     return this.http.get<TransactionDetail>(`${environment.apiUrl}/user/billing/${encodeURIComponent(id)}`).pipe(this.guard,
       map(detail => ({ ...detail, paymentMethod: detail.paymentMethod === 'simulation' ? 'Thanh toán mô phỏng' : detail.paymentMethod })));
   }
+
+  downloadInvoice(id: string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/user/settings/payment/invoices/${encodeURIComponent(id)}/download`, {
+      responseType: 'blob',
+    }).pipe(this.guard);
+  }
 }

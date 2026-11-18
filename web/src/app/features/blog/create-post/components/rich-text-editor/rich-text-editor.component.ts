@@ -24,12 +24,6 @@ interface FormatAction {
   state?: string;
 }
 
-interface MoreAction {
-  label: string;
-  icon: string;
-  run: () => void;
-}
-
 interface MediaTarget {
   element: HTMLElement;
   label: string;
@@ -57,7 +51,6 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   readonly value = model('');
   readonly error = input('');
-  readonly imageUploaded = output<string>();
 
   readonly editor = viewChild<ElementRef<HTMLDivElement>>('editor');
   private readonly surface = viewChild<ElementRef<HTMLDivElement>>('surface');
@@ -66,7 +59,6 @@ export class RichTextEditorComponent implements AfterViewInit {
   readonly uploading = signal(false);
   readonly uploadError = signal('');
   readonly url = signal('');
-  readonly moreOpen = signal(false);
   readonly block = signal('p');
   readonly selectedMedia = signal<MediaTarget | null>(null);
 
@@ -74,6 +66,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   readonly italicActive = signal(false);
   readonly underlineActive = signal(false);
   readonly strikeActive = signal(false);
+  readonly imageInput = viewChild<ElementRef<HTMLInputElement>>('imageInput');
 
   private savedRange: Range | null = null;
 
@@ -82,20 +75,14 @@ export class RichTextEditorComponent implements AfterViewInit {
     { command: 'italic', label: 'In nghiêng', icon: 'italic', state: 'italic' },
     { command: 'underline', label: 'Gạch chân', icon: 'underline', state: 'underline' },
     { command: 'strikeThrough', label: 'Gạch ngang', icon: 'strike', state: 'strikeThrough' },
-    { command: 'formatBlock', value: '<pre>', label: 'Đoạn mã', icon: 'basic' },
     { command: 'createLink', label: 'Chèn liên kết', icon: 'link' },
     { command: 'formatBlock', value: '<blockquote>', label: 'Trích dẫn', icon: 'quote' },
-    { command: 'insertUnorderedList', label: 'Danh sách', icon: 'list' },
+    { command: 'insertUnorderedList', label: 'Danh sách ký hiệu', icon: 'list' },
     { command: 'insertOrderedList', label: 'Danh sách đánh số', icon: 'ordered' },
     { command: 'insertImage', label: 'Chèn ảnh', icon: 'image' },
     { command: 'insertTable', label: 'Chèn bảng', icon: 'table' },
-    { command: 'insertTip', label: 'Chèn ghi chú (Tip Box)', icon: 'info' },
   ];
 
-  readonly moreActions: MoreAction[] = [
-    { label: 'Xóa định dạng', icon: 'x', run: () => this.runCommand('removeFormat') },
-    { label: 'Đường kẻ ngang', icon: 'list', run: () => this.insertHtml('<hr><p><br></p>') },
-  ];
 
   constructor() {
     effect(() => {
@@ -144,29 +131,24 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   execute(event: MouseEvent, action: FormatAction): void {
     event.preventDefault();
-    this.moreOpen.set(false);
+    event.stopPropagation();
     this.captureSelection();
-    this.editor()?.nativeElement.focus();
 
     if (action.command === 'createLink' || action.command === 'insertImage') {
       if (action.command === 'createLink') {
+        this.editor()?.nativeElement.focus();
         const anchor = this.closestAnchor();
         this.url.set(anchor?.getAttribute('href') ?? '');
+        this.uploadError.set('');
+        this.prompt.set('link');
       } else {
-        this.url.set('');
+        this.uploadError.set('');
+        this.imageInput()?.nativeElement.click();
       }
-      this.uploadError.set('');
-      this.prompt.set(action.command === 'createLink' ? 'link' : 'image');
       return;
     }
 
-    if (action.command === 'insertTable') {
-      this.insertHtml(
-        '<table><thead><tr><th>Cột 1</th><th>Cột 2</th></tr></thead>' +
-          '<tbody><tr><td>Ô 1</td><td>Ô 2</td></tr><tr><td>Ô 3</td><td>Ô 4</td></tr></tbody></table><p><br></p>'
-      );
-      return;
-    }
+    this.editor()?.nativeElement.focus();
 
     if (action.command === 'insertTip') {
       this.insertHtml('<blockquote>💡 Nhập nội dung ghi chú tại đây...</blockquote><p><br></p>');
@@ -180,7 +162,11 @@ export class RichTextEditorComponent implements AfterViewInit {
     const editor = this.editor()?.nativeElement;
     if (!editor) return;
     editor.focus();
-    this.restoreSelection();
+    if (!this.restoreSelection()) return;
+    if (command === 'insertUnorderedList' || command === 'insertOrderedList') {
+      this.toggleList(command === 'insertOrderedList' ? 'ol' : 'ul');
+      return;
+    }
     // Prefer semantic tags over inline styles so saved HTML stays clean.
     document.execCommand('styleWithCSS', false, 'false');
     document.execCommand(command, false, value);
@@ -193,38 +179,42 @@ export class RichTextEditorComponent implements AfterViewInit {
   changeBlock(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.block.set(value);
-    this.runCommand('formatBlock', `<${value}>`);
-  }
-
-  toggleMore(event: MouseEvent): void {
-    event.preventDefault();
-    this.captureSelection();
-    this.moreOpen.update((open) => !open);
-  }
-
-  runMore(event: MouseEvent, action: MoreAction): void {
-    event.preventDefault();
-    this.moreOpen.set(false);
-    this.captureSelection();
-    action.run();
+    const editor = this.editor()?.nativeElement;
+    if (!editor || !this.restoreSelection()) return;
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!range || !editor.contains(range.commonAncestorContainer)) return;
+    const selectedText = range.toString();
+    const block = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.startContainer as HTMLElement).closest('p,h2,h3,pre,blockquote')
+      : range.startContainer.parentElement?.closest('p,h2,h3,pre,blockquote');
+    const replacement = document.createElement(value);
+    if (selectedText) {
+      replacement.textContent = selectedText;
+      range.deleteContents();
+      range.insertNode(replacement);
+    } else if (block && editor.contains(block)) {
+      while (block.firstChild) replacement.appendChild(block.firstChild);
+      block.replaceWith(replacement);
+    } else {
+      replacement.innerHTML = '<br>';
+      range.insertNode(replacement);
+    }
+    this.moveCaretToEnd(replacement);
+    this.ensureBlocks(editor);
+    this.syncValue();
   }
 
   /** ---------- Link / image insertion ---------- */
 
   insertUrl(event?: Event): void {
     event?.preventDefault();
+    event?.stopPropagation();
     const kind = this.prompt();
     if (!kind) return;
     const raw = this.url().trim();
     if (!raw) {
       this.uploadError.set(kind === 'image' ? 'Vui lòng chọn ảnh hoặc nhập đường dẫn ảnh.' : 'Vui lòng nhập đường dẫn liên kết.');
-      return;
-    }
-
-    if (kind === 'image') {
-      this.closePrompt();
-      this.insertHtml(`<figure class="rte-figure"><img src="${this.escapeAttribute(raw)}" alt=""></figure>`);
-      this.imageUploaded.emit(raw);
       return;
     }
 
@@ -234,8 +224,8 @@ export class RichTextEditorComponent implements AfterViewInit {
       return;
     }
 
-    this.closePrompt();
     this.insertLink(href);
+    this.closePrompt();
   }
 
   upload(event: Event): void {
@@ -256,9 +246,8 @@ export class RichTextEditorComponent implements AfterViewInit {
           this.uploadError.set('Máy chủ không trả về đường dẫn ảnh.');
           return;
         }
-        this.closePrompt();
         this.insertHtml(`<figure class="rte-figure"><img src="${this.escapeAttribute(url)}" alt=""></figure>`);
-        this.imageUploaded.emit(url);
+        this.closePrompt();
       },
       error: () => {
         this.uploading.set(false);
@@ -272,7 +261,6 @@ export class RichTextEditorComponent implements AfterViewInit {
     this.uploadError.set('');
     this.url.set('');
     this.editor()?.nativeElement.focus();
-    this.restoreSelection();
   }
 
   /** ---------- Paste sanitising (fixes pasted font/colour overrides) ---------- */
@@ -374,15 +362,6 @@ export class RichTextEditorComponent implements AfterViewInit {
     if (event.key === 'Escape') this.selectedMedia.set(null);
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (!this.moreOpen()) return;
-    const target = event.target;
-    if (target instanceof Node && !(target as HTMLElement).closest?.('[data-more-root]')) {
-      this.moreOpen.set(false);
-    }
-  }
-
   @HostListener('document:selectionchange')
   onSelectionChange(): void {
     const editor = this.editor()?.nativeElement;
@@ -457,7 +436,7 @@ export class RichTextEditorComponent implements AfterViewInit {
     const editor = this.editor()?.nativeElement;
     if (!editor) return;
     editor.focus();
-    this.restoreSelection();
+    if (!this.restoreSelection()) return;
 
     const selection = window.getSelection();
     const range = this.savedRange && editor.contains(this.savedRange.commonAncestorContainer)
@@ -484,22 +463,53 @@ export class RichTextEditorComponent implements AfterViewInit {
   }
 
   private insertLink(href: string): void {
-    const selection = window.getSelection();
-    const hasSelection = this.savedRange && !this.savedRange.collapsed;
+    const editor = this.editor()?.nativeElement;
+    const hasSelection = !!(editor && this.savedRange && editor.contains(this.savedRange.commonAncestorContainer) && !this.savedRange.collapsed);
     if (!hasSelection) {
-      this.insertHtml(
-        `<a href="${this.escapeAttribute(href)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(href)}</a>&nbsp;`
-      );
+      const link = document.createElement('a');
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = href;
+      this.styleLink(link);
+      const range = editor && this.savedRange && editor.contains(this.savedRange.commonAncestorContainer)
+        ? this.savedRange
+        : editor ? this.caretRangeAtEnd(editor) : null;
+      if (!editor || !range) return;
+      range.insertNode(link);
+      const space = document.createTextNode('\u00a0');
+      link.after(space);
+      const caret = document.createRange();
+      caret.setStartAfter(space);
+      caret.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(caret);
+      this.savedRange = caret.cloneRange();
+      this.ensureBlocks(editor);
+      this.syncValue();
       return;
     }
 
-    this.restoreSelection();
-    document.execCommand('createLink', false, href);
-    this.editor()?.nativeElement.querySelectorAll('a[href]').forEach((anchor) => {
-      if (!anchor.getAttribute('target')) anchor.setAttribute('target', '_blank');
-      const rel = anchor.getAttribute('rel') ?? '';
-      if (!rel.includes('noopener')) anchor.setAttribute('rel', `${rel} noopener noreferrer`.trim());
-    });
+    if (!editor || !this.restoreSelection()) return;
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!range || range.collapsed) return;
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    this.styleLink(anchor);
+    try { range.surroundContents(anchor); }
+    catch {
+      anchor.appendChild(range.extractContents());
+      range.insertNode(anchor);
+    }
+    const caret = document.createRange();
+    caret.selectNodeContents(anchor);
+    caret.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(caret);
+    this.savedRange = caret.cloneRange();
     this.syncValue();
     this.refreshState();
   }
@@ -510,6 +520,12 @@ export class RichTextEditorComponent implements AfterViewInit {
     if (!node) return null;
     const element = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
     return element?.closest('a') ?? null;
+  }
+
+  private styleLink(anchor: HTMLAnchorElement): void {
+    anchor.style.color = '#1e64ef';
+    anchor.style.textDecoration = 'underline';
+    anchor.style.textUnderlineOffset = '2px';
   }
 
   private normalizeLink(raw: string): string | null {
@@ -525,16 +541,16 @@ export class RichTextEditorComponent implements AfterViewInit {
     }
   }
 
-  private restoreSelection(): void {
+  private restoreSelection(): boolean {
     const editor = this.editor()?.nativeElement;
-    if (!editor) return;
+    if (!editor) return false;
     const selection = window.getSelection();
     if (this.savedRange && editor.contains(this.savedRange.commonAncestorContainer)) {
       selection?.removeAllRanges();
       selection?.addRange(this.savedRange);
-      return;
+      return true;
     }
-    this.moveCaretToEnd(editor);
+    return false;
   }
 
   private moveCaretToEnd(editor: HTMLElement): void {
@@ -552,6 +568,46 @@ export class RichTextEditorComponent implements AfterViewInit {
     range.selectNodeContents(editor);
     range.collapse(false);
     return range;
+  }
+
+  private toggleList(tag: 'ul' | 'ol'): void {
+    const editor = this.editor()?.nativeElement;
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!editor || !range) return;
+    const current = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.startContainer as HTMLElement).closest('ul,ol')
+      : range.startContainer.parentElement?.closest('ul,ol');
+    if (current && editor.contains(current)) {
+      if (current.tagName.toLowerCase() === tag) {
+        const fragment = document.createDocumentFragment();
+        Array.from(current.children).forEach((item) => {
+          const paragraph = document.createElement('p');
+          paragraph.innerHTML = item.innerHTML || '<br>';
+          fragment.appendChild(paragraph);
+        });
+        current.replaceWith(fragment);
+      } else {
+        const replacement = document.createElement(tag);
+        while (current.firstChild) replacement.appendChild(current.firstChild);
+        current.replaceWith(replacement);
+      }
+    } else {
+      const text = range.toString();
+      const list = document.createElement(tag);
+      const item = document.createElement('li');
+      item.textContent = text || 'Mục danh sách';
+      list.appendChild(item);
+      range.deleteContents();
+      range.insertNode(list);
+      const caret = document.createRange();
+      caret.selectNodeContents(item);
+      caret.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(caret);
+      this.savedRange = caret.cloneRange();
+    }
+    this.syncValue();
   }
 
   private refreshState(): void {

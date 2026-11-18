@@ -8,18 +8,18 @@
   } @else {
     <div class="course-promo-layout">
       <div class="course-card-trigger">
-          <span class="mini-cover"><img src="/assets/courses/course-73-cover.png" alt="Ảnh khóa học Kỹ thuật ghi nhớ hiệu quả" /></span>
+          <span class="mini-cover"><img [src]="course()?.thumbnailUrl || '/assets/courses/course-73-cover.png'" [alt]="'Ảnh khóa học ' + (course()?.title || 'Kỹ thuật ghi nhớ hiệu quả')" /></span>
         <span class="mini-course-copy">
           <strong>{{ course()?.title || 'Kỹ thuật ghi nhớ hiệu quả' }}</strong>
-          <span class="mini-author"><svg lucideUserRound></svg><span [appInstructorTrigger]="course()?.instructorId || course()?.instructor || 'ThinkUp'">{{ course()?.instructor || 'ThinkUp' }}</span></span>
-          <span class="mini-meta"><b><svg lucideStar></svg> {{ course()?.rating ?? '4.9' }}</b><i></i><span><svg lucideClock3></svg> {{ course()?.duration || '10 phút' }}</span></span>
+          <span class="mini-author"><svg lucideUserRound></svg>@if (instructorId()) { <span [appInstructorTrigger]="instructorId()">{{ course()?.instructor || 'Giảng viên ThinkUp' }}</span> } @else { <span>{{ course()?.instructor || 'Giảng viên ThinkUp' }}</span> }</span>
+          <span class="mini-meta"><b><svg lucideStar></svg> {{ (course()?.rating ?? 4.9) | number:'1.1-1' }}</b><i></i><span><svg lucideClock3></svg> {{ course()?.duration || '10 phút' }}</span></span>
           <em>{{ course()?.salePrice ? (course()!.salePrice | number:'1.0-0') + ' ₫' : 'Miễn phí' }}</em>
           <span class="mini-actions">
-            <button type="button" (click)="addToCart()" [disabled]="addingToCart()" aria-label="Thêm khóa học vào giỏ hàng"><svg lucideShoppingCart aria-hidden="true"></svg></button>
+            <button type="button" (click)="addToCart()" [disabled]="!isLoggedIn() || addingToCart()" [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng giỏ hàng'" aria-label="Thêm khóa học vào giỏ hàng"><svg lucideShoppingCart aria-hidden="true"></svg></button>
           </span>
         </span>
       </div>
-      <div class="course-detail"><span class="promo-label">GÓC THINKUP</span><p>{{ course()?.title || 'Khóa học ngắn giúp bạn ghi nhớ từ vựng và kiến thức mới dễ dàng hơn.' }}</p><a [routerLink]="['/main/courses', courseId]" target="_blank" rel="noopener" (click)="$event.stopPropagation()">Khám phá <svg lucideExternalLink></svg></a></div>
+      <div class="course-detail"><span class="promo-label">GÓC THINKUP</span><p>{{ course()?.title || 'Khóa học ngắn giúp bạn ghi nhớ từ vựng và kiến thức mới dễ dàng hơn.' }}</p><a [routerLink]="['/main/courses', courseId()]" target="_blank" rel="noopener" (click)="$event.stopPropagation()">Khám phá <svg lucideExternalLink></svg></a></div>
     </div>
     <button type="button" class="dismiss-trigger" (click)="openDismissSurvey($event)" aria-label="Tắt quảng cáo Góc ThinkUp"><svg lucideX></svg></button>
   }

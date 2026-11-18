@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
-import { catchError, distinctUntilChanged, finalize, map, of, switchMap } from 'rxjs';
+import { catchError, distinctUntilChanged, finalize, map, of, switchMap, tap } from 'rxjs';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
@@ -17,6 +17,7 @@ import {
 } from '@lucide/angular';
 import { Course } from '../../../core/models/course.model';
 import { CommerceService } from '../../../core/services/commerce.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RoadmapSkillStatus, RoadmapStage } from '../models/roadmap.model';
 import { RoadmapService } from '../services/roadmap.service';
@@ -63,6 +64,7 @@ export class RoadmapSkillDetailComponent implements OnInit {
   readonly roadmapService = inject(RoadmapService);
   private readonly flashcardService = inject(FlashcardService);
   private readonly commerceService = inject(CommerceService);
+  private readonly auth = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
@@ -75,13 +77,22 @@ export class RoadmapSkillDetailComponent implements OnInit {
   readonly statusOptions = STATUS_OPTIONS;
   readonly loading = this.roadmapService.loading;
   readonly error = signal<string | null>(null);
-  private creatingFlashcard = false;
+  readonly creatingReviewSet = signal(false);
   readonly savingStatus = signal(false);
-  /** Left roadmap rail collapses into a dropdown so it does not push the page content down. */
-  readonly sidebarOpen = signal(false);
+  /** Stage sections expand independently; the current stage opens on entry. */
+  readonly expandedStageIds = signal<Set<string>>(new Set());
 
-  toggleSidebar(): void {
-    this.sidebarOpen.update((open) => !open);
+  isStageExpanded(stage: RoadmapStage): boolean {
+    return this.expandedStageIds().has(stage.id);
+  }
+
+  toggleStage(stage: RoadmapStage): void {
+    this.expandedStageIds.update(current => {
+      const next = new Set(current);
+      if (next.has(stage.id)) next.delete(stage.id);
+      else next.add(stage.id);
+      return next;
+    });
   }
 
   /** Returns to the page the user came from; falls back to the roadmap overview. */
@@ -144,6 +155,10 @@ export class RoadmapSkillDetailComponent implements OnInit {
       switchMap(id => {
         this.error.set(null);
         return this.roadmapService.loadRoadmap(id).pipe(
+          tap(() => {
+            const currentStage = this.stage();
+            if (currentStage) this.expandedStageIds.update(current => new Set(current).add(currentStage.id));
+          }),
           catchError(() => {
             this.error.set('Không tải được thông tin kỹ năng. Vui lòng thử lại sau.');
             return of(null);
@@ -178,12 +193,12 @@ export class RoadmapSkillDetailComponent implements OnInit {
 
   createFlashcard(): void {
     const skill = this.skill();
-    if (!skill || this.creatingFlashcard) return;
+    if (!skill || this.creatingReviewSet()) return;
 
-    this.creatingFlashcard = true;
+    this.creatingReviewSet.set(true);
     this.flashcardService
       .createFromRoadmap({ nodeId: skill.id, roadmapId: this.roadmapService.getPersonalRoadmapId(this.roadmapId), title: skill.title })
-      .pipe(finalize(() => this.creatingFlashcard = false))
+      .pipe(finalize(() => this.creatingReviewSet.set(false)))
       .subscribe({
         next: result => {
           this.router.navigate(['/learning/flashcards', result.setId, 'edit'], {
@@ -203,6 +218,7 @@ export class RoadmapSkillDetailComponent implements OnInit {
   }
 
   addToCart(courseId: string): void {
+    if (!this.auth.isAuthenticated()) return;
     this.commerceService.addToCart(courseId).subscribe((result) => {
       this.toastService.showToast({
         type: 'success',
@@ -212,6 +228,8 @@ export class RoadmapSkillDetailComponent implements OnInit {
   }
 
   goToSkill(skillId: string): void {
+    const targetStage = this.stages().find(item => item.skills.some(skill => skill.id === skillId));
+    if (targetStage) this.expandedStageIds.update(current => new Set(current).add(targetStage.id));
     this.router.navigate(['/learning/roadmap', this.roadmapId, skillId]);
   }
 

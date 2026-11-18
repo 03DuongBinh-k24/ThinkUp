@@ -1,21 +1,24 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LucideHeart, LucideShoppingCart, LucideStar, LucideUserRound } from '@lucide/angular';
 import { Course } from '../../../../core/models/course.model';
 import { ToastService } from '../../../../core/services/toast.service';
 import { FavoritesService } from '../../../../core/services/favorites.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-roadmap-course-card',
   standalone: true,
-  imports: [RouterLink, LucideHeart, LucideShoppingCart, LucideStar, LucideUserRound, InstructorTriggerDirective],
+  imports: [DecimalPipe, RouterLink, LucideHeart, LucideShoppingCart, LucideStar, LucideUserRound, InstructorTriggerDirective],
   templateUrl: './roadmap-course-card.component.html',
   styleUrls: ['../../styles/roadmap-ui.css', './roadmap-course-card.component.css']
 })
 export class RoadmapCourseCardComponent {
   private readonly favoritesService = inject(FavoritesService);
   private readonly toastService = inject(ToastService);
+  private readonly auth = inject(AuthService);
 
   readonly course = input.required<Course>();
   readonly addToCart = output<string>();
@@ -27,6 +30,7 @@ export class RoadmapCourseCardComponent {
     return url && url !== this.failedThumbnail() ? url : null;
   });
   readonly isFavorite = computed(() => this.favoritesService.isFavorite(this.course().id));
+  readonly isLoggedIn = computed(() => this.auth.isAuthenticated());
   readonly badge = computed(() => this.course().badge ?? 'HOT');
   readonly tags = computed(() => (this.course().tags ?? []).slice(0, 3));
 
@@ -35,6 +39,7 @@ export class RoadmapCourseCardComponent {
   }
 
   toggleFavorite(event: Event): void {
+    if (!this.isLoggedIn()) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -47,6 +52,7 @@ export class RoadmapCourseCardComponent {
   }
 
   onAddToCart(event: Event): void {
+    if (!this.isLoggedIn()) return;
     event.preventDefault();
     event.stopPropagation();
     this.addToCart.emit(this.course().id);

@@ -1,0 +1,151 @@
+{
+  "info": {
+    "_postman_id": "7dfb1a56-b8cb-41a3-a8cf-28c31c69f320",
+    "name": "ThinkUp - Kiểm thử API các Module Học viên",
+    "description": "Collection kiểm thử theo các route backend hiện có. Dùng tài khoản thử nghiệm riêng. Các request ghi dữ liệu được đánh dấu rõ trong tên. Không dùng để chạy lặp trên production.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "testEmail", "value": "student_test@thinkup.edu.vn" },
+    { "key": "testPassword", "value": "" },
+    { "key": "courseId", "value": "" },
+    { "key": "lessonId", "value": "" },
+    { "key": "roadmapCategoryId", "value": "1" },
+    { "key": "roadmapNodeId", "value": "" },
+    { "key": "flashcardId", "value": "" },
+    { "key": "notificationId", "value": "" },
+    { "key": "supportTicketId", "value": "" }
+  ],
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+  "item": [
+    {
+      "name": "00 - Health Check",
+      "item": [
+        {
+          "name": "GET Health (không cần đăng nhập)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/health" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('status=ok', () => pm.expect(pm.response.json().status).to.eql('ok'));", "pm.test('Có uptime', () => pm.expect(pm.response.json().uptime).to.be.a('number'));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        }
+      ]
+    },
+    {
+      "name": "01 - Auth (học viên)",
+      "item": [
+        {
+          "name": "POST Đăng nhập (dùng tài khoản đã xác minh email)",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"rememberMe\": false\n}" }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Đăng nhập thành công (200)', () => pm.response.to.have.status(200));", "const data = pm.response.json();", "const token = data.accessToken || data.token || data.data?.accessToken;", "if (token) pm.environment.set('accessToken', token);", "pm.test('Có access token', () => pm.expect(token).to.be.a('string').and.not.empty);", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "POST Đăng nhập sai mật khẩu (âm tính; dùng tài khoản test)",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"SaiPassword-For-Test-Only\",\n  \"rememberMe\": false\n}" }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Từ chối thông tin sai (401)', () => pm.response.to.have.status(401));", "pm.test('Mã lỗi INVALID_CREDENTIALS', () => pm.expect(pm.response.json().code).to.eql('INVALID_CREDENTIALS'));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "GET Hồ sơ hiện tại (cần đăng nhập)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/profile" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "GET Hồ sơ khi thiếu token (âm tính; dự kiến 401)",
+          "request": { "method": "GET", "header": [], "auth": { "type": "noauth" }, "url": "{{baseUrl}}/api/user/profile" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Chặn truy cập chưa xác thực (401)', () => pm.response.to.have.status(401));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Khóa học & giỏ hàng",
+      "item": [
+        {
+          "name": "GET Danh sách khóa học (đọc)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/courses?sort=popular&page=1&limit=10" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('success=true', () => pm.expect(pm.response.json().success).to.eql(true));", "const body=pm.response.json(); const rows=body.data?.courses || body.data?.items || body.data; if (Array.isArray(rows) && rows.length) { const c=rows[0]; const id=c.id || c.course_id || c._id; if (id) pm.environment.set('courseId', String(id)); }", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "GET Chi tiết khóa học theo courseId (đọc)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/courses/{{courseId}}/detail" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 khi courseId tồn tại', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "GET Giỏ hàng (đọc; có thể cần token)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/cart" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Phản hồi hợp lệ (200 hoặc 401 tùy trạng thái phiên)', () => pm.expect([200,401]).to.include(pm.response.code));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Onboarding & gợi ý khóa học theo câu trả lời",
+      "description": "Backend sắp xếp danh sách khóa học dựa trên category, tag, level và mức độ phổ biến; mã hiện tại thể hiện cơ chế theo quy tắc, không đủ căn cứ gọi là mô hình ML.",
+      "item": [
+        {
+          "name": "GET Danh sách khóa học sau onboarding (đọc; cần token)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/onboarding/courses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "POST Gửi onboarding hợp lệ (GHI DB; chỉ chạy với user test)",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"frontend\",\n  \"selectedSkills\": [\"html-css\", \"js-ts\"],\n  \"currentLevel\": \"beginner\"\n}" }, "url": "{{baseUrl}}/api/user/onboarding/submit" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Onboarding được chấp nhận (200)', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }]
+        },
+        {
+          "name": "POST Onboarding thiếu dữ liệu (âm tính; dự kiến 400)",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"frontend\",\n  \"selectedSkills\": [],\n  \"currentLevel\": \"beginner\"\n}" }, "url": "{{baseUrl}}/api/user/onboarding/submit" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Từ chối dữ liệu thiếu (400)', () => pm.response.to.have.status(400));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 - Lộ trình nghề nghiệp",
+      "item": [
+        { "name": "GET Danh sách lộ trình (đọc)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/roadmap/careers" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Mẫu lộ trình theo categoryId (đọc)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/roadmap/template/{{roadmapCategoryId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Mẫu lộ trình tồn tại (200)', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Lộ trình cá nhân (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/roadmap/my-roadmap" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Khóa học đề xuất cho roadmap node (cần token + nodeId thật)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/roadmap/nodes/{{roadmapNodeId}}/recommended-courses" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Phản hồi HTTP thành công', () => pm.expect(pm.response.code).to.be.within(200,299));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    },
+    {
+      "name": "05 - Bài học & tiến độ",
+      "item": [
+        { "name": "GET Tổng quan bài học theo courseId (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/lessons/overview/{{courseId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 nếu khóa học có dữ liệu', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Nội dung bài học (cần lessonId hợp lệ + token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/lessons/content/{{lessonId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 nếu lessonId hợp lệ và được phép', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    },
+    {
+      "name": "06 - Flashcard",
+      "item": [
+        { "name": "GET Danh sách flashcard của học viên (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/flashcards" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Flashcard theo ID (cần flashcardId hợp lệ + token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/flashcards/{{flashcardId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 nếu ID hợp lệ', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    },
+    {
+      "name": "07 - Yêu thích",
+      "item": [
+        { "name": "GET Danh sách yêu thích (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/favorites" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Kiểm tra yêu thích của courseId (đọc)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/favorites/check/{{courseId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    },
+    {
+      "name": "08 - Thông báo",
+      "item": [
+        { "name": "GET Danh sách thông báo (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/notifications" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Tóm tắt thông báo (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/notifications/summary" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    },
+    {
+      "name": "09 - Hỗ trợ",
+      "item": [
+        { "name": "GET Danh mục hỗ trợ (không cần đăng nhập)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/support/topics" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Ticket hỗ trợ của tôi (cần token)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/support/tickets" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    },
+    {
+      "name": "10 - Blog",
+      "item": [
+        { "name": "GET Danh sách bài viết (đọc)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/blog?page=1&limit=10" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] },
+        { "name": "GET Chủ đề blog phổ biến (đọc)", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/blog/topics/popular" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Ghi thời gian phản hồi', () => pm.environment.set('lastResponseTimeMs', String(pm.response.responseTime)));", "console.log('ThinkUp API response time (ms):', pm.response.responseTime);"] } }] }
+      ]
+    }
+  ]
+}

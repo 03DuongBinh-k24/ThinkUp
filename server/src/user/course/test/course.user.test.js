@@ -22,6 +22,7 @@ import {
   COLLECTION_ENROLLMENTS,
   COLLECTION_LESSONS,
   COLLECTION_LESSON_VIDEOS,
+  generateCourseSeoMetadata,
 } from '../course.user.js';
 
 describe('Kiểm thử Module Truy Xuất Thẻ Khóa Học (Course Cards)', () => {
@@ -59,6 +60,25 @@ describe('Kiểm thử Module Truy Xuất Thẻ Khóa Học (Course Cards)', () 
 
   // ─── 1. Tiện ích format và tính toán ─────────────────────────────────────────
   describe('1. Kiểm thử các hàm tiện ích', () => {
+    it('TC-SEO-COURSE-01: Sinh metadata SEO cho khóa học với fallback và giới hạn ký tự', () => {
+      const seo = generateCourseSeoMetadata({
+        title: 'Khóa học React',
+        description: '<p>Học React từ cơ bản đến nâng cao.</p>',
+        slug: 'react-co-ban',
+        thumbnail_url: 'https://cdn.example.com/react.png',
+        status: 'published',
+        keywords: ['React', 'Frontend'],
+      }, { clientUrl: 'https://thinkup.vn/' });
+
+      assert.strictEqual(seo.title, 'Khóa học React');
+      assert.strictEqual(seo.description, 'Học React từ cơ bản đến nâng cao.');
+      assert.strictEqual(seo.canonicalUrl, 'https://thinkup.vn/courses/react-co-ban');
+      assert.strictEqual(seo.robots, 'index, follow');
+      assert.strictEqual(seo.openGraph.url, seo.canonicalUrl);
+      assert.strictEqual(seo.schemaMarkup['@type'], 'Course');
+      assert.deepStrictEqual(seo.keywords, ['React', 'Frontend']);
+    });
+
     it('TC-FMT-01: formatVND chuyển đổi số tiền hoặc miễn phí', () => {
       assert.strictEqual(formatVND(0), 'Miễn phí');
       assert.strictEqual(formatVND(-500), 'Miễn phí');
@@ -509,6 +529,8 @@ describe('Kiểm thử Module Truy Xuất Thẻ Khóa Học (Course Cards)', () 
       assert.ok(enrolled, 'Khóa học mẫu phải có trong danh sách');
       assert.ok(enrolled.title, 'Phải có title');
       assert.ok(enrolled.instructor, 'Phải có instructor');
+      assert.equal(typeof enrolled.instructorAvatar, 'string', 'Dashboard cần trả avatar giảng viên để trang hồ sơ đồng bộ ảnh');
+      assert.equal(typeof enrolled.instructorId, 'string');
       assert.ok(typeof enrolled.totalLessons === 'number', 'Phải có totalLessons');
       assert.ok(typeof enrolled.completedLessons === 'number', 'Phải có completedLessons');
       assert.ok(enrolled.cover, 'Phải có cover color');

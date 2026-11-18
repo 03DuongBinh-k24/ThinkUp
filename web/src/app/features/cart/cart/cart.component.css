@@ -800,6 +800,11 @@
   color: var(--pay-primary);
 }
 
+.suggest-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .suggest-action svg {
   width: 15px;
   height: 15px;

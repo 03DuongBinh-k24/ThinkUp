@@ -553,14 +553,21 @@ test('Simulation retries reserved identifier collisions and fails closed if allo
   assert.equal(unavailable.db.tables.get('orders')?.length||0,0);
 });
 
-test('Simulation mode is server-controlled, defaults to live and cannot convert existing live requests',async()=>{
-  const f=await fixture();const live=await f.create({paymentMode:'simulation',is_simulated:true});
-  assert.equal(live.status,'pending');assert.equal(live.isSimulated,undefined);
-  f.options.paymentMode='simulation';await assert.rejects(f.create(),e=>e.code==='IDEMPOTENCY_CONFLICT');
-  assert.equal(txOf(f,live.transactionId).status,'pending');
-  f.options.paymentMode='invalid';await assert.rejects(f.create(),e=>e.code==='PAYMENT_MODE_INVALID');
-  const g=await fixture();const previous=process.env.PAYMENT_MODE;
-  try{process.env.PAYMENT_MODE='simulation';assert.equal((await g.create()).isSimulated,true);}finally{process.env.PAYMENT_MODE=previous;}
+test('Simulation mode is server-controlled, defaults to simulation and cannot convert existing live requests',async()=>{
+  const previous=process.env.PAYMENT_MODE;
+  try {
+    delete process.env.PAYMENT_MODE;
+    const simulated=await fixture();
+    assert.equal((await simulated.create()).isSimulated,true);
+
+    const f=await fixture();f.options.paymentMode='live';const live=await f.create({paymentMode:'simulation',is_simulated:true});
+    assert.equal(live.status,'pending');assert.equal(live.isSimulated,undefined);
+    f.options.paymentMode='simulation';await assert.rejects(f.create(),e=>e.code==='IDEMPOTENCY_CONFLICT');
+    assert.equal(txOf(f,live.transactionId).status,'pending');
+    f.options.paymentMode='invalid';await assert.rejects(f.create(),e=>e.code==='PAYMENT_MODE_INVALID');
+  } finally {
+    if(previous===undefined)delete process.env.PAYMENT_MODE;else process.env.PAYMENT_MODE=previous;
+  }
 });
 
 test('Simulation cannot be paid by a real gateway or retried as an unpaid order',async()=>{

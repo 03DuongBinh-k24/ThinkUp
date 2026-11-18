@@ -185,6 +185,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
 
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private roomPollInterval: ReturnType<typeof setInterval> | null = null;
+  private roomPresenceInterval: ReturnType<typeof setInterval> | null = null;
   private hasJoined = false;
   readonly leaving = signal(false);
   readonly departureChoice = signal<'close' | 'auto' | 'manual' | ''>('');
@@ -271,6 +272,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     if (id && id === this.roomId() && this.hasJoined) return;
     const transition = ++this.roomTransition;
     if (this.roomPollInterval) clearInterval(this.roomPollInterval);
+    if (this.roomPresenceInterval) clearInterval(this.roomPresenceInterval);
     this.roomPollInterval = null;
     const previousId = this.roomId();
     if (previousId && previousId !== id && this.hasJoined) {
@@ -375,6 +377,10 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
           this.refreshRoomData(() => this.requestRoomSync());
           this.loadPermissions();
           this.roomPollInterval = setInterval(() => this.refreshRoomData(), 5000);
+          this.studyRoomService.heartbeat(id).subscribe({ error: () => { /* The lease expires if the session is no longer valid. */ } });
+          this.roomPresenceInterval = setInterval(() => {
+            if (id === this.roomId() && this.hasJoined) this.studyRoomService.heartbeat(id).subscribe({ error: () => { /* Retry on the next heartbeat. */ } });
+          }, 20000);
         } catch {
           if (!this.isCurrentRoomTransition(id, transition)) return;
           this.studyRoomService.leaveRoom(id, user.id).subscribe({ error: () => { /* The connection error remains the actionable message. */ } });
@@ -408,6 +414,12 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
       next: members => {
         if (id !== this.roomId()) return;
         const connectedMembers = members.filter(member => !this.disconnectedParticipantIds.has(member.userId));
+        const currentUser = connectedMembers.find(member => member.userId === userId);
+        if (currentUser && currentUser.role !== this.currentRole()) {
+          this.currentRole.set(currentUser.role);
+          this.roleLabel.set(currentUser.role === 'owner' ? 'Chủ phòng' : currentUser.role === 'moderator' ? 'Moderator' : 'Thành viên');
+          this.loadPermissions();
+        }
         this.participants.set(connectedMembers.map(member => {
           const position = this.liveParticipantPositions.get(member.userId);
           return position ? { ...member, position } : member;
@@ -424,7 +436,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
       next: messages => {
         if (id !== this.roomId()) return;
         const incoming = messages.map(message => this.mapMessage(message, userId));
-        this.messages.update(current => this.mergeMessages(incoming, current));
+        this.messages.set(incoming);
       },
       error: () => { if (id === this.roomId()) this.showNotice('Không thể đồng bộ tin nhắn phòng.'); },
     });
@@ -460,9 +472,10 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     if (this.timerInterval) clearInterval(this.timerInterval);
     void this.timerAudio?.close();
     if (this.roomPollInterval) clearInterval(this.roomPollInterval);
+    if (this.roomPresenceInterval) clearInterval(this.roomPresenceInterval);
     if (this.noticeTimer) clearTimeout(this.noticeTimer);
     void this.media.dispose();
-    if (this.hasJoined && !this.leaving) {
+    if (this.hasJoined && !this.leaving()) {
       const userId = this.auth.currentUser()?.id;
       if (userId) this.studyRoomService.leaveRoom(this.roomId(), userId).subscribe({ error: () => { /* Component teardown must remain silent. */ } });
     }
@@ -1322,10 +1335,18 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
     const { participant } = target;
     if (!this.participants().some(person => person.userId === participant.userId)) return;
     const name = participant.displayName || participant.name;
-    this.disconnectedParticipantIds.add(participant.userId);
-    this.removeParticipantState(participant.userId);
-    void this.media.sendRealtime({ type: 'participant-kick', payload: { userId: participant.userId } });
-    this.showNotice(`Đã mời ${name} ra khỏi phòng.`);
+    this.studyRoomService.kickParticipant(target.roomId, participant.userId).subscribe({
+      next: () => {
+        if (target.roomId !== this.roomId()) return;
+        this.disconnectedParticipantIds.add(participant.userId);
+        this.removeParticipantState(participant.userId);
+        void this.media.sendRealtime({ type: 'participant-kick', payload: { userId: participant.userId } });
+        this.showNotice(`Đã mời ${name} ra khỏi phòng.`);
+      },
+      error: (error: { error?: { message?: string } }) => {
+        if (target.roomId === this.roomId()) this.showNotice(error.error?.message || 'Không thể mời thành viên ra khỏi phòng.');
+      },
+    });
   }
   dismissThinkUpCorner(reason: ThinkUpCornerDismissReason): void {
     const roomId = this.roomId();

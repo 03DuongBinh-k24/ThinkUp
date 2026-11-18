@@ -20,7 +20,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { LearningChapter, LearningCourse, LearningLesson, QuizQuestion } from '../../models/learning.model';
 import { inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { LearningService } from '../../services/learning.service';
 import { QuizAttemptDto, QuizOverviewDto } from '../../models/learning-api.model';
 
@@ -180,7 +180,7 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
     this.apiQuestions = [];
     this.errorMessage = '';
     try {
-      const overview = await firstValueFrom(this.service.getQuizOverview(this.lesson.id));
+      const overview = await firstValueFrom(this.service.getQuizOverview(this.lesson.id).pipe(timeout(20000)));
       if (version !== this.generation) return;
       this.overview = overview;
       this.secondsLeft = overview.time_limit_minutes * 60;
@@ -204,7 +204,7 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
     this.busy=true;
     this.errorMessage='';
     try {
-      const attempt=await firstValueFrom(this.service.startQuizAttempt(this.lesson.id,retry));
+      const attempt=await firstValueFrom(this.service.startQuizAttempt(this.lesson.id,retry).pipe(timeout(20000)));
       if(version!==this.generation)return;
       this.applyAttempt(attempt);
       this.currentIndex=0;
@@ -262,7 +262,7 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
     this.saveQueue=this.saveQueue.then(async()=>{
       if(version!==this.generation || this.saveFailed)return;
       try {
-        const saved=await firstValueFrom(this.service.saveQuizAnswers(attemptId,{answers,flagged_question_ids,revision:this.revision}));
+        const saved=await firstValueFrom(this.service.saveQuizAnswers(attemptId,{answers,flagged_question_ids,revision:this.revision}).pipe(timeout(15000)));
         if(version===this.generation)this.revision=saved.revision;
       } catch(error) {
         if(version!==this.generation)return;
@@ -279,11 +279,25 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
   async submit(): Promise<void> {
     if (this.phase !== 'running' || this.busy) return;
     const version=this.generation;
+    const attemptId=this.attemptId;
     this.busy=true;
     try {
-      await this.saveQueue;
+      await Promise.race([
+        this.saveQueue,
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Đã hết thời gian chờ lưu đáp án.')), 15000)),
+      ]);
       if(version!==this.generation || this.saveFailed)return;
-      const result=await firstValueFrom(this.service.submitQuizAttempt(this.attemptId));
+      // Persist the exact visible answer snapshot before submission. This avoids
+      // depending on a background autosave that may still carry an older revision.
+      const saved=await firstValueFrom(this.service.saveQuizAnswers(attemptId,{
+        answers:{...this.answers},
+        flagged_question_ids:[...this.flagged],
+        revision:this.revision,
+      }).pipe(timeout(15000)));
+      if(version!==this.generation)return;
+      this.revision=saved.revision;
+      this.saveFailed=false;
+      const result=await firstValueFrom(this.service.submitQuizAttempt(attemptId).pipe(timeout(20000)));
       if(version!==this.generation)return;
       this.stopTimer();
       this.correctCount=result.correct_count;
@@ -292,7 +306,18 @@ export class QuizWorkspaceComponent implements OnChanges, OnDestroy {
       this.serverPassed=result.passed;
       this.phase='result';
       if(result.passed)this.completed.emit();
-    } catch { if(version===this.generation)this.errorMessage='Không nộp được bài. Kết quả chưa được xác nhận; vui lòng thử lại.'; }
+    } catch(error) {
+      if(version!==this.generation)return;
+      if((error as {status?:number})?.status===409) {
+        this.errorMessage='Đáp án vừa được cập nhật từ một phiên khác. Đang tải trạng thái mới nhất; vui lòng kiểm tra rồi nộp lại.';
+        try {
+          const current=await firstValueFrom(this.service.getQuizAttempt(attemptId).pipe(timeout(15000)));
+          if(version===this.generation)this.applyAttempt(current);
+        } catch {}
+      } else {
+        this.errorMessage='Không lưu được đáp án hoặc máy chủ phản hồi quá lâu. Bài chưa được nộp; vui lòng thử lại.';
+      }
+    }
     finally { if(version===this.generation)this.busy=false; }
   }
 

@@ -10,6 +10,10 @@
     <button
       type="button"
       class="cc-card__save"
+      [disabled]="!isLoggedIn()"
+      [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
+      [class.opacity-50]="!isLoggedIn()"
+      [class.cursor-not-allowed]="!isLoggedIn()"
       [class.is-saved]="saved()"
       [attr.aria-pressed]="saved()"
       [attr.aria-label]="'Lưu ' + card().title"
@@ -80,7 +84,7 @@
       </div>
 
       <div class="cc-card__actions">
-        <button type="button" class="cc-icon-btn" (click)="addToCart.emit(card())" aria-label="Thêm vào giỏ hàng">
+      <button type="button" class="cc-icon-btn" [disabled]="!isLoggedIn()" [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng giỏ hàng'" [class.opacity-50]="!isLoggedIn()" [class.cursor-not-allowed]="!isLoggedIn()" (click)="addToCart.emit(card())" aria-label="Thêm vào giỏ hàng">
           <app-icon name="shopping-cart" class="h-[14px] w-[14px]" />
         </button>
         <a class="cc-icon-btn" [routerLink]="['/main/courses', card().id]" aria-label="Xem chi tiết khóa học">
@@ -90,3 +94,5 @@
     </div>
   </div>
 </article>
+
+
