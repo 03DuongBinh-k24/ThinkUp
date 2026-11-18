@@ -43,7 +43,7 @@ const COPY: Record<AccountDialogKind, KindCopy> = {
     toastTitle: 'Đã mở khóa tài khoản thành công'
   },
   reset: {
-    title: 'Đặt lại xác thực 2 lớp',
+    title: 'Đặt lại xác thực 2 lớp (Reset 2FA)',
     subtitle: 'Xóa cấu hình xác thực cũ theo yêu cầu của nhân sự.',
     noticeKind: 'warning',
     noticeTitle: 'Bắt buộc thiết lập lại 2FA',

@@ -21,10 +21,7 @@
     </div>
   }
 
-  <div dialogFooter style="display: flex; justify-content: flex-end; gap: 10px">
+  <div dialogFooter style="display: flex; justify-content: flex-end">
     <button class="button" type="button" (click)="close()">Đóng</button>
-    @if (showDetail()) {
-      <button class="button primary" type="button" (click)="viewDetail()">Xem chi tiết kiểm định</button>
-    }
   </div>
 </app-admin-dialog>
