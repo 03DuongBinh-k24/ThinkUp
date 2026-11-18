@@ -23,7 +23,7 @@ const REASONS: CustomSelectOption[] = [
   standalone: true,
   imports: [AdminDialogComponent, CustomSelectComponent],
   templateUrl: './course-reject-dialog.component.html',
-  styleUrls: ['../../courses-page.css', './course-reject-dialog.component.css']
+  styleUrl: '../../courses-page.css'
 })
 export class CourseRejectDialogComponent {
   readonly workspace = input.required<ApprovalWorkspace>();

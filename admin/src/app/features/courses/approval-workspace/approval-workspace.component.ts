@@ -1,12 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
-import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
-import { downloadTable } from '../../../shared/utils/export-formats';
 import { CourseHistoryDialogComponent } from '../components/course-history-dialog/course-history-dialog.component';
 import { CourseRejectDialogComponent, RejectPayload } from '../components/course-reject-dialog/course-reject-dialog.component';
 import { CourseRiskDialogComponent } from '../components/course-risk-dialog/course-risk-dialog.component';
@@ -37,11 +34,10 @@ const LANGUAGES: CustomSelectOption[] = [
   imports: [
     NgTemplateOutlet, CustomSelectComponent,
     CourseHistoryDialogComponent, CourseRejectDialogComponent, CourseRiskDialogComponent,
-    CourseSupplementDialogComponent, CourseToastComponent,
-    SelectionBarComponent, BulkSelectionDialogComponent
+    CourseSupplementDialogComponent, CourseToastComponent
   ],
   templateUrl: './approval-workspace.component.html',
-  styleUrls: ['../courses-page.css', './approval-workspace.component.css']
+  styleUrl: '../courses-page.css'
 })
 export class ApprovalWorkspaceComponent {
   private readonly store = inject(CourseStore);
@@ -64,13 +60,6 @@ export class ApprovalWorkspaceComponent {
   readonly issueFlag = signal(false);
   readonly issueNote = signal('');
   readonly toast = signal<{ message: string; tone: ToastTone } | null>(null);
-  readonly selection = signal<ReadonlySet<string>>(new Set());
-  readonly selectionListOpen = signal(false);
-  private readonly resetSelectionOnNavigate = effect(() => {
-    this.id();
-    this.selection.set(new Set());
-    this.selectionListOpen.set(false);
-  });
 
   readonly checklist = computed(() => (this.workspace()?.checklist ?? []).map(item => ({
     ...item,
@@ -81,80 +70,8 @@ export class ApprovalWorkspaceComponent {
   readonly codeLines = computed(() => (this.workspace()?.ide.code ?? '').split('\n'));
   readonly lessonCount = computed(() => (this.workspace()?.chapters ?? [])
     .reduce((total, chapter) => total + chapter.lessons.length, 0));
-  readonly testcases = computed(() => this.workspace()?.ide.testcases ?? []);
-  readonly selectedIds = computed(() => [...this.selection()]);
-  readonly allVisibleSelected = computed(() => {
-    const items = this.testcases();
-    const chosen = this.selection();
-    return items.length > 0 && items.every(item => chosen.has(item.id));
-  });
-  readonly someVisibleSelected = computed(() => !this.allVisibleSelected() && this.testcases().some(item => this.selection().has(item.id)));
-  readonly selectionItems = computed<BulkSelectionItem[]>(() => {
-    const ws = this.workspace();
-    if (!ws) return [];
-    return ws.ide.testcases
-      .filter(item => this.selection().has(item.id))
-      .map(item => ({ id: item.id, label: `${item.visibility} · ${item.input}`, detail: `${ws.title} · ${ws.instructor.name}` }));
-  });
-  readonly selectionCandidates = computed<BulkSelectionItem[]>(() => {
-    const ws = this.workspace();
-    if (!ws) return [];
-    return ws.ide.testcases
-      .filter(item => !this.selection().has(item.id))
-      .map(item => ({ id: item.id, label: `${item.visibility} · ${item.input}`, detail: `${ws.title} · ${ws.instructor.name}` }));
-  });
-  readonly selectionActions = computed<readonly SelectionAction[]>(() => [
-    { key: 'export', label: 'Xuất đã chọn' }
-  ]);
-
-  isSelected(id: string): boolean { return this.selection().has(id); }
-
-  toggleSelect(id: string, checked: boolean): void {
-    const next = new Set(this.selection());
-    checked ? next.add(id) : next.delete(id);
-    this.selection.set(next);
-  }
-
-  toggleSelectAll(): void {
-    const next = new Set(this.selection());
-    if (this.allVisibleSelected()) this.testcases().forEach(item => next.delete(item.id));
-    else this.testcases().forEach(item => next.add(item.id));
-    this.selection.set(next);
-  }
-
-  clearSelection(): void { this.selection.set(new Set()); }
-
-  setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
-
-  runSelectionAction(key: string, ids?: readonly string[]): void {
-    this.selectionListOpen.set(false);
-    const targetIds = ids ?? this.selectedIds();
-    if (!targetIds.length || key !== 'export') return;
-    const ws = this.workspace();
-    if (!ws) return;
-    const chosen = new Set(targetIds);
-    const rows: (string | number)[][] = [
-      ['Khóa học', 'Giảng viên', 'Test case', 'Đầu vào', 'Kết quả mong đợi', 'Trạng thái'],
-      ...ws.ide.testcases.filter(item => chosen.has(item.id)).map(item => [
-        ws.title, ws.instructor.name, item.visibility, item.input, item.expected, this.testLabel(item.state)
-      ])
-    ];
-    this.notify(`Đang tạo tệp XLSX cho ${targetIds.length} test case đã chọn.`, 'info');
-    void downloadTable('xlsx', `test-case-${ws.courseId}`, rows)
-      .then(() => this.notify(`Đã xuất ${targetIds.length} test case đã chọn ra tệp XLSX.`, 'success'))
-      .catch(() => this.notify('Không thể tạo tệp xuất. Vui lòng thử lại.', 'error'));
-  }
 
   setTab(id: WorkspaceTab): void { this.tab.set(id); }
-  onTabKeydown(event: KeyboardEvent, current: WorkspaceTab): void {
-    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
-    event.preventDefault();
-    const index = this.tabs.findIndex(item => item.id === current);
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? this.tabs.length - 1
-      : (index + (event.key === 'ArrowLeft' ? -1 : 1) + this.tabs.length) % this.tabs.length;
-    this.setTab(this.tabs[next].id);
-    document.getElementById('approval-tab-' + this.tabs[next].id)?.focus();
-  }
   toggleChapter(no: string): void {
     const next = new Set(this.collapsed());
     next.has(no) ? next.delete(no) : next.add(no);
