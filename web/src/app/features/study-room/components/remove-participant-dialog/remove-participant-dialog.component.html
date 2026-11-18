@@ -1,0 +1,14 @@
+<dialog #dialog class="room-glass remove-participant-dialog"
+    [class.dark]="dark()" [attr.data-theme]="selectedTheme()"
+    aria-labelledby="remove-participant-title" aria-describedby="remove-participant-description"
+    (cancel)="$event.preventDefault(); close(); cancelled.emit()">
+    <h2 id="remove-participant-title">Mời ra khỏi phòng?</h2>
+    <p id="remove-participant-description">
+      <strong>{{ name() }}</strong>
+      sẽ rời khỏi phiên học hiện tại.
+    </p>
+    <footer>
+      <button type="button" autofocus (click)="close(); cancelled.emit()">Hủy</button>
+      <button type="button" class="confirm-removal" (click)="close(); confirmed.emit()">Mời ra khỏi phòng</button>
+    </footer>
+  </dialog>

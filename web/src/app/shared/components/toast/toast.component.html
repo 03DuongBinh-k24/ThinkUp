@@ -1,7 +1,7 @@
-<div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-auto" role="status" aria-live="polite">
+<div class="fixed top-4 right-4 z-[9999] flex max-w-[calc(100vw-2rem)] flex-col items-end gap-2 pointer-events-auto" role="status" aria-live="polite">
   @for (toast of toastService.toasts(); track toast.id) {
     <div
-      class="flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm max-w-[400px] w-full toast-item"
+      class="flex w-max max-w-full items-center gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm toast-item"
       [ngClass]="getStyle(toast.type)"
     >
       <!-- Icon based on type -->
@@ -35,7 +35,7 @@
         }
       }
 
-      <p class="text-[13px] font-medium text-[#191B23] leading-[20px] flex-1 m-0">
+      <p class="min-w-0 text-[13px] font-medium text-[#191B23] leading-[20px] flex-1 m-0">
         {{ toast.message }}
       </p>
 
@@ -43,7 +43,7 @@
         <button
           type="button"
           (click)="runAction(toast.id, action)"
-          class="shrink-0 rounded-md px-2 py-1 text-[13px] font-semibold text-[#2563EB] transition-colors hover:bg-white/60 hover:text-[#1D4ED8]"
+          class="shrink-0 whitespace-nowrap rounded-md px-2 py-1 text-[13px] font-semibold text-[#2563EB] transition-colors hover:bg-white/60 hover:text-[#1D4ED8]"
         >
           {{ action.label }}
         </button>
