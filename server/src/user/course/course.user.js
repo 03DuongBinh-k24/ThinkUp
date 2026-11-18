@@ -436,6 +436,7 @@ export async function getCourseCards({
       } : {}),
       id: String(doc._id || cId),
       course_id: cId,
+      course_code: doc.course_code || null,
       slug: doc.slug || `course-${cId}`,
       title: doc.title || 'Khóa học ThinkUp',
       thumbnail_url: doc.thumbnail_url || '',
@@ -848,6 +849,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
 
   return {
     course_id: courseIdStr,
+    course_code: courseDoc.course_code || null,
     id: String(courseDoc._id),
     title: courseDoc.title,
     slug: courseDoc.slug || courseIdStr,

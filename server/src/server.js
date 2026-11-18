@@ -57,6 +57,7 @@ import { createAdminTicketsRouter, ensureSupportAdminIndexes, seedDefaultCannedR
 import { createAdminComplaintsRouter, ensureComplaintIndexes } from './admin/support/complaints.admin.js';
 import { createAdminFaqsRouter, ensureFaqIndexes } from './admin/support/faqs.admin.js';
 import { ensureBusinessVoucherIndexes } from './user/voucher/voucher.service.js';
+import { getMongoDb } from './user/db.js';
 import { createAdminPreferencesRouter, ensureAdminPreferencesIndexes } from './admin/preferences/preferences.admin.js';
 import { createAdminNotificationsRouter, ensureAdminNotificationIndexes } from './admin/notifications/notifications.admin.js';
 import { createAdminSystemRouter } from './admin/system/system.routes.js';

@@ -11,6 +11,19 @@ export const LARGE_PAYOUT_THRESHOLD = 20_000_000;
 export const TAX_THRESHOLD = 2_000_000;
 export const TAX_RATE = 0.10;
 
+async function payoutSettings(db) {
+  const config = await db.collection('system_settings').findOne({ _id: 'global_config' }, {
+    projection: { 'parameters.super_admin_threshold': 1, 'parameters.tax_threshold': 1,
+      'parameters.tax_rate': 1, 'general.timezone': 1 },
+  });
+  const params = config?.parameters || {};
+  return {
+    threshold: Number.isSafeInteger(params.super_admin_threshold) ? params.super_admin_threshold : LARGE_PAYOUT_THRESHOLD,
+    taxThreshold: Number.isSafeInteger(params.tax_threshold) ? params.tax_threshold : TAX_THRESHOLD,
+    taxRate: Number.isFinite(params.tax_rate) && params.tax_rate >= 0 && params.tax_rate <= 1 ? params.tax_rate : TAX_RATE,
+  };
+}
+
 export async function ensureAdminPayoutIndexes(db) {
   await db.collection(PAYOUT_COLLECTION).createIndex({ request_id: 1 }, { unique: true, sparse: true });
   await db.collection(PAYOUT_COLLECTION).createIndex({ status: 1, submitted_at: -1 });
@@ -198,13 +211,14 @@ export async function listAdminPayouts(query = {}, options = {}) {
 
 export async function getAdminPayoutSummary(query = {}, options = {}) {
   const db = options.db || await getMongoDb();
+  const settings = await payoutSettings(db);
   const raw = await getRawPayouts(db);
   const now = new Date();
   const currentMonthKey = vietnamMonth(now);
   const summarize = rows => {
     const all = rows.map(payoutView);
     const pending = all.filter(item => item.status === 'pending');
-    const largePending = pending.filter(item => item.amount >= LARGE_PAYOUT_THRESHOLD);
+    const largePending = pending.filter(item => item.amount >= settings.threshold);
     const approved = all.filter(item => item.status === 'approved');
     const paidThisMonth = all.filter(item => item.status === 'paid' && item.paidAt && vietnamMonth(new Date(item.paidAt)) === currentMonthKey);
     return {
@@ -239,6 +253,7 @@ export async function getAdminPayoutDetail(id, options = {}) {
 export async function approveAdminPayout(id, { note = '', adminId, adminRole }, options = {}) {
   if (!id || typeof id !== 'string') throw bad('Mã yêu cầu không hợp lệ.');
   const db = options.db || await getMongoDb();
+  const settings = await payoutSettings(db);
 
   const query = ObjectId.isValid(id) && id.length === 24
     ? { $or: [{ request_id: id }, { _id: new ObjectId(id) }] }
@@ -254,7 +269,7 @@ export async function approveAdminPayout(id, { note = '', adminId, adminRole }, 
   if (doc.is_demo !== true) writablePayout(doc);
 
   const amount = money(doc.amount);
-  if (amount >= LARGE_PAYOUT_THRESHOLD && adminRole !== 'SA') {
+  if (amount >= settings.threshold && adminRole !== 'SA') {
     throw bad('Yêu cầu từ 20.000.000 VNĐ trở lên bắt buộc Super Admin phê duyệt.', 403, 'PAYOUT_SUPER_ADMIN_REQUIRED');
   }
 
@@ -270,7 +285,8 @@ export async function approveAdminPayout(id, { note = '', adminId, adminRole }, 
       !Number.isFinite(policy.rate) || policy.rate < 0 || policy.rate > 1 || !policy.version)) {
     throw bad('Chưa có chính sách thuế được phê duyệt trong hợp đồng.', 409, 'PAYOUT_TAX_POLICY_UNVERIFIED');
   }
-  const taxAmount = doc.is_demo === true ? computeTax(amount) : amount >= policy.threshold ? Math.round(amount * policy.rate) : 0;
+  const taxAmount = doc.is_demo === true ? amount >= settings.taxThreshold ? Math.round(amount * settings.taxRate) : 0
+    : amount >= policy.threshold ? Math.round(amount * policy.rate) : 0;
   const netAmount = amount - taxAmount;
 
   const updateFields = {
