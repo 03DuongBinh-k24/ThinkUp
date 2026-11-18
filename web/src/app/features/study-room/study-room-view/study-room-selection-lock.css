@@ -1,0 +1,12 @@
+.study-canvas,
+.study-canvas * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.study-canvas input,
+.study-canvas textarea,
+.study-canvas [contenteditable='true'] {
+  user-select: text;
+  -webkit-user-select: text;
+}

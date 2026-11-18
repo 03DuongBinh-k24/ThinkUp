@@ -1,0 +1,185 @@
+.course-promo-layout {
+  align-items: start;
+}
+
+.course-card-trigger,
+.course-detail {
+  align-self: start;
+}
+
+.course-card-trigger {
+  align-items: start;
+}
+
+.course-detail {
+  justify-content: flex-start;
+}
+
+.corner {
+  width: min(460px, calc(100vw - 24px));
+}
+
+.course-promo-layout {
+  grid-template-columns: minmax(0, 56%) minmax(0, 44%);
+  height: 120px;
+}
+
+.course-card-trigger {
+  grid-template-columns: 96px minmax(0, 1fr);
+  height: 120px;
+  min-height: 120px;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.mini-cover {
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+}
+
+.mini-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mini-cover svg {
+  display: none;
+}
+
+.mini-course-copy strong {
+  font-size: 12px;
+}
+
+.mini-course-copy em {
+  font-size: 12px;
+  padding-inline-end: 32px;
+}
+
+.mini-actions button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #dbe4f0;
+  border-radius: 7px;
+  background: transparent;
+  color: #155dfc;
+  cursor: pointer;
+}
+
+.course-detail {
+  padding: 14px 16px;
+}
+
+.course-detail p {
+  margin: 6px 0 10px;
+  font-size: 11px;
+}
+
+.mini-author,
+.mini-meta {
+  font-size: 9px !important;
+}
+
+.dismiss-trigger {
+  top: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dismiss-trigger svg {
+  width: 12px;
+  height: 12px;
+}
+
+.survey {
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.survey h2 {
+  font-size: 16px;
+}
+
+.survey p {
+  font-size: 11px;
+}
+
+.survey fieldset {
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.survey label {
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.survey textarea {
+  min-height: 56px;
+  margin-top: 6px;
+  padding: 7px;
+  font-size: 11px;
+}
+
+.survey-actions {
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.survey-actions button {
+  min-height: 36px;
+  font-size: 11px;
+}
+
+.survey {
+  border-color: var(--line);
+  background: var(--glass);
+  color: var(--ink);
+}
+
+.survey::before {
+  content: none;
+}
+
+.survey :is(p, .survey-close) {
+  color: var(--muted);
+}
+
+.survey .survey-error {
+  color: var(--danger) !important;
+}
+
+.survey :is(label, textarea, .keep) {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.survey label:has(input:checked),
+.survey .dismiss {
+  background: var(--accent-surface);
+  color: var(--accent);
+}
+
+.survey label:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.survey input {
+  accent-color: var(--accent);
+}
+
+.corner .survey :is(button, input, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

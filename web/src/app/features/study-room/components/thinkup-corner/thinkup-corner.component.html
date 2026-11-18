@@ -1,40 +1,26 @@
-<aside class="corner" [style.left.px]="position().x" [style.top.px]="position().y" [class.expanded]="expanded()" [class.surveying]="surveyOpen()" (pointerdown)="$event.stopPropagation()">
+<aside class="corner" [style.left.px]="position().x" [style.top.px]="position().y" [class.expanded]="expanded()" [class.surveying]="surveyOpen()" [class.draggable]="draggable()" [class.dark]="dark()" [attr.data-theme]="theme()" (pointerdown)="startDrag($event)">
   @if (surveyOpen()) {
-    <section class="survey" aria-labelledby="thinkup-dismiss-title">
-      <div class="survey-heading">
-        <div>
-          <h2 id="thinkup-dismiss-title">Ẩn Góc ThinkUp?</h2>
-          <p>Cho ThinkUp biết lý do để cải thiện gợi ý.</p>
-        </div>
-        <button type="button" class="survey-close" (click)="keepCorner($event)" aria-label="Đóng khảo sát"><svg lucideX></svg></button>
-      </div>
-      <fieldset>
-        <legend class="sr-only">Lý do tắt Góc ThinkUp</legend>
-        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('not-relevant')" /> Không phù hợp nhu cầu</label>
-        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('distracting')" /> Làm tôi mất tập trung</label>
-        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('already-seen')" /> Tôi đã xem nội dung này</label>
-        <label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('other')" /> Lý do khác</label>
-      </fieldset>
-      @if (showReasonError()) { <p class="survey-error" role="alert">Vui lòng chọn một lý do.</p> }
-      <div class="survey-actions">
-        <button type="button" class="keep" (click)="keepCorner($event)">Giữ lại</button>
-        <button type="button" class="dismiss" (click)="confirmDismiss($event)">Xác nhận tắt</button>
-      </div>
+    <section class="survey room-glass" [class.dark]="dark()" [attr.data-theme]="theme()" role="dialog" aria-modal="true" aria-labelledby="thinkup-dismiss-title">
+      <div class="survey-heading"><div><h2 id="thinkup-dismiss-title">Ẩn Góc ThinkUp?</h2><p>Cho ThinkUp biết lý do để cải thiện gợi ý.</p></div><button #dismissButton type="button" class="survey-close" (click)="keepCorner($event)" aria-label="Đóng khảo sát"><svg lucideX></svg></button></div>
+      <fieldset><legend class="sr-only">Lý do tắt Góc ThinkUp</legend><label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('not-relevant')" /> Không phù hợp nhu cầu</label><label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('distracting')" /> Làm tôi mất tập trung</label><label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('already-seen')" /> Tôi đã xem nội dung này</label><label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('too-frequent')" /> Hiển thị quá thường xuyên</label><label><input type="radio" name="thinkup-dismiss-reason" (change)="selectReason('other')" /> Lý do khác</label>@if (reason() === 'other') { <textarea aria-label="Bạn có thể chia sẻ thêm (không bắt buộc)" placeholder="Bạn có thể chia sẻ thêm (không bắt buộc)"></textarea> }</fieldset>
+      @if (showReasonError()) { <p class="survey-error" role="alert">Vui lòng chọn một lý do.</p> }<div class="survey-actions"><button type="button" class="keep" (click)="keepCorner($event)">Giữ lại</button><button type="button" class="dismiss" (click)="confirmDismiss($event)">Ẩn quảng cáo</button></div>
     </section>
   } @else {
-    <button type="button" class="corner-card" (click)="openCorner()" [attr.aria-expanded]="expanded()" aria-label="Mở Góc ThinkUp">
-      <span class="corner-mark" aria-hidden="true"><svg lucideBookOpen></svg></span>
-      <span class="corner-copy"><small><svg lucideSparkles></svg> GÓC THINKUP</small><strong>Khám phá điều mới</strong><span>Bài học và tài nguyên dành cho bạn</span></span>
-    </button>
-    <button type="button" class="dismiss-trigger" (click)="openDismissSurvey($event)" aria-label="Tắt Góc ThinkUp"><svg lucideX></svg></button>
-
-    @if (expanded()) {
-      <div class="corner-detail">
-        <span class="detail-label">Gợi ý hôm nay</span>
-        <strong>Khám phá các khóa học nổi bật trên ThinkUp</strong>
-        <p>Học thử một bài và quay lại phòng bất cứ lúc nào.</p>
-        <a routerLink="/main/courses" target="_blank" rel="noopener" (click)="$event.stopPropagation()">Xem khóa học <svg lucideExternalLink></svg></a>
+    <div class="course-promo-layout">
+      <div class="course-card-trigger">
+          <span class="mini-cover"><img src="/assets/courses/course-73-cover.png" alt="Ảnh khóa học Kỹ thuật ghi nhớ hiệu quả" /></span>
+        <span class="mini-course-copy">
+          <strong>{{ course()?.title || 'Kỹ thuật ghi nhớ hiệu quả' }}</strong>
+          <span class="mini-author"><svg lucideUserRound></svg><span [appInstructorTrigger]="course()?.instructorId || course()?.instructor || 'ThinkUp'">{{ course()?.instructor || 'ThinkUp' }}</span></span>
+          <span class="mini-meta"><b><svg lucideStar></svg> {{ course()?.rating ?? '4.9' }}</b><i></i><span><svg lucideClock3></svg> {{ course()?.duration || '10 phút' }}</span></span>
+          <em>{{ course()?.salePrice ? (course()!.salePrice | number:'1.0-0') + ' ₫' : 'Miễn phí' }}</em>
+          <span class="mini-actions">
+            <button type="button" (click)="addToCart()" [disabled]="addingToCart()" aria-label="Thêm khóa học vào giỏ hàng"><svg lucideShoppingCart aria-hidden="true"></svg></button>
+          </span>
+        </span>
       </div>
-    }
+      <div class="course-detail"><span class="promo-label">GÓC THINKUP</span><p>{{ course()?.title || 'Khóa học ngắn giúp bạn ghi nhớ từ vựng và kiến thức mới dễ dàng hơn.' }}</p><a [routerLink]="['/main/courses', courseId]" target="_blank" rel="noopener" (click)="$event.stopPropagation()">Khám phá <svg lucideExternalLink></svg></a></div>
+    </div>
+    <button type="button" class="dismiss-trigger" (click)="openDismissSurvey($event)" aria-label="Tắt quảng cáo Góc ThinkUp"><svg lucideX></svg></button>
   }
 </aside>

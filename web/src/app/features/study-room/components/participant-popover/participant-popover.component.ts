@@ -7,7 +7,7 @@ import { RoomParticipant } from '../../services/study-room.service';
   standalone: true,
   imports: [LucideFlag, LucideLogOut, LucideX],
   templateUrl: './participant-popover.component.html',
-  styleUrl: './participant-popover.component.css',
+  styleUrls: ['./participant-popover.component.css', './participant-popover-overrides.css'],
 })
 export class ParticipantPopoverComponent {
   readonly participant = input.required<RoomParticipant>();

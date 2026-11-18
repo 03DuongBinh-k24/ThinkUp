@@ -9,6 +9,7 @@ import { OwnerDeparture, RoomConnection, RoomDetailsUpdate, RoomMessage, RoomPar
 
 // TODO(pre-deploy): Nhớ xóa các phòng và tài khoản demo sau khi hợp đồng danh sách chờ và upload đã được nghiệm thu.
 const user: User = { id: 'demo-learner', full_name: 'Nguyễn Khánh Linh', avatar: '/assets/study-room/demo-avatars/khanh-linh.jpg', email: 'demo@example.invalid', role: 'student' };
+const demoPeerId = 'demo-peer';
 
 const demoChat: RoomMessage[] = [
   { id: 'demo-chat-1', senderId: 'demo-peer', senderName: 'Trần Đức Minh', content: 'Mọi người đọc đến chương 3 chưa? Mình muốn trao đổi đoạn nói về thói quen nhỏ.', createdAt: '2026-01-01T02:00:00Z' },
@@ -21,6 +22,7 @@ const demoChat: RoomMessage[] = [
 function fixture(roomId: string, name: string, details: Partial<StudyRoomItem> = {}): StudyRoomItem {
   return {
     roomId, name, type: 'public', maxUsers: 4, currentUsers: 1, status: 'focus',
+    creator: demoPeerId,
     tags: ['Lập trình'], category: 'Lập trình', theme: 'white', description: 'Phòng dùng để kiểm tra giao diện.',
     ...details,
   };
@@ -28,6 +30,7 @@ function fixture(roomId: string, name: string, details: Partial<StudyRoomItem> =
 
 const rooms = [
   fixture('demo-open', 'Phòng demo · Thành viên', { description: 'Vào phòng với quyền thành viên thông thường.' }),
+  fixture('demo-owner-offline', 'Phòng demo · Chủ phòng chưa vào', { creator: 'demo-offline-owner' }),
   fixture('demo-password', 'Phòng có mật khẩu', { type: 'private', requiresPassword: true }),
   fixture('demo-full', 'Phòng hết chỗ', { currentUsers: 4 }),
   fixture('demo-waitlist', 'Phòng có danh sách chờ', { currentUsers: 4, waitlistEnabled: true }),
@@ -159,6 +162,7 @@ class DemoStudyRoomService extends StudyRoomService {
     const roomId = codeOrLink.trim().split(/[?#]/)[0].split('/').filter(Boolean).at(-1) ?? '';
     const room = this.getRoomById(roomId);
     if (!room) return failure('ROOM_MISSING', 'Không tìm thấy phòng demo.');
+    if (!this.hasPresentOwner(roomId)) return failure('OWNER_ABSENT', 'Chủ phòng chưa có mặt. Bạn có thể tham gia khi chủ phòng vào.', roomId);
     if (this.extras.roomSettings(roomId).locked && this.role(roomId) !== 'owner') {
       return failure('ROOM_LOCKED', 'Chủ phòng đã khóa lượt tham gia mới.', roomId);
     }
@@ -178,6 +182,7 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override createRoom(request: Parameters<StudyRoomService['createRoom']>[0]) {
     const room = fixture(crypto.randomUUID(), request.name, {
+      creator: user.id,
       type: request.type, maxUsers: request.capacity, currentUsers: 1, description: request.goal,
       tags: request.tags, category: request.topic, theme: request.roomTheme, requiresPassword: !!request.password,
     });
@@ -188,20 +193,30 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override prepareConnection(roomId: string, userId: string, name: string) { return this.connection(roomId, userId, name); }
   override connection(roomId: string, _userId: string, _name: string): Observable<RoomConnection> {
+    if (!this.getRoomById(roomId)) return failure('ROOM_MISSING', 'Không tìm thấy phòng demo.', roomId);
+    if (!this.hasPresentOwner(roomId)) return failure('OWNER_ABSENT', 'Chủ phòng chưa có mặt. Bạn có thể tham gia khi chủ phòng vào.', roomId);
     return of({ roomId, token: '', livekitUrl: '', role: this.role(roomId), position: this.positions.get(roomId) ?? { x: 280, y: 180 } });
   }
 
   override participants(roomId: string): Observable<RoomParticipant[]> {
+    return of(this.roomParticipants(roomId));
+  }
+
+  private hasPresentOwner(roomId: string): boolean {
+    return this.roomParticipants(roomId).some(participant => participant.role === 'owner');
+  }
+
+  private roomParticipants(roomId: string): RoomParticipant[] {
     const selfRole = this.role(roomId);
     const members: RoomParticipant[] = [
       { userId: user.id, name: user.full_name, displayName: user.full_name, initials: 'KL', avatar: user.avatar ?? '', role: selfRole, roleLabel: selfRole === 'owner' ? 'Chủ phòng' : 'Thành viên', isSelf: true, position: this.positions.get(roomId) ?? { x: 280, y: 180 } },
-      { userId: 'demo-peer', name: 'Trần Đức Minh', displayName: 'Trần Đức Minh', initials: 'ĐM', avatar: '/assets/study-room/demo-avatars/duc-minh.jpg', role: 'member', roleLabel: 'Thành viên', isSelf: false, position: { x: 475, y: 200 } },
+      { userId: demoPeerId, name: 'Trần Đức Minh', displayName: 'Trần Đức Minh', initials: 'ĐM', avatar: '/assets/study-room/demo-avatars/duc-minh.jpg', role: 'member', roleLabel: 'Thành viên', isSelf: false, position: { x: 475, y: 200 } },
     ];
     if (roomId === 'demo-owner') {
       members.push({ userId: 'demo-peer-2', name: 'Lê Gia Huy', displayName: 'Lê Gia Huy', initials: 'GH', avatar: '/assets/study-room/demo-avatars/gia-huy.jpg', role: 'member', roleLabel: 'Thành viên', isSelf: false, position: { x: 650, y: 225 } });
     }
-    const ownerId = this.ownerByRoom.get(roomId);
-    return of(members.map<RoomParticipant>(member => member.userId === ownerId ? { ...member, role: 'owner', roleLabel: 'Chủ phòng' } : member));
+    const ownerId = this.ownerByRoom.get(roomId) ?? this.getRoomById(roomId)?.creator;
+    return members.map(member => member.userId === ownerId ? { ...member, role: 'owner', roleLabel: 'Chủ phòng' } : member);
   }
 
   private roomPermissions(roomId: string): RoomPermissions {
@@ -214,7 +229,7 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override permissions(roomId: string, _userId: string): ReturnType<StudyRoomService['permissions']> {
     const owner = this.role(roomId) === 'owner';
-    return of({ role: this.role(roomId), roomPermissions: this.roomPermissions(roomId), effectivePermissions: { canManagePermissions: owner, canChangeTheme: owner }, permissionMatrix: [] });
+    return of({ role: this.role(roomId), roomPermissions: this.roomPermissions(roomId), effectivePermissions: { canManagePermissions: owner, canChangeTheme: true }, permissionMatrix: [] });
   }
 
   override updatePermissions(roomId: string, patch: Partial<RoomPermissions>) {
@@ -335,8 +350,11 @@ class DemoStudyRoomService extends StudyRoomService {
   }
 
   override changeTheme(roomId: string, theme: string) {
-    const room = this.getJoinedRoom(roomId);
-    if (room) this.joined.update(current => ({ ...current, [roomId]: { ...room, theme } }));
+    if (!this.getRoomById(roomId)) return failure('ROOM_MISSING', 'Không tìm thấy phòng demo.', roomId);
+    this.records.update(rooms => rooms.map(room => room.roomId === roomId ? { ...room, theme } : room));
+    this.joined.update(current => current[roomId]
+      ? { ...current, [roomId]: { ...current[roomId], theme } }
+      : current);
     return of(null);
   }
   override invite() { return failure('DEMO_ONLY', 'Chế độ demo không gửi lời mời.'); }
