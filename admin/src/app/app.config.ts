@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { provideUserManagementDataSource } from './features/users/data/user-management.providers';
 import { provideBusinessStore } from './features/business/services/business.providers';
+import { provideDashboardStore } from './features/dashboard/services/dashboard.providers';
 import { SupportDemoService } from './features/support/services/support-demo.service';
 import { SupportHttpService } from './features/support/services/support-http.service';
 import { environment } from '../environments/environment';
@@ -15,7 +16,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideUserManagementDataSource(),
-    provideBusinessStore()
-    ,{ provide: SupportDemoService, useClass: environment.adminDataSource === 'http' ? SupportHttpService : SupportDemoService }
+    provideBusinessStore(),
+    provideDashboardStore(),
+    { provide: SupportDemoService, useClass: environment.adminDataSource === 'http' ? SupportHttpService : SupportDemoService }
   ]
 };

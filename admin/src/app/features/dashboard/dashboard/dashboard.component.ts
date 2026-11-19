@@ -1,5 +1,6 @@
 import { environment } from '../../../../environments/environment';
-import { afterNextRender, Component, computed, ElementRef, HostListener, inject, Injector, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, HostListener, inject, Injector, OnInit, signal, viewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { LucideArrowRight, LucideCircleDollarSign, LucideGraduationCap, LucideMonitorUp, LucideTrendingUp, LucideUsersRound } from '@lucide/angular';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
 import { ColumnFilterComponent, ColumnFilterValue, TEXT_SORT_OPTIONS, compareSortValues } from '../../../shared/components/column-filter/column-filter.component';
@@ -10,11 +11,36 @@ import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared
 import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
 import { AdminNumberPipe } from '../../../shared/pipes/admin-number.pipe';
 import { AdminPrivacyPipe } from '../../../shared/pipes/admin-privacy.pipe';
-import { AUDIT_LOGS, DASHBOARD_ACTIONS, DASHBOARD_METRICS, REVENUE_DATASETS, TOP_COURSES, type AuditLog, type RevenuePoint } from '../../../core/data/mock/dashboard.mock';
+import { ActionItem, AuditLog, DashboardLearning, DashboardMetric, RevenuePoint } from '../models/dashboard.models';
+import { DASHBOARD_STORE, DashboardQuery } from '../services/dashboard.store';
+import { moneyLabel } from '../services/dashboard-http.service';
 
 type Period = 'Ngày' | 'Tuần' | 'Tháng' | 'Năm' | 'Quý';
 interface DashboardPalette { id: string; label: string; original: string; marketplace: string; payout: string; }
 type DashboardLogColumn = 'account' | 'role' | 'action';
+
+const PERIOD_QUERY: Record<Period, { period: NonNullable<DashboardQuery['period']>; grain: NonNullable<DashboardQuery['grain']> }> = {
+  'Ngày': { period: 'today', grain: 'day' },
+  'Tuần': { period: '7d', grain: 'day' },
+  'Tháng': { period: 'month', grain: 'day' },
+  'Năm': { period: 'year', grain: 'month' },
+  'Quý': { period: 'quarter', grain: 'month' },
+};
+
+const EMPTY_LEARNING: DashboardLearning = {
+  totalEnrollments: 0, completed: 0, inProgress: 0, inactive: 0,
+  percentages: { completed: 0, inProgress: 0, inactive: 0 },
+};
+
+const decimalFmt = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
+
+function niceCeil(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(value));
+  const scaled = value / power;
+  const step = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
+  return step * power;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -23,20 +49,33 @@ type DashboardLogColumn = 'account' | 'role' | 'action';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
+  private readonly data = inject(DASHBOARD_STORE);
+  private readonly router = inject(Router);
+
   readonly paletteOptions: DashboardPalette[] = [
     { id: 'denim-amber', label: 'Denim · Amber', original: '#3674b5', marketplace: '#f59a2f', payout: '#d86d7d' }
   ];
   readonly paletteId = signal('denim-amber');
   readonly palette = computed(() => this.paletteOptions.find(option => option.id === this.paletteId()) ?? this.paletteOptions[0]);
   readonly hoveredBar = signal<number | null>(null);
-  readonly previewDashboard = environment.adminDataSource === 'http';
-  readonly metrics = DASHBOARD_METRICS;
-  readonly actions = DASHBOARD_ACTIONS;
-  readonly courses = TOP_COURSES;
-  readonly bars = computed<RevenuePoint[]>(() => REVENUE_DATASETS[this.period()] ?? REVENUE_DATASETS['Tháng']);
+  /** Chỉ hiện cảnh báo khi app chạy ở chế độ demo; chế độ HTTP hiển thị số liệu thật. */
+  readonly previewDashboard = environment.adminDataSource !== 'http';
+  readonly loading = this.data.loading;
+  readonly loadError = this.data.error;
+  readonly overview = this.data.overview;
+
+  readonly metrics = computed<readonly DashboardMetric[]>(() => this.overview()?.metrics ?? []);
+  readonly actions = computed<readonly ActionItem[]>(() => this.overview()?.actions ?? []);
+  readonly courses = computed(() => this.data.analytics()?.courses ?? []);
+  readonly learning = computed<DashboardLearning>(() => this.data.analytics()?.learning ?? EMPTY_LEARNING);
+  readonly totals = computed(() => this.data.analytics()?.totals ?? {
+    total: 0, original: 0, marketplace: 0, payout: 0, changePercent: null
+  });
+  readonly bars = computed<RevenuePoint[]>(() => this.data.analytics()?.bars ?? []);
   readonly periods: Period[] = ['Ngày', 'Tuần', 'Tháng', 'Năm', 'Quý'];
   readonly period = signal<Period>('Tháng');
+  readonly rangeApplied = signal(false);
   readonly filter = signal('Tất cả');
   readonly filterOptions: ReadonlyArray<CustomSelectOption> = [
     { value: 'Tất cả', label: 'Tất cả' },
@@ -50,28 +89,30 @@ export class DashboardComponent {
   private readonly injector = inject(Injector);
   private readonly dateTrigger = viewChild<ElementRef<HTMLButtonElement>>('dateTrigger');
   private readonly datePopover = viewChild<ElementRef<HTMLElement>>('datePopover');
-  readonly startDate = signal('2026-09-01');
-  readonly endDate = signal('2026-09-30');
+  private readonly initialRange = this.currentMonthRange();
+  readonly startDate = signal(this.initialRange.start);
+  readonly endDate = signal(this.initialRange.end);
   readonly rangeLabel = computed(() => `${this.displayDate(this.startDate())} - ${this.displayDate(this.endDate())}`);
   readonly selectedLog = signal<AuditLog | null>(null);
   readonly toast = signal<string | null>(null);
   readonly logAccountFilter = signal<string[]>([]);
   readonly logRoleFilter = signal<string[]>([]);
   readonly logActionFilter = signal<string[]>([]);
-  readonly logAccountValues: readonly ColumnFilterValue[] = [...new Set(AUDIT_LOGS.map(log => log.account))]
-    .map(account => ({ value: account, label: account }));
+  readonly logs = this.data.logs;
+  readonly logAccountValues = computed<readonly ColumnFilterValue[]>(() =>
+    [...new Set(this.logs().map(log => log.account))].map(account => ({ value: account, label: account })));
   readonly logRoleValues: readonly ColumnFilterValue[] = this.filterOptions
     .filter(option => option.value !== 'Tất cả')
     .map(option => ({ value: option.value, label: option.label }));
-  readonly logActionValues: readonly ColumnFilterValue[] = [...new Set(AUDIT_LOGS.map(log => log.action))]
-    .map(action => ({ value: action, label: action }));
+  readonly logActionValues = computed<readonly ColumnFilterValue[]>(() =>
+    [...new Set(this.logs().map(log => log.action))].map(action => ({ value: action, label: action })));
   readonly textSorts = TEXT_SORT_OPTIONS;
   readonly columnSort = signal<{ column: DashboardLogColumn; direction: 'asc' | 'desc' } | null>(null);
   readonly visibleLogs = computed(() => {
     const accounts = this.logAccountFilter();
     const roles = this.logRoleFilter();
     const actions = this.logActionFilter();
-    const logs = AUDIT_LOGS.filter(log =>
+    const logs = this.logs().filter(log =>
       (this.filter() === 'Tất cả' || log.role === this.filter())
       && (!accounts.length || accounts.includes(log.account))
       && (!roles.length || roles.includes(log.role))
@@ -83,10 +124,38 @@ export class DashboardComponent {
     }
     return logs;
   });
+  readonly logsEmptyMessage = computed(() => {
+    if (this.data.logsError()) return this.data.logsError();
+    if (this.loading()) return 'Đang tải nhật ký quản trị…';
+    return 'Không có mục nhật ký nào khớp bộ lọc hiện tại.';
+  });
+
+  readonly chartMax = computed(() => {
+    const bars = this.bars();
+    const peak = bars.reduce((max, bar) => Math.max(max, bar.original + bar.marketplace, bar.payout), 0);
+    return niceCeil(peak * 1.05);
+  });
+  readonly chartTicks = computed(() => {
+    const max = this.chartMax();
+    return Array.from({ length: 7 }, (_, index) => decimalFmt.format(max - (max * index) / 6));
+  });
+  readonly donutGradient = computed(() => {
+    const percent = this.learning().percentages;
+    const completed = Math.min(100, Math.max(0, percent.completed));
+    const learning = Math.min(100 - completed, Math.max(0, percent.inProgress));
+    return `conic-gradient(#1570d1 0 ${completed}%, #42b7b3 ${completed}% ${completed + learning}%, #e5ae50 ${completed + learning}% 100%)`;
+  });
+  readonly revenueChangeBadge = computed(() => {
+    const change = this.totals().changePercent;
+    if (change === null || !Number.isFinite(change)) return '—';
+    return `${change > 0 ? '↗ ' : change < 0 ? '↘ ' : ''}${change > 0 ? '+' : ''}${decimalFmt.format(change)}%`;
+  });
+  readonly revenueChangeNegative = computed(() => (this.totals().changePercent ?? 0) < 0);
+
   readonly payoutPath = computed(() => this.makePayoutPath(this.bars()));
   readonly payoutPoints = computed(() => this.bars().map((bar, index, bars) => ({
     x: bars.length > 0 ? (index + 0.5) * (730 / bars.length) : 0,
-    y: 305 - bar.payout
+    y: this.payoutY(bar.payout)
   })));
 
   readonly selection = signal<ReadonlySet<string>>(new Set());
@@ -95,36 +164,73 @@ export class DashboardComponent {
   readonly allVisibleSelected = computed(() => {
     const logs = this.visibleLogs();
     const chosen = this.selection();
-    return logs.length > 0 && logs.every(log => chosen.has(log.time));
+    return logs.length > 0 && logs.every(log => chosen.has(this.keyOf(log)));
   });
   readonly someVisibleSelected = computed(() =>
-    !this.allVisibleSelected() && this.visibleLogs().some(log => this.selection().has(log.time)));
+    !this.allVisibleSelected() && this.visibleLogs().some(log => this.selection().has(this.keyOf(log))));
   readonly selectionItems = computed<BulkSelectionItem[]>(() =>
-    AUDIT_LOGS.filter(log => this.selection().has(log.time))
-      .map(log => ({ id: log.time, label: log.account, detail: `${log.action} · ${log.time}` })));
+    this.logs().filter(log => this.selection().has(this.keyOf(log)))
+      .map(log => ({ id: this.keyOf(log), label: log.account, detail: `${log.action} · ${log.time}` })));
   readonly selectionCandidates = computed<BulkSelectionItem[]>(() =>
-    this.visibleLogs().filter(log => !this.selection().has(log.time))
-      .map(log => ({ id: log.time, label: log.account, detail: `${log.action} · ${log.time}` })));
+    this.visibleLogs().filter(log => !this.selection().has(this.keyOf(log)))
+      .map(log => ({ id: this.keyOf(log), label: log.account, detail: `${log.action} · ${log.time}` })));
   readonly selectionActions = computed<readonly SelectionAction[]>(() => [
     { key: 'export', label: 'Xuất mục đã chọn', tone: 'primary', title: 'Tải tệp các mục nhật ký đã chọn' }
   ]);
   private toastTimer?: ReturnType<typeof setTimeout>;
 
-  isLogSelected(time: string): boolean {
-    return this.selection().has(time);
+  ngOnInit(): void {
+    void this.load();
   }
 
-  toggleSelect(id: string, checked: boolean): void {
+  reload(): void {
+    void this.load();
+  }
+
+  choosePeriod(period: Period): void {
+    if (this.period() === period && !this.rangeApplied()) return;
+    this.period.set(period);
+    this.rangeApplied.set(false);
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    const mapping = PERIOD_QUERY[this.period()];
+    await this.data.load(this.rangeApplied()
+      ? { startDate: this.startDate(), endDate: this.endDate(), grain: mapping.grain }
+      : { period: mapping.period, grain: mapping.grain });
+  }
+
+  private queryPeriod(): DashboardQuery {
+    const mapping = PERIOD_QUERY[this.period()];
+    return this.rangeApplied()
+      ? { startDate: this.startDate(), endDate: this.endDate(), grain: mapping.grain }
+      : { period: mapping.period, grain: mapping.grain };
+  }
+
+  // Giữ tham chiếu để template/mở rộng dùng lại tham số đang áp dụng.
+  readonly activeQuery = computed(() => this.queryPeriod());
+
+  private keyOf(log: AuditLog): string {
+    return log.id || log.time;
+  }
+
+  isLogSelected(log: AuditLog): boolean {
+    return this.selection().has(this.keyOf(log));
+  }
+
+  toggleSelect(log: AuditLog, checked: boolean): void {
     const next = new Set(this.selection());
-    if (checked) next.add(id);
-    else next.delete(id);
+    const key = this.keyOf(log);
+    if (checked) next.add(key);
+    else next.delete(key);
     this.selection.set(next);
   }
 
   toggleSelectAll(): void {
     const next = new Set(this.selection());
-    if (this.allVisibleSelected()) this.visibleLogs().forEach(log => next.delete(log.time));
-    else this.visibleLogs().forEach(log => next.add(log.time));
+    if (this.allVisibleSelected()) this.visibleLogs().forEach(log => next.delete(this.keyOf(log)));
+    else this.visibleLogs().forEach(log => next.add(this.keyOf(log)));
     this.selection.set(next);
   }
 
@@ -140,7 +246,7 @@ export class DashboardComponent {
     this.selectionListOpen.set(false);
     const targets = ids ?? this.selectedIds();
     if (!targets.length || key !== 'export') return;
-    const logs = AUDIT_LOGS.filter(log => targets.includes(log.time));
+    const logs = this.logs().filter(log => targets.includes(this.keyOf(log)));
     if (!logs.length) return;
     void downloadTable('xlsx', 'nhat-ky-quan-tri-da-chon', [
       ['Thời gian', 'Tài khoản', 'Role', 'Hành động', 'IP'],
@@ -170,6 +276,12 @@ export class DashboardComponent {
   closeDatePopover(): void {
     this.datePickerOpen.set(false);
     this.datePopoverPosition.set(null);
+  }
+
+  applyDateRange(): void {
+    this.rangeApplied.set(true);
+    this.closeDatePopover();
+    void this.load();
   }
 
   @HostListener('document:keydown.escape')
@@ -216,9 +328,17 @@ export class DashboardComponent {
     });
   }
 
+  barHeight(value: number): number {
+    return Math.max(0, Math.min(100, (value / this.chartMax()) * 100));
+  }
+
+  private payoutY(value: number): number {
+    return 305 - (value / this.chartMax()) * 300;
+  }
+
   private makePayoutPath(bars: readonly RevenuePoint[]): string {
     const step = bars.length > 0 ? 730 / bars.length : 0;
-    const points = bars.map((bar, index) => ({ x: (index + 0.5) * step, y: 305 - bar.payout }));
+    const points = bars.map((bar, index) => ({ x: (index + 0.5) * step, y: this.payoutY(bar.payout) }));
     return points.reduce((path, point, index) => {
       if (index === 0) return `M ${point.x} ${point.y}`;
       const previous = points[index - 1];
@@ -227,10 +347,26 @@ export class DashboardComponent {
     }, '');
   }
 
-  // TODO(pre-deploy): Nhớ xóa thông báo thao tác mẫu này khi các chức năng quản trị được nối tới API thực tế.
-  showPendingFeature(): void {
-    this.toast.set('Chức năng hiện chưa khả dụng.');
-    window.setTimeout(() => this.toast.set(null), 3500);
+  openMetric(metric: DashboardMetric): void {
+    if (metric.link) void this.router.navigateByUrl(metric.link);
+    else this.notify('Chưa có trang quản lý phòng học ảo.');
+  }
+
+  openAction(action: ActionItem): void {
+    void this.router.navigateByUrl(action.link);
+  }
+
+  openAllActions(): void {
+    const first = this.actions()[0];
+    if (first) this.openAction(first);
+  }
+
+  openAllCourses(): void {
+    void this.router.navigateByUrl('/courses');
+  }
+
+  openAllLogs(): void {
+    void this.router.navigateByUrl('/system/audit');
   }
 
   chooseToday(): void {
@@ -238,6 +374,7 @@ export class DashboardComponent {
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     this.startDate.set(today); this.endDate.set(today);
   }
+
   private displayDate(value: string): string { const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; }
   chooseFilter(value: string): void { this.filter.set(value); }
   setHoveredBar(index: number | null): void { this.hoveredBar.set(index); }
@@ -272,5 +409,21 @@ export class DashboardComponent {
       ['Thời gian', 'Tài khoản', 'Role', 'Hành động', 'IP'],
       ...this.visibleLogs().map(log => [log.time, log.account, log.role, log.action, log.ip])
     ]);
+  }
+
+  money(value: number): string {
+    return moneyLabel(value);
+  }
+
+  share(part: number, total: number): number {
+    return total > 0 ? Number((part / total * 100).toFixed(1)) : 0;
+  }
+
+  private currentMonthRange(): { start: string; end: string } {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    const end = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}`;
+    return { start, end };
   }
 }

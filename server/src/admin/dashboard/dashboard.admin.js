@@ -58,30 +58,68 @@ export async function getAdminDashboardOverview(query = {}, options = {}) {
   const users = db.collection('users');
   const courses = db.collection('courses');
   const transactions = db.collection('payment_transactions');
-  const [usersCurrent, usersPrevious, courseTotal, courseNew, courseStates, revenue, revenuePrevious] = await Promise.all([
+  const complaints = db.collection('support_complaints');
+  const tickets = db.collection('support_tickets');
+  const payouts = db.collection('payout_requests');
+  // "Trễ hạn duyệt" = hồ sơ chờ duyệt đã nằm quá 14 ngày (mốc nghiệp vụ của Action Center).
+  const overdueCutoff = new Date(current.end.getTime() - 14 * DAY);
+  const openComplaintFilter = { status: { $in: ['pending', 'reviewing', 'waiting_instructor'] } };
+  const [
+    usersCurrent, usersPrevious, usersActive, usersNew,
+    courseTotal, courseNew, courseStates,
+    revenue, revenuePrevious, revenuePending,
+    payoutsPending, payoutsLargePending,
+    complaintsOpen, overdueCourses, overdueTickets, overdueComplaints,
+  ] = await Promise.all([
     users.countDocuments({ email_verified: true, created_at: { $lte: current.end } }),
     users.countDocuments({ email_verified: true, created_at: { $lte: current.previousEnd } }),
+    users.countDocuments({ email_verified: true, status: 'active', created_at: { $lte: current.end } }),
+    users.countDocuments({ email_verified: true, created_at: { $gte: current.start, $lte: current.end } }),
     courses.countDocuments({}),
     courses.countDocuments({ $or: [{ created_at: { $gte: current.start, $lte: current.end } }, { createdAt: { $gte: current.start, $lte: current.end } }] }),
     Promise.all(['published', 'pending_review', 'hidden', 'draft'].map(async status => [status, await courses.countDocuments({ status })])),
     transactions.aggregate([{ $match: { status: 'success', paid_at: { $gte: current.start, $lte: current.end } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
     transactions.aggregate([{ $match: { status: 'success', paid_at: { $gte: current.previousStart, $lte: current.previousEnd } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
+    transactions.aggregate([{ $match: { status: 'pending', created_at: { $gte: current.start, $lte: current.end } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
+    payouts.countDocuments({ status: 'pending', deleted_at: { $exists: false } }),
+    payouts.countDocuments({ status: 'pending', amount: { $gte: 20000000 }, deleted_at: { $exists: false } }),
+    complaints.countDocuments(openComplaintFilter),
+    courses.countDocuments({ $or: [
+      { status: 'pending_review', created_at: { $lte: overdueCutoff } },
+      { review_status: { $in: ['pending_review', 'in_review', 'changes_requested'] }, review_submitted_at: { $lte: overdueCutoff } },
+    ] }),
+    tickets.countDocuments({ status: { $ne: 'closed' }, due_at: { $lte: current.end } }),
+    complaints.countDocuments({ ...openComplaintFilter, due_at: { $lte: current.end } }),
   ]);
   const roomDocs = await db.collection('study_rooms').find({ status: { $in: ['active', 'ongoing', 'live', 'focus', 'break'] } }, { projection: { capacity: 1, maxUsers: 1, currentUsers: 1, participants: 1 } }).toArray();
   const online = roomDocs.reduce((sum, room) => sum + Math.max(room.currentUsers || 0, new Set((room.participants || []).map(p => String(p.userId))).size), 0);
   const capacity = roomDocs.reduce((sum, room) => sum + (room.capacity || room.maxUsers || 0), 0);
   const revenueNow = revenue[0]?.total || 0, revenueBefore = revenuePrevious[0]?.total || 0;
+  const revenuePendingNow = revenuePending[0]?.total || 0;
+  const loadPercent = capacity ? Number((online / capacity * 100).toFixed(1)) : 0;
   const kpis = {
-    users: { total: usersCurrent, changePercent: pct(usersCurrent, usersPrevious) },
+    users: { total: usersCurrent, active: usersActive, newInPeriod: usersNew, changePercent: pct(usersCurrent, usersPrevious) },
     courses: { total: courseTotal, newInPeriod: courseNew, statuses: Object.fromEntries(courseStates) },
-    revenue: { total: revenueNow, changePercent: pct(revenueNow, revenueBefore), currency: 'VND' },
-    rooms: { active: roomDocs.length, onlineUsers: online, capacity, loadPercent: capacity ? Number((online / capacity * 100).toFixed(1)) : 0,
-      loadStatus: capacity && online / capacity > .8 ? 'overloaded' : capacity && online / capacity > .5 ? 'high' : 'normal' },
+    revenue: { total: revenueNow, paid: revenueNow, pending: revenuePendingNow, changePercent: pct(revenueNow, revenueBefore), currency: 'VND' },
+    rooms: { active: roomDocs.length, onlineUsers: online, capacity, loadPercent,
+      loadStatus: loadPercent > 80 ? 'overloaded' : loadPercent > 50 ? 'high' : 'normal' },
+  };
+  const actions = {
+    payoutsPending,
+    payoutsLargePending,
+    courseApprovals: overdueCourses,
+    complaints: complaintsOpen,
+    alerts: overdueTickets + overdueComplaints,
   };
   const visibleKpis = role === 'SA' ? kpis : role === 'CA' ? { courses: kpis.courses } : role === 'FA' ? { revenue: kpis.revenue } : { tickets: { available: false } };
+  const visibleActions = role === 'SA' ? actions
+    : role === 'CA' ? { courseApprovals: actions.courseApprovals }
+    : role === 'FA' ? { payoutsPending: actions.payoutsPending, payoutsLargePending: actions.payoutsLargePending }
+    : { complaints: actions.complaints, alerts: actions.alerts };
   return {
     success: true, period: { start: current.start.toISOString(), end: current.end.toISOString(), previousStart: current.previousStart.toISOString(), previousEnd: current.previousEnd.toISOString() },
     kpis: visibleKpis,
+    actions: visibleActions,
   };
 }
 
@@ -90,13 +128,14 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
   const current = range(query, options.now || new Date());
   const grain = query.grain || 'month';
   if (!['day', 'week', 'month', 'quarter', 'year'].includes(grain)) throw FAIL('Độ chia biểu đồ không hợp lệ.');
-  const payouts = [];
-  const [transactions, enrollments, progress, courses, reviews] = await Promise.all([
+  const [transactions, enrollments, progress, courses, reviews, payouts, previousRevenue] = await Promise.all([
     db.collection('payment_transactions').find({ status: 'success', paid_at: { $gte: current.start, $lte: current.end } }).toArray(),
     db.collection('user_enrollments').find({ status: { $ne: 'revoked' } }).toArray(),
     db.collection('user_course_progress').find({}).toArray(),
     db.collection('courses').find({}).toArray(),
     db.collection('course_reviews').find({}).toArray(),
+    db.collection('payout_requests').find({ status: 'paid', paid_at: { $gte: current.start, $lte: current.end } }).toArray(),
+    db.collection('payment_transactions').aggregate([{ $match: { status: 'success', paid_at: { $gte: current.previousStart, $lte: current.previousEnd } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
   ]);
   const courseById = new Map();
   for (const course of courses) for (const id of [course._id, course.course_id, course.id].filter(Boolean)) courseById.set(String(id), course);
@@ -125,7 +164,7 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
     }
     buckets.set(key, bucket);
   }
-  for (const payout of payouts) { const key = keyFor(payout.paid_at); if (!key) continue; const bucket = buckets.get(key) || { period: key, original: 0, marketplace: 0, payout: 0 }; bucket.payout += payout.amount || payout.paid_amount || 0; buckets.set(key, bucket); }
+  for (const payout of payouts) { const key = keyFor(payout.paid_at); if (!key) continue; const bucket = buckets.get(key) || { period: key, original: 0, marketplace: 0, payout: 0 }; bucket.payout += payout.net_amount ?? payout.amount ?? payout.paid_amount ?? 0; buckets.set(key, bucket); }
   const progressByEnrollment = new Map();
   for (const row of progress) progressByEnrollment.set(`${row.user_id}:${row.course_id}`, Number(row.progress_percentage ?? row.progress ?? 0));
   const distribution = { inProgress: 0, completed: 0, inactive: 0 };
@@ -136,8 +175,25 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
   for (const tx of transactions) { const summary = typeof tx.order_summary === 'string' ? (() => { try { return JSON.parse(tx.order_summary); } catch { return {}; } })() : tx.order_summary || {}; for (const item of summary.courses || tx.courses || []) { const id = String(item.id || item.course_id || ''); if (id) purchaseTotals.set(id, (purchaseTotals.get(id) || 0) + 1); } }
   const topCourses = [...purchaseTotals].map(([id, purchases]) => { const course = courseById.get(id); const rating = reviewTotals.get(id); return { courseId: id, title: course?.title || 'Khóa học', purchases, rating: rating?.count ? Number((rating.sum / rating.count).toFixed(1)) : null }; }).sort((a, b) => b.purchases - a.purchases).slice(0, 5);
   const revenueRows = [...buckets.values()].sort((a, b) => a.period.localeCompare(b.period));
-  const totalRevenue = revenueRows.reduce((sum, item) => sum + item.original + item.marketplace, 0);
-  return { success: true, revenue: { rows: revenueRows, total: totalRevenue, payoutAvailable: false }, learning: { totalEnrollments, inProgress: distribution.inProgress, completed: distribution.completed, inactive: distribution.inactive, percentages: Object.fromEntries(Object.entries(distribution).map(([key, count]) => [key, totalEnrollments ? Number((count / totalEnrollments * 100).toFixed(1)) : 0])) }, topCourses };
+  const originalTotal = revenueRows.reduce((sum, item) => sum + item.original, 0);
+  const marketplaceTotal = revenueRows.reduce((sum, item) => sum + item.marketplace, 0);
+  const totalRevenue = originalTotal + marketplaceTotal;
+  const payoutTotal = revenueRows.reduce((sum, item) => sum + item.payout, 0);
+  const previousTotal = previousRevenue[0]?.total || 0;
+  return {
+    success: true,
+    revenue: {
+      rows: revenueRows,
+      total: totalRevenue,
+      original: originalTotal,
+      marketplace: marketplaceTotal,
+      payout: payoutTotal,
+      changePercent: pct(totalRevenue, previousTotal),
+      payoutAvailable: true,
+    },
+    learning: { totalEnrollments, inProgress: distribution.inProgress, completed: distribution.completed, inactive: distribution.inactive, percentages: Object.fromEntries(Object.entries(distribution).map(([key, count]) => [key, totalEnrollments ? Number((count / totalEnrollments * 100).toFixed(1)) : 0])) },
+    topCourses,
+  };
 }
 
 export async function listAdminAuditLogs(query = {}, options = {}) {
@@ -150,7 +206,7 @@ export async function listAdminAuditLogs(query = {}, options = {}) {
     const ids = adminDocs.filter(admin => options.normalizeRole(admin.role) === role).map(admin => admin._id);
     filter.admin_id = { $in: ids };
   }
-  const rows = await db.collection('admin_audit_logs').find(filter).sort({ created_at: -1, _id: -1 }).limit(options.dashboard ? 5 : limit).toArray();
+  const rows = await db.collection('admin_audit_logs').find(filter).sort({ created_at: -1, _id: -1 }).limit(limit).toArray();
   if (!rows.length) return { success: true, items: [], total: await db.collection('admin_audit_logs').countDocuments(filter) };
   const ids = [...new Set(rows.map(row => String(row.admin_id)).filter(Boolean))].filter(ObjectId.isValid).map(id => new ObjectId(id));
   const admins = await db.collection('admins').find({ _id: { $in: ids } }, { projection: { full_name: 1, email: 1, role: 1 } }).toArray();
@@ -186,7 +242,7 @@ export function createAdminDashboardRouter(express, requireAdmin, normalizeRole)
   const dashboardGuard = (req,res,next) => requireAdmin(req,res,error => error ? next(error) : requireDashboardRole(req,res,next));
   router.get('/overview', dashboardGuard, async (req, res, next) => { try { res.json(await getAdminDashboardOverview(req.query, { ...options(), role: req.adminRole })); } catch (error) { next(error); } });
   router.get('/analytics', dashboardGuard, async (req, res, next) => { try { if (req.adminRole === 'CS') throw FAIL('Không có quyền xem analytics.', 403, 'ADMIN_FORBIDDEN'); const result = await getAdminDashboardAnalytics(req.query, options()); res.json(req.adminRole === 'CA' ? { success: true, learning: result.learning, topCourses: result.topCourses } : req.adminRole === 'FA' ? { success: true, revenue: result.revenue } : result); } catch (error) { next(error); } });
-  router.get('/audit-logs', guard, async (req, res, next) => { try { res.json(await listAdminAuditLogs({ ...req.query, limit: 5 }, { ...options(), dashboard: true })); } catch (error) { next(error); } });
+  router.get('/audit-logs', guard, async (req, res, next) => { try { res.json(await listAdminAuditLogs({ ...req.query, limit: req.query.limit ?? 5 }, { ...options(), dashboard: true })); } catch (error) { next(error); } });
   router.get('/audit-logs/export', guard, async (req, res, next) => { try { const result = await exportAdminAuditLogs(req.query, { ...options(), adminId: req.adminId, ip: req.ip, userAgent: req.headers['user-agent'] }); res.json(result); } catch (error) { next(error); } });
   router.get('/audit-logs/:id', guard, async (req, res, next) => { try { res.json(await getAdminAuditLog(req.params.id, { ...options(), asStringId: true })); } catch (error) { next(error); } });
   return router;
