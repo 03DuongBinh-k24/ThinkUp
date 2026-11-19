@@ -64,9 +64,15 @@
           <span>{{ formatPrice(course().originalPrice) }}</span>
         }
       </div>
-      <button type="button" class="course-card__cart" aria-label="Thêm khóa học vào giỏ" [disabled]="!isLoggedIn()" [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng giỏ hàng'" [class.opacity-50]="!isLoggedIn()" [class.cursor-not-allowed]="!isLoggedIn()" (click)="onAddToCart($event)">
+      <button type="button" class="course-card__cart" aria-label="Thêm khóa học vào giỏ" (click)="onAddToCart($event)">
         <svg lucideShoppingCart aria-hidden="true" [size]="16" [strokeWidth]="1.8"></svg>
       </button>
     </div>
   </div>
 </article>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="'/main/courses/' + course().id"
+  (closed)="authModalOpen.set(false)"
+/>

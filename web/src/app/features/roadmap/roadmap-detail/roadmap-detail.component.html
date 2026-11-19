@@ -191,3 +191,9 @@
     }
   </div>
 </section>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="'/learning/roadmap/' + roadmapId"
+  (closed)="authModalOpen.set(false)"
+/>

@@ -6,9 +6,9 @@ import { BlogService } from '../services/blog.service';
 import { BlogPost, BlogStatus } from '../models/blog.model';
 import { BlogIconComponent } from '../components/blog-icon/blog-icon.component';
 import { BlogStatusBadgeComponent } from '../components/blog-status-badge/blog-status-badge.component';
-import { BlogAuthModalComponent } from '../components/blog-auth-modal/blog-auth-modal.component';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 import { AuthService } from '../../../core/services/auth.service';
-@Component({selector:'app-manage-posts',standalone:true,imports:[RouterLink,FormsModule,BlogIconComponent,BlogStatusBadgeComponent,BlogAuthModalComponent],templateUrl:'./manage-posts.component.html',styleUrl:'./manage-posts.component.css'})
+@Component({selector:'app-manage-posts',standalone:true,imports:[RouterLink,FormsModule,BlogIconComponent,BlogStatusBadgeComponent,AuthRequiredModalComponent],templateUrl:'./manage-posts.component.html',styleUrl:'./manage-posts.component.css'})
 export class ManagePostsComponent {
   private readonly blog=inject(BlogService);private readonly router=inject(Router);private readonly auth=inject(AuthService);private readonly destroyRef=inject(DestroyRef);
   readonly search=signal('');readonly status=signal('all');readonly allPosts=signal<BlogPost[]>([]);readonly loading=signal(false);readonly error=signal('');readonly authModal=signal(!this.auth.isAuthenticated());

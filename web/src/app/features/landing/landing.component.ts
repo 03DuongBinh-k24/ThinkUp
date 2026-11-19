@@ -18,6 +18,8 @@ import { CourseCardView } from '../../shared/components/course-card/course-card.
 import { formatMoney, toCourseCardView } from '../../shared/components/course-card/course-card.mapper';
 import { IconComponent, IconName } from '../../shared/components/icon/icon.component';
 import { LandingHeaderComponent } from './components/landing-header.component';
+import { AuthRequiredModalComponent } from '../../shared/components/auth-required-modal/auth-required-modal.component';
+import { AuthService } from '../../core/services/auth.service';
 
 interface LandingTool {
   label: string;
@@ -107,17 +109,21 @@ const TOOL_CHECKS = [
 @Component({
   selector: 'app-landing-view',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, CourseCardComponent, IconComponent, LandingHeaderComponent],
+  imports: [CommonModule, RouterLink, FormsModule, CourseCardComponent, IconComponent, LandingHeaderComponent, AuthRequiredModalComponent],
   templateUrl: './landing.component.html',
   styleUrls: ['./styles/landing-ui.css', './landing.component.css'],
 })
 export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  private readonly authService = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly platformId = inject(PLATFORM_ID);
   private revealObserver?: IntersectionObserver;
+
+  readonly authModalOpen = signal(false);
+  readonly authReturnUrl = signal('/learning/study-room');
 
   readonly skillTracks = skillTracks;
   readonly stats = stats;
@@ -148,7 +154,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   private roomAutoPlayPaused = false;
 
   readonly popularCards = computed<CourseCardView[]>(() =>
-    this.popularCourses().slice(0, 4).map((course, index) => toCourseCardView(course, index))
+    this.popularCourses().slice(0, 12).map((course, index) => toCourseCardView(course, index))
   );
 
   private readonly courseTrack = viewChild<ElementRef<HTMLElement>>('courseTrack');
@@ -156,7 +162,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.courseService.getCourses({ sort: 'popular' }).subscribe({
       next: (res) => {
-        this.popularCourses.set(res.data.slice(0, 4));
+        this.popularCourses.set(res.data.slice(0, 12));
       },
       error: () => this.toast.showToast({ type: 'error', message: 'Không tải được khóa học. Vui lòng thử lại.' }),
     });
@@ -248,11 +254,19 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   scrollCourses(direction: 1 | -1): void {
     const track = this.courseTrack()?.nativeElement;
     if (!track) return;
-    track.scrollBy({ left: direction * Math.round(track.clientWidth * 0.8), behavior: 'smooth' });
+    track.scrollBy({ left: direction * track.clientWidth, behavior: 'smooth' });
   }
 
-  /** Trang chủ khách chỉ dành cho khách nên các thao tác cần tài khoản sẽ mở trang đăng nhập. */
-  requireAccount(): void {
-    void this.router.navigate(['/auth/login']);
+  onEnterStudyRoom(event: Event): void {
+    if (!this.authService.isAuthenticated()) {
+      event.preventDefault();
+      this.authReturnUrl.set('/learning/study-room');
+      this.authModalOpen.set(true);
+    }
+  }
+
+  requireAccount(returnUrl = '/'): void {
+    this.authReturnUrl.set(returnUrl);
+    this.authModalOpen.set(true);
   }
 }

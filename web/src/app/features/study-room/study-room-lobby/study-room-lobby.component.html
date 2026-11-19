@@ -527,3 +527,9 @@
     </div>
   }
 </dialog>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="authReturnUrl()"
+  (closed)="authModalOpen.set(false)"
+/>

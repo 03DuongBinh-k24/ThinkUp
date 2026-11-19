@@ -40,6 +40,7 @@ import {
   StudyRoomCardComponent,
   StudyRoomCardViewModel,
 } from "../components/study-room-card/study-room-card.component";
+import { AuthRequiredModalComponent } from "../../../shared/components/auth-required-modal/auth-required-modal.component";
 
 interface ThemePreview {
   id: string;
@@ -69,6 +70,7 @@ interface ThemePreview {
     LucideTag,
     LucideX,
     LucidePlay,
+    AuthRequiredModalComponent,
   ],
   templateUrl: "./study-room-lobby.component.html",
   styleUrl: "./study-room-lobby.component.css",
@@ -280,6 +282,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   newRoomPassword = "";
   readonly showNewRoomPassword = signal(false);
   readonly passwordCopyStatus = signal("");
+  readonly authModalOpen = signal(false);
+  readonly authReturnUrl = signal("/learning/study-room");
 
   async copyNewRoomPassword(): Promise<void> {
     const password = this.newRoomPassword;
@@ -343,6 +347,12 @@ export class StudyRoomLobbyComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const authRequired = this.route.snapshot.queryParamMap.get("authRequired");
+    const returnUrlParam = this.route.snapshot.queryParamMap.get("returnUrl");
+    if (authRequired === "true" && !this.auth.isAuthenticated()) {
+      this.authReturnUrl.set(returnUrlParam || "/learning/study-room");
+      this.authModalOpen.set(true);
+    }
     this.feedback = this.route.snapshot.queryParamMap.get("entryError") || "";
     this.roomCode = this.route.snapshot.queryParamMap.get("roomCode") || "";
     this.searchChanges.pipe(
@@ -472,9 +482,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   openCreate(): void {
     if (this.submitting()) return;
     if (!this.auth.isAuthenticated()) {
-      this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room" },
-      });
+      this.authReturnUrl.set("/learning/study-room");
+      this.authModalOpen.set(true);
       return;
     }
     this.feedback = "";
@@ -487,9 +496,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   quickJoin(): void {
     if (this.submitting()) return;
     if (!this.auth.isAuthenticated()) {
-      void this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room" },
-      });
+      this.authReturnUrl.set("/learning/study-room");
+      this.authModalOpen.set(true);
       return;
     }
     this.feedback = "";
@@ -517,9 +525,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   joinRoom(room: StudyRoomItem): void {
     if (this.submitting()) return;
     if (!this.auth.isAuthenticated()) {
-      this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room/" + room.roomId },
-      });
+      this.authReturnUrl.set("/learning/study-room/" + room.roomId);
+      this.authModalOpen.set(true);
       return;
     }
     this.feedback = "";
@@ -546,9 +553,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   }
   joinByCode(): void {
     if (!this.auth.isAuthenticated()) {
-      this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room" },
-      });
+      this.authReturnUrl.set("/learning/study-room");
+      this.authModalOpen.set(true);
       return;
     }
     if (!this.roomCode.trim()) {

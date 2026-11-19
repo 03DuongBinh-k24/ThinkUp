@@ -6,13 +6,15 @@ import { DemoRoomSettings, StudyRoomExtras, StudyRoomIdentity } from '../../serv
 import { RoomParticipant, RoomPermissions, StudyRoomService } from '../../services/study-room.service';
 import { StudyRoomItem, StudyRoomJoinRequest } from '../../models/study-room.model';
 import { LucideCheck, LucideChevronDown, LucideCircleX, LucideCopy, LucideEye, LucideEyeOff, LucidePencil, LucideMic, LucideMicOff, LucideMonitor, LucideSave, LucideSettings, LucideUserPlus, LucideUsers, LucideX } from '@lucide/angular';
+import { AuthRequiredModalComponent } from '../../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 export interface RoomTheme { id: string; name: string; src: string; background?: string; grid?: string; type?: string; fit?: string; ambient?: string; }
 
-@Component({ selector: 'app-room-control-panel', standalone: true, imports: [NgTemplateOutlet, LucideCheck, LucideChevronDown, LucideCircleX, LucideCopy, LucideEye, LucideEyeOff, LucidePencil, LucideMic, LucideMicOff, LucideMonitor, LucideSave, LucideSettings, LucideUserPlus, LucideUsers, LucideX], templateUrl: './room-control-panel.component.html', styleUrls: ['../room-glass.css', './room-control-panel.component.css'] })
+@Component({ selector: 'app-room-control-panel', standalone: true, imports: [NgTemplateOutlet, AuthRequiredModalComponent, LucideCheck, LucideChevronDown, LucideCircleX, LucideCopy, LucideEye, LucideEyeOff, LucidePencil, LucideMic, LucideMicOff, LucideMonitor, LucideSave, LucideSettings, LucideUserPlus, LucideUsers, LucideX], templateUrl: './room-control-panel.component.html', styleUrls: ['../room-glass.css', './room-control-panel.component.css'] })
 export class RoomControlPanelComponent implements OnInit {
   private readonly rooms = inject(StudyRoomService);
   readonly extras = inject(StudyRoomExtras);
+  readonly authModalOpen = signal(false);
   readonly roomSettings = computed(() => this.extras.roomSettings(this.roomId()));
   readonly renaming = signal(false);
   readonly renameFeedback = signal('');
@@ -177,7 +179,11 @@ export class RoomControlPanelComponent implements OnInit {
 
   load(): void {
     const userId = this.auth.currentUser()?.id;
-    if (!userId) { this.loading.set(false); this.error.set('Vui lòng đăng nhập để xem quyền phòng.'); return; }
+    if (!userId) {
+      this.loading.set(false);
+      this.authModalOpen.set(true);
+      return;
+    }
     this.error.set('');
     this.loading.set(true);
     this.rooms.permissions(this.roomId(), userId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

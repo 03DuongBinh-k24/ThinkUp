@@ -17,6 +17,7 @@ import {
   PaymentStatusValue,
 } from '../../../core/models/payment.model';
 import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 type CheckoutTab = 'domestic' | 'international';
 
@@ -151,7 +152,7 @@ const BANK_FULL_NAMES: Record<string, string> = {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink, InstructorTriggerDirective],
+  imports: [CommonModule, RouterLink, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './checkout.component.html',
   styleUrls: [
     '../../payment-ui.css',
@@ -217,6 +218,7 @@ export class CheckoutComponent implements OnInit {
   paidAmount = signal(0);
   readonly isSimulated = signal(false);
   readonly paidTransactionId = signal('');
+  readonly authModalOpen = signal(false);
   readonly paidInvoiceCode = signal('');
   readonly paidPaymentContent = signal('');
   readonly receiptError = signal('');
@@ -475,8 +477,7 @@ export class CheckoutComponent implements OnInit {
     }
 
     if (!this.auth.isAuthenticated()) {
-      this.toast.showToast({ type: 'warning', message: 'Vui lòng đăng nhập để tiếp tục thanh toán.' });
-      void this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/main/checkout' } });
+      this.authModalOpen.set(true);
       return;
     }
 

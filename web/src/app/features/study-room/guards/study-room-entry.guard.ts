@@ -9,7 +9,16 @@ export const studyRoomEntryGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
   const user = inject(StudyRoomIdentity).currentUser();
   const roomId = route.paramMap.get('roomId') || '';
-  if (!user) return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
+  if (!user) {
+    return router.createUrlTree(['/learning/study-room'], {
+      queryParams: {
+        roomCode: roomId,
+        authRequired: 'true',
+        returnUrl: state.url,
+        entryError: 'Bạn cần đăng nhập để tham gia phòng học ảo.',
+      },
+    });
+  }
   const room = rooms.getJoinedRoom(roomId);
   return (room ? of(room) : rooms.joinRoom(roomId)).pipe(
     switchMap(joined => rooms.prepareConnection(joined.roomId, user.id, user.full_name)),

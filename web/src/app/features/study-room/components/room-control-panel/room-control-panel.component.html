@@ -244,3 +244,9 @@
     </div>
   </div>
 </dialog>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="'/learning/study-room/' + (roomId() || '')"
+  (closed)="authModalOpen.set(false)"
+/>

@@ -25,6 +25,7 @@ import { FlashcardService } from '../services/flashcard.service';
 import { RoadmapCourseCardComponent } from '../components/roadmap-course-card/roadmap-course-card.component';
 import { RoadmapProgressComponent } from '../components/roadmap-progress/roadmap-progress.component';
 import { RoadmapStageIconComponent } from '../components/roadmap-stage-icon/roadmap-stage-icon.component';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 interface StatusOption {
   id: RoadmapSkillStatus;
@@ -55,7 +56,8 @@ const STATUS_OPTIONS: StatusOption[] = [
     LucideLightbulb,
     RoadmapCourseCardComponent,
     RoadmapProgressComponent,
-    RoadmapStageIconComponent
+    RoadmapStageIconComponent,
+    AuthRequiredModalComponent
   ],
   templateUrl: './roadmap-skill-detail.component.html',
   styleUrls: ['../styles/roadmap-ui.css', './roadmap-skill-detail.component.css']
@@ -79,6 +81,8 @@ export class RoadmapSkillDetailComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly creatingReviewSet = signal(false);
   readonly savingStatus = signal(false);
+  readonly authModalOpen = signal(false);
+  readonly authReturnUrl = signal('');
   /** Stage sections expand independently; the current stage opens on entry. */
   readonly expandedStageIds = signal<Set<string>>(new Set());
 
@@ -218,7 +222,11 @@ export class RoadmapSkillDetailComponent implements OnInit {
   }
 
   addToCart(courseId: string): void {
-    if (!this.auth.isAuthenticated()) return;
+    if (!this.auth.isAuthenticated()) {
+      this.authReturnUrl.set(`/main/courses/${courseId}`);
+      this.authModalOpen.set(true);
+      return;
+    }
     this.commerceService.addToCart(courseId).subscribe((result) => {
       this.toastService.showToast({
         type: 'success',

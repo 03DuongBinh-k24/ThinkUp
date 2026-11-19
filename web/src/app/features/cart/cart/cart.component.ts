@@ -11,6 +11,7 @@ import { CartItem } from '../../../core/models/commerce.model';
 import { Course } from '../../../core/models/course.model';
 import { CheckoutVoucher } from '../../../core/models/payment.model';
 import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 interface CourseArt {
   gradient: string;
@@ -36,7 +37,7 @@ const COURSE_ART: Record<string, { title: string; subtitle: string; icon: string
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, RouterLink, InstructorTriggerDirective],
+  imports: [CommonModule, RouterLink, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './cart.component.html',
   styleUrls: ['../../payment-ui.css', './cart.component.css'],
 })
@@ -66,6 +67,7 @@ export class CartComponent implements OnInit {
   voucherLoading = signal(false);
   removingIds = signal<string[]>([]);
   thumbnailErrors = signal<Set<string>>(new Set());
+  readonly authModalOpen = signal(false);
 
   private suggestionPool = signal<Course[]>([]);
   private voucherSequence = 0;
@@ -326,8 +328,7 @@ export class CartComponent implements OnInit {
     if (this.selectedCount() === 0) return;
 
     if (!this.auth.isAuthenticated()) {
-      this.toast.showToast({ type: 'warning', message: 'Vui lòng đăng nhập để tiếp tục thanh toán.' });
-      void this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/main/checkout' } });
+      this.authModalOpen.set(true);
       return;
     }
 

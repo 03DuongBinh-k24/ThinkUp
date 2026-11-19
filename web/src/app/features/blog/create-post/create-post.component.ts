@@ -8,14 +8,14 @@ import { BlogDraft, BlogPost } from '../models/blog.model';
 import { EDITOR_CATEGORIES, EMPTY_BLOG_DRAFT } from '../data/blog-options';
 import { createBlogSlug, getBlogHeadings, prepareBlogHtml } from '../utils/blog-content';
 import { BlogIconComponent } from '../components/blog-icon/blog-icon.component';
-import { BlogAuthModalComponent } from '../components/blog-auth-modal/blog-auth-modal.component';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 import { BlogStatusBadgeComponent } from '../components/blog-status-badge/blog-status-badge.component';
 import { BlogTagInputComponent } from '../components/blog-tag-input/blog-tag-input.component';
 import { BlogImageUploadComponent } from '../components/blog-image-upload/blog-image-upload.component';
 import { RichTextEditorComponent } from './components/rich-text-editor/rich-text-editor.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
-@Component({ selector:'app-create-post',standalone:true,imports:[FormsModule,RouterLink,BlogIconComponent,BlogAuthModalComponent,BlogStatusBadgeComponent,BlogTagInputComponent,BlogImageUploadComponent,RichTextEditorComponent],templateUrl:'./create-post.component.html',styleUrl:'./create-post.component.css' })
+@Component({ selector:'app-create-post',standalone:true,imports:[FormsModule,RouterLink,BlogIconComponent,AuthRequiredModalComponent,BlogStatusBadgeComponent,BlogTagInputComponent,BlogImageUploadComponent,RichTextEditorComponent],templateUrl:'./create-post.component.html',styleUrl:'./create-post.component.css' })
 export class CreatePostComponent {
   private readonly blog=inject(BlogService);private readonly auth=inject(AuthService);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly destroyRef=inject(DestroyRef);
   post:BlogDraft=structuredClone(EMPTY_BLOG_DRAFT);
