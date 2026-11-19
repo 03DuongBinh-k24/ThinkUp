@@ -517,3 +517,5 @@ button.voucher-kpi:focus-visible { outline: 2px solid #176de1; outline-offset: 2
   .voucher-form-dialog .voucher-help-tooltip::after { content: none; }
   .voucher-discount-heading-title, .voucher-state-title-row { flex-wrap: wrap; white-space: normal; }
 }
+.voucher-table-wrap th:nth-child(3) app-column-filter { display: none; }
+.voucher-table-wrap th:nth-child(3)::after { content: 'Nguồn tài trợ'; }

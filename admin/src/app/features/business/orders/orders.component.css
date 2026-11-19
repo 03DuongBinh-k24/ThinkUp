@@ -576,3 +576,7 @@
   row-gap: 16px;
   padding: 18px;
 }
+.orders-table-scroll th:nth-child(5) app-column-filter,
+.orders-table-scroll th:nth-child(6) app-column-filter { display: none; }
+.orders-table-scroll th:nth-child(5)::after { content: 'Phương thức'; }
+.orders-table-scroll th:nth-child(6)::after { content: 'Trạng thái'; }
