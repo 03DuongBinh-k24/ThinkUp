@@ -7,6 +7,7 @@ import { INSTRUCTOR_REFUND_PERCENT, Attachment, ComplaintCase, ComplaintStatus, 
 export class SupportDemoService {
   readonly loadError = signal('');
   readonly loading = signal(false);
+  readonly ticketReductionRate = signal<number | null>(null);
   open(_page: 'faqs' | 'tickets' | 'complaints', _id?: string): void {}
 
   readonly tickets = signal<SupportTicket[]>(structuredClone(MOCK_TICKETS));

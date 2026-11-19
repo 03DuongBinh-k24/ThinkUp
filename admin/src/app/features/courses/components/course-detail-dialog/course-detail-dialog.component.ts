@@ -19,7 +19,12 @@ type FinanceState = 'loading' | 'ready' | 'error';
 export class CourseDetailDialogComponent {
   private readonly store = inject(CourseStore);
 
-  readonly course = input.required<Course>();
+  readonly selection = input.required<Course>({ alias: 'course' });
+  readonly detail = signal<Course | null>(null);
+  readonly course = computed(() => this.detail() ?? this.selection());
+  readonly detailError = signal('');
+  readonly learnersError = signal('');
+  readonly learners = signal<Course['learners'] | null>(null);
   readonly closed = output<void>();
 
   readonly tab = signal<DetailTab>('overview');
@@ -39,11 +44,13 @@ export class CourseDetailDialogComponent {
   readonly statusLabel = computed(() => COURSE_STATUS_LABELS[this.course().status]);
   readonly statusTone = computed(() => COURSE_STATUS_TONE[this.course().status]);
   readonly levelTone = computed(() => LEVEL_TONE[this.course().level]);
-  readonly learners = computed(() => this.course().learners);
-
-  constructor() {
-    // TODO(api-contract): API chỉ trả báo cáo cho khóa đã duyệt và đang bán/ẩn; dialog tự xử lý trạng thái này.
+  async ngOnInit(): Promise<void> {
     void this.loadFinance();
+    try {
+      this.detail.set(await this.store.getCourseContent(this.selection()));
+    } catch {
+      this.detailError.set('Không tải được nội dung khóa học.');
+    }
   }
 
   private async loadFinance(): Promise<void> {
@@ -60,8 +67,16 @@ export class CourseDetailDialogComponent {
     }
   }
 
-  setTab(id: DetailTab): void {
+  async setTab(id: DetailTab): Promise<void> {
     this.tab.set(id);
+    if (id === 'learners' && this.learners() === null) {
+      this.learnersError.set('');
+      try {
+        this.learners.set(await this.store.getCourseLearners(this.selection()));
+      } catch {
+        this.learnersError.set('Không tải được danh sách học viên.');
+      }
+    }
   }
 
   close(): void {

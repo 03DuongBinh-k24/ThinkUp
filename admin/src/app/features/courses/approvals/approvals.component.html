@@ -17,8 +17,7 @@
       </span>
       <span>
         <span class="kpi-label">Tổng yêu cầu duyệt</span>
-        <strong class="kpi-value">284</strong>
-        <span class="kpi-foot">↑ 18,2% so với kỳ trước</span>
+        <strong class="kpi-value">{{ approvals().length }}</strong>
       </span>
     </button>
     <button class="kpi" type="button" [class.is-selected]="status() === 'remaining'" (click)="setStatus('remaining')" aria-label="Lọc hồ sơ chờ thẩm định mới">
@@ -27,8 +26,7 @@
       </span>
       <span>
         <span class="kpi-label">Chờ thẩm định mới</span>
-        <strong class="kpi-value">18</strong>
-        <span class="kpi-foot">3 hồ sơ sắp/quá hạn 48h</span>
+        <strong class="kpi-value">{{ summary().remaining }}</strong>
       </span>
     </button>
     <button class="kpi" type="button" [class.is-selected]="status() === 'waiting'" (click)="setStatus('waiting')" aria-label="Lọc hồ sơ chờ giảng viên bổ sung">
@@ -37,18 +35,16 @@
       </span>
       <span>
         <span class="kpi-label">Chờ GV bổ sung</span>
-        <strong class="kpi-value">42</strong>
-        <span class="kpi-foot">14,8% tổng yêu cầu</span>
+        <strong class="kpi-value">{{ summary().waiting }}</strong>
       </span>
     </button>
-    <button class="kpi" type="button" [class.is-selected]="status() === 'approved'" (click)="setStatus('approved')" aria-label="Lọc hồ sơ đã duyệt trong kỳ">
+    <button class="kpi" type="button" [class.is-selected]="status() === 'approved'" (click)="setStatus('approved')" aria-label="Lọc hồ sơ đã duyệt">
       <span class="kpi-icon green" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
       </span>
       <span>
-        <span class="kpi-label">Đã duyệt trong kỳ</span>
-        <strong class="kpi-value">196</strong>
-        <span class="kpi-foot">Tỷ lệ duyệt thành công 86,7%</span>
+        <span class="kpi-label">Đã duyệt</span>
+        <strong class="kpi-value">{{ summary().approved }}</strong>
       </span>
     </button>
   </section>

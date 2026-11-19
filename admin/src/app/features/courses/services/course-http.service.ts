@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseLevel, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest } from '../models/course.models';
 import { CourseDemoService } from './course-demo.service';
+import { APPROVAL_SLA_LABELS } from '../course-utils';
 import { formatCurrency } from '../course-utils';
 import { apiErrorMessage } from '../../../shared/utils/api-error';
 
@@ -40,6 +41,34 @@ export class CourseHttpService extends CourseDemoService {
 
   constructor() { super(); void this.load(); }
   override retry(): void { void this.load(); }
+
+  override async getCourseContent(course: Course): Promise<Course> {
+    const url = `${this.base}/admin/courses/${encodeURIComponent(course.id)}`;
+    const response = await firstValueFrom(this.http.get<{ course: {
+      description: string; tags: string[]; sections: { id: string; title: string }[];
+      lessons: { sectionId: string }[]; curriculumSummary: { sectionCount: number; lessonCount: number };
+    } }>(url));
+    const detail = response.course;
+    const lessonCounts = new Map<string, number>();
+    for (const lesson of detail.lessons) {
+      lessonCounts.set(lesson.sectionId, (lessonCounts.get(lesson.sectionId) ?? 0) + 1);
+    }
+    return {
+      ...course, description: detail.description, tags: detail.tags,
+      curriculumSummary: `${detail.curriculumSummary.sectionCount} chương · ${detail.curriculumSummary.lessonCount} bài học`,
+      chapters: detail.sections.map((section, index) => ({
+        no: String(index + 1), title: section.title, meta: `${lessonCounts.get(section.id) ?? 0} bài học`
+      }))
+    };
+  }
+
+  override async getCourseLearners(course: Course): Promise<Course['learners']> {
+    const rows = await this.all(`/admin/courses/${encodeURIComponent(course.id)}/learners`);
+    return rows.map(row => ({
+      name: text(row, 'fullName'), email: text(row, 'email'), progress: num(row, 'progress'),
+      enrolledAt: text(row, 'purchasedAt'), status: row['completed'] === true ? 'Hoàn thành' : 'Đang học'
+    }));
+  }
 
   /**
    * GET /admin/courses/:id/finance (SA/FA). Backend chỉ trả báo cáo cho khóa đã duyệt,
@@ -96,8 +125,8 @@ export class CourseHttpService extends CourseDemoService {
     } while (page <= pages);
     return rows;
   }
-  override archiveCourse(id: string, reason: string, explanation: string): void { void this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: 'archived', reason, explanation }); }
-  override setCourseStatus(id: string, status: CourseStatus): void { void this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: status }); }
+  override async archiveCourse(id: string, reason: string, explanation: string): Promise<void> { await this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: 'archived', reason, explanation }); }
+  override async setCourseStatus(id: string, status: CourseStatus): Promise<void> { await this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: status }); }
   override async approveApproval(id: string): Promise<void> { await this.decide(id, { decision: 'approve' }); }
   override async rejectApproval(id: string, reason: string, detail: string): Promise<void> {
     await this.decide(id, { decision: 'reject', reason, details: detail });
@@ -129,7 +158,7 @@ const text = (row: Record<string, unknown>, ...keys: string[]): string => {
   return '';
 };
 const num = (row: Record<string, unknown>, ...keys: string[]): number => Number(keys.map(key => row[key]).find(value => value != null && typeof value !== 'object') ?? 0);
-const COURSE_STATUSES: readonly string[] = ['published', 'pending', 'hidden', 'archived'];
+const COURSE_STATUSES: readonly string[] = ['published', 'pending', 'hidden', 'archived', 'unpublished'];
 const COURSE_LEVELS: readonly string[] = ['Cơ bản', 'Trung cấp', 'Nâng cao'];
 const toLevel = (value: string): CourseLevel => COURSE_LEVELS.includes(value) ? value as CourseLevel : 'Cơ bản';
 
@@ -148,7 +177,8 @@ function toCourse(row: Record<string, unknown>): Course {
     rating: row['rating'] == null ? null : num(row, 'rating'),
     // API trả `ratingCount`; model UI đặt tên là `reviewCount`.
     reviewCount: num(row, 'ratingCount', 'reviewCount'),
-    status: (COURSE_STATUSES.includes(status) ? status : 'hidden') as CourseStatus,
+    status: ['pending_review', 'in_review', 'changes_requested'].includes(text(row, 'reviewStatus'))
+      && status === 'unpublished' ? 'pending' : (COURSE_STATUSES.includes(status) ? status : 'unpublished') as CourseStatus,
     createdAt: text(row, 'createdAt'),
     updatedAt: text(row, 'updatedAt'),
     durationHours: num(row, 'durationHours'),
@@ -161,7 +191,12 @@ function toCourse(row: Record<string, unknown>): Course {
   };
 }
 function toApproval(row: Record<string, unknown>): ApprovalItem {
-  const status = text(row, 'status');
+  const review = text(row, 'reviewStatus');
+  const hours = row['reviewHoursRemaining'];
+  const sla: ApprovalItem['slaStatus'] = review === 'changes_requested' ? 'waiting'
+    : review === 'approved' ? 'approved'
+    : typeof hours === 'number' && hours <= 0 ? 'overdue'
+    : typeof hours === 'number' && hours <= 12 ? 'due-soon' : 'remaining';
   return {
     id: text(row, 'id'),
     reviewRevision: text(row, 'reviewRevision'),
@@ -175,11 +210,11 @@ function toApproval(row: Record<string, unknown>): ApprovalItem {
     resources: text(row, 'resources'),
     suggestedPrice: num(row, 'suggestedPrice', 'price'),
     discount: num(row, 'discount'),
-    submittedAt: text(row, 'submittedAt', 'createdAt'),
-    slaHours: num(row, 'slaHours'),
-    slaStatus: (text(row, 'slaStatus') || (status === 'published' ? 'approved' : 'remaining')) as ApprovalItem['slaStatus'],
-    slaLabel: text(row, 'slaLabel'),
-    slaHint: text(row, 'slaHint'),
+    submittedAt: text(row, 'reviewSubmittedAt'),
+    slaHours: typeof hours === 'number' ? hours : 0,
+    slaStatus: sla,
+    slaLabel: APPROVAL_SLA_LABELS[sla],
+    slaHint: typeof hours === 'number' ? `${Math.ceil(Math.abs(hours))} giờ` : '',
     action: 'inspect'
   };
 }

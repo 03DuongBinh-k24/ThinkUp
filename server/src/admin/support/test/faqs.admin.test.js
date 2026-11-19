@@ -162,6 +162,7 @@ test('FAQ Admin: Khối 1 - 4 thẻ KPI Hiệu năng Tri thức', async () => {
   assert.equal(summary.totalFaqsCount, 1);
   assert.equal(summary.monthlyViewsCount, 1526);
   assert.equal(summary.failedSearchesCount, 64);
+  assert.equal(summary.ticketReductionRate, null);
 });
 
 test('FAQ Admin: Khối 2 & 3 - Bộ lọc 7 nhóm & Soạn thảo câu hỏi mới', async () => {

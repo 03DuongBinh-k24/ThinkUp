@@ -6,7 +6,7 @@ import { ExportMenuComponent } from '../../../shared/components/export-menu/expo
 import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
-import { downloadTable } from '../../../shared/utils/export-formats';
+import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
 import { formatNumber, paginationRange } from '../course-utils';
 import { Roadmap } from '../models/course.models';
 import { CourseStore } from '../services/course.store';
@@ -328,9 +328,18 @@ export class RoadmapListComponent {
     this.store.retry();
   }
 
-  exportList(format: string): void {
+  exportList(format: ExportFormat): void {
     this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${this.resultTotal()} lộ trình.`, 'info');
-    setTimeout(() => this.notify(`Đã xuất ${this.resultTotal()} lộ trình ra tệp ${format.toUpperCase()}.`, 'success'), 900);
+    const rows: (string | number)[][] = [
+      ['Mã', 'Tên lộ trình', 'Ngành', 'Độ phủ', 'Bài kiểm tra', 'Trạng thái'],
+      ...this.filtered().map(item => [
+        item.code, item.name, item.industry, item.coverage,
+        `${item.testPassed}/${item.testTotal}`, item.hidden ? 'Tạm ẩn' : 'Đang hiển thị'
+      ])
+    ];
+    void downloadTable(format, 'thinkup-lo-trinh-hoc-tap', rows)
+      .then(() => this.notify(`Đã xuất ${rows.length - 1} lộ trình ra tệp ${format.toUpperCase()}.`, 'success'))
+      .catch(() => this.notify('Không thể tạo tệp xuất. Vui lòng thử lại.', 'error'));
   }
 
   notify(message: string, tone: ToastTone): void {

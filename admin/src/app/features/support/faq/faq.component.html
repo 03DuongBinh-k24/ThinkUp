@@ -18,7 +18,7 @@
     <article class="metric-card">
       <span class="metric-icon cyan"><svg lucideChartNoAxesColumnIncreasing aria-hidden="true"></svg></span>
       <div>
-        <small>Lượt tra cứu tháng</small><strong>{{ totalViews() }}</strong>
+        <small>Tổng lượt tra cứu</small><strong>{{ totalViews() }}</strong>
         <p>Tổng lượt xem trong dữ liệu hiện tại</p>
       </div>
     </article>
@@ -36,8 +36,8 @@
     <article class="metric-card">
       <span class="metric-icon green"><svg lucideTrendingDown aria-hidden="true"></svg></span>
       <div>
-        <small>Lượng Ticket giảm</small><strong>—</strong>
-        <p>Chờ dữ liệu đo lường từ backend</p>
+        <small>Lượng Ticket giảm</small><strong>{{ data.ticketReductionRate() === null ? '—' : data.ticketReductionRate() + '%' }}</strong>
+        <p>So sánh hai kỳ 30 ngày liên tiếp</p>
       </div>
     </article>
   </section>

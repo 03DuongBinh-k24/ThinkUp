@@ -7,6 +7,7 @@ import { LucideArrowDownUp, LucideArrowUp, LucideBold, LucideCalendarDays, Lucid
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { Attachment, EmailReplyMetadata, Priority, ReplyTemplate, ResolutionCategory, SupportTicket, ThreadMessage, TicketStatus } from '../models/support.models';
 import { SupportDemoService } from '../services/support-demo.service';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 type TicketModal = 'assign' | 'escalate' | 'templates' | 'close' | null;
 type ReplyChannel = 'internal' | 'email';
@@ -266,9 +267,10 @@ export class TicketDetailComponent {
     if (rejected) this.notify(`${rejected} tệp vượt quá giới hạn 10 MB và đã bị bỏ qua.`);
   }
   removePendingFile(name: string): void { const file = this.pendingFiles().find(item => item.name === name); if (file?.url) { URL.revokeObjectURL(file.url); this.objectUrls.delete(file.url); } this.pendingFiles.update(files => files.filter(item => item.name !== name)); }
-  send(): void {
+  readonly sending = signal(false);
+  async send(): Promise<void> {
     const ticket = this.ticket(); const body = this.reply().trim();
-    if (!ticket || !this.canSubmitReply()) return;
+    if (!ticket || !this.canSubmitReply() || this.sending()) return;
     if (this.replyChannel() === 'internal') {
       this.data.addInternalNote(ticket.id, body, this.pendingFiles());
       this.reply.set(''); this.pendingFiles.set([]);
@@ -277,10 +279,18 @@ export class TicketDetailComponent {
       return;
     }
     const nextStatus: Extract<TicketStatus, 'processing' | 'waiting'> = ticket.status === 'waiting' ? 'waiting' : 'processing';
-    this.data.reply(ticket.id, body, nextStatus, this.pendingFiles(), this.buildEmailMetadata());
+    this.sending.set(true);
+    try {
+      await this.data.reply(ticket.id, body, nextStatus, this.pendingFiles(), this.buildEmailMetadata());
+    } catch (error) {
+      this.notify(apiErrorMessage(error));
+      return;
+    } finally {
+      this.sending.set(false);
+    }
     this.reply.set(''); this.pendingFiles.set([]);
     if (this.replyEditor) this.replyEditor.nativeElement.innerHTML = '';
-    this.notify(nextStatus === 'waiting' ? 'Đã gửi phản hồi; ticket tiếp tục chờ học viên.' : 'Đã gửi phản hồi; ticket tiếp tục được xử lý.');
+    this.notify('Đã lưu phản hồi cho ticket.');
   }
 
   toggleMessageMenu(id: string): void { this.messageMenuId.update(current => current === id ? null : id); }

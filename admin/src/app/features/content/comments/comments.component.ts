@@ -14,6 +14,7 @@ import {
 } from '../content-utils';
 import { CommentSource, CommentStatus, ContentComment, ReportSeverity } from '../models/content.models';
 import { ContentStore } from '../services/content.store';
+import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
 
 type CommentColumn = 'author' | 'context' | 'source' | 'time' | 'safety' | 'status';
 
@@ -425,9 +426,18 @@ export class ContentCommentsComponent {
     this.store.retry();
   }
 
-  exportList(format: string): void {
+  exportList(format: ExportFormat): void {
     this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${this.filtered().length} bình luận.`, 'info');
-    setTimeout(() => this.notify(`Đã xuất ${this.filtered().length} bình luận ra tệp ${format.toUpperCase()}.`, 'success'), 900);
+    const rows: (string | number)[][] = [
+      ['Mã', 'Nội dung', 'Tác giả', 'Ngữ cảnh', 'Nguồn', 'Trạng thái', 'Thời gian'],
+      ...this.filtered().map(item => [
+        item.id, item.content, item.author, item.contextTitle, item.contextType,
+        COMMENT_STATUS_LABELS[item.status], item.createdAt
+      ])
+    ];
+    void downloadTable(format, 'thinkup-binh-luan', rows)
+      .then(() => this.notify(`Đã xuất ${rows.length - 1} bình luận ra tệp ${format.toUpperCase()}.`, 'success'))
+      .catch(() => this.notify('Không thể tạo tệp xuất. Vui lòng thử lại.', 'error'));
   }
 
   openSpam(item: ContentComment): void {

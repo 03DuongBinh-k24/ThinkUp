@@ -61,6 +61,10 @@ export class SupportHttpService extends SupportDemoService {
         case 'complaints': this.complaints.set(rows.map(toComplaint)); break;
         case 'faqs': {
           this.faqs.set(rows.map(toFaq));
+          this.ticketReductionRate.set(null);
+          const summary = await firstValueFrom(this.http.get<{ data: { ticketReductionRate: number | null } }>(`${url}/summary`));
+          if (revision !== this.revision) return;
+          this.ticketReductionRate.set(summary.data.ticketReductionRate);
           const result = await firstValueFrom(this.http.get<{ data: Raw[] }>(`${url}/failed-searches`));
           if (revision === this.revision) this.failedSearches.set(result.data.map(row => ({
             keyword: text(row, 'keyword'), count: number(row, 'searchCount'), suggestedCategory: text(row, 'suggestedCategory')
@@ -89,7 +93,15 @@ export class SupportHttpService extends SupportDemoService {
   }
 
   override acceptTicket(id: string): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/claim`, {}); }
-  override reply(id: string, body: string, status: Extract<TicketStatus, 'processing' | 'waiting'>, attachments: Attachment[] = []): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/reply`, { body, status, attachments }); }
+  override async reply(id: string, body: string, status: Extract<TicketStatus, 'processing' | 'waiting'>, attachments: Attachment[] = []): Promise<void> {
+    await this.post(`/admin/support/tickets/${encodeURIComponent(id)}/reply`, { body, status, attachments });
+  }
+
+  override async reopenTicket(id: string): Promise<void> {
+    await this.post(`/admin/support/tickets/${encodeURIComponent(id)}/reopen`, {
+      reason: 'Quản trị viên yêu cầu mở lại từ hàng đợi hỗ trợ.'
+    });
+  }
   override assignTicket(id: string, assignee: string, note: string): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/transfer`, { assignee, note }); }
   override async resolveTicket(id: string, body: string, category: string, internalNote: string, sendCsat: boolean, attachments: Attachment[] = []): Promise<void> { await this.post(`/admin/support/tickets/${encodeURIComponent(id)}/resolve`, { finalReplyBody: body, resolutionCategory: category, internalSolutionNote: internalNote, sendCsatSurvey: sendCsat, attachments }); }
   override async requestInstructorExplanation(id: string, deadlineHours: 12 | 24, freezeCommission: boolean, directive: string): Promise<void> { await this.post(`/admin/support/complaints/${encodeURIComponent(id)}/request-explanation`, { deadlineHours, freezeInstructorWallet: freezeCommission, adminInstructionNote: directive }); }

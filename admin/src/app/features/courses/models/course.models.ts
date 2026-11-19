@@ -1,4 +1,4 @@
-export type CourseStatus = 'published' | 'pending' | 'hidden' | 'archived';
+export type CourseStatus = 'published' | 'pending' | 'hidden' | 'archived' | 'unpublished';
 export type CourseLevel = 'Cơ bản' | 'Trung cấp' | 'Nâng cao';
 
 export interface CourseLearner {
