@@ -317,7 +317,170 @@
 }
 
 
+/* ---------- 5. Carousel phòng học ảo ---------- */
+.ln-room-carousel {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.ln-room-carousel__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 210px;
+  overflow: hidden;
+}
+
+.ln-room-carousel__slide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 66%;
+  aspect-ratio: 16 / 10;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #e6f4ff;
+  border-radius: clamp(14px, 1.15vw, 22px);
+  background: #0b1220;
+  box-shadow: 0 22px 48px -30px rgba(8, 46, 92, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.82);
+  transition:
+    transform 620ms var(--tu-motion-ease),
+    opacity 420ms ease,
+    filter 420ms ease,
+    box-shadow 420ms ease;
+}
+
+.ln-room-carousel__slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 1100ms var(--tu-motion-ease);
+}
+
+.ln-room-carousel__slide.is-active {
+  z-index: 3;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+  box-shadow: 0 34px 66px -34px rgba(6, 38, 77, 0.58);
+}
+
+/* Ảnh đang xem phóng nhẹ để khối không bị "tĩnh" khi chuyển slide. */
+.ln-room-carousel__slide.is-active img {
+  transform: scale(1.04);
+}
+
+/* Hai ảnh kế bên nằm gọn trong khung: mép ngoài trùng mép khung nên vẫn giữ góc bo. */
+.ln-room-carousel__slide.is-prev,
+.ln-room-carousel__slide.is-next {
+  z-index: 2;
+  width: 60%;
+  opacity: 0.62;
+  filter: saturate(0.9) blur(0.6px);
+  transform: translate(-50%, -50%) translateX(-33.33%);
+}
+
+.ln-room-carousel__slide.is-next {
+  transform: translate(-50%, -50%) translateX(33.33%);
+}
+
+.ln-room-carousel__arrow {
+  position: absolute;
+  top: calc(50% - 26px);
+  z-index: 5;
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid #e3e9f3;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 10px 24px -14px rgba(15, 23, 42, 0.45);
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.ln-room-carousel__arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+.ln-room-carousel__arrow--prev { left: 0; }
+.ln-room-carousel__arrow--next { right: 0; }
+
+.ln-room-carousel__arrow:hover {
+  background: #006ab5;
+  color: #fff;
+  box-shadow: 0 14px 28px -14px rgba(0, 106, 181, 0.65);
+  transform: scale(1.04);
+}
+
+.ln-room-carousel__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: clamp(14px, 1.2vw, 20px);
+}
+
+.ln-room-carousel__dot {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #cdd6e4;
+  cursor: pointer;
+  transition: width 260ms var(--tu-motion-ease), background-color 260ms ease;
+}
+
+.ln-room-carousel__dot.is-active {
+  width: 38px;
+  background: #1f2a44;
+}
+
+@media (max-width: 1279px) {
+  .ln-room-carousel__slide { width: 72%; }
+  .ln-room-carousel__slide.is-prev,
+  .ln-room-carousel__slide.is-next { width: 64%; }
+  .ln-room-carousel__arrow { width: 46px; height: 46px; top: calc(50% - 23px); }
+}
+
+@media (max-width: 1023px) {
+  /* Ảnh chiếm toàn bộ khung: đổi tỉ lệ khung theo đúng tỉ lệ ảnh để không bị cắt dọc. */
+  .ln-room-carousel__stage { aspect-ratio: 16 / 10; }
+  .ln-room-carousel__slide { width: 100%; }
+  .ln-room-carousel__slide.is-prev,
+  .ln-room-carousel__slide.is-next {
+    width: 100%;
+    opacity: 0;
+    filter: none;
+  }
+  .ln-room-carousel__arrow--prev { left: 8px; }
+  .ln-room-carousel__arrow--next { right: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-room-carousel__slide,
+  .ln-room-carousel__slide img,
+  .ln-room-carousel__arrow,
+  .ln-room-carousel__dot {
+    transition: none !important;
+  }
+  .ln-room-carousel__slide.is-active img {
+    transform: none;
+  }
+}
+
 /* Guest landing: header and Hero are a single responsive visual surface. */
+
 .tu-hero-wrap {
   width: 100%;
   margin: 0;
