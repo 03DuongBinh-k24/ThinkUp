@@ -11,6 +11,8 @@ type ApiPage = { items?: Array<Record<string, unknown>>; pagination?: { total?: 
 /** Base HTTP adapter for the content handoff. Blog UI remains intentionally incomplete while another developer revises it. */
 @Injectable()
 export class ContentHttpService extends ContentStore {
+  override readonly requiresReportDecision = true;
+  override readonly canApprovePendingReview = false;
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiUrl}/admin/content`;
   private readonly postState = signal<ContentPost[]>([]);
@@ -65,11 +67,19 @@ export class ContentHttpService extends ContentStore {
   async replyComment(id: string, content: string): Promise<void> { await this.commentAction(id, { content }, 'Phản hồi bình luận'); }
   async updateReview(id: string, patch: Partial<ContentReview>, note: string): Promise<void> { await this.reviewAction(id, patch, note); }
   async replyReview(id: string, content: string): Promise<void> { await this.reviewAction(id, { content }, 'Phản hồi đánh giá'); }
-  async removeReviews(ids: string[]): Promise<void> { await Promise.all(ids.map(id => this.reviewAction(id, { status: 'hidden' }, 'Xóa đánh giá'))); }
+  async removeReviews(ids: string[]): Promise<void> {
+    try {
+      for (const id of ids) {
+        await this.request(`reviews/${encodeURIComponent(id)}/remove`, 'POST', { reason: 'Xóa đánh giá' });
+      }
+    } finally {
+      await this.load();
+    }
+  }
   async updateReport(id: string, patch: Partial<ContentReport>, note: string, decision?: string): Promise<void> {
     const url = `reports/${encodeURIComponent(id)}`;
     if (patch.status === 'processing') {
-    await this.request(`${url}/claim`, 'POST', {});
+      await this.request(`${url}/claim`, 'POST', {});
     } else if (patch.status === 'dismissed' && decision) {
       await this.request(`${url}/dismiss`, 'POST', { reasonCode: decision, note });
     } else if (patch.status === 'resolved' && decision) {
@@ -108,7 +118,12 @@ export class ContentHttpService extends ContentStore {
   private async reviewAction(id: string, patch: Record<string, unknown>, note: string): Promise<void> {
     const action = patch['status'] === 'hidden' ? 'hide' : patch['content'] ? 'reply' : patch['status'] === 'approved' ? 'restore' : null;
     if (!action) throw new Error('Trạng thái đánh giá chưa được hỗ trợ.');
-    await this.request(`reviews/${encodeURIComponent(id)}/${action}`, 'POST', { ...patch, reason: note });
+    const review = this.reviews().find(item => item.id === id);
+    if ((action === 'hide' && review?.status === 'hidden') || (action === 'restore' && review?.status === 'approved')) return;
+    if (action === 'restore' && review?.status === 'pending') {
+      throw new Error('API hiện chỉ hỗ trợ duyệt lại đánh giá đã ẩn hoặc bị từ chối.');
+    }
+    await this.request(`reviews/${encodeURIComponent(id)}/${action}`, 'POST', { ...patch, reason: patch['rejectionReason'] || note });
     await this.load();
   }
   private request(path: string, method: 'POST' | 'PATCH', body: unknown): Promise<unknown> {
@@ -123,7 +138,24 @@ function postPayload(post: Partial<ContentPost>) {
 
 const text = (row: Record<string, unknown>, ...keys: string[]): string => String(keys.map(key => row[key]).find(value => value != null) ?? '');
 const num = (row: Record<string, unknown>, ...keys: string[]): number => Number(keys.map(key => row[key]).find(value => value != null) ?? 0);
+function reviewReply(value: unknown): ContentReview['reply'] {
+  if (!value || typeof value !== 'object') return undefined;
+  const row = value as Record<string, unknown>;
+  const content = text(row, 'content');
+  return content ? { content, by: text(row, 'byName', 'by'), at: text(row, 'at', 'created_at', 'createdAt') } : undefined;
+}
+
+function reviewStatus(value: unknown): ContentReview['status'] {
+  switch (value) {
+    case 'hidden': return 'hidden';
+    case 'rejected':
+    case 'declined': return 'rejected';
+    case 'pending':
+    case 'pending_review': return 'pending';
+    default: return 'approved';
+  }
+}
 function toPost(row: Record<string, unknown>): ContentPost { return { id: text(row, 'id'), title: text(row, 'title'), slug: text(row, 'slug'), category: text(row, 'category') as ContentPost['category'], author: text(row, 'author'), authorRole: 'Tác giả', tags: Array.isArray(row['tags']) ? row['tags'].map(String) : [], status: text(row, 'status') as ContentPost['status'] || 'published', excerpt: text(row, 'excerpt'), body: text(row, 'content').split('\n'), thumbnail: text(row, 'coverImage'), views: num(row, 'views'), commentCount: 0, createdAt: text(row, 'createdAt'), updatedAt: text(row, 'updatedAt'), featured: false, pinned: Boolean(row['pinned']), allowComments: row['allowComments'] !== false, loginRequired: Boolean(row['loginRequired']) }; }
 function toComment(row: Record<string, unknown>): ContentComment { return { id: text(row, 'id'), transferredReportId: text(row, 'reportId', 'report_id') || undefined, postId: text(row, 'postId', 'post_id', 'blog_post_id', 'course_id', 'courseId'), postTitle: text(row, 'contextTitle', 'context_title', 'course_title', 'post_title'), contextTitle: text(row, 'contextTitle', 'context_title', 'course_title', 'post_title'), contextType: row['source'] === 'blog' ? 'blog' : 'course', author: text(row, 'author', 'authorName', 'author_name', 'reviewer_name') || 'Học viên', authorRole: 'Học viên', email: text(row, 'email', 'userEmail'), content: text(row, 'content'), status: text(row, 'status') as ContentComment['status'] || 'visible', safety: row['status'] === 'reported' ? 'reported' : 'clean', reportCount: num(row, 'reportCount', 'report_count', 'reports_count'), likeCount: num(row, 'likesCount', 'like_count'), replyCount: num(row, 'replyCount', 'reply_count'), createdAt: text(row, 'createdAt', 'created_at') }; }
-function toReview(row: Record<string, unknown>): ContentReview { return { id: text(row, 'id'), courseId: text(row, 'courseId', 'course_id'), courseTitle: text(row, 'courseTitle', 'course_title') || 'Đang tải khóa học', instructor: text(row, 'instructor', 'instructorName', 'instructor_name') || 'Chưa có thông tin', learner: text(row, 'learner', 'reviewerName', 'reviewer_name') || 'Học viên', learnerEmail: text(row, 'learnerEmail', 'learner_email'), completion: num(row, 'completion'), learningProgress: row['learningProgress'] as ContentReview['learningProgress'], rating: num(row, 'rating'), nps: num(row, 'nps'), feedbackTags: Array.isArray(row['feedbackTags']) ? row['feedbackTags'].map(String) : [], title: text(row, 'title'), content: text(row, 'content'), status: row['status'] === 'published' ? 'approved' : text(row, 'status') as ContentReview['status'] || 'approved', helpfulCount: num(row, 'helpfulCount'), reportCount: num(row, 'reportCount'), createdAt: text(row, 'createdAt'), reply: row['reply'] as ContentReview['reply'] }; }
+function toReview(row: Record<string, unknown>): ContentReview { return { id: text(row, 'id'), courseId: text(row, 'courseId', 'course_id'), courseTitle: text(row, 'courseTitle', 'course_title') || 'Đang tải khóa học', instructor: text(row, 'instructor', 'instructorName', 'instructor_name') || 'Chưa có thông tin', learner: text(row, 'learner', 'reviewerName', 'reviewer_name') || 'Học viên', learnerEmail: text(row, 'learnerEmail', 'learner_email'), completion: num(row, 'completion'), learningProgress: row['learningProgress'] as ContentReview['learningProgress'], rating: num(row, 'rating'), nps: num(row, 'nps'), feedbackTags: Array.isArray(row['feedbackTags']) ? row['feedbackTags'].map(String) : [], title: text(row, 'title'), content: text(row, 'content'), status: reviewStatus(row['status']), helpfulCount: num(row, 'helpfulCount'), reportCount: num(row, 'reportCount'), createdAt: text(row, 'createdAt'), reply: reviewReply(row['reply']) }; }
 function toReport(row: Record<string, unknown>): ContentReport { return { id: text(row, 'id'), code: text(row, 'code'), type: text(row, 'type') as ContentReport['type'], targetId: text(row, 'targetId'), targetTitle: text(row, 'targetTitle'), targetAuthor: text(row, 'targetAuthor'), priorOffenses: 0, reportedBy: text(row, 'reportedBy'), reason: text(row, 'reason'), description: text(row, 'description'), evidenceSnippet: text(row, 'evidenceSnippet'), severity: text(row, 'severity') as ContentReport['severity'] || 'medium', status: row['status'] === 'pending' ? 'new' : row['status'] === 'in_review' ? 'processing' : text(row, 'status') as ContentReport['status'] || 'new', createdAt: text(row, 'createdAt'), slaDueAt: text(row, 'slaDueAt'), assignee: text(row, 'assignee'), evidence: [] }; }

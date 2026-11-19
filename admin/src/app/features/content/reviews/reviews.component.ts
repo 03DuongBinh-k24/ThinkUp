@@ -246,6 +246,11 @@ export class ContentReviewsComponent {
     { key: 'delete', label: 'Xóa', tone: 'danger' }
   ]);
   readonly replyError = computed(() => this.replyTouched() && this.replyText().trim().length < 20 ? 'Phản hồi cần tối thiểu 20 ký tự.' : '');
+
+  canApprove(item: ContentReview): boolean {
+    return item.status === 'hidden' || item.status === 'rejected' ||
+      (item.status === 'pending' && this.store.canApprovePendingReview);
+  }
   readonly hideReasons = HIDE_REASONS;
   readonly hideError = computed(() => {
     if (!this.hideTouched()) return '';

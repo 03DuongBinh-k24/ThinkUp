@@ -5,6 +5,8 @@ import { ContentComment, ContentPost, ContentReport, ContentReview, ModerationLo
 export type ContentList = 'posts' | 'comments' | 'reviews' | 'reports';
 
 export abstract class ContentStore {
+  readonly requiresReportDecision: boolean = false;
+  readonly canApprovePendingReview: boolean = true;
   async open(_list: ContentList): Promise<void> {}
 
   abstract readonly posts: Signal<readonly ContentPost[]>;

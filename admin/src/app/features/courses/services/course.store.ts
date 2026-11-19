@@ -1,6 +1,6 @@
 import { Signal } from '@angular/core';
 import {
-  ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest
+  ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseStatus, CourseSuggestion, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest
 } from '../models/course.models';
 
 /** Replaceable contract so the demo data source can be swapped for the real course API. */
@@ -16,6 +16,9 @@ export abstract class CourseStore {
 
   abstract retry(): void;
   ensureRoadmapStudio(_id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> { return Promise.reject(new Error('Nguồn dữ liệu không hỗ trợ cấu hình lộ trình.')); }
+  async getRoadmapNodeSuggestions(roadmapId: string, _nodeId: string): Promise<CourseSuggestion[]> {
+    return this.studios().find(studio => studio.roadmapId === roadmapId)?.suggestions ?? [];
+  }
   createRoadmap(_input: { categoryId: number; name: string; code?: string; description?: string }): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> { return Promise.reject(new Error('Nguồn dữ liệu không hỗ trợ tạo lộ trình.')); }
   abstract getCourseContent(course: Course): Promise<Course>;
   abstract getCourseLearners(course: Course): Promise<Course['learners']>;
@@ -29,7 +32,7 @@ export abstract class CourseStore {
   abstract approveApproval(id: string): Promise<void> | void;
   abstract rejectApproval(id: string, reason: string, detail: string): Promise<void> | void;
   abstract requestSupplement(id: string, items: string[], issueType: string, detail: string): Promise<void> | void;
-  abstract toggleRoadmapVisibility(id: string): void;
+  abstract toggleRoadmapVisibility(id: string): Promise<void> | void;
   abstract updateRoadmapNode(roadmapId: string, node: RoadmapNode): void;
   abstract saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): Promise<void> | void;
   abstract publishRoadmap(roadmapId: string, studio?: RoadmapStudio): Promise<void> | void;
