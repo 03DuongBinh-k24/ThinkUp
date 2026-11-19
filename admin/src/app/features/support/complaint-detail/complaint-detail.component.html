@@ -1,3 +1,5 @@
+@if (data.loadError()) { <p role="alert">{{ data.loadError() }} <button type="button" (click)="data.open('complaints', caseId)">Thử lại</button></p> }
+@if (data.loading()) { <p role="status">Đang tải dữ liệu…</p> }
 <main class="support-page complaint-detail-page">
   <nav class="breadcrumb" aria-label="Đường dẫn trang"><a class="breadcrumb-parent" routerLink="/support/complaints">Khiếu nại &amp; Sự cố</a><span class="breadcrumb-separator">/</span><strong class="breadcrumb-current" aria-current="page">{{ caseId }}</strong></nav>
   @if (caseFile(); as item) {

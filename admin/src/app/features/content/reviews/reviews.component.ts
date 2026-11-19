@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { AdminDialogComponent } from '../../../shared/components/admin-dialog/admin-dialog.component';
 import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
@@ -45,7 +46,16 @@ const NPS_VALUES: ColumnFilterValue[] = [
   styleUrls: ['../content-page.css', '../content-moderation.css', './reviews.component.css']
 })
 export class ContentReviewsComponent {
+  private writing = false;
+  private async write(action: () => void | Promise<void>): Promise<boolean> {
+    if (this.writing) return false;
+    this.writing = true;
+    try { await action(); return true; }
+    catch (error) { this.notify(apiErrorMessage(error), 'error'); return false; }
+    finally { this.writing = false; }
+  }
   private readonly store = inject(ContentStore);
+  ngOnInit(): void { void this.store.open('reviews'); }
   readonly loadError = this.store.loadError;
 
   readonly rowMenu = signal<{ item: ContentReview; top: number; left: number } | null>(null);
@@ -386,13 +396,13 @@ export class ContentReviewsComponent {
   openDetail(item: ContentReview): void { this.detailId.set(item.id); this.replyText.set(''); this.replyTouched.set(false); }
   closeDetail(): void { this.detailId.set(null); }
 
-  changeStatus(item: ContentReview, status: ReviewStatus): void {
+  async changeStatus(item: ContentReview, status: ReviewStatus): Promise<void> {
     if (status === 'hidden') {
       this.askHide(item);
       return;
     }
-    this.store.updateReview(item.id, { status, rejectionReason: status === 'rejected' ? 'Vi phạm tiêu chuẩn đánh giá của ThinkUp.' : undefined },
-      `Chuyển trạng thái sang ${REVIEW_STATUS_LABELS[status]}.`);
+    if (!await this.write(() => this.store.updateReview(item.id, { status, rejectionReason: status === 'rejected' ? 'Vi phạm tiêu chuẩn đánh giá của ThinkUp.' : undefined },
+      `Chuyển trạng thái sang ${REVIEW_STATUS_LABELS[status]}.`))) return;
     this.notify(`Đã chuyển đánh giá ${item.id} sang ${REVIEW_STATUS_LABELS[status]}.`, 'success');
   }
 
@@ -403,7 +413,7 @@ export class ContentReviewsComponent {
     this.hideTouched.set(false);
   }
 
-  submitHide(): void {
+  async submitHide(): Promise<void> {
     this.hideTouched.set(true);
     const item = this.hideTarget();
     if (!item || !this.canHide()) {
@@ -413,15 +423,15 @@ export class ContentReviewsComponent {
     const reason = this.hideNote().trim()
       ? `${this.hideReason()}: ${this.hideNote().trim()}`
       : this.hideReason();
-    this.store.updateReview(item.id, { status: 'hidden', rejectionReason: reason },
-      `Ẩn đánh giá: ${reason}`);
+    if (!await this.write(() => this.store.updateReview(item.id, { status: 'hidden', rejectionReason: reason },
+      `Ẩn đánh giá: ${reason}`))) return;
     this.hideTarget.set(null);
     this.notify(`Đã ẩn đánh giá ${item.id} và khóa phản hồi công khai.`, 'success');
   }
 
-  bulkStatus(status: ReviewStatus, ids: readonly string[] = this.selectedList()): void {
+  async bulkStatus(status: ReviewStatus, ids: readonly string[] = this.selectedList()): Promise<void> {
     if (!ids.length) return;
-    ids.forEach(id => this.store.updateReview(id, { status }, `Cập nhật hàng loạt sang ${REVIEW_STATUS_LABELS[status]}.`));
+    for (const id of ids) { if (!await this.write(() => this.store.updateReview(id, { status }, `Cập nhật hàng loạt sang ${REVIEW_STATUS_LABELS[status]}.`))) return; }
     this.selected.set(new Set());
     this.notify(`Đã cập nhật ${ids.length} đánh giá.`, 'success');
   }
@@ -431,10 +441,10 @@ export class ContentReviewsComponent {
     this.bulkDeleteIds.set(ids);
   }
 
-  confirmBulkDelete(): void {
+  async confirmBulkDelete(): Promise<void> {
     const ids = this.bulkDeleteIds();
     if (!ids?.length) return;
-    this.store.removeReviews([...ids]);
+    if (!await this.write(() => this.store.removeReviews([...ids]))) return;
     this.selected.set(new Set());
     this.bulkDeleteIds.set(null);
     this.notify(`Đã xóa ${ids.length} đánh giá.`, 'success');
@@ -450,20 +460,20 @@ export class ContentReviewsComponent {
     else this.bulkStatus(key as ReviewStatus, ids);
   }
 
-  confirmDelete(): void {
+  async confirmDelete(): Promise<void> {
     const item = this.deleteTarget();
     if (!item) return;
-    this.store.removeReviews([item.id]);
+    if (!await this.write(() => this.store.removeReviews([item.id]))) return;
     this.deleteTarget.set(null);
     this.detailId.set(null);
     this.notify(`Đã xóa đánh giá ${item.id}.`, 'success');
   }
 
-  sendReply(): void {
+  async sendReply(): Promise<void> {
     this.replyTouched.set(true);
     const item = this.detail();
     if (!item || this.replyText().trim().length < 20) return;
-    this.store.replyReview(item.id, this.replyText().trim(), 'Quản trị viên');
+    if (!await this.write(() => this.store.replyReview(item.id, this.replyText().trim(), 'Quản trị viên'))) return;
     this.replyText.set('');
     this.replyTouched.set(false);
     this.notify(`Đã gửi phản hồi tới ${item.learner}.`, 'success');

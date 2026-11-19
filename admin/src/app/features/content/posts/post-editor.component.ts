@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { AdminDialogComponent } from '../../../shared/components/admin-dialog/admin-dialog.component';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -23,6 +24,14 @@ const LECTURER_NAMES: readonly string[] = [...new Set(MOCK_COURSES.map(course =>
   styleUrls: ['../content-page.css', './post-editor.component.css']
 })
 export class ContentPostEditorComponent {
+  private writing = false;
+  private async write(action: () => void | Promise<void>): Promise<boolean> {
+    if (this.writing) return false;
+    this.writing = true;
+    try { await action(); return true; }
+    catch (error) { this.notify(apiErrorMessage(error), 'error'); return false; }
+    finally { this.writing = false; }
+  }
   private readonly store = inject(ContentStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -79,7 +88,8 @@ export class ContentPostEditorComponent {
   readonly bodyError = computed(() => this.submitted() && this.bodyText().trim().length < 50 ? 'Nội dung cần tối thiểu 50 ký tự.' : '');
   readonly valid = computed(() => this.title().trim().length >= 10 && this.excerpt().trim().length >= 30 && this.bodyText().trim().length >= 50);
 
-  constructor() {
+  async ngOnInit(): Promise<void> {
+    await this.store.open('posts');
     const id = this.route.snapshot.paramMap.get('id');
     if (!id || id === 'new') return;
     const post = this.store.posts().find(item => item.id === id) ?? null;
@@ -121,7 +131,7 @@ export class ContentPostEditorComponent {
     this.category.set(value as ContentCategory);
   }
 
-  save(overrideStatus?: PostStatus): void {
+  async save(overrideStatus?: PostStatus): Promise<void> {
     if (this.missing()) return;
     this.submitted.set(true);
     if (!this.valid()) {
@@ -144,7 +154,7 @@ export class ContentPostEditorComponent {
     const now = new Date().toISOString();
     const existing = this.editing();
     if (existing) {
-      this.store.updatePost(existing.id, {
+      if (!await this.write(() => this.store.updatePost(existing.id, {
         title: this.title().trim(),
         slug: this.slug() || slugify(this.title()),
         excerpt: this.excerpt().trim(),
@@ -164,14 +174,14 @@ export class ContentPostEditorComponent {
         pinned: this.pinned(),
         scheduledAt: status === 'scheduled' ? new Date(this.scheduledAt()).toISOString() : undefined,
         rejectionReason: undefined
-      }, `Lưu bài viết ở trạng thái ${POST_STATUS_LABELS[status]}.`);
+      }, `Lưu bài viết ở trạng thái ${POST_STATUS_LABELS[status]}.`))) return;
       this.editing.set(this.store.posts().find(post => post.id === existing.id) ?? existing);
       this.lastSaved.set(now);
       this.notify(`Đã lưu “${this.title().trim()}”.`, 'success');
     } else {
       const nextId = Math.max(0, ...this.store.posts().map(post => Number(post.id.replace('BV-', '')) || 0)) + 1;
       const id = `BV-${String(nextId).padStart(3, '0')}`;
-      this.store.createPost({
+      if (!await this.write(() => this.store.createPost({
         id,
         title: this.title().trim(),
         slug: this.slug() || slugify(this.title()),
@@ -195,7 +205,7 @@ export class ContentPostEditorComponent {
         scheduledAt: status === 'scheduled' ? new Date(this.scheduledAt()).toISOString() : undefined,
         featured: this.featured(),
         pinned: this.pinned()
-      });
+      }))) return;
       this.notify('Đã tạo bài viết mới.', 'success');
       setTimeout(() => void this.router.navigate(['/content/posts']), 500);
     }

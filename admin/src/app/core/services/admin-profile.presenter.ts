@@ -277,6 +277,7 @@ export function mapAdminProfile(response: AdminProfileResponse, current: AdminUs
 
   return {
     ...current,
+    accessRole: response.admin.role,
     id: admin.id || current.id,
     email: admin.email?.trim() || current.email,
     fullName: admin.full_name?.trim() || current.fullName,

@@ -9,13 +9,15 @@
  */
 export type AdminDataSourceMode = 'http' | 'mock';
 
+const dataSource = 'http' as AdminDataSourceMode;
+
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:5000/api',
   /** Nguồn dữ liệu nghiệp vụ — xem `AdminDataSourceMode`. */
-  adminDataSource: 'http' as AdminDataSourceMode,
+  adminDataSource: dataSource,
   // TODO(pre-deploy): tắt cờ này khi backend đã cấp tài khoản role 'admin' thật.
-  adminDemoLogin: true,
+  adminDemoLogin: dataSource === 'mock',
   /**
    * TODO(pre-deploy): xoá nhánh demo khi backend hỗ trợ 2FA và hạn xoay vòng mật khẩu.
    * Chỉ dùng để dựng/kiểm thử luồng thiết kế ở môi trường local.

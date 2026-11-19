@@ -9,8 +9,11 @@
   <!-- TODO(pre-deploy): Nhớ thay số liệu và quyền demo bằng API rút tiền cùng RBAC thật; backend xử lý duyệt, từ chối, hoàn ví, email và giải ngân. -->
   @if (error() && !dialog()) { <p class="error" role="alert">{{ error() }}</p> }
   @if (payoutsAreDemo()) {
-    <p class="notice" role="status">Dữ liệu chi trả giảng viên đang là dữ liệu minh họa. Backend chưa có API yêu cầu/duyệt/giải ngân thật, nên các thao tác duyệt và từ chối chỉ thay đổi tạm trên màn hình.</p>
+    <p class="notice" role="status">Chế độ minh họa. Các thao tác duyệt và từ chối chỉ áp dụng trong phiên này.</p>
   }
+  @if (loadingPayouts()) { <p role="status">Đang tải yêu cầu chi trả…</p> }
+  @if (loadFailure()) { <p role="alert">{{ loadFailure() }} <button type="button" (click)="reload()">Thử lại</button></p> }
+  @if (!payoutsAreDemo()) { <p class="notice">Thống kê chỉ tính các yêu cầu thực. Các yêu cầu minh họa được đánh dấu trong bảng.</p> }
   <section class="kpi-grid" aria-label="Tổng quan rút tiền">
     <button class="kpi" type="button" [class.selected]="status() === 'pending'" (click)="filterFromKpi('pending')">
       <span class="kpi-icon pending" aria-hidden="true">
@@ -158,11 +161,11 @@
           @for (item of visible(); track item.id) {
             <tr [class.row-menu-open]="openActionMenuId() === item.id" [class.row-selected]="selection().has(item.id)">
               <td class="select-cell"><input type="checkbox" [checked]="selection().has(item.id)" [attr.aria-label]="'Chọn yêu cầu rút tiền ' + item.id" (change)="toggleSelect(item.id, $any($event.target).checked)"></td>
-              <td class="request-id request-code-cell" [class.menu-open]="openActionMenuId() === item.id"><div class="request-code-main"><span>{{ item.id }}</span><div class="row-actions request-id-actions" (click)="$event.stopPropagation()"><button class="row-actions-trigger" type="button" [attr.aria-label]="'Mở menu thao tác cho yêu cầu ' + item.id" aria-haspopup="menu" [attr.aria-expanded]="openActionMenuId() === item.id" data-tooltip="Xem các thao tác với yêu cầu rút tiền" (click)="toggleRowActions(item.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg></button>@if (openActionMenuId() === item.id) {<div class="row-actions-menu" role="menu">@if (item.status === 'pending') {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'review')"><img src="/assets/business/orders/circle-check.svg" alt=""><span>Duyệt yêu cầu</span></button><button class="danger" type="button" role="menuitem" (click)="closeRowActions(); open(item, 'reject')"><img src="/assets/business/orders/circle-x.svg" alt=""><span>Từ chối yêu cầu</span></button>} @else {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'details')"><img src="/assets/dashboard/4-icon-eye-outlined.svg" alt=""><span>Xem chi tiết</span></button>}</div>}</div></div></td>
+              <td class="request-id request-code-cell" [class.menu-open]="openActionMenuId() === item.id"><div class="request-code-main"><span>{{ item.id }} @if (item.isDemo || payoutsAreDemo()) { <small>Minh họa</small> }</span><div class="row-actions request-id-actions" (click)="$event.stopPropagation()"><button class="row-actions-trigger" type="button" [attr.aria-label]="'Mở menu thao tác cho yêu cầu ' + item.id" aria-haspopup="menu" [attr.aria-expanded]="openActionMenuId() === item.id" data-tooltip="Xem các thao tác với yêu cầu rút tiền" (click)="toggleRowActions(item.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg></button>@if (openActionMenuId() === item.id) {<div class="row-actions-menu" role="menu">@if (item.status === 'pending') {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'review')"><img src="/assets/business/orders/circle-check.svg" alt=""><span>Duyệt yêu cầu</span></button><button class="danger" type="button" role="menuitem" (click)="closeRowActions(); open(item, 'reject')"><img src="/assets/business/orders/circle-x.svg" alt=""><span>Từ chối yêu cầu</span></button>} @else {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'details')"><img src="/assets/dashboard/4-icon-eye-outlined.svg" alt=""><span>Xem chi tiết</span></button>}</div>}</div></div></td>
               <td><div class="stack"><strong>{{ item.instructor }}</strong><span class="muted email" [title]="item.email">{{ item.email }}</span></div></td>
               <td class="number amount" [class.high-value]="item.amount >= 20000000">{{ money(item.amount) }}</td>
-              <td class="number">{{ money(item.taxAmount) }}</td>
-              <td class="number net-amount">{{ money(item.amount - item.taxAmount) }}</td>
+              <td class="number">{{ item.taxAmount === null ? '—' : money(item.taxAmount) }}</td>
+              <td class="number net-amount">{{ net(item) === null ? '—' : money(net(item)!) }}</td>
               <td><div class="stack bank"><span>{{ item.bank }}</span><span class="muted">{{ item.accountNumber }}</span></div></td>
               <td><div class="stack date"><span>{{ datePart(item.submittedAt) }}</span><span class="muted">{{ timePart(item.submittedAt) }}</span></div></td>
               <td><span [class]="'status ' + item.status">{{ statusLabel(item.status) }}</span></td>
@@ -196,7 +199,7 @@
       <div class="dialog-body">
         <div class="request-summary">
           <div class="request-identity">
-            <span class="request-code">{{ item.id }}</span>
+            <span class="request-code">{{ item.id }} @if (item.isDemo || payoutsAreDemo()) { <small>Minh họa</small> }</span>
             <button class="copy-id" type="button" [attr.aria-label]="'Sao chép mã yêu cầu ' + item.id" [title]="copiedId() ? 'Đã sao chép' : 'Sao chép mã yêu cầu'" (click)="copyRequestId(item.id)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
             </button>
@@ -243,7 +246,7 @@
           </section>
           <section class="payout-info-card" aria-labelledby="reconciliation-title">
             <h3 id="reconciliation-title">Đối soát khoản rút</h3>
-            <dl><div><dt>Số tiền yêu cầu</dt><dd>{{ money(item.amount) }}</dd></div><div><dt>Thuế TNCN dự kiến</dt><dd>{{ money(item.taxAmount) }}</dd></div><div class="net-row"><dt>Thực nhận dự kiến</dt><dd>{{ money(item.amount - item.taxAmount) }}</dd></div></dl>
+            <dl><div><dt>Số tiền yêu cầu</dt><dd>{{ money(item.amount) }}</dd></div><div><dt>Thuế TNCN dự kiến</dt><dd>{{ item.taxAmount === null ? '—' : money(item.taxAmount) }}</dd></div><div class="net-row"><dt>Thực nhận dự kiến</dt><dd>{{ net(item) === null ? '—' : money(net(item)!) }}</dd></div></dl>
           </section>
           <section class="payout-info-card" aria-labelledby="bank-details-title">
             <h3 id="bank-details-title">Tài khoản nhận tiền</h3>

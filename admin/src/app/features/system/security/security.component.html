@@ -1,3 +1,5 @@
+@if (store.loading()) { <p role="status">Đang tải dữ liệu…</p> }
+@if (store.loadError()) { <p role="alert">{{ store.loadError() }} <button type="button" (click)="store.open('security')">Thử lại</button></p> }
 @if (denied()) {
   <div class="system-page">
     <div class="denied-state">

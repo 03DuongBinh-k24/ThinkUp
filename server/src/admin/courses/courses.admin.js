@@ -28,6 +28,10 @@ function validatePage(query) {
   if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) throw FAIL('Phân trang không hợp lệ.');
   return { page, pageSize };
 }
+function reviewRevision(row) {
+  return [String(row._id), row.admin_version ?? 0, iso(row.updated_at || row.updatedAt) ?? '', statusOf(row).reviewStatus ?? ''].join('|');
+}
+
 function viewCourse(row, instructor = null) {
   const status = statusOf(row);
   const submittedAt = date(row.review_submitted_at || row.submitted_at || (row.status === 'pending_review' ? row.created_at || row.createdAt : null));
@@ -37,7 +41,7 @@ function viewCourse(row, instructor = null) {
     title: row.title || '', slug: row.slug || '', categoryId: row.category_id ?? null,
     category: row.category_name || row.category || '', level: row.level || row.difficulty || '',
     instructorId: String(row.instructor_id ?? row.instructorId ?? ''), instructorName: instructor?.full_name || instructor?.name || row.instructor_name || row.instructor?.name || '',
-    status: status.businessStatus, reviewStatus: status.reviewStatus,
+    status: status.businessStatus, reviewStatus: status.reviewStatus, reviewRevision: reviewRevision(row),
     price: Number(row.price ?? 0), originalPrice: Number(row.original_price ?? row.price ?? 0),
     rating: Number(row.rating ?? row.average_rating ?? 0), ratingCount: Number(row.total_reviews ?? row.rating_count ?? 0),
     learnerCount: Number(row.total_students ?? row.student_count ?? 0), createdAt: iso(row.created_at || row.createdAt), updatedAt: iso(row.updated_at || row.updatedAt),
@@ -252,8 +256,15 @@ export async function decideCourseReview(id, body, req, options = {}) {
   if (decision !== 'approve' && (reason.length < 2 || reason.length > 120 || details.length < 10 || details.length > 2000)) throw FAIL('Cần ghi lý do và nội dung xử lý chi tiết.');
   const db = options.db || await getMongoDb();
   return courseTransaction(db, async session => {
-  const coll = db.collection('courses'), current = await coll.findOne(courseQuery(id), { session });
+  const coll = db.collection('courses');
+  const selected = body.expectedRevision !== undefined
+    ? { _id: ObjectId.isValid(id) ? new ObjectId(id) : id }
+    : courseQuery(id);
+  const current = await coll.findOne(selected, { session });
   if (!current) throw FAIL('Không tìm thấy khóa học.', 404, 'COURSE_NOT_FOUND');
+  if (body.expectedRevision !== undefined && body.expectedRevision !== reviewRevision(current)) {
+    throw FAIL('Phiên bản khóa học đã thay đổi. Tải lại hồ sơ trước khi xử lý.', 409, 'COURSE_REVIEW_CONFLICT');
+  }
   const { reviewStatus } = statusOf(current);
   if (!['pending_review', 'in_review', 'changes_requested'].includes(reviewStatus)) throw FAIL('Khóa học không ở trạng thái có thể thẩm định.', 409, 'COURSE_REVIEW_STATE_CONFLICT');
   const now = options.now || new Date(), nextReview = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'changes_requested';

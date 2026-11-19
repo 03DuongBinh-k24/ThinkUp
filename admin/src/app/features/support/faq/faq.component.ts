@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { Component, HostListener, WritableSignal, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FAQ_CATEGORIES } from '../../../core/data/mock/support.mock';
@@ -14,7 +15,9 @@ import { SupportPaginationComponent } from '../components/support-pagination/sup
 
 @Component({ selector:'app-support-faq',standalone:true,imports:[FormsModule, SupportPaginationComponent, ColumnFilterComponent, CustomSelectComponent, SelectionBarComponent, BulkSelectionDialogComponent, AdminDialogComponent, LucideBold, LucideBookOpenText, LucideChartNoAxesColumnIncreasing, LucideCircleAlert, LucideCircleHelp, LucideEyeOff, LucideFileText, LucideFolder, LucideItalic, LucideLink, LucideList, LucideListOrdered, LucidePencil, LucidePencilLine, LucidePlus, LucideSave, LucideSearch, LucideSearchX, LucideSend, LucideTag, LucideTrash2, LucideTrendingDown, LucideTriangleAlert, LucideUnderline, LucideX],templateUrl:'./faq.component.html',styleUrls:['../support-page.css','./faq.component.css'] })
 export class FaqComponent {
-  private readonly data=inject(SupportDemoService);readonly faqs=this.data.faqs;readonly failed=this.data.failedSearches;readonly categories=FAQ_CATEGORIES;
+  readonly data = inject(SupportDemoService);
+  ngOnInit(): void { this.data.open('faqs'); }
+  readonly faqs=this.data.faqs;readonly failed=this.data.failedSearches;readonly categories=FAQ_CATEGORIES;
   readonly categoryOptions = computed<ReadonlyArray<CustomSelectOption>>(() => [
     { value: '', label: 'Tất cả 7 nhóm' },
     ...this.categories.map(c => ({ value: c, label: c }))
@@ -70,21 +73,21 @@ export class FaqComponent {
   toggleSelectAll():void{const next=new Set(this.selection());if(this.allVisibleSelected())this.visible().forEach(item=>next.delete(item.id));else this.visible().forEach(item=>next.add(item.id));this.selection.set(next)}
   clearSelection():void{this.selection.set(new Set())}
   setSelectionIds(ids:string[]):void{this.selection.set(new Set(ids))}
-  runSelectionAction(key:string,ids?:readonly string[]):void{
+  async runSelectionAction(key:string,ids?:readonly string[]):Promise<void>{
     this.selectionListOpen.set(false);
     const targets=ids??this.selectedIds();if(!targets.length)return;
     if(key==='delete'){this.bulkDeleteIds.set(targets);return}
     const status:FaqStatus=key==='publish'?'published':'hidden';
     const changed=this.faqs().filter(item=>targets.includes(item.id)&&item.status!==status);
     if(!changed.length){this.toast.set('Các FAQ đã chọn đều ở trạng thái này.');setTimeout(()=>this.toast.set(''),2500);return}
-    changed.forEach(item=>this.data.setFaqStatus(item.id,status));
+    for (const item of changed) { if (!await this.write(() => this.data.setFaqStatus(item.id, status))) return; this.toggleSelect(item.id, false); }
     this.clearSelection();
     this.toast.set(status==='published'?`Đã xuất bản ${changed.length} FAQ.`:`Đã tạm ẩn ${changed.length} FAQ.`);
     setTimeout(()=>this.toast.set(''),3000);
   }
-  confirmBulkDelete():void{
+  async confirmBulkDelete():Promise<void>{
     const ids=this.bulkDeleteIds();if(!ids?.length)return;
-    ids.forEach(id=>this.data.deleteFaq(id));
+    for (const id of ids) { if (!await this.write(() => this.data.deleteFaq(id))) return; this.toggleSelect(id, false); }
     this.bulkDeleteIds.set(null);
     this.clearSelection();
     this.page.set(Math.min(this.page(),this.pages()));
@@ -103,17 +106,25 @@ export class FaqComponent {
   setAnswerFormat(value:string,textarea:HTMLTextAreaElement):void{this.answerFormat.set(value);if(value==='paragraph')return;const current=this.form().answer;const start=textarea.selectionStart??current.length;const end=textarea.selectionEnd??start;const selected=current.slice(start,end)||'Nội dung';const insertion=value==='heading'?`## ${selected}`:`> ${selected}`;this.patch('answer',`${current.slice(0,start)}${insertion}${current.slice(end)}`.slice(0,500));setTimeout(()=>textarea.focus())}
   orderInvalid():boolean{const order=Number(this.form().order);return!Number.isInteger(order)||order<1}
   valid():boolean{const v=this.form();return!!v.category&&v.question.trim().length>0&&v.question.trim().length<=150&&v.answer.trim().length>0&&v.answer.trim().length<=500&&Number.isInteger(Number(v.order))&&Number(v.order)>0}
-  save():void{this.attempted.set(true);if(!this.valid())return;const value={...this.form(),question:this.form().question.trim(),answer:this.sanitize(this.form().answer.trim()),updatedAt:new Date().toISOString()};this.data.saveFaq(value);this.closeModal();this.toast.set(this.editing()?'Đã lưu thay đổi FAQ.':'Đã tạo FAQ mới.');setTimeout(()=>this.toast.set(''),3000)}
+  async save():Promise<void>{this.attempted.set(true);if(!this.valid())return;const value={...this.form(),question:this.form().question.trim(),answer:this.sanitize(this.form().answer.trim()),updatedAt:new Date().toISOString()};if (!await this.write(() => this.data.saveFaq(value))) return;this.closeModal();this.toast.set(this.editing()?'Đã lưu thay đổi FAQ.':'Đã tạo FAQ mới.');setTimeout(()=>this.toast.set(''),3000)}
+  private busy = false;
+  private async write(action: () => void | Promise<void>): Promise<boolean> {
+    if (this.busy) return false;
+    this.busy = true;
+    try { await action(); return true; }
+    catch (error) { this.toast.set(apiErrorMessage(error)); return false; }
+    finally { this.busy = false; }
+  }
   sanitize(value:string):string{return value.replace(/<[^>]*>/g,'').replace(/javascript:/gi,'')}
-  setStatus(item:FaqItem,status:FaqStatus):void{this.data.setFaqStatus(item.id,status);this.toast.set(status==='published'?'FAQ đã được xuất bản.':'Đã cập nhật trạng thái FAQ.');setTimeout(()=>this.toast.set(''),2500)}
+  async setStatus(item:FaqItem,status:FaqStatus):Promise<void>{if (!await this.write(() => this.data.setFaqStatus(item.id,status))) return;this.toast.set(status==='published'?'FAQ đã được xuất bản.':'Đã cập nhật trạng thái FAQ.');setTimeout(()=>this.toast.set(''),2500)}
   askStatusChange(item:FaqItem,target:FaqStatus):void{this.pendingStatusChange.set({item,target});this.openModal('status')}
-  confirmStatusChange():void{const change=this.pendingStatusChange();if(!change)return;this.data.setFaqStatus(change.item.id,change.target);this.closeModal();this.toast.set(change.target==='published'?'FAQ đã được xuất bản.':'FAQ đã được chuyển sang trạng thái Tạm ẩn.');setTimeout(()=>this.toast.set(''),3000)}
+  async confirmStatusChange():Promise<void>{const change=this.pendingStatusChange();if(!change)return;if (!await this.write(() => this.data.setFaqStatus(change.item.id,change.target))) return;this.closeModal();this.toast.set(change.target==='published'?'FAQ đã được xuất bản.':'FAQ đã được chuyển sang trạng thái Tạm ẩn.');setTimeout(()=>this.toast.set(''),3000)}
   askDelete(item:FaqItem):void{this.deleting.set(item);this.openModal('delete')}
-  confirmDelete():void{const item=this.deleting();if(!item)return;this.data.deleteFaq(item.id);this.closeModal();this.deleting.set(null);this.toast.set('Đã xóa FAQ và cập nhật lại thứ tự.');setTimeout(()=>this.toast.set(''),3000)}
+  async confirmDelete():Promise<void>{const item=this.deleting();if(!item)return;if (!await this.write(() => this.data.deleteFaq(item.id))) return;this.closeModal();this.deleting.set(null);this.toast.set('Đã xóa FAQ và cập nhật lại thứ tự.');setTimeout(()=>this.toast.set(''),3000)}
   fromFailed(item:FailedSearch):void{this.editing.set(null);this.keywordDraft.set('');this.answerFormat.set('paragraph');this.form.set(this.blank(item.keyword,item.suggestedCategory));this.attempted.set(false);this.modal.set('editor');this.focusModal()}
   setOrderDraft(id:string,value:number):void{this.orderDrafts.update(items=>({...items,[id]:value}))}
   orderValue(item:FaqItem):number{return this.orderDrafts()[item.id]??item.order}
-  saveOrder(item:FaqItem):void{const order=this.orderValue(item);if(!Number.isInteger(order)||order<1){this.toast.set('Thứ tự phải là số nguyên lớn hơn 0.');return}this.data.reorderFaq(item.id,order);this.orderDrafts.update(items=>{const next={...items};delete next[item.id];return next});this.toast.set('Đã cập nhật thứ tự trong nhóm.');setTimeout(()=>this.toast.set(''),2500)}
+  async saveOrder(item:FaqItem):Promise<void>{const order=this.orderValue(item);if(!Number.isInteger(order)||order<1){this.toast.set('Thứ tự phải là số nguyên lớn hơn 0.');return}if (!await this.write(() => this.data.reorderFaq(item.id,order))) return;this.orderDrafts.update(items=>{const next={...items};delete next[item.id];return next});this.toast.set('Đã cập nhật thứ tự trong nhóm.');setTimeout(()=>this.toast.set(''),2500)}
   insertAnswer(textarea:HTMLTextAreaElement,kind:'bold'|'italic'|'underline'|'bullet'|'number'|'link'):void{const value=this.form().answer;const start=textarea.selectionStart??value.length;const end=textarea.selectionEnd??start;const selected=value.slice(start,end)||'Nội dung';const insertion=kind==='bold'?`**${selected}**`:kind==='italic'?`*${selected}*`:kind==='underline'?`<u>${selected}</u>`:kind==='bullet'?`- ${selected}`:kind==='number'?`1. ${selected}`:`[${selected}](https://)`;const next=`${value.slice(0,start)}${insertion}${value.slice(end)}`.slice(0,500);this.patch('answer',next);setTimeout(()=>{textarea.focus();textarea.setSelectionRange(start+insertion.length,start+insertion.length)})}
   openModal(type:'editor'|'failed'|'delete'|'status'):void{this.modalOrigin=document.activeElement instanceof HTMLElement?document.activeElement:null;this.modal.set(type);this.focusModal()}
   closeModal():void{const closing=this.modal();this.modal.set(null);if(closing==='status')this.pendingStatusChange.set(null);setTimeout(()=>this.modalOrigin?.focus())}

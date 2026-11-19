@@ -128,12 +128,18 @@ export function countVoucherFilter(filter: VoucherAdvancedFilter): number {
   ].filter(value => value !== '' && value !== null && value !== undefined).length;
 }
 
+export type PayoutDecision = { status: 'approved'; note?: string } |
+  { status: 'rejected'; reason: string; details: string; file?: File | null };
+
 export interface PayoutRequest {
+  isDemo?: boolean;
+  netAmount?: number | null;
+  evidenceId?: string;
   id: string;
   instructor: string;
   email: string;
   amount: number;
-  taxAmount: number;
+  taxAmount: number | null;
   bank: string;
   accountNumber: string;
   accountName: string;

@@ -6,6 +6,7 @@
     </div>
   </header>
 
+  @if (previewDashboard) { <p role="status">Dashboard đang hiển thị số liệu minh họa.</p> }
   <section class="metrics-grid" aria-label="Chỉ số tổng quan">
     @for (metric of metrics; track metric.title) {
       <article class="metric-card" [class]="'metric-card ' + metric.theme">

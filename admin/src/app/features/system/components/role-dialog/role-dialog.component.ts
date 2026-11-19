@@ -122,7 +122,10 @@ export class RoleDialogComponent {
     this.serverError.set(false);
   }
 
-  submit(): void {
+  readonly submitting = signal(false);
+
+  async submit(): Promise<void> {
+    if (this.submitting()) return;
     if (this.locked()) return;
     this.formError.set('');
     this.reasonError.set('');
@@ -145,19 +148,16 @@ export class RoleDialogComponent {
       return;
     }
 
-    // TODO(pre-deploy): Nhớ xóa mô phỏng lỗi máy chủ bằng OTP 000000 khi nối API thật.
-    if (this.otp() === SERVER_FAILURE_OTP) {
-      this.serverError.set(true);
-      return;
-    }
 
     const role = this.selectedRole() as AdminRoleCode;
     const reason = this.reason().trim();
     const otp = this.otp();
+    this.submitting.set(true);
     const result = this.mode() === 'assign'
-      ? this.store.assignRole(this.selectedStaff()!.id, role, reason, otp)
-      : this.store.changeRole(this.person()!.id, role, reason, otp);
+      ? await this.store.assignRole(this.selectedStaff()!.id, role, reason, otp)
+      : await this.store.changeRole(this.person()!.id, role, reason, otp);
 
+    this.submitting.set(false);
     if (!result.ok) {
       if (result.message.startsWith('Mã xác thực')) {
         this.wrongAttempts += 1;

@@ -1,3 +1,5 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
+import { PayoutDecision } from '../models/business.models';
 import { DOCUMENT } from '@angular/common';
 import { afterNextRender, Component, DestroyRef, HostListener, Injector, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -144,7 +146,7 @@ export class PayoutsComponent {
         && (!this.status() || item.status === this.status())
         && (this.limitMin() === null || item.amount >= this.limitMin()!)
         && (this.limitMax() === null || item.amount <= this.limitMax()!)
-        && (!this.taxOnly() || item.taxAmount > 0)
+        && (!this.taxOnly() || (item.taxAmount ?? 0) > 0)
         && this.matchesColumn(this.instructorColumnFilters(), item.instructor)
         && this.matchesAmountColumn(item.amount)
         && this.matchesColumn(this.bankColumnFilters(), item.bank)
@@ -165,12 +167,16 @@ export class PayoutsComponent {
   readonly currentPage = computed(() => Math.min(this.page(), this.totalPages()));
   readonly pagination = computed(() => paginationItems(this.currentPage(), this.totalPages()));
   readonly visible = computed(() => this.filtered().slice((this.currentPage() - 1) * this.pageSize, this.currentPage() * this.pageSize));
-  readonly pending = computed(() => this.payouts().filter(item => item.status === 'pending').length);
-  readonly largePending = computed(() => this.payouts().filter(item => item.status === 'pending' && item.amount >= 20000000).length);
-  readonly awaitingAmount = computed(() => this.payouts().filter(item => item.status === 'approved').reduce((sum, item) => sum + item.amount - item.taxAmount, 0));
-  readonly paidAmount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + item.amount - item.taxAmount, 0));
-  readonly paidCount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length);
-  readonly taxAmount = computed(() => this.payouts().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + item.taxAmount, 0));
+  private readonly kpiRows = computed(() => this.payoutsAreDemo() ? this.payouts() : this.payouts().filter(row => !row.isDemo));
+  net(item: PayoutRequest): number | null {
+    return item.netAmount !== undefined ? item.netAmount : item.taxAmount === null ? null : item.amount - item.taxAmount;
+  }
+  readonly pending = computed(() => this.kpiRows().filter(item => item.status === 'pending').length);
+  readonly largePending = computed(() => this.kpiRows().filter(item => item.status === 'pending' && item.amount >= 20000000).length);
+  readonly awaitingAmount = computed(() => this.kpiRows().filter(item => item.status === 'approved').reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
+  readonly paidAmount = computed(() => this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
+  readonly paidCount = computed(() => this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length);
+  readonly taxAmount = computed(() => this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (item.taxAmount ?? 0), 0));
   readonly selection = signal<ReadonlySet<string>>(new Set());
   readonly selectionListOpen = signal(false);
   readonly bulkRejectIds = signal<readonly string[] | null>(null);
@@ -206,7 +212,18 @@ export class PayoutsComponent {
   });
   readonly bulkRejectAmount = computed(() => this.bulkRejectTargets().reduce((sum, item) => sum + item.amount, 0));
 
+  readonly loadingPayouts = signal(false);
+  readonly submitting = signal(false);
+  readonly loadFailure = signal('');
+  async reload(): Promise<void> {
+    this.loadingPayouts.set(true);
+    this.loadFailure.set('');
+    try { await this.data.reloadPayouts(); }
+    catch (error) { this.loadFailure.set(apiErrorMessage(error)); }
+    finally { this.loadingPayouts.set(false); }
+  }
   constructor() {
+    void this.reload();
     this.destroyRef.onDestroy(() => this.removeFilterPopoverListeners());
     this.destroyRef.onDestroy(() => { if (this.bulkToastTimer) clearTimeout(this.bulkToastTimer); });
   }
@@ -523,7 +540,9 @@ export class PayoutsComponent {
     if (item.availableBalance < item.amount) issues.push(`Số dư khả dụng không đủ để duyệt yêu cầu ${money(item.amount)}.`);
     return issues;
   }
-  open(item: PayoutRequest, dialog: 'details' | 'review' | 'reject'): void { this.selected.set(item); this.returnFromReject.set('details'); this.dialog.set(dialog); this.error.set(''); this.clearCopyToast(); this.approvalNote.set(''); this.rejectionReason.set(''); this.rejectionDetails.set(''); this.evidence.set(''); }
+  open(item: PayoutRequest, dialog: 'details' | 'review' | 'reject'): void { this.evidenceFile = null; this.selected.set(item);
+    void this.data.payoutDetail(item.id).then(detail => { if (this.selected()?.id === item.id) this.selected.set(detail); }).catch(error => { if (this.selected()?.id === item.id) this.error.set(apiErrorMessage(error)); });
+    this.returnFromReject.set('details'); this.dialog.set(dialog); this.error.set(''); this.clearCopyToast(); this.approvalNote.set(''); this.rejectionReason.set(''); this.rejectionDetails.set(''); this.evidence.set(''); }
   openReject(): void { this.returnFromReject.set(this.dialog() === 'review' ? 'review' : 'details'); this.error.set(''); this.dialog.set('reject'); }
   cancelReject(): void { this.error.set(''); this.dialog.set(this.returnFromReject()); }
   @HostListener('document:keydown.escape')
@@ -554,21 +573,26 @@ export class PayoutsComponent {
   approve(): void {
     const item = this.selected(); if (!item) return;
     if (!this.canApprove(item)) { this.error.set('Chưa thể duyệt. Vui lòng xử lý các cảnh báo phía trên.'); return; }
-    // TODO(pre-deploy): Thay cập nhật cục bộ bằng API duyệt chi trả khi backend bàn giao luồng thật.
-    this.data.updatePayout(item.id, { status: 'approved' });
-    this.close();
-    this.toast.set('Đã duyệt yêu cầu (dữ liệu minh họa). Chờ kế toán giải ngân.');
+    void this.saveDecision(item, { status: 'approved', note: this.approvalNote() });
   }
   reject(): void {
-    const item = this.selected(); if (!item) return;
-    if (!this.rejectionReason() || !this.rejectionDetails().trim()) { this.error.set('Chọn lý do và nhập giải thích chi tiết trước khi xác nhận.'); return; }
-    // TODO(pre-deploy): API từ chối + tải minh chứng chưa tồn tại; giữ minh chứng trong bộ nhớ.
-    this.data.updatePayout(item.id, {
-      status: 'rejected',
-      rejectionReason: `${this.rejectionReason()}: ${this.rejectionDetails().trim()}`
-    });
-    this.close();
-    this.toast.set('Đã từ chối yêu cầu (dữ liệu minh họa).');
+    const item = this.selected();
+    if (!item) return;
+    const reason = this.rejectionReason();
+    const details = this.rejectionDetails().trim();
+    if (!reason || !details) { this.error.set('Chọn lý do và nhập giải thích chi tiết trước khi xác nhận.'); return; }
+    void this.saveDecision(item, { status: 'rejected', reason, details, file: this.evidenceFile });
+  }
+  private async saveDecision(item: PayoutRequest, decision: PayoutDecision): Promise<void> {
+    if (this.submitting()) return;
+    this.submitting.set(true);
+    try {
+      await this.data.updatePayout(item.id, decision);
+      this.close();
+      this.notifyBulk(decision.status === 'approved' ? 'Đã duyệt yêu cầu. Chờ giải ngân.' : 'Đã từ chối yêu cầu.');
+    } catch (error) {
+      this.error.set(apiErrorMessage(error));
+    } finally { this.submitting.set(false); }
   }
   chooseEvidence(event: Event): void { this.evidenceFile = (event.target as HTMLInputElement).files?.[0] ?? null; this.evidence.set(this.evidenceFile?.name ?? ''); }
   async downloadEvidence(id: string): Promise<void> {
@@ -602,10 +626,7 @@ export class PayoutsComponent {
   private bulkApprove(ids: readonly string[]): void {
     const eligible = this.payouts().filter(item => ids.includes(item.id) && item.status === 'pending' && this.canApprove(item));
     if (!eligible.length) { this.notifyBulk('Không có yêu cầu nào đủ điều kiện duyệt trong lựa chọn.'); return; }
-    eligible.forEach(item => this.data.updatePayout(item.id, { status: 'approved' }));
-    this.clearSelection();
-    const skipped = ids.length - eligible.length;
-    this.notifyBulk(`Đã duyệt ${eligible.length} yêu cầu rút tiền, chờ kế toán giải ngân.${skipped ? ` Bỏ qua ${skipped} yêu cầu không đủ điều kiện hoặc không chờ duyệt.` : ''}`);
+    void this.applyBulk(eligible, { status: 'approved' }, ids);
   }
   private openBulkReject(ids: readonly string[]): void {
     this.bulkRejectIds.set(ids);
@@ -627,17 +648,29 @@ export class PayoutsComponent {
     const targets = this.bulkRejectTargets();
     this.bulkRejectIds.set(null);
     if (!targets.length) { this.notifyBulk('Các yêu cầu đã chọn không còn ở trạng thái chờ duyệt nên không thể từ chối.'); return; }
-    const rejectionReason = `${this.bulkRejectReason()}: ${this.bulkRejectDetails().trim()}`;
-    targets.forEach(item => this.data.updatePayout(item.id, { status: 'rejected', rejectionReason }));
-    this.clearSelection();
-    const skipped = ids.length - targets.length;
-    this.notifyBulk(`Đã từ chối ${targets.length} yêu cầu rút tiền.${skipped ? ` Bỏ qua ${skipped} yêu cầu không ở trạng thái chờ duyệt.` : ''}`);
+    void this.applyBulk(targets, { status: 'rejected', reason: this.bulkRejectReason(), details: this.bulkRejectDetails().trim() }, ids);
+  }
+  private async applyBulk(items: readonly PayoutRequest[], decision: PayoutDecision, ids: readonly string[]): Promise<void> {
+    if (this.submitting()) return;
+    this.submitting.set(true);
+    const remaining = new Set(ids);
+    const failures: string[] = [];
+    try {
+      for (const item of items) {
+        try {
+          await this.data.updatePayout(item.id, decision);
+          remaining.delete(item.id);
+        } catch (error) { failures.push(`${item.id}: ${apiErrorMessage(error)}`); }
+      }
+      this.selection.set(remaining);
+      this.notifyBulk(`Đã cập nhật ${ids.length - remaining.size}/${ids.length} yêu cầu. ${failures.join(' · ')}`);
+    } finally { this.submitting.set(false); }
   }
   private exportSelected(ids: readonly string[]): void {
     const rows = this.payouts().filter(item => ids.includes(item.id));
     downloadTable('xlsx', 'thinkup-rut-tien-da-chon', [
-      ['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái'],
-      ...rows.map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount, item.amount - item.taxAmount, item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status)])
+      ['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái', 'Dữ liệu minh họa'],
+      ...rows.map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount ?? '—', this.net(item) ?? '—', item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status), item.isDemo || this.payoutsAreDemo() ? 'Có' : 'Không'])
     ]).then(
       () => this.notifyBulk(`Đã xuất ${rows.length} yêu cầu đã chọn ra tệp XLSX.`),
       () => this.notifyBulk('Không thể tạo tệp xuất. Vui lòng thử lại.')
@@ -648,5 +681,5 @@ export class PayoutsComponent {
     this.toast.set(message);
     this.bulkToastTimer = setTimeout(() => this.toast.set(''), 4200);
   }
-  export(format: ExportFormat): void { downloadTable(format, 'thinkup-rut-tien', [['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái', 'Dữ liệu minh họa'], ...this.filtered().map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount, item.amount - item.taxAmount, item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status), this.data.payoutsAreDemo() ? 'Có' : 'Không'])]); }
+  export(format: ExportFormat): void { downloadTable(format, 'thinkup-rut-tien', [['Mã yêu cầu', 'Giảng viên', 'Email', 'Số tiền yêu cầu', 'Thuế TNCN', 'Thực chi', 'Ngân hàng', 'Số tài khoản', 'Ngày gửi', 'Trạng thái', 'Dữ liệu minh họa'], ...this.filtered().map(item => [item.id, item.instructor, item.email, item.amount, item.taxAmount ?? '—', this.net(item) ?? '—', item.bank, item.accountNumber, dateTime(item.submittedAt), this.statusLabel(item.status), item.isDemo || this.payoutsAreDemo() ? 'Có' : 'Không'])]); }
 }
