@@ -241,28 +241,49 @@ export async function getCourseCards({
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const pageSize = isGetAll ? 0 : Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
   const skipCount = isGetAll ? 0 : (pageNum - 1) * pageSize;
-  let courseDocs = await db.collection(COLLECTION_COURSES).find(courseFilter).toArray();
+  const numericExpr = value => ({ $convert: { input: value, to: 'double', onError: 0, onNull: 0 } });
+  const effectivePriceExpr = { $ifNull: ['$price', { $ifNull: ['$sale_price', '$original_price'] }] };
+  const pipeline = [
+    { $match: courseFilter },
+    { $addFields: {
+      _catalogPrice: numericExpr(effectivePriceExpr),
+      _catalogRating: { $cond: [{ $gt: [numericExpr('$total_reviews'), 0] }, numericExpr('$rating'), 0] },
+      _catalogStudents: numericExpr({ $ifNull: ['$total_students', '$students_count'] }),
+      _catalogSortDate: { $ifNull: ['$created_at', '$updated_at'] },
+    } },
+  ];
   if (filters.min_rating) {
     const minimumRating = Number(filters.min_rating);
-    if (Number.isFinite(minimumRating)) courseDocs = courseDocs.filter(course => courseAverageRating(course) >= minimumRating);
+    if (Number.isFinite(minimumRating)) pipeline.push({ $match: { _catalogRating: { $gte: minimumRating } } });
   }
-  if (filters.price_type === 'free') {
-    courseDocs = courseDocs.filter(course => numericSortValue(course.price ?? course.sale_price ?? course.original_price) === 0);
-  } else if (filters.price_type === 'paid') {
-    courseDocs = courseDocs.filter(course => numericSortValue(course.price ?? course.sale_price ?? course.original_price) > 0);
-  }
-  const totalCoursesCount = courseDocs.length;
-  if (sort !== 'recommended') courseDocs.sort((a, b) => compareCourseDocuments(a, b, sort));
-  const recommendationById = new Map();
+  if (filters.price_type === 'free') pipeline.push({ $match: { _catalogPrice: 0 } });
+  else if (filters.price_type === 'paid') pipeline.push({ $match: { _catalogPrice: { $gt: 0 } } });
+  const totalRows = await db.collection(COLLECTION_COURSES).aggregate([...pipeline, { $count: 'total' }]).toArray();
+  const totalCoursesCount = Number(totalRows[0]?.total || 0);
+  const sortStage = sort === 'highest_rated'
+    ? { _catalogRating: -1, _catalogReviews: -1, _catalogId: -1 }
+    : sort === 'newest'
+      ? { _catalogSortTimestamp: -1, _catalogId: -1 }
+      : sort === 'price_asc' ? { _catalogPrice: 1, _catalogId: -1 }
+        : sort === 'price_desc' ? { _catalogPrice: -1, _catalogId: -1 }
+          : { _catalogStudents: -1, _catalogId: -1 };
+  let coursePipeline = [...pipeline, { $addFields: {
+    _catalogReviews: numericExpr('$total_reviews'),
+    _catalogSortTimestamp: { $convert: { input: '$_catalogSortDate', to: 'date', onError: new Date(0), onNull: new Date(0) } },
+    _catalogId: { $toString: { $ifNull: ['$course_id', '$_id'] } },
+  } }];
   if (sort === 'recommended') {
     const { getCatalogRanking } = await import('./rcm_course.js');
     const { ranked } = await getCatalogRanking({ userId, guestCartIds, dbInstance: db });
-    ranked.forEach((item, index) => recommendationById.set(item.course_id, { ...item, index }));
-    courseDocs.sort((a, b) =>
-      (recommendationById.get(String(a.course_id || a._id))?.index ?? Infinity)
-      - (recommendationById.get(String(b.course_id || b._id))?.index ?? Infinity));
-  }
-  if (!isGetAll) courseDocs = courseDocs.slice(skipCount, skipCount + pageSize);
+    const ids = ranked.map(item => String(item.course_id));
+    coursePipeline.push({ $addFields: { _catalogRecommendation: { $let: {
+      vars: { index: { $indexOfArray: [ids, '$_catalogId'] } },
+      in: { $cond: [{ $lt: ['$$index', 0] }, 2147483647, '$$index'] },
+    } } } });
+    coursePipeline.push({ $sort: { _catalogRecommendation: 1, _catalogId: -1 } });
+  } else coursePipeline.push({ $sort: sortStage });
+  if (!isGetAll) coursePipeline.push({ $skip: skipCount }, { $limit: pageSize });
+  let courseDocs = await db.collection(COLLECTION_COURSES).aggregate(coursePipeline).toArray();
 
   if (courseDocs.length === 0) {
     return {
@@ -591,7 +612,6 @@ export async function getSingleCourseCard(courseIdentifier, userId = null, dbIns
     err.status = 404;
     throw err;
   }
-
   const result = await getCourseCards({
     userId,
     filters: { search: courseDoc.title },
@@ -650,11 +670,16 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
 
   const courseDoc = await db.collection(COLLECTION_COURSES).findOne({
     $or: conds,
-    status: 'published',
-    admin_hidden: { $ne: true },
+    deleted_at: { $exists: false },
   });
 
   if (!courseDoc) {
+    const err = new Error('Khóa học không tồn tại hoặc chưa được mở bán.');
+    err.status = 404;
+    throw err;
+  }
+  if ((courseDoc.status !== 'published' || courseDoc.admin_hidden === true) &&
+      !await hasCourseEnrollment(courseDoc, userId, { db })) {
     const err = new Error('Khóa học không tồn tại hoặc chưa được mở bán.');
     err.status = 404;
     throw err;
@@ -1499,8 +1524,6 @@ export async function getUserEnrolledCourses(userId, options = {}) {
   const objectIds = courseIdArr.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
 
   const coursesDocs = await db.collection(COLLECTION_COURSES).find({
-    status: 'published',
-    admin_hidden: { $ne: true },
     deleted_at: { $exists: false },
     $or: [
       { _id: { $in: objectIds } },
@@ -1757,13 +1780,13 @@ export async function getLessonStream(courseId, lessonId, userId = null, options
   const db = options.db || await getMongoDb();
   const id = courseId.trim();
   const course = await db.collection(COLLECTION_COURSES).findOne({
-    status: 'published',
-    admin_hidden: { $ne: true },
     deleted_at: { $exists: false },
     $or: [{ course_id: id }, { slug: id },
       ...(ObjectId.isValid(id) ? [{ _id: new ObjectId(id) }] : [])],
   });
   if (!course) fail('Khóa học không tồn tại.', 404, 'COURSE_NOT_FOUND');
+  if ((course.status !== 'published' || course.admin_hidden === true) && !await hasCourseEnrollment(course, userId, { db }))
+    fail('Khóa học hiện không khả dụng.', 404, 'COURSE_UNAVAILABLE');
   const ids = [course.course_id, course.id, course._id].filter(v => v != null).flatMap(v => [v, String(v)]);
   let sectionIds = [];
   if (typeof db.collection(COLLECTION_SECTIONS)?.find === 'function') {

@@ -226,6 +226,7 @@ export async function getCourseStudyCurriculum(courseIdOrSlug, userId = null, op
     error.status = 404;
     throw error;
   }
+  if (courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   if (courseDoc.admin_hidden === true && !await hasCourseEnrollment(courseDoc, userId, { db })) {
     throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   }
@@ -684,6 +685,7 @@ export async function updateLessonProgress(userId, courseId, lessonId, payload =
     error.status = 404;
     throw error;
   }
+  if (courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   if (courseDoc.admin_hidden === true && !await hasCourseEnrollment(courseDoc, uid, { db })) {
     throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   }
@@ -865,6 +867,7 @@ export async function getCourseOverview(courseIdOrSlug, userId = null) {
     error.status = 404;
     throw error;
   }
+  if (courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   if (courseDoc.admin_hidden === true && !await hasCourseEnrollment(courseDoc, userId, { db })) {
     throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   }
@@ -1890,7 +1893,7 @@ export async function getCourseDocuments(courseIdOrSlug, userId = null, options 
     ],
   });
 
-  if (!courseDoc) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404 });
+  if (!courseDoc || courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   const enrolled = await hasCourseEnrollment(courseDoc, userId, { db });
   if (courseDoc.admin_hidden === true && !enrolled) throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
 
@@ -2027,7 +2030,7 @@ export async function downloadCourseDocument(documentId, userId, options = {}) {
   const courseId = String(doc.course_id || '');
   const course = await db.collection(COLLECTION_COURSES).findOne({ $or: [{ course_id: courseId }, { id: courseId },
     ...(ObjectId.isValid(courseId) ? [{ _id: new ObjectId(courseId) }] : [])] });
-  if (!course) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404 });
+  if (!course || course.deleted_at != null) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   const enrolled = await hasCourseEnrollment(course, userId, { db });
   if (course.admin_hidden === true && !enrolled) throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   if (!(doc.is_free === true || String(doc.is_free) === '1' || doc.is_preview === true) &&
@@ -2110,6 +2113,7 @@ export async function resolveLessonContext(lessonId, userId = null, options = {}
     };
     course = await db.collection(COLLECTION_COURSES).findOne(courseQuery);
   }
+  if (course?.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
 
   const isFree = lesson.is_free === true || String(lesson.is_free) === '1' || lesson.is_preview === true;
   if (course?.admin_hidden === true && (!userId || !await hasCourseEnrollment(course, userId, { db }))) {
