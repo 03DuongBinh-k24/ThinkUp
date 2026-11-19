@@ -344,7 +344,7 @@ export async function getCartDetails({
       instructor: {
         id: String(doc.instructor_id || ''),
         name: inst?.full_name || 'Giảng viên ThinkUp',
-        avatar_url: inst?.avatar_url || '',
+        avatar_url: inst?.avatar_url || inst?.avatar || '',
       },
       rating: totalReviews > 0 ? (parseFloat(doc.rating) || 0) : 0,
       total_reviews: totalReviews,

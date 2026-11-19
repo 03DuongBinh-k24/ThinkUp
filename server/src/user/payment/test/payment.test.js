@@ -257,6 +257,9 @@ test('VNPay encodes once, does not mutate input, separates Return URL and signed
   const f=await fixture(),s=await f.create({paymentMethod:'vnpay'}),params=signedVnp({vnp_TxnRef:s.transactionId});
   const before=JSON.stringify(params);assert.equal((await verifyVnpayCallback(params,f.options)).isSuccess,true);assert.equal(JSON.stringify(params),before);assert.equal(txOf(f,s.transactionId).status,'pending');
   assert.equal((await verifyVnpayCallback({...params,vnp_Amount:'1'},f.options)).code,'97');
+  // A valid signed Return can settle for local sandbox use when explicitly enabled.
+  assert.equal((await verifyVnpayCallback(params,{...f.options,settle:true,settleOnCallback:true})).status,'success');
+  assert.equal(txOf(f,s.transactionId).status,'success');
   assert.equal((await verifyVnpayCallback(params,{...f.options,settle:true})).status,'success');
 });
 test('Stripe creation charges precisely the DB-derived total and uses provider idempotency',async()=>{
@@ -451,12 +454,12 @@ test('VNPay maps bank selections to NCB only on sandbox, preserving production s
   } finally {if(saved===undefined)delete process.env.VNP_URL;else process.env.VNP_URL=saved;}
 });
 
-test('Simulation completes every supported gateway choice without gateway configuration or receipt email',async()=>{
+test('Simulation completes selected simulated methods without gateway configuration or receipt email',async()=>{
   const keys=['SEPAY_BANK_ID','SEPAY_ACCOUNT_NO','BANK_ACCOUNT_HOLDER','SEPAY_WEBHOOK_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','VNP_TMN_CODE','VNP_HASH_SECRET','VNP_RETURN_URL'];
   const saved=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
   try {
     keys.forEach(key=>delete process.env[key]);
-    for(const method of ['sepay','vnpay','stripe','swift','momo','zalopay','paypal','apple-pay']) {
+    for(const method of ['sepay','stripe','swift','momo','zalopay','paypal','apple-pay']) {
       const f=await simulationFixture();
       await f.db.collection('user_cart_items').insertOne({user_id:f.userId,course_id:f.courseId});
       await f.db.collection('user_cart_items').insertOne({user_id:'another-user',course_id:f.courseId});
@@ -553,12 +556,14 @@ test('Simulation retries reserved identifier collisions and fails closed if allo
   assert.equal(unavailable.db.tables.get('orders')?.length||0,0);
 });
 
-test('Simulation mode is server-controlled, defaults to simulation and cannot convert existing live requests',async()=>{
+test('Payment mode defaults to live and cannot convert existing live requests',async()=>{
   const previous=process.env.PAYMENT_MODE;
   try {
     delete process.env.PAYMENT_MODE;
-    const simulated=await fixture();
-    assert.equal((await simulated.create()).isSimulated,true);
+    const defaultMode=await fixture();
+    const pending=await defaultMode.create({paymentMethod:'vnpay'});
+    assert.equal(pending.status,'pending');
+    assert.equal(pending.isSimulated,undefined);
 
     const f=await fixture();f.options.paymentMode='live';const live=await f.create({paymentMode:'simulation',is_simulated:true});
     assert.equal(live.status,'pending');assert.equal(live.isSimulated,undefined);
@@ -568,6 +573,35 @@ test('Simulation mode is server-controlled, defaults to simulation and cannot co
   } finally {
     if(previous===undefined)delete process.env.PAYMENT_MODE;else process.env.PAYMENT_MODE=previous;
   }
+});
+
+test('VNPay ATM never simulates, even when global simulation is enabled',async()=>{
+  const keys=['VNP_TMN_CODE','VNP_HASH_SECRET','VNP_RETURN_URL'];
+  const saved=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+  try {
+    const f=await fixture();f.options.paymentMode='simulation';
+    const session=await f.create({paymentMethod:'vnpay'});
+    assert.equal(session.status,'pending');
+    assert.equal(session.paymentMethod,'vnpay');
+    assert.equal(session.isSimulated,undefined);
+    assert.equal(txOf(f,session.transactionId).is_simulated,undefined);
+
+    keys.forEach(key=>delete process.env[key]);
+    const unconfigured=await fixture();unconfigured.options.paymentMode='simulation';
+    await assert.rejects(unconfigured.create({paymentMethod:'vnpay'}),error=>error.code==='PAYMENT_NOT_CONFIGURED');
+  } finally {
+    for(const[key,value]of Object.entries(saved)){if(value===undefined)delete process.env[key];else process.env[key]=value;}
+  }
+});
+
+test('VNPay retries remain live when other methods use simulation mode',async()=>{
+  const f=await fixture();f.options.paymentMode='simulation';
+  const first=await f.create({paymentMethod:'vnpay'});
+  const retry=await retryPaymentSession({userId:f.userId,orderId:first.orderId,paymentMethod:'vnpay',idempotencyKey:'vnpay-live-retry-0001'},f.options);
+  assert.equal(retry.status,'pending');
+  assert.equal(retry.paymentMethod,'vnpay');
+  assert.equal(retry.isSimulated,undefined);
+  assert.equal(txOf(f,first.transactionId).status,'cancelled');
 });
 
 test('Simulation cannot be paid by a real gateway or retried as an unpaid order',async()=>{
