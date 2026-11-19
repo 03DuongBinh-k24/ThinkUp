@@ -417,5 +417,4 @@ h2 { font-size: 23px; line-height: 26px; font-weight: 700; color: #14336b; }
 .logs-panel th:nth-child(4) app-column-filter,
 .logs-panel th:nth-child(5) app-column-filter { display: none; }
 .progress-body .donut { aspect-ratio: 1; border-radius: 50%; }
-.bar-stack { border-radius: 999px 999px 0 0; overflow: hidden; }
-.bar-stack i:first-child { border-radius: 999px 999px 0 0; }
+.chart-legend .payout { width: 10px; height: 10px; border: 3px solid var(--dashboard-chart-payout, var(--dashboard-danger)); border-radius: 50%; }
