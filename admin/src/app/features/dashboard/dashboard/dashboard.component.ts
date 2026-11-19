@@ -77,29 +77,21 @@ export class DashboardComponent implements OnInit {
   readonly chartBars = computed<RevenuePoint[]>(() => {
     const rawBars = this.data.analytics()?.bars ?? [];
     if (!rawBars.length) return [];
-    // Nếu toàn bộ đều bằng 0 thì giữ nguyên
-    const hasAnyRevenue = rawBars.some(b => b.original > 0 || b.marketplace > 0 || b.payout > 0);
-    if (!hasAnyRevenue) return rawBars;
+    const hasAny = rawBars.some(b => b.original > 0 || b.marketplace > 0 || b.payout > 0);
+    if (!hasAny) return rawBars;
 
-    // Tìm tháng đầu tiên và tháng cuối cùng có phát sinh dữ liệu doanh thu hoặc payout
-    let firstActiveIndex = 0;
-    while (firstActiveIndex < rawBars.length) {
-      const b = rawBars[firstActiveIndex];
-      if (b.original > 0 || b.marketplace > 0 || b.payout > 0) break;
-      firstActiveIndex++;
+    // Lọc lấy các tháng phát sinh doanh thu / dòng tiền
+    const activeBars = rawBars.filter(b => b.original > 0 || b.marketplace > 0 || b.payout > 0);
+    // Nếu chỉ có 1 hoặc 2 tháng phát sinh dữ liệu, để biểu đồ không bị đơn điệu và thấy rõ độ dốc / tăng trưởng,
+    // ta lấy một dải tháng tự nhiên xung quanh các tháng có dữ liệu (tối thiểu 4 - 6 cột)
+    if (activeBars.length < 5) {
+      let firstIdx = rawBars.findIndex(b => b.original > 0 || b.marketplace > 0 || b.payout > 0);
+      let lastIdx = rawBars.length - 1 - [...rawBars].reverse().findIndex(b => b.original > 0 || b.marketplace > 0 || b.payout > 0);
+      const start = Math.max(0, Math.min(firstIdx, rawBars.length - 5));
+      const end = Math.min(rawBars.length - 1, Math.max(lastIdx, start + 4));
+      return rawBars.slice(start, end + 1);
     }
-
-    let lastActiveIndex = rawBars.length - 1;
-    while (lastActiveIndex >= 0) {
-      const b = rawBars[lastActiveIndex];
-      if (b.original > 0 || b.marketplace > 0 || b.payout > 0) break;
-      lastActiveIndex--;
-    }
-
-    // Hiển thị từ tháng bắt đầu có dữ liệu (có thể lùi 1 tháng trước đó làm baseline nếu có) đến hết năm hoặc tháng cuối
-    const start = Math.max(0, firstActiveIndex - 1);
-    const end = Math.min(rawBars.length - 1, Math.max(lastActiveIndex, firstActiveIndex + 3));
-    return rawBars.slice(start, end + 1);
+    return activeBars;
   });
   readonly bars = computed<RevenuePoint[]>(() => this.chartBars());
   readonly periods: Period[] = ['Ngày', 'Tuần', 'Tháng', 'Năm', 'Quý'];
@@ -162,7 +154,11 @@ export class DashboardComponent implements OnInit {
   readonly chartMax = computed(() => {
     const bars = this.bars();
     const peak = bars.reduce((max, bar) => Math.max(max, bar.original + bar.marketplace, bar.payout), 0);
-    // Bám sát đỉnh thực tế hơn thay vì phóng trục tung lên quá cao
+    if (peak <= 0) return 10;
+    // Để trục tung ngắn lại, các cột cao lên và thấy rõ độ biến động lớn
+    // Ta làm tròn vừa sát với đỉnh peak (nhân 1.05 rồi làm tròn theo bước bội số 10 hoặc 25)
+    if (peak <= 50) return Math.ceil(peak * 1.05 / 5) * 5;
+    if (peak <= 150) return Math.ceil(peak * 1.05 / 10) * 10;
     return niceCeil(peak * 1.02);
   });
   readonly chartTicks = computed(() => {
