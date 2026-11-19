@@ -1,3 +1,13 @@
+.admin-dialog::backdrop {
+  background: rgba(31, 43, 64, 0.58);
+  backdrop-filter: none;
+}
+
+.admin-dialog__surface {
+  position: relative;
+  z-index: 1;
+}
+
 .archive-reason-field app-custom-select {
   display: block;
   justify-self: center;

@@ -42,6 +42,8 @@ interface Pagination {
 
 interface LecturerApiItem {
   id: string;
+  accountLinked?: boolean;
+  lecturerId?: string | null;
   name?: string;
   email?: string;
   phone?: string;
@@ -441,7 +443,9 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
 
   private toLecturer(item: LecturerApiItem): Lecturer {
     return {
+      lecturerCode: item.lecturerId || undefined,
       id: item.id,
+      accountLinked: item.accountLinked ?? true,
       name: item.name || item.email || item.id,
       initials: initialsOf(item.name || item.email || ''),
       email: item.email || '',
@@ -483,7 +487,9 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
 
     return {
       ...(base ?? this.toLecturer(user)),
+      lecturerCode: user.lecturerId || base?.lecturerCode,
       id: user.id,
+      accountLinked: user.accountLinked ?? base?.accountLinked ?? true,
       name: user.name || base?.name || user.email || user.id,
       initials: initialsOf(user.name || base?.name || ''),
       email: user.email || base?.email || '',
@@ -522,6 +528,7 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
 
   private toStudent(item: StudentApiItem): Student {
     return {
+      studentCode: item.studentId || undefined,
       id: item.id,
       name: item.name || item.email || item.id,
       initials: initialsOf(item.name || item.email || ''),
@@ -548,6 +555,7 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
     const firstOrder = (response.orders ?? [])[0];
     return {
       ...(base ?? this.toStudent(user)),
+      studentCode: user.studentId || base?.studentCode,
       id: user.id,
       name: user.name || base?.name || user.email || user.id,
       initials: initialsOf(user.name || base?.name || ''),

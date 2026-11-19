@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import { randomUUID } from 'node:crypto';
 import { getMongoDb, sendEmail } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
+import { publishAdminNotificationToRoster } from '../notifications/notifications.admin.js';
 import {
   COLLECTION_TICKETS,
   COLLECTION_ATTACHMENTS,
@@ -434,6 +435,13 @@ export async function claimTicket(actor, ticketId, options = {}) {
     previous_assignee: doc.assignee_id || null,
     new_assignee: String(actor.id || actor._id || actor.adminId),
     new_assignee_name: adminName,
+  });
+
+  await publishAdminNotificationToRoster(db, {
+    type: 'ticket', severity: 'info', title: 'Ticket hỗ trợ được tiếp nhận',
+    message: `Ticket ${doc.ticket_code} đã được ${adminName} tiếp nhận.`,
+    href: `/support/tickets/${encodeURIComponent(doc.ticket_code)}`,
+    eventKey: 'admin.ticket.claimed', dedupeKey: `admin.ticket.claimed:${String(doc._id)}`,
   });
 
   return {

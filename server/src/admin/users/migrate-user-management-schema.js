@@ -5,6 +5,14 @@ const REQUIRED_DB_NAME = 'Thinkup';
 
 export const USER_MANAGEMENT_INDEXES = [
   ['users', { role: 1, status: 1, created_at: -1 }, { name: 'user_management_role_status_created' }],
+  ['user_courses', { user_id: 1, course_id: 1 }, { name: 'user_courses_owner_course' }],
+  ['user_courses', { userId: 1, courseId: 1 }, { name: 'user_courses_camel_owner_course' }],
+  ['user_enrollments', { user_id: 1, course_id: 1 }, { name: 'user_enrollments_owner_course' }],
+  ['user_enrollments', { userId: 1, courseId: 1 }, { name: 'user_enrollments_camel_owner_course' }],
+  ['user_course_progress', { user_id: 1, course_id: 1 }, { name: 'user_course_progress_owner_course' }],
+  ['user_course_progress', { userId: 1, courseId: 1 }, { name: 'user_course_progress_camel_owner_course' }],
+  ['payment_transactions', { user_id: 1 }, { name: 'payment_transactions_user_id' }],
+  ['payment_transactions', { userId: 1 }, { name: 'payment_transactions_userId' }],
   ['users', { deleted_at: 1 }, { name: 'user_management_deleted_at', partialFilterExpression: { deleted_at: { $exists: true } } }],
   ['instructor_profiles', { user_id: 1 }, {
     name: 'instructor_profiles_user_id_unique',

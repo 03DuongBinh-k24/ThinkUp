@@ -22,6 +22,10 @@ try {
 
 let _mongoClient = null;
 let _mongoDb = null;
+let _mongoConnectTask = null;
+let _mongoRetryAfter = 0;
+let _mongoLastError = null;
+const MONGO_RETRY_DELAY_MS = 5000;
 
 /**
  * Lấy kết nối cơ sở dữ liệu MongoDB (Singleton).
@@ -29,30 +33,60 @@ let _mongoDb = null;
 export async function getMongoDb(customUri, customDbName) {
   if (_mongoDb) return _mongoDb;
 
+  // Share one connection attempt across concurrent startup tasks and requests.
+  if (_mongoConnectTask) return _mongoConnectTask;
+  if (_mongoRetryAfter > Date.now()) {
+    const error = new Error('MongoDB is temporarily unavailable; retry shortly.');
+    error.code = 'MONGODB_RETRY_BACKOFF';
+    error.cause = _mongoLastError;
+    throw error;
+  }
+
   const uri = customUri || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/thinkup_db';
   const dbName = customDbName || process.env.MONGODB_DB_NAME || 'Thinkup';
 
-  _mongoClient = new MongoClient(uri);
-  await _mongoClient.connect();
-  _mongoDb = _mongoClient.db(dbName);
+  _mongoConnectTask = (async () => {
+    const client = new MongoClient(uri, { serverSelectionTimeoutMS: 10000 });
+    _mongoClient = client;
+    try {
+      await client.connect();
+      const db = client.db(dbName);
 
-  try {
-    await _mongoDb.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true });
-    await _mongoDb.collection('users').createIndex({ phone: 1 }, { unique: true, sparse: true });
-    await _mongoDb.collection('otps').createIndex({ email: 1, purpose: 1 });
-  } catch {
-    // Bỏ qua lỗi tạo index nếu đã tồn tại
-  }
+      try {
+        await db.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true });
+        await db.collection('users').createIndex({ phone: 1 }, { unique: true, sparse: true });
+        await db.collection('otps').createIndex({ email: 1, purpose: 1 });
+      } catch {
+        // Index creation can fail independently (for example, duplicate legacy data).
+      }
 
-  return _mongoDb;
+      _mongoDb = db;
+      _mongoRetryAfter = 0;
+      _mongoLastError = null;
+      return db;
+    } catch (error) {
+      _mongoLastError = error;
+      _mongoRetryAfter = Date.now() + MONGO_RETRY_DELAY_MS;
+      if (_mongoClient === client) _mongoClient = null;
+      await client.close().catch(() => {});
+      throw error;
+    } finally {
+      _mongoConnectTask = null;
+    }
+  })();
+
+  return _mongoConnectTask;
 }
 
 export async function closeMongoDb() {
+  if (_mongoConnectTask) await _mongoConnectTask.catch(() => {});
   if (_mongoClient) {
     await _mongoClient.close();
     _mongoClient = null;
     _mongoDb = null;
   }
+  _mongoRetryAfter = 0;
+  _mongoLastError = null;
 }
 
 export function getJwtSecret() {

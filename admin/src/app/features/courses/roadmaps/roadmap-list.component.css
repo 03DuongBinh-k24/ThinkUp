@@ -2,3 +2,13 @@
 .select-cell { width: 44px; text-align: center; }
 .roadmap-test-status, .table-scroll th:nth-child(8) { text-align: center; }
 .roadmap-test-badge { width: 120px; min-height: 26px; justify-content: center; text-align: center; white-space: normal; }
+.roadmap-create-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgb(15 23 42 / 48%); }
+.roadmap-create-dialog { width: min(100%, 520px); display: grid; gap: 16px; padding: 24px; border-radius: 16px; background: #fff; box-shadow: 0 24px 80px rgb(15 23 42 / 24%); }
+.roadmap-create-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.roadmap-create-dialog h2 { margin: 0; font-size: 21px; }
+.roadmap-create-dialog header p { margin: 6px 0 0; color: #64748b; font-size: 14px; }
+.roadmap-create-dialog label { display: grid; gap: 7px; color: #334155; font-size: 14px; font-weight: 600; }
+.roadmap-create-dialog label span { color: #64748b; font-weight: 400; }
+.roadmap-create-dialog input, .roadmap-create-dialog textarea { box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; color: #0f172a; font: inherit; font-weight: 400; }
+.roadmap-create-dialog footer { display: flex; justify-content: flex-end; gap: 10px; }
+.roadmap-create-error { margin: 0; color: #b91c1c; font-size: 14px; }

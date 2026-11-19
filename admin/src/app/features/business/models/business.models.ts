@@ -147,6 +147,8 @@ export interface PayoutRequest {
   verified: boolean;
   contractValid: boolean;
   disputed: boolean;
+  taxPolicyVerified?: boolean;
+  holdVerified?: boolean;
   status: PayoutStatus;
   submittedAt: string;
   paidAt?: string;

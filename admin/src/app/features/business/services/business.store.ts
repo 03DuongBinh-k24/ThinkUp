@@ -40,20 +40,29 @@ export interface OrderTotals {
   cancelled: number;
 }
 
+export interface PayoutSummary {
+  pendingCount: number;
+  largePendingCount: number;
+  awaitingDisbursementAmount: number;
+  paidThisMonthAmount: number;
+  paidThisMonthCount: number;
+  taxDeductedThisMonthAmount: number;
+}
+
 /**
  * Hợp đồng dữ liệu module kinh doanh.
  *
  * TODO(pre-deploy): Nhớ gỡ `BusinessDemoService` cùng `core/data/mock/business.mock.ts` khi chốt
  * dọn mock; hiện `environment.adminDataSource` quyết định nguồn dữ liệu.
  *
- * Payouts cố ý chưa có implementation HTTP: backend chưa có luồng yêu cầu/duyệt/giải ngân thật
- * (xem `business-payouts.md`). Giữ mock và ghi rõ phần còn thiếu.
+ * Payouts có thể tải dữ liệu và thống kê qua Admin API; chế độ mock vẫn phục vụ preview.
  */
 export interface BusinessStore {
   readonly orders: Signal<readonly BusinessOrder[]>;
   readonly orderTotals: Signal<OrderTotals>;
   readonly vouchers: Signal<readonly BusinessVoucher[]>;
   readonly payouts: Signal<readonly PayoutRequest[]>;
+  readonly payoutSummary: Signal<PayoutSummary | null>;
   readonly payoutRole: Signal<'finance' | 'super'>;
   readonly loading: Signal<boolean>;
   readonly error: Signal<string | null>;

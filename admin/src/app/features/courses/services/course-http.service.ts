@@ -36,37 +36,139 @@ export class CourseHttpService extends CourseDemoService {
   // TODO(admin-api): backend chưa có endpoint workspace duyệt hồ sơ và studio lộ trình; giữ rỗng để UI hiện trạng thái trống.
   override readonly workspaces = signal<ApprovalWorkspace[]>([]);
   override readonly studios = signal<RoadmapStudio[]>([]);
+  private readonly studioRequests = new Map<string, Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }>>();
+  private readonly persistedStageTests = new Map<string, Map<string, Record<string, unknown>>>();
   private readonly loadErrorState = signal(false);
   override readonly loadError = this.loadErrorState.asReadonly();
+  private readonly roadmapLoadErrorState = signal(false);
+  override readonly roadmapLoadError = this.roadmapLoadErrorState.asReadonly();
+  private readonly roadmapLoadMessageState = signal('');
+  readonly roadmapLoadMessage = this.roadmapLoadMessageState.asReadonly();
 
   constructor() { super(); void this.load(); }
   override retry(): void { void this.load(); }
 
+  override async createRoadmap(input: { categoryId: number; name: string; code?: string; description?: string }): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
+    const response = await firstValueFrom(this.http.post<{ roadmap: Record<string, unknown> }>(`${this.base}/admin/roadmaps`, input));
+    const id = text(response.roadmap, 'versionId', 'id');
+    if (!id) throw new Error('API không trả về mã bản nháp lộ trình.');
+    const result = await this.ensureRoadmapStudio(id);
+    this.roadmaps.update(items => items.some(item => item.id === result.id) ? items : [result.roadmap, ...items]);
+    return result;
+  }
+
+  override ensureRoadmapStudio(id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
+    const cached = this.studios().find(studio => studio.roadmapId === id);
+    if (cached) {
+      const roadmap = this.roadmaps().find(item => item.id === id);
+      if (roadmap) return Promise.resolve({ id, roadmap, studio: cached });
+    }
+    const pending = this.studioRequests.get(id);
+    if (pending) return pending;
+    const request = firstValueFrom(this.http.get<{ roadmap: Record<string, unknown> }>(`${this.base}/admin/roadmaps/${encodeURIComponent(id)}`))
+      .then(async ({ roadmap }) => {
+        const phasesRaw = Array.isArray(roadmap['stages']) ? roadmap['stages'] as Array<Record<string, unknown>> : [];
+        const draftId = text(roadmap, 'versionId', 'id') || id;
+        const phases = phasesRaw.map((phase, phaseIndex) => ({
+          id: text(phase, 'stage_id', 'id') || `phase-${phaseIndex + 1}`,
+          no: text(phase, 'no', 'order') || String(phaseIndex + 1).padStart(2, '0'),
+          name: text(phase, 'name', 'title') || `Giai đoạn ${phaseIndex + 1}`,
+          nodes: (Array.isArray(phase['nodes']) ? phase['nodes'] as Array<Record<string, unknown>> : []).map((node, nodeIndex) => ({
+            id: text(node, 'node_id', 'id') || `node-${phaseIndex + 1}-${nodeIndex + 1}`,
+            name: text(node, 'title', 'name'), type: toNodeType(text(node, 'type')),
+            level: toLevel(text(node, 'level')), industry: text(node, 'industry'), description: text(node, 'description'),
+            outcomes: Array.isArray(node['outcomes']) ? (node['outcomes'] as unknown[]).join('\n') : text(node, 'outcomes'),
+            tags: Array.isArray(node['tags']) ? (node['tags'] as unknown[]).map(String) : [],
+            courses: (Array.isArray(node['courses']) ? node['courses'] as Array<Record<string, unknown>> : []).map(course => ({
+              id: text(course, 'course_id', 'id'), title: text(course, 'title'), match: num(course, 's_match', 'match'), level: toLevel(text(course, 'level'))
+            }))
+          }))
+        }));
+        const testPhaseIndex = phasesRaw.findIndex(phase => phase['test']);
+        const testPhase = testPhaseIndex >= 0 ? phasesRaw[testPhaseIndex] : null;
+        const rawTest = (testPhase?.['test'] ?? {}) as Record<string, unknown>;
+        const rawQuestions = Array.isArray(rawTest['questions']) ? rawTest['questions'] as Array<Record<string, unknown>> : [];
+        const test = {
+          name: text(rawTest, 'name', 'title'), duration: num(rawTest, 'duration_minutes', 'duration'), passScore: num(rawTest, 'pass_score', 'passScore'),
+          stage: testPhase ? `${phases[testPhaseIndex]?.no} · ${phases[testPhaseIndex]?.name}` : '',
+          questions: rawQuestions.map((question, index) => ({
+            id: text(question, 'question_id', 'id') || `question-${index + 1}`, nodeId: text(question, 'node_id', 'nodeId'), skillTag: text(question, 'skill_tag', 'skillTag'), index: index + 1,
+            title: text(question, 'title', 'question_text', 'prompt') || `Câu hỏi ${index + 1}`, meta: text(question, 'meta') || '4 phương án · 1 đáp án đúng', prompt: text(question, 'prompt', 'question_text', 'question'),
+            language: text(question, 'language'), code: text(question, 'code'), hint: text(question, 'hint'), hintSaved: !!text(question, 'hint'),
+            answers: (Array.isArray(question['answers']) ? question['answers'] as Array<Record<string, unknown>> : Array.isArray(question['options']) ? question['options'] as Array<Record<string, unknown>> : []).map((answer, answerIndex) => ({
+              letter: text(answer, 'letter', 'key') || String.fromCharCode(65 + answerIndex), text: text(answer, 'text'), correct: answer['correct'] === true || text(question, 'correct_option', 'correctOption') === text(answer, 'key', 'letter')
+            }))
+          }))
+        };
+        const firstNodeId = phases.flatMap(phase => phase.nodes)[0]?.id;
+        const suggestions = firstNodeId ? ((await firstValueFrom(this.http.get<{ courses?: Array<Record<string, unknown>> }>(`${this.base}/admin/roadmaps/${encodeURIComponent(draftId)}/nodes/${encodeURIComponent(firstNodeId)}/suggestions`)).catch(() => ({ courses: [] }))).courses ?? []) : [];
+        const studio: RoadmapStudio = {
+          roadmapId: draftId, phases, selectedNodeId: phases.flatMap(phase => phase.nodes)[0]?.id ?? '',
+          suggestions: suggestions.map(course => ({ id: text(course, 'course_id', 'id'), title: text(course, 'title'), level: toLevel(text(course, 'level')), match: num(course, 's_match', 'match') })), threshold: num(roadmap, 'threshold') || 70, test
+        };
+        this.persistedStageTests.set(draftId, new Map(phasesRaw.flatMap((phase, index) => phase['test'] ? [[text(phase, 'stage_id', 'id') || `phase-${index + 1}`, phase['test'] as Record<string, unknown>]] : [])));
+        const updatedRoadmap: Roadmap = {
+          ...toRoadmap({ ...roadmap, versionId: draftId }),
+          learners: num(roadmap, 'learnerCount'),
+          completion: roadmap['completionRate'] == null ? null : num(roadmap, 'completionRate'),
+          testPassed: roadmap['testPassed'] == null ? null : num(roadmap, 'testPassed'),
+          testTotal: num(roadmap, 'testTotal')
+        };
+        this.roadmaps.update(items => items.map(item => item.id === id ? updatedRoadmap : item));
+        this.studios.update(items => [...items.filter(item => item.roadmapId !== id && item.roadmapId !== draftId), { ...studio, roadmapId: draftId }]);
+        const savedStudio = { ...studio, roadmapId: draftId };
+        return { id: draftId, roadmap: updatedRoadmap, studio: savedStudio };
+      })
+      .finally(() => this.studioRequests.delete(id));
+    this.studioRequests.set(id, request);
+    return request;
+  }
+
   override async getCourseContent(course: Course): Promise<Course> {
     const url = `${this.base}/admin/courses/${encodeURIComponent(course.id)}`;
-    const response = await firstValueFrom(this.http.get<{ course: {
-      description: string; tags: string[]; sections: { id: string; title: string }[];
-      lessons: { sectionId: string }[]; curriculumSummary: { sectionCount: number; lessonCount: number };
-    } }>(url));
+    const response = await firstValueFrom(this.http.get<{ course: Record<string, unknown> }>(url));
     const detail = response.course;
-    const lessonCounts = new Map<string, number>();
-    for (const lesson of detail.lessons) {
-      lessonCounts.set(lesson.sectionId, (lessonCounts.get(lesson.sectionId) ?? 0) + 1);
+    const sections = Array.isArray(detail['sections']) ? detail['sections'] as Array<Record<string, unknown>> : [];
+    const lessons = Array.isArray(detail['lessons']) ? detail['lessons'] as Array<Record<string, unknown>> : [];
+    const sectionIdAliases = new Map<string, string>();
+    for (const section of sections) {
+      const canonical = text(section, 'id', 'sectionId', 'section_id');
+      for (const key of [canonical, text(section, 'sectionId', 'section_id', '_id')]) if (key) sectionIdAliases.set(key, canonical);
     }
+    const lessonGroups = new Map<string, Array<Record<string, unknown>>>();
+    for (const lesson of lessons) {
+      const rawSectionId = text(lesson, 'sectionId', 'section_id');
+      const sectionId = sectionIdAliases.get(rawSectionId) ?? rawSectionId;
+      lessonGroups.set(sectionId, [...(lessonGroups.get(sectionId) ?? []), lesson]);
+    }
+    const summary = (detail['curriculumSummary'] && typeof detail['curriculumSummary'] === 'object' ? detail['curriculumSummary'] : {}) as Record<string, unknown>;
     return {
-      ...course, description: detail.description, tags: detail.tags,
-      curriculumSummary: `${detail.curriculumSummary.sectionCount} chương · ${detail.curriculumSummary.lessonCount} bài học`,
-      chapters: detail.sections.map((section, index) => ({
-        no: String(index + 1), title: section.title, meta: `${lessonCounts.get(section.id) ?? 0} bài học`
-      }))
+      ...course,
+      description: text(detail, 'description', 'shortDescription'),
+      tags: Array.isArray(detail['tags']) ? (detail['tags'] as unknown[]).map(String) : [],
+      category: text(detail, 'category') || course.category,
+      thumbnailUrl: text(detail, 'thumbnailUrl', 'thumbnail_url', 'coverImage', 'cover_image', 'thumbnail', 'image') || course.thumbnailUrl,
+      durationHours: num(detail, 'durationHours') || course.durationHours,
+      curriculumSummary: `${num(summary, 'sectionCount')} chương · ${num(summary, 'lessonCount')} bài học`,
+      chapters: sections.map((section, index) => {
+        const id = text(section, 'id', 'sectionId', 'section_id');
+        const chapterLessons = lessonGroups.get(sectionIdAliases.get(id) ?? id) ?? [];
+        return { no: String(index + 1), title: text(section, 'title'), meta: `${chapterLessons.length} bài học`,
+          description: text(section, 'description'), lessons: chapterLessons.map(lesson => ({
+            id: text(lesson, 'id', 'lessonId', 'lesson_id'), title: text(lesson, 'title'), type: text(lesson, 'type', 'lesson_type'),
+            durationMinutes: num(lesson, 'durationMinutes', 'duration_minutes')
+          })) };
+      })
     };
   }
 
   override async getCourseLearners(course: Course): Promise<Course['learners']> {
     const rows = await this.all(`/admin/courses/${encodeURIComponent(course.id)}/learners`);
     return rows.map(row => ({
-      name: text(row, 'fullName'), email: text(row, 'email'), progress: num(row, 'progress'),
-      enrolledAt: text(row, 'purchasedAt'), status: row['completed'] === true ? 'Hoàn thành' : 'Đang học'
+      name: text(row, 'fullName', 'full_name', 'name'), email: text(row, 'email'),
+      progress: num(row, 'progress', 'progressPercentage', 'progress_percentage'),
+      enrolledAt: text(row, 'purchasedAt', 'purchased_at', 'enrolledAt', 'enrolled_at'),
+      status: row['completed'] === true || row['isCompleted'] === true || row['is_completed'] === true ? 'Hoàn thành' : 'Đang học'
     }));
   }
 
@@ -105,17 +207,30 @@ export class CourseHttpService extends CourseDemoService {
   }
   async load(): Promise<void> {
     this.loadErrorState.set(false);
-    try {
-      const [courses, approvals, roadmaps] = await Promise.all([
-        this.all('/admin/courses'), this.all('/admin/courses/approvals'), this.all('/admin/roadmaps')
-      ]);
-      this.courses.set(courses.map(toCourse));
-      this.approvals.set(approvals.map(toApproval));
-      this.roadmaps.set(roadmaps.map(toRoadmap));
-    } catch {
-      // 403 được xử lý khi người dùng mở trang (Q2); ở đây chỉ báo lỗi tải, không rơi về mock.
-      this.loadErrorState.set(true);
-    }
+    this.roadmapLoadErrorState.set(false);
+    this.roadmapLoadMessageState.set('');
+    // Tải danh sách khóa học độc lập: lỗi ở API phụ (duyệt/lộ trình) không được
+    // biến trang quản lý khóa học thành trạng thái lỗi khi endpoint chính vẫn hoạt động.
+    const coursesRequest = this.all('/admin/courses').then(rows => {
+      this.courses.set(rows.map(toCourse));
+      return true;
+    }).catch(() => false);
+    const approvalsRequest = this.all('/admin/courses/approvals')
+      .then(rows => this.approvals.set(rows.map(toApproval)))
+      .catch(() => this.approvals.set([]));
+    const roadmapsRequest = this.all('/admin/roadmaps').then(rows => {
+      this.roadmaps.set(rows.map(toRoadmap));
+      return true;
+    }).catch(error => {
+      this.roadmaps.set([]);
+      this.roadmapLoadMessageState.set(apiErrorMessage(error, 'Không tải được danh sách lộ trình.'));
+      return false;
+    });
+
+    const coursesLoaded = await coursesRequest;
+    const [, roadmapsLoaded] = await Promise.all([approvalsRequest, roadmapsRequest]);
+    this.loadErrorState.set(!coursesLoaded);
+    this.roadmapLoadErrorState.set(!roadmapsLoaded);
   }
   private async all(path: string): Promise<Array<Record<string, unknown>>> {
     const rows: Array<Record<string, unknown>> = []; let page = 1; let pages = 1;
@@ -141,11 +256,28 @@ export class CourseHttpService extends CourseDemoService {
       { ...body, expectedRevision: revision }));
     await this.load();
   }
-  override toggleRoadmapVisibility(id: string): void { void this.post(`/admin/roadmaps/${encodeURIComponent(id)}/hide`, {}); }
-  override updateRoadmapNode(roadmapId: string, node: RoadmapNode): void { void this.patch(`/admin/roadmaps/${encodeURIComponent(roadmapId)}`, { node }); }
-  override saveRoadmapDraft(roadmapId: string): void { void this.patch(`/admin/roadmaps/${encodeURIComponent(roadmapId)}`, { status: 'draft' }); }
-  override publishRoadmap(roadmapId: string): void { void this.post(`/admin/roadmaps/${encodeURIComponent(roadmapId)}/publish`, {}); }
-  override saveRoadmapTest(roadmapId: string, test: RoadmapTest): void { void this.patch(`/admin/roadmaps/${encodeURIComponent(roadmapId)}`, { test }); }
+  override toggleRoadmapVisibility(id: string): void {
+    const item = this.roadmaps().find(roadmap => roadmap.id === id);
+    if (!item || item.hidden) return;
+    void this.post(`/admin/roadmaps/${encodeURIComponent(id)}/hide`, {});
+  }
+  override updateRoadmapNode(_roadmapId: string, _node: RoadmapNode): void { /* Studio saves the complete draft atomically. */ }
+  override saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): Promise<void> { return this.saveStudio(roadmapId, studio); }
+  override async publishRoadmap(roadmapId: string, studio?: RoadmapStudio): Promise<void> {
+    if (studio) await this.saveStudio(roadmapId, studio);
+    await this.post(`/admin/roadmaps/${encodeURIComponent(roadmapId)}/publish`, {});
+  }
+  override saveRoadmapTest(_roadmapId: string, _test: RoadmapTest): void { /* Studio saves the complete draft atomically. */ }
+  private async saveStudio(roadmapId: string, currentStudio?: RoadmapStudio): Promise<void> {
+    const studio = currentStudio ?? this.studios().find(item => item.roadmapId === roadmapId); if (!studio) throw new Error('Không có dữ liệu lộ trình để lưu.');
+    const phases = studio.phases;
+    const savedTests = this.persistedStageTests.get(roadmapId);
+    const stages = phases.map(phase => ({ id: phase.id, name: phase.name, nodes: phase.nodes.map(node => this.serializeNode(node)), test: this.testForStage(studio, phase) ?? savedTests?.get(phase.id) ?? null }));
+    await this.patch(`/admin/roadmaps/${encodeURIComponent(roadmapId)}`, { name: this.roadmaps().find(item => item.id === roadmapId)?.name, threshold: studio.threshold, stages });
+  }
+  private serializeNode(node: RoadmapNode): Record<string, unknown> { return { id: node.id, name: node.name, type: node.type, level: node.level, industry: node.industry, description: node.description, outcomes: node.outcomes, tags: node.tags, courses: (node.courses ?? []).map(course => ({ course_id: course.id })) }; }
+  private serializeTest(studioTest: RoadmapTest): Record<string, unknown> { return { name: studioTest.name, duration_minutes: studioTest.duration, pass_score: studioTest.passScore, questions: studioTest.questions.map(question => ({ id: question.id, node_id: question.nodeId, skill_tag: question.skillTag, prompt: question.prompt || question.title, language: question.language, code: question.code, answers: question.answers.map(answer => ({ key: answer.letter, text: answer.text, correct: answer.correct })) })) }; }
+  private testForStage(studio: RoadmapStudio, phase: RoadmapStudio['phases'][number]): Record<string, unknown> | null { return studio.test.stage.endsWith(phase.name) ? this.serializeTest(studio.test) : null; }
   private post(path: string, body: unknown): Promise<unknown> { return firstValueFrom(this.http.post(`${this.base}${path}`, body)).then(result => { void this.load(); return result; }); }
   private patch(path: string, body: unknown): Promise<unknown> { return firstValueFrom(this.http.patch(`${this.base}${path}`, body)).then(result => { void this.load(); return result; }); }
 }
@@ -161,6 +293,10 @@ const num = (row: Record<string, unknown>, ...keys: string[]): number => Number(
 const COURSE_STATUSES: readonly string[] = ['published', 'pending', 'hidden', 'archived', 'unpublished'];
 const COURSE_LEVELS: readonly string[] = ['Cơ bản', 'Trung cấp', 'Nâng cao'];
 const toLevel = (value: string): CourseLevel => COURSE_LEVELS.includes(value) ? value as CourseLevel : 'Cơ bản';
+const toNodeType = (value: string): RoadmapNode['type'] => {
+  const types: Record<string, RoadmapNode['type']> = { framework: 'Framework', language: 'Ngôn ngữ', tool: 'Công cụ', skill: 'Kỹ năng', project: 'Dự án', Framework: 'Framework', 'Ngôn ngữ': 'Ngôn ngữ', 'Công cụ': 'Công cụ', 'Kỹ năng': 'Kỹ năng', 'Dự án': 'Dự án' };
+  return types[value] ?? 'Kỹ năng';
+};
 
 /** Không dùng bản ghi mock theo index: mỗi dòng API phải tự đủ field, thiếu thì để giá trị rỗng an toàn. */
 function toCourse(row: Record<string, unknown>): Course {
@@ -183,6 +319,7 @@ function toCourse(row: Record<string, unknown>): Course {
     updatedAt: text(row, 'updatedAt'),
     durationHours: num(row, 'durationHours'),
     description: text(row, 'description'),
+    thumbnailUrl: text(row, 'thumbnailUrl', 'thumbnail_url', 'coverImage', 'cover_image', 'thumbnail', 'image'),
     tags: Array.isArray(row['tags']) ? row['tags'].map(String) : [],
     curriculumSummary: text(row, 'curriculumSummary'),
     chapters: [],
@@ -220,22 +357,27 @@ function toApproval(row: Record<string, unknown>): ApprovalItem {
 }
 function toRoadmap(row: Record<string, unknown>): Roadmap {
   const coverage = num(row, 'coverage');
+  const stages = Array.isArray(row['stageDetails']) ? row['stageDetails'] as Array<Record<string, unknown>> : [];
+    const learnerCount = num(row, 'learnerCount', 'learners');
+  const completed = num(row, 'completedLearnerCount', 'completedCount', 'completedLearners');
   return {
     // Bảng lộ trình dùng `versionId` làm khóa, không phải `id`.
-    id: text(row, 'versionId', 'roadmapId', 'id'),
+    id: text(row, 'versionId') || text(row, 'roadmapId', 'id') || String(row['categoryId'] ?? ''),
     code: text(row, 'code'),
     name: text(row, 'name', 'title'),
     industry: text(row, 'industry'),
-    stages: num(row, 'stages'),
-    nodes: num(row, 'nodes'),
+    stages: num(row, 'stageCount') || stages.length || num(row, 'stages'),
+    nodes: num(row, 'nodeCount') || stages.reduce((sum, stage) => sum + (Array.isArray(stage['nodes']) ? (stage['nodes'] as unknown[]).length : 0), 0) || num(row, 'nodes'),
     // API dùng `learnerCount`, model UI dùng `learners`.
-    learners: num(row, 'learnerCount', 'learners'),
-    completion: num(row, 'completion'),
+    learners: learnerCount,
+    completion: row['completionRate'] != null || row['completion'] != null ? num(row, 'completionRate', 'completion') : learnerCount && row['completedLearnerCount'] != null ? Math.round(completed / learnerCount * 100) : null,
     coverage,
     coverageAvg: num(row, 'coverageAvg') || coverage,
-    testPassed: num(row, 'testPassed'),
-    testTotal: num(row, 'testTotal'),
-    missingTests: num(row, 'missingTests'),
-    hidden: row['hidden'] === true
+    testPassed: row['testPassed'] != null || row['testsPassed'] != null ? num(row, 'testPassed', 'testsPassed') : null,
+    // API's testTotal is the number of learner attempts. Keep zero distinct
+    // from absent values; stage test availability is represented by missingTests.
+    testTotal: row['testTotal'] != null || row['testsTotal'] != null ? num(row, 'testTotal', 'testsTotal') : 0,
+    missingTests: row['missingTests'] != null ? num(row, 'missingTests') : (stages.length ? stages.filter(stage => !stage['test']).length : 0),
+    hidden: row['hidden'] === true || row['status'] === 'hidden' || row['status'] === 'draft' || row['status'] === 'superseded'
   };
 }

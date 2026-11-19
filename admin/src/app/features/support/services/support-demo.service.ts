@@ -1,9 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, InjectionToken, signal } from '@angular/core';
 import { MOCK_COMPLAINTS, MOCK_FAILED_SEARCHES, MOCK_FAQS, MOCK_REPLY_TEMPLATES, MOCK_STAFF, MOCK_TICKETS } from '../../../core/data/mock/support.mock';
 import { INSTRUCTOR_REFUND_PERCENT, Attachment, ComplaintCase, ComplaintStatus, EmailReplyMetadata, FaqItem, FaqStatus, PendingOperation, ReplyTemplate, ResolutionCategory, SupportTicket, ThreadMessage, TicketStatus } from '../models/support.models';
 
 // TODO(pre-deploy): Nhớ xóa adapter demo và thay bằng HttpClient adapter sau khi có endpoint, schema, quyền và error contract chính thức.
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class SupportDemoService {
   readonly loadError = signal('');
   readonly loading = signal(false);
@@ -188,3 +188,5 @@ export class SupportDemoService {
     return 'Đội Chăm sóc học viên';
   }
 }
+
+export const SUPPORT_STORE = new InjectionToken<SupportDemoService>('SUPPORT_STORE');

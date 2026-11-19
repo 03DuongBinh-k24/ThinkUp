@@ -132,11 +132,19 @@ export class AdminNotificationsService {
     this.errorState.set(null);
     this.transport().list(adminId, { limit: NOTIFICATION_PAGE_SIZE, cursor }).subscribe({
       next: (page) => {
+        if (this.adminId() !== adminId) {
+          this.loadingMoreState.set(false);
+          return;
+        }
         this.itemsState.update((items) => mergeItems(items, page.items));
         this.applyPageMeta(page);
         this.loadingMoreState.set(false);
       },
       error: (error: unknown) => {
+        if (this.adminId() !== adminId) {
+          this.loadingMoreState.set(false);
+          return;
+        }
         this.errorState.set(this.messageOf(error));
         this.loadingMoreState.set(false);
       }
@@ -235,7 +243,10 @@ export class AdminNotificationsService {
   }
 
   private isDemoMode(): boolean {
-    return environment.adminDemoLogin || this.auth.getToken() === 'demo-local-access-token';
+    // Explicit demo credentials only. A global demo-login build flag must not
+    // silently route a real authenticated session away from the backend API.
+    return this.auth.getToken() === 'demo-local-access-token'
+      || this.auth.currentUser()?.id.startsWith('demo-') === true;
   }
 
   private transport(): AdminNotificationTransport {

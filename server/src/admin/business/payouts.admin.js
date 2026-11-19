@@ -2,6 +2,7 @@ import { Binary, ObjectId } from 'mongodb';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { getMongoDb } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
+import { publishAdminNotificationToRoster } from '../notifications/notifications.admin.js';
 
 export const PAYOUT_COLLECTION = 'payout_requests';
 export const PAYOUT_WALLETS = 'instructor_wallets';
@@ -130,6 +131,10 @@ export function payoutView(doc) {
   const amount = money(doc.amount);
   const taxAmount = doc.tax_amount != null ? money(doc.tax_amount) : doc.is_demo === true ? computeTax(amount) : null;
   const netAmount = doc.net_amount != null ? money(doc.net_amount) : taxAmount === null ? null : amount - taxAmount;
+  const policy = doc.tax_policy_snapshot;
+  const taxPolicyVerified = doc.is_demo === true || Boolean(policy?.contract_id && dateOf(policy.approved_at)
+    && Number.isSafeInteger(policy.threshold) && policy.threshold >= 0
+    && Number.isFinite(policy.rate) && policy.rate >= 0 && policy.rate <= 1 && policy.version);
 
   return {
     id: String(doc.request_id || doc._id),
@@ -143,9 +148,10 @@ export function payoutView(doc) {
     accountNumber: doc.account_number || doc.bank_info?.account_number || '',
     accountName: doc.account_name || doc.bank_info?.account_name || '',
     availableBalance: money(doc.available_balance),
-    verified: Boolean(doc.verified ?? true),
-    contractValid: Boolean(doc.contract_valid ?? true),
-    disputed: Boolean(doc.disputed ?? false),
+    verified: doc.verified === true,
+    contractValid: doc.contract_valid === true,
+    disputed: doc.disputed !== false,
+    taxPolicyVerified,
     status: doc.status || 'pending',
     submittedAt: dateOf(doc.submitted_at || doc.created_at)?.toISOString() || null,
     approvedAt: dateOf(doc.approved_at)?.toISOString() || null,
@@ -244,9 +250,18 @@ export async function getAdminPayoutDetail(id, options = {}) {
   const doc = await db.collection(PAYOUT_COLLECTION).findOne(query);
   if (!doc) throw bad('Không tìm thấy yêu cầu rút tiền.', 404, 'PAYOUT_NOT_FOUND');
 
+  let holdVerified = doc.is_demo === true;
+  if (!holdVerified && doc.instructor_id && doc.hold_ledger_id && doc.request_id && Number.isSafeInteger(doc.amount)) {
+    const [hold, wallet] = await Promise.all([
+      db.collection(PAYOUT_LEDGER).findOne({ _id: doc.hold_ledger_id, request_id: doc.request_id, instructor_id: String(doc.instructor_id), action: 'hold', amount: doc.amount }),
+      db.collection(PAYOUT_WALLETS).findOne({ instructor_id: String(doc.instructor_id), frozen_balance: { $gte: doc.amount } }),
+    ]);
+    holdVerified = Boolean(hold && wallet);
+  }
+
   return {
     success: true,
-    payout: payoutView(doc),
+    payout: { ...payoutView(doc), holdVerified },
   };
 }
 
@@ -325,6 +340,13 @@ export async function approveAdminPayout(id, { note = '', adminId, adminRole }, 
     },
     created_at: now,
     }, { session });
+  });
+
+  await publishAdminNotificationToRoster(db, {
+    type: 'payout', severity: 'info', title: 'Yêu cầu chi trả đã được duyệt',
+    message: `Yêu cầu ${doc.request_id || String(doc._id)} đã được duyệt và đang chờ giải ngân.`,
+    href: '/business/payouts', eventKey: 'admin.payout.approved',
+    dedupeKey: `admin.payout.approved:${doc.request_id || String(doc._id)}`,
   });
 
   return {
@@ -423,6 +445,13 @@ export async function rejectAdminPayout(id, { reason, details = '', evidence = '
       created_at: now,
     }, { session });
   }
+  });
+
+  await publishAdminNotificationToRoster(db, {
+    type: 'payout', severity: 'warning', title: 'Yêu cầu chi trả bị từ chối',
+    message: `Yêu cầu ${doc.request_id || String(doc._id)} đã bị từ chối.`,
+    href: '/business/payouts', eventKey: 'admin.payout.rejected',
+    dedupeKey: `admin.payout.rejected:${doc.request_id || String(doc._id)}`,
   });
 
   return {

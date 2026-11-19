@@ -14,6 +14,7 @@ import {
   BusinessStore,
   OrderListFilters,
   OrderTotals,
+  PayoutSummary,
   VoucherListFilters
 } from './business.store';
 
@@ -98,6 +99,8 @@ interface ApiVoucherList extends ApiEnvelope {
   pageSize: number;
 }
 
+interface ApiPayoutSummary extends ApiEnvelope { kpi?: PayoutSummary; realKpi?: PayoutSummary; }
+
 const WEEKDAY_LABELS = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 const MAX_VOUCHER_BULK = 50;
 
@@ -105,8 +108,7 @@ const MAX_VOUCHER_BULK = 50;
  * Nguồn dữ liệu module kinh doanh gọi Admin API thật.
  *
  * - Đơn hàng + voucher: HTTP (`/api/admin/business/orders`, `/api/admin/business/vouchers`).
- * - Chi trả giảng viên: vẫn dùng dữ liệu minh họa vì backend chưa có luồng yêu cầu/duyệt/giải ngân
- *   thật (xem `business-payouts.md`). `payoutsAreDemo` = true để UI ghi rõ.
+ * - Chi trả giảng viên: danh sách và thống kê tải từ Admin API.
  *
  * Cách tải danh sách: đọc hết các trang (pageSize=100) rồi giữ nguyên bộ lọc/tìm kiếm/phân trang
  * phía client đang có trong component. Khi dữ liệu đơn/voucher lớn hơn vài nghìn dòng, chuyển bộ
@@ -124,6 +126,7 @@ export class BusinessHttpService implements BusinessStore {
   private readonly payoutApi = `${environment.apiUrl}/admin/business/payouts`;
   private readonly auth = inject(AdminAuthService);
   private readonly payoutState = signal<readonly PayoutRequest[]>([]);
+  private readonly payoutSummaryState = signal<PayoutSummary | null>(null);
   private readonly loadingState = signal(false);
   private readonly errorState = signal<string | null>(null);
 
@@ -131,6 +134,7 @@ export class BusinessHttpService implements BusinessStore {
   readonly orderTotals = this.orderTotalsState.asReadonly();
   readonly vouchers = this.voucherState.asReadonly();
   readonly payouts = this.payoutState.asReadonly();
+  readonly payoutSummary = this.payoutSummaryState.asReadonly();
   readonly payoutRole = computed(() => ['SA', 'SUPER_ADMIN', 'ADMIN'].includes(this.auth.currentUser()?.accessRole?.toUpperCase() ?? '') ? 'super' as const : 'finance' as const);
   readonly loading = this.loadingState.asReadonly();
   readonly error = this.errorState.asReadonly();
@@ -438,14 +442,20 @@ export class BusinessHttpService implements BusinessStore {
   }
 
   async reloadPayouts(): Promise<void> {
-    const { items } = await collectAllPages<PayoutRequest>(async (page, pageSize) => {
-      const result = await firstValueFrom(this.http.get<{ items: PayoutRequest[]; total: number; pageSize: number }>(
-        this.payoutApi, { params: { page, pageSize } }
-      ));
-      if (!Array.isArray(result.items)) throw new Error('Danh sách chi trả không hợp lệ.');
-      return { ...result, page, pages: Math.ceil(result.total / result.pageSize) };
-    });
+    const [summary, { items }] = await Promise.all([
+      firstValueFrom(this.http.get<ApiPayoutSummary>(`${this.payoutApi}/summary`)),
+      collectAllPages<PayoutRequest>(async (page, pageSize) => {
+        const result = await firstValueFrom(this.http.get<{ items: PayoutRequest[]; total: number; pageSize: number }>(
+          this.payoutApi, { params: { page, pageSize } }
+        ));
+        if (!Array.isArray(result.items)) throw new Error('Danh sách chi trả không hợp lệ.');
+        return { ...result, page, pages: Math.ceil(result.total / result.pageSize) };
+      })
+    ]);
+    if (!summary.kpi) throw new Error('Thống kê chi trả không hợp lệ.');
     this.payoutState.set(items);
+    // Thẻ tổng quan phản ánh toàn bộ hàng đang hiển thị, gồm cả hàng minh họa.
+    this.payoutSummaryState.set(summary.kpi);
   }
 
   async payoutDetail(id: string): Promise<PayoutRequest> {
@@ -474,7 +484,17 @@ export class BusinessHttpService implements BusinessStore {
     }
     const action = decision.status === 'approved' ? 'approve' : 'reject';
     const { payout } = await firstValueFrom(this.http.post<{ payout: PayoutRequest }>(`${url}/${action}`, body));
-    this.payoutState.update(items => items.map(row => row.id === id ? payout : row));
+    const updatedRows = this.payoutState().map(row => row.id === id ? payout : row);
+    this.payoutState.set(updatedRows);
+    // Cập nhật KPI ngay khi danh sách đổi; sau đó lấy lại số tổng hợp từ API để
+    // áp dụng ngưỡng thuế/duyệt và thời gian tháng theo cấu hình server.
+    this.payoutSummaryState.set(summarizePayoutRows(updatedRows));
+    try {
+      const summary = await firstValueFrom(this.http.get<ApiPayoutSummary>(`${this.payoutApi}/summary`));
+      if (summary.kpi) this.payoutSummaryState.set(summary.kpi);
+    } catch {
+      // Thao tác payout đã thành công; giữ KPI tính từ danh sách vừa nhận.
+    }
   }
 }
 
@@ -487,6 +507,30 @@ function compact<T extends object>(source: T): Record<string, string> {
     result[key] = String(value);
   }
   return result;
+}
+
+function vietnamMonthKey(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit'
+  }).format(date);
+}
+
+function summarizePayoutRows(rows: readonly PayoutRequest[]): PayoutSummary {
+  const paidMonth = rows.filter(row => row.status === 'paid'
+    && vietnamMonthKey(row.paidAt) === vietnamMonthKey(new Date().toISOString()));
+  return {
+    pendingCount: rows.filter(row => row.status === 'pending').length,
+    // API /summary will replace this immediate estimate and applies the current system threshold.
+    largePendingCount: rows.filter(row => row.status === 'pending' && row.amount >= 20_000_000).length,
+    awaitingDisbursementAmount: rows.filter(row => row.status === 'approved')
+      .reduce((sum, row) => sum + (row.netAmount ?? (row.taxAmount == null ? 0 : row.amount - row.taxAmount)), 0),
+    paidThisMonthAmount: paidMonth.reduce((sum, row) => sum + (row.netAmount ?? (row.taxAmount == null ? 0 : row.amount - row.taxAmount)), 0),
+    paidThisMonthCount: paidMonth.length,
+    taxDeductedThisMonthAmount: paidMonth.reduce((sum, row) => sum + (row.taxAmount ?? 0), 0),
+  };
 }
 
 function normalizeOrderStatus(value: string | undefined): OrderStatus {

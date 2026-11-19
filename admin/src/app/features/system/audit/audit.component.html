@@ -8,7 +8,6 @@
 
   </header>
 
-  <!-- TODO(pre-deploy): Nhớ xóa nhánh demo ?integrity=broken / ?exportError=1 và đấu nối API nhật ký kiểm toán thật. -->
 
   <div class="metric-grid">
     <article class="metric-card">
@@ -17,7 +16,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6" /></svg>
       </span>
       <strong>{{ totalLabel() }}</strong>
-      <p>{{ summary().totalDelta }} so với hôm qua</p>
+      <p>{{ summary().totalDelta }}</p>
     </article>
     <button class="metric-card actionable" type="button" (click)="filterHighRisk()">
       <small>Tác vụ nguy cơ cao</small>
@@ -33,7 +32,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4" /><path d="M2.8 20a6.2 6.2 0 0 1 12.4 0" /><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8M17.6 14.2a6.2 6.2 0 0 1 3.6 5.8" /></svg>
       </span>
       <strong>{{ summary().activeAdmins }}</strong>
-      <p>{{ summary().onlineAdmins }} người hiện đang online</p>
+      <p>{{ summary().onlineAdmins }} người có thao tác hôm nay</p>
     </article>
     <article class="metric-card" [class.integrity-broken]="broken()">
       <small>Toàn vẹn dữ liệu</small>
@@ -44,7 +43,7 @@
       @if (broken()) {
         <p class="metric-danger-note">Chức năng kiểm toán đang tạm khóa</p>
       } @else {
-        <p>Đã chứng thực chuỗi nhật ký</p>
+        <p>Đã xác thực các bản ghi có checksum</p>
       }
     </article>
   </div>

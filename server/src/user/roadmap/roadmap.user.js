@@ -998,15 +998,33 @@ async function readStageBank(stageId) {
     });
   }
   const db = await getMongoDb();
+  // Published roadmaps suffix stage/node IDs. Their questions remain in the
+  // canonical bank, so map the published curriculum back before validating.
+  const canonicalStageId = String(stageId).split('__')[0];
   const records = await db.collection(COLLECTION_ROADMAP_QUESTIONS)
-    .find({ stage_id: String(stageId) }).sort({ question_id: 1 }).toArray();
-  const bank = inspectStageBank(stage, careerName, records);
+    .find({ stage_id: canonicalStageId }).sort({ question_id: 1 }).toArray();
+  const canonicalStage = String(stage.stage_id) === canonicalStageId ? stage : {
+    ...stage,
+    stage_id: canonicalStageId,
+    nodes: (stage.nodes || []).map(node => ({ ...node, node_id: String(node.node_id).split('__')[0] })),
+  };
+  const bank = inspectStageBank(canonicalStage, careerName, records);
   if (!bank.available) {
     console.error('[Roadmap question bank unavailable]', { stage_id: stageId, missing: bank.missing });
     throw Object.assign(new Error('Bài kiểm tra đang được chuẩn bị. Bạn có thể tiếp tục học các kỹ năng.'),
       { status: 503, code: 'STAGE_TEST_UNAVAILABLE' });
   }
   return bank.questions;
+}
+
+function mapVersionedStageQuestions(questions, stage, template, stageId) {
+  if (!template.version_id) return questions;
+  const suffix = String(stageId).includes('__') ? String(stageId).slice(String(stageId).indexOf('__')) : '';
+  const versionNodes = new Set((stage.nodes || []).map(node => node.node_id));
+  return questions.map(question => {
+    const nodeId = `${question.node_id}${suffix}`;
+    return versionNodes.has(nodeId) ? { ...question, stage_id: stageId, node_id: nodeId } : question;
+  });
 }
 
 export async function getRoadmapTemplate(categoryId, options = {}) {
@@ -1029,7 +1047,7 @@ export async function getRoadmapTemplate(categoryId, options = {}) {
 
 async function enrichRoadmapTemplate(template, db) {
   const stages = template.stages || [];
-  const stageIds = stages.map(stage => stage.stage_id);
+  const stageIds = [...new Set(stages.map(stage => String(stage.stage_id).split('__')[0]))];
   const nodeIds = stages.flatMap(stage => (stage.nodes || []).map(node => node.node_id));
   if (stageIds.some(id => typeof id !== 'string' || !id.trim())
     || nodeIds.some(id => typeof id !== 'string' || !id.trim())
@@ -1041,9 +1059,21 @@ async function enrichRoadmapTemplate(template, db) {
     .find({ stage_id: { $in: stageIds } }).toArray();
   return { ...template, stages: stages.map(stage => ({
     ...stage,
+    // Custom roadmap versions may have their own authored questions. The
+    // canonical bank uses stable stage/node IDs, while published copies append
+    // a version suffix to both IDs.
     test_available: Array.isArray(stage.test?.questions) && stage.test.questions.length > 0
       ? true
-      : inspectStageBank(stage, template.career_name || template.name || '', records.filter(q => q.stage_id === stage.stage_id)).available,
+      : (() => {
+        const canonicalStageId = String(stage.stage_id).split('__')[0];
+        const canonicalStage = template.version_id ? {
+          ...stage,
+          stage_id: canonicalStageId,
+          nodes: (stage.nodes || []).map(node => ({ ...node, node_id: String(node.node_id).split('__')[0] })),
+        } : stage;
+        return inspectStageBank(canonicalStage, template.career_name || template.name || '',
+          records.filter(q => q.stage_id === canonicalStageId)).available;
+      })(),
     nodes: (stage.nodes || []).map(node => ({ ...node, outcomes: node.outcomes || node.topics || [] }))
   })) };
 }
@@ -1051,7 +1081,18 @@ async function enrichRoadmapTemplate(template, db) {
 /**
  * Khởi tạo hoặc gieo hạt bộ câu hỏi mẫu vào database nếu chưa có.
  */
-export async function ensureSeedQuestions() {
+let seedQuestionsTask = null;
+export function ensureSeedQuestions() {
+  if (!seedQuestionsTask) {
+    seedQuestionsTask = seedSeedQuestions().catch(error => {
+      seedQuestionsTask = null;
+      throw error;
+    });
+  }
+  return seedQuestionsTask;
+}
+
+async function seedSeedQuestions() {
   const db = await getMongoDb();
   const questionsColl = db.collection(COLLECTION_ROADMAP_QUESTIONS);
 
@@ -1426,7 +1467,8 @@ export async function getMyRoadmap(userId) {
       title: stage.title,
       description: stage.description,
       order: stage.order,
-      test_available: stage.test_available && stage.nodes.every(node => Boolean(nodeMap[node.node_id])),
+      // Assessment availability is independent of learner progress/node state.
+      test_available: stage.test_available === true,
       progress_percentage: stageProg.progress_percentage,
       total_nodes: stageProg.total_nodes,
       completed_nodes: stageProg.completed_nodes,
@@ -1476,8 +1518,9 @@ export async function getStageTestQuestions(stageId, userId = null) {
       { status: 404, code: 'ACTIVE_STAGE_NOT_FOUND' });
     activeNodeIds = new Set(roadmap.nodes.filter(node => node.stage_id === String(stageId)).map(node => node.node_id));
   }
-  const { stage } = await getStageDefinition(stageId);
-  const questions = await readStageBank(stageId);
+  const { stage, template } = await getStageDefinition(stageId);
+  let questions = await readStageBank(stageId);
+  questions = mapVersionedStageQuestions(questions, stage, template, stageId);
   if (activeNodeIds && questions.some(question => !activeNodeIds.has(question.node_id))) {
     console.error('[Roadmap enrollment requires curriculum reconciliation]', { stage_id: stageId });
     throw Object.assign(new Error('Bài kiểm tra đang được chuẩn bị. Bạn có thể tiếp tục học các kỹ năng.'),
@@ -1556,7 +1599,8 @@ export async function submitStageTest(userId, stageId, answers = []) {
     throw err;
   }
 
-  const expectedQuestions = await readStageBank(stageId);
+  const { stage, template } = await getStageDefinition(stageId);
+  const expectedQuestions = mapVersionedStageQuestions(await readStageBank(stageId), stage, template, stageId);
 
   const questionIds = answers.map(answer => answer.question_id.trim());
   if (new Set(questionIds).size !== questionIds.length
@@ -2122,6 +2166,9 @@ export async function getUserSubmissionHistory(userId, stageId = null) {
  */
 export function createRoadmapRouter(express, requireAuth, activityOptions = {}) {
   const router = express.Router();
+  router.use((req, res, next) => {
+    ensureSeedQuestions().then(() => next()).catch(next);
+  });
 
   router.post('/stage-test/:stageId/activity-session', requireAuth,
     createLearningActivityStartHandler('roadmap_quiz', req => ({ stage_id: req.params.stageId }), [], activityOptions));

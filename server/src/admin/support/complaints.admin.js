@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { publishAdminNotificationToRoster } from '../notifications/notifications.admin.js';
 import { randomUUID } from 'node:crypto';
 import { getMongoDb, sendEmail } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
@@ -304,6 +305,13 @@ export async function requestInstructorExplanation(actor, complaintId, payload =
 
   await col.updateOne({ _id: doc._id }, { $set: updates });
 
+  await publishAdminNotificationToRoster(db, {
+    type: 'complaint', severity: 'critical', title: 'Khiếu nại yêu cầu giảng viên giải trình',
+    message: `Hồ sơ ${doc.complaint_code} chuyển sang chờ giảng viên giải trình.`,
+    href: '/support/complaints', eventKey: 'admin.complaint.explanation-requested',
+    dedupeKey: `admin.complaint.explanation-requested:${String(doc._id)}`,
+  });
+
   // Gửi email hỏa tốc và thông báo cho giảng viên (AC-26)
   if (doc.respondent?.email) {
     try {
@@ -425,6 +433,12 @@ export async function resolveRefund(actor, complaintId, payload = {}, options = 
 
   // Ghi nhận audit log (AC-21)
   await recordDisputeAudit(db, actor, 'RESOLVE_REFUND', doc.complaint_code, resolution);
+  await publishAdminNotificationToRoster(db, {
+    type: 'complaint', severity: 'warning', title: 'Khiếu nại đã được xử lý hoàn tiền',
+    message: `Hồ sơ ${doc.complaint_code} đã được kết luận hoàn tiền ${refundAmount.toLocaleString('vi-VN')} đ.`,
+    href: '/support/complaints', eventKey: 'admin.complaint.refunded',
+    dedupeKey: `admin.complaint.refunded:${String(doc._id)}`,
+  });
 
   return { success: true, status: 'resolved', resolution };
 }
@@ -517,6 +531,12 @@ export async function dismissComplaint(actor, complaintId, payload = {}, options
 
   // Ghi nhận audit log
   await recordDisputeAudit(db, actor, 'DISMISS_COMPLAINT', doc.complaint_code, resolution);
+  await publishAdminNotificationToRoster(db, {
+    type: 'complaint', severity: 'warning', title: 'Khiếu nại đã bị bác bỏ',
+    message: `Hồ sơ ${doc.complaint_code} đã được kết luận không chấp thuận.`,
+    href: '/support/complaints', eventKey: 'admin.complaint.dismissed',
+    dedupeKey: `admin.complaint.dismissed:${String(doc._id)}`,
+  });
 
   return { success: true, status: 'dismissed', resolution };
 }
@@ -614,6 +634,12 @@ export async function disciplineInstructor(actor, complaintId, payload = {}, opt
 
   // Lưu vào nhật ký kiểm toán hệ thống (AC-45)
   await recordDisputeAudit(db, actor, 'DISCIPLINE_INSTRUCTOR', doc.complaint_code, disciplineRecord);
+  await publishAdminNotificationToRoster(db, {
+    type: 'complaint', severity: 'critical', title: 'Đã ban hành chế tài giảng viên',
+    message: `Hồ sơ ${doc.complaint_code} đã áp dụng: ${sanctions.join(', ')}.`,
+    href: '/support/complaints', eventKey: 'admin.complaint.discipline',
+    dedupeKey: `admin.complaint.discipline:${String(doc._id)}`,
+  });
 
   return { success: true, complaintCode: doc.complaint_code, discipline: disciplineRecord };
 }

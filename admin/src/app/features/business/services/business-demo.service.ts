@@ -4,7 +4,7 @@ import { MOCK_ORDERS, MOCK_ORDER_SUMMARY, MOCK_PAYOUT_ADMIN_ROLE, MOCK_PAYOUTS, 
 import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
 import { BusinessOrder, BusinessVoucher, OrderStatus, PayoutRequest, VoucherAuditAction, VoucherAuditEntry } from '../models/business.models';
 import { voucherFundedAmount } from '../business-utils';
-import { BusinessStore, OrderListFilters, OrderTotals, VoucherListFilters } from './business.store';
+import { BusinessStore, OrderListFilters, OrderTotals, PayoutSummary, VoucherListFilters } from './business.store';
 
 // TODO(pre-deploy): Nhớ xóa adapter demo này và thay bằng HttpClient service theo API contract đã xác minh.
 /** Adapter dữ liệu minh họa — chỉ dùng khi `environment.adminDataSource = 'mock'`. */
@@ -39,6 +39,18 @@ export class BusinessDemoService implements BusinessStore {
   });
   readonly vouchers = this.voucherState.asReadonly();
   readonly payouts = this.payoutState.asReadonly();
+  readonly payoutSummary = computed<PayoutSummary | null>(() => {
+    const rows = this.payoutState();
+    const paid = rows.filter(row => row.status === 'paid' && row.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7));
+    return {
+      pendingCount: rows.filter(row => row.status === 'pending').length,
+      largePendingCount: rows.filter(row => row.status === 'pending' && row.amount >= 20_000_000).length,
+      awaitingDisbursementAmount: rows.filter(row => row.status === 'approved').reduce((sum, row) => sum + (row.netAmount ?? row.amount - (row.taxAmount ?? 0)), 0),
+      paidThisMonthAmount: paid.reduce((sum, row) => sum + (row.netAmount ?? row.amount - (row.taxAmount ?? 0)), 0),
+      paidThisMonthCount: paid.length,
+      taxDeductedThisMonthAmount: paid.reduce((sum, row) => sum + (row.taxAmount ?? 0), 0)
+    };
+  });
   readonly payoutRole = signal<'finance' | 'super'>(MOCK_PAYOUT_ADMIN_ROLE).asReadonly();
   readonly loading = signal(false).asReadonly();
   readonly error = signal<string | null>(null).asReadonly();

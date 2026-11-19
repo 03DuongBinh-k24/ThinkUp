@@ -438,7 +438,7 @@ export class VouchersComponent {
   }
 
   private createdAtOf(item: BusinessVoucher): string {
-    return item.auditLog.find(entry => entry.action === 'created')?.at ?? item.startsAt;
+    return item.createdAt ?? item.auditLog.find(entry => entry.action === 'created')?.at ?? item.startsAt;
   }
 
   private timestamp(value: string): number {
@@ -473,7 +473,7 @@ export class VouchersComponent {
     this.editOriginal.set(null);
     this.form.set({
       code: '', description: '', sponsor: 'thinkup', scope: 'all', audience: 'all',
-      discountType: 'fixed', discountValue: 0, minOrder: 0, minCourseCount: 1,
+      discountType: 'fixed', discountValue: 0, minOrder: 1, minCourseCount: 1,
       used: 0, limit: 1, perAccount: 1, startsAt: '', endsAt: '', weeklyLimitEnabled: false, weeklySchedule: this.defaultWeeklySchedule(),
       showOnSite: true, locked: false, fundedAmount: 0, auditLog: []
     });

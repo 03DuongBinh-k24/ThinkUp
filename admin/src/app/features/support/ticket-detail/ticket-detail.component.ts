@@ -6,7 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideArrowDownUp, LucideArrowUp, LucideBold, LucideCalendarDays, LucideCheckCircle2, LucideClock3, LucideCopy, LucideDownload, LucideEllipsis, LucideFileText, LucideImage, LucideItalic, LucideLayoutGrid, LucideList, LucideListOrdered, LucideMail, LucideMessageSquareText, LucidePaperclip, LucidePencil, LucidePlus, LucideRefreshCw, LucideReply, LucideSearch, LucideSend, LucideTag, LucideUserRoundPlus, LucideX } from '@lucide/angular';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { Attachment, EmailReplyMetadata, Priority, ReplyTemplate, ResolutionCategory, SupportTicket, ThreadMessage, TicketStatus } from '../models/support.models';
-import { SupportDemoService } from '../services/support-demo.service';
+import { SUPPORT_STORE } from '../services/support-demo.service';
 import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 type TicketModal = 'assign' | 'escalate' | 'templates' | 'close' | null;
@@ -22,7 +22,7 @@ type ReplyChannel = 'internal' | 'email';
 export class TicketDetailComponent {
   @ViewChild('replyEditor') private replyEditor?: ElementRef<HTMLElement>;
 
-  readonly data = inject(SupportDemoService);
+  readonly data = inject(SUPPORT_STORE);
   ngOnInit(): void { this.data.open('tickets', this.ticketId); }
 
   private readonly route = inject(ActivatedRoute);

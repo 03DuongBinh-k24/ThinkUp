@@ -23,7 +23,7 @@
         <div class="profile-copy">
           <h2>{{ item.name }}</h2>
           <p class="profile-title">{{ item.title }}</p>
-          <p class="profile-meta">{{ item.email }} · {{ item.phone }} · {{ item.id }}</p>
+          <p class="profile-meta">{{ item.email }} · {{ item.phone }} · Mã GV: {{ item.lecturerCode || 'Chưa cấp mã' }}</p>
           <span class="status-badge" [class]="'status-badge status-badge--' + statusTone[item.status]">
             {{ statusLabels[item.status] }}
           </span>
@@ -103,7 +103,7 @@
     @if (lecturer(); as item) {
       <app-user-modal
         title="Từ chối hồ sơ giảng viên"
-        [subtitle]="item.name + ' · ' + item.id"
+        [subtitle]="item.name + ' · ' + (item.lecturerCode || 'Chưa cấp mã')"
         size="lg"
         (closed)="closeModal()"
       >
@@ -143,7 +143,7 @@
     @if (lecturer(); as item) {
       <app-user-modal
         title="Yêu cầu bổ sung thông tin giấy tờ"
-        [subtitle]="item.name + ' · ' + item.id"
+        [subtitle]="item.name + ' · ' + (item.lecturerCode || 'Chưa cấp mã')"
         size="lg"
         (closed)="closeModal()"
       >

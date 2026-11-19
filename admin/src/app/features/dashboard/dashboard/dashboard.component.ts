@@ -63,6 +63,7 @@ export class DashboardComponent implements OnInit {
   readonly previewDashboard = environment.adminDataSource !== 'http';
   readonly loading = this.data.loading;
   readonly loadError = this.data.error;
+  readonly analyticsError = this.data.analyticsError;
   readonly overview = this.data.overview;
 
   readonly metrics = computed<readonly DashboardMetric[]>(() => this.overview()?.metrics ?? []);

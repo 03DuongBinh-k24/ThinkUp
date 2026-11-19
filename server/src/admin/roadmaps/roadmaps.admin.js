@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { randomUUID } from 'node:crypto';
 import { getMongoDb } from '../../user/db.js';
+import { assessmentTags, ensureSeedQuestions, inspectStageBank } from '../../user/roadmap/roadmap.user.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
 
 export const ADMIN_ROADMAP_VERSIONS = 'admin_roadmap_versions';
@@ -19,10 +20,10 @@ function validateQuestions(questions) {
     if (!Array.isArray(q.answers) || q.answers.length !== 4) throw FAIL(`Câu hỏi ${index + 1} phải có đúng bốn phương án.`);
     const answers = q.answers.map((a, i) => ({ key: String(a.key || a.letter || String.fromCharCode(65 + i)).toUpperCase(), text: txt(a.text) }));
     if (answers.some(a => !/^[A-D]$/.test(a.key) || !a.text || a.text.length > 1500) || new Set(answers.map(a => a.key)).size !== 4) throw FAIL(`Phương án câu hỏi ${index + 1} không hợp lệ.`);
-    const correct = q.answers.filter(a => a.correct).map(a => String(a.key || a.letter || '').toUpperCase());
+      const correct = q.answers.filter(a => a.correct).map(a => String(a.key || a.letter || '').toUpperCase());
     const correctKey = txt(q.correct_option || q.correctOption).toUpperCase() || correct[0];
     if (correct.length > 1 || !answers.some(a => a.key === correctKey)) throw FAIL(`Câu hỏi ${index + 1} phải có đúng một đáp án đúng.`);
-    return { question_id: txt(q.id || q.question_id) || `q-${index + 1}`, question_text: prompt, code, language: txt(q.language) || 'text', options: answers, correct_option: correctKey, explanation: txt(q.explanation), skill_tag: txt(q.skill_tag) || null };
+    return { question_id: txt(q.id || q.question_id) || `q-${index + 1}`, question_text: prompt, code, language: txt(q.language) || 'text', options: answers, correct_option: correctKey, explanation: txt(q.explanation), skill_tag: txt(q.skill_tag) || null, node_id: txt(q.node_id) || null };
   });
 }
 function normalizeStages(stages, threshold = 70, allowEmpty = false) {
@@ -114,7 +115,7 @@ export async function syncApprovedCourseWithRoadmaps(db, courseId, options = {})
   }
   return { changedRoadmaps };
 }
-function snapshot(row) { return { versionId: String(row._id), categoryId: row.category_id, code: row.code, name: row.name, industry: row.industry || '', description: row.description || '', status: row.status, version: row.version, threshold: row.threshold, stages: row.stages || [], updatedAt: row.updated_at?.toISOString?.() || null, publishedAt: row.published_at?.toISOString?.() || null }; }
+function snapshot(row) { const id = String(row.version_id || row._id); return { versionId: id, id, categoryId: row.category_id, code: row.code, name: row.name, industry: row.industry || '', description: row.description || '', status: row.status, version: row.version, threshold: row.threshold, stages: row.stages || [], updatedAt: row.updated_at?.toISOString?.() || null, publishedAt: row.published_at?.toISOString?.() || null }; }
 async function audit(db, req, action, row, before, after, metadata = {}, session = undefined) {
   const adminId = ObjectId.isValid(String(req?.adminId || '')) ? new ObjectId(String(req.adminId)) : null;
   const result = await db.collection('admin_audit_logs').insertOne({ admin_id: adminId, action, ip: req?.ip || 'unknown', user_agent: req?.headers?.['user-agent'] || 'unknown', details: { entity: { type: 'roadmap', id: String(row.category_id || row._id) }, before, after, outcome: 'success', correlation_id: randomUUID(), metadata }, created_at: new Date() }, { session });
@@ -127,6 +128,7 @@ async function roadmapTransaction(db, work) {
 }
 
 export async function listAdminRoadmaps(query = {}, options = {}) {
+  if (!options.db) await ensureSeedQuestions();
   const db = options.db || await getMongoDb(), page = Number(query.page ?? 1), pageSize = Number(query.pageSize ?? 20);
   if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) throw FAIL('Phân trang không hợp lệ.');
   const versions = await db.collection(ADMIN_ROADMAP_VERSIONS).find({}).sort({ category_id: 1, version: -1, updated_at: -1 }).toArray();
@@ -135,12 +137,79 @@ export async function listAdminRoadmaps(query = {}, options = {}) {
   for (const row of versions) if (!chosen.has(Number(row.category_id))) chosen.set(Number(row.category_id), row);
   for (const row of templates) if (!chosen.has(Number(row.category_id))) chosen.set(Number(row.category_id), { ...row, status: 'legacy', version: 0, stages: row.stages || [] });
   const categories = await db.collection('course_categories').find({}).toArray(), categoryMap = new Map(categories.map(x => [Number(x.category_id), x]));
+  const selectedStages = [...chosen.values()].flatMap(row => row.stages || []);
+  const stageIds = [...new Set(selectedStages.map(stage => String(stage.stage_id || '').split('__')[0]).filter(Boolean))];
+  const stageQuestions = stageIds.length
+    ? await db.collection('roadmap_stage_questions').find({ stage_id: { $in: stageIds } }).toArray()
+    : [];
+  const legacyTemplates = await db.collection('roadmap_templates').find({}).toArray();
+  const canonicalStages = new Map(legacyTemplates.flatMap(template => (template.stages || []).map(stage => [String(stage.stage_id), {
+    stage, careerName: template.career_name || template.name || ''
+  }])));
+  const attemptedStages = stageIds.length
+    ? await db.collection('roadmap_test_submissions').distinct('stage_id', { stage_id: { $in: stageIds } })
+    : [];
+  const attemptedStageIds = new Set(attemptedStages.map(String));
+  const questionsByStage = new Map();
+  for (const question of stageQuestions) questionsByStage.set(String(question.stage_id), [...(questionsByStage.get(String(question.stage_id)) || []), question]);
+  const userRoadmaps = await db.collection('user_roadmaps').find({}).toArray();
+  const roadmapProgress = new Map();
+  const roadmapByStage = new Map();
+  for (const version of versions) for (const stage of version.stages || []) roadmapByStage.set(String(stage.stage_id), String(version.version_id || version._id));
+  for (const progress of userRoadmaps) {
+    const version = String(progress.template_version_id || progress.templateVersionId || progress.roadmap_version_id || '');
+    const category = String(progress.category_id || progress.categoryId || '');
+    const key = version || category;
+    if (!key) continue;
+    const entry = roadmapProgress.get(key) || { learners: new Set(), completed: new Set(), passed: 0, attempts: 0 };
+    const learner = String(progress.user_id || progress.student_id || '');
+    if (learner) {
+      const stages = Array.isArray(progress.stages) ? progress.stages : Array.isArray(progress.nodes) ? progress.nodes : [];
+      const hasCompletionSignal = progress.completed != null || progress.is_completed != null || progress.status != null || progress.completion_rate != null || progress.progress != null;
+      const allProgressDone = stages.length > 0 && stages.every(item => item.completed === true || item.is_completed === true || item.status === 'completed');
+      const roadmapNodes = Array.isArray(progress.nodes) ? progress.nodes : [];
+      const allNodesDone = roadmapNodes.length > 0 && roadmapNodes.every(item => item.status === 'completed');
+      if (progress.is_active !== false) entry.learners.add(learner);
+      if (progress.completed === true || progress.is_completed === true || progress.status === 'completed' || Number(progress.completion_rate) >= 100 || Number(progress.progress_percentage ?? progress.progress) >= 100 || allProgressDone || allNodesDone) entry.completed.add(learner);
+    }
+    roadmapProgress.set(key, entry);
+  }
+  const attempts = await db.collection('roadmap_test_submissions').find({}).toArray();
+  for (const attempt of attempts) {
+    const userId = String(attempt.user_id || '');
+    const learnerRoadmap = userRoadmaps.find(item => String(item.user_id || '') === userId && item.is_active);
+    const key = String(attempt.template_version_id || attempt.templateVersionId || attempt.roadmap_version_id || roadmapByStage.get(String(attempt.stage_id)) || learnerRoadmap?.template_version_id || learnerRoadmap?.category_id || '');
+    if (!key) continue;
+    const entry = roadmapProgress.get(key) || { learners: new Set(), completed: new Set(), passed: 0, attempts: 0 };
+    entry.attempts++;
+    if (attempt.passed === true || attempt.status === 'passed' || attempt.result === 'passed' || (attempt.score_percentage != null && Number(attempt.score_percentage) >= Number(attempt.pass_score || 70))) entry.passed++;
+    roadmapProgress.set(key, entry);
+  }
   let rows = [...chosen.values()].map(row => {
-    const stages = row.stages || [], nodes = stages.flatMap(stage => stage.nodes || []), missingTests = stages.filter(stage => !stage.test).length;
+    const stages = row.stages || [], nodes = stages.flatMap(stage => stage.nodes || []);
+    const missingTests = stages.filter(stage => {
+      if (Array.isArray(stage.test?.questions) && stage.test.questions.length > 0) return false;
+      // Published/versioned roadmaps namespace stage and node IDs. Their question
+      // bank is attached to the canonical template stage, so inspect it with the
+      // canonical IDs that learner delivery uses instead of the versioned IDs.
+      const canonical = canonicalStages.get(String(stage.stage_id).split('__')[0]);
+      const bankStage = canonical?.stage || stage;
+      const careerName = canonical?.careerName || row.career_name || row.name || '';
+    const records = questionsByStage.get(String(bankStage.stage_id).split('__')[0]) || [];
+      const normalizedStage = bankStage === stage ? bankStage : {
+        ...bankStage,
+        stage_id: String(bankStage.stage_id).split('__')[0],
+        nodes: (bankStage.nodes || []).map(node => ({ ...node, node_id: String(node.node_id).split('__')[0] })),
+      };
+      const available = inspectStageBank(normalizedStage, careerName, records).available;
+      return !available;
+    }).length;
     const nodesCovered = nodes.filter(node => (node.courses || []).some(course => Number(course.s_match ?? course.match ?? 0) >= Math.max(70, Number(node.threshold ?? row.threshold ?? 70)) && course.level_match === true)).length;
     const coverage = nodes.length ? Number((nodesCovered / nodes.length * 100).toFixed(1)) : 0;
     const category = categoryMap.get(Number(row.category_id));
-    return { ...snapshot(row), name: row.name || row.career_name || category?.name || '', code: row.code || row.short_code || category?.roadmap_short_code || String(row.category_id), industry: row.industry || category?.industry || category?.name || '', stages: stages.length, nodes: nodes.length, coverage, missingTests, learnerCount: row.learner_count || 0, missingCourses: nodes.length - nodesCovered, searchableNodeText: nodes.map(node => node.title || node.name || '').join(' ') };
+    const progress = roadmapProgress.get(String(row.version_id || row._id)) || roadmapProgress.get(String(row.category_id)) || { learners: new Set(), completed: new Set(), passed: 0, attempts: 0 };
+    const learnerCount = progress.learners.size;
+    return { ...snapshot(row), name: row.name || row.career_name || category?.name || '', code: row.code || row.short_code || category?.roadmap_short_code || String(row.category_id), industry: row.industry || category?.industry || category?.name || '', stages: stages.length, nodes: nodes.length, coverage, missingTests, learnerCount, completedLearnerCount: progress.completed.size, completionRate: learnerCount ? Math.round(progress.completed.size / learnerCount * 100) : null, testPassed: progress.passed, testTotal: progress.attempts, missingCourses: nodes.length - nodesCovered, searchableNodeText: nodes.map(node => node.title || node.name || '').join(' ') };
   });
   const q = txt(query.search || query.q).toLocaleLowerCase();
   rows = rows.filter(row => (!q || row.name.toLocaleLowerCase().includes(q) || row.code.toLocaleLowerCase().includes(q) || row.searchableNodeText.toLocaleLowerCase().includes(q))
@@ -164,6 +233,47 @@ export async function getAdminRoadmap(id, options = {}) {
   const categoryId = Number(id), legacy = Number.isSafeInteger(categoryId) ? await db.collection('roadmap_templates').findOne({ category_id: categoryId }) : null;
   if (!legacy) throw FAIL('Không tìm thấy lộ trình.', 404, 'ROADMAP_NOT_FOUND');
   return { success: true, roadmap: { versionId: null, categoryId: legacy.category_id, code: legacy.short_code || String(legacy.category_id), name: legacy.career_name, industry: '', description: legacy.description || '', status: 'legacy', version: 0, threshold: 70, stages: (legacy.stages || []).map(s => ({ ...s, nodes: (s.nodes || []).map(n => ({ ...n, description: n.description || '', outcomes: (n.outcomes || n.topics || []).join?.('\n') || '', courses: [] })) })) } };
+}
+export async function ensureAdminRoadmapDraft(id, options = {}) {
+  if (!options.db) await ensureSeedQuestions();
+  const db = options.db || await getMongoDb();
+  const current = await getAdminRoadmap(id, { db });
+  if (current.roadmap.status === 'draft') return current;
+  return roadmapTransaction(db, async session => {
+    const categoryId = Number(current.roadmap.categoryId);
+    const category = await db.collection('course_categories').findOne({ category_id: categoryId }, { session });
+    if (!category) throw FAIL('Không tìm thấy nhóm ngành.', 404, 'CATEGORY_NOT_FOUND');
+    const previous = await db.collection(ADMIN_ROADMAP_VERSIONS).find({ category_id: categoryId }, { session }).sort({ version: -1 }).limit(1).toArray();
+    const now = options.now || new Date();
+    const threshold = Number(current.roadmap.threshold || 70);
+    const sourceStages = current.roadmap.stages || [];
+    const stageIds = sourceStages.map(stage => txt(stage.stage_id || stage.id)).filter(Boolean);
+    const existingQuestions = stageIds.length
+      ? await db.collection('roadmap_stage_questions').find({ stage_id: { $in: stageIds } }, { session }).sort({ question_id: 1 }).toArray()
+      : [];
+    const questionsByStage = new Map();
+    for (const question of existingQuestions) questionsByStage.set(String(question.stage_id), [...(questionsByStage.get(String(question.stage_id)) || []), question]);
+    const stagesForDraft = sourceStages.map((stage, index) => {
+      const nodes = (stage.nodes || []).map(node => {
+        const outcomes = node.outcomes || node.topics || '';
+        const tags = node.tags || node.assessment_tags || (Array.isArray(node.topics) ? node.topics : []);
+        return { ...node, description: node.description || node.title || node.name || 'Nội dung kỹ năng', outcomes: Array.isArray(outcomes) ? outcomes.join('\n') : String(outcomes || node.title || node.name || 'Kết quả học tập'), tags: tags.length ? tags : [node.title || node.name || 'Kỹ năng'] };
+      });
+      const importedQuestions = (questionsByStage.get(String(stage.stage_id || stage.id)) || [])
+        .filter(question => nodes.some(node => String(node.node_id || node.id) === String(question.node_id))
+          && question.question_text && Array.isArray(question.options) && question.options.length === 4
+          && question.options.every(option => option?.key && option?.text)
+          && question.options.some(option => String(option.key).toUpperCase() === String(question.correct_option).toUpperCase()))
+        .slice(0, 200)
+        .map(question => ({ id: question.question_id, prompt: question.question_text, code: question.code || '', language: question.language || 'text', answers: question.options.map(option => ({ key: option.key, text: option.text, correct: String(option.key).toUpperCase() === String(question.correct_option).toUpperCase() })), skill_tag: question.skill_tag, node_id: question.node_id, explanation: question.explanation || '' }));
+      return { ...stage, id: stage.id || stage.stage_id || `stage-${index + 1}`, name: stage.name || stage.title, nodes, test: stage.test || (importedQuestions.length ? { name: `${stage.name || stage.title} · Bài kiểm tra`, duration_minutes: 30, pass_score: 70, questions: importedQuestions } : null) };
+    });
+    const stages = normalizeStages(stagesForDraft, threshold, true);
+    const row = { category_id: categoryId, code: current.roadmap.code, name: current.roadmap.name, career_name: current.roadmap.name, industry: current.roadmap.industry || category.name, description: current.roadmap.description || '', status: 'draft', version: Number(previous[0]?.version || 0) + 1, threshold, stages, created_by: String(options.adminId), created_at: now, updated_at: now, version_id: randomUUID() };
+    const inserted = await db.collection(ADMIN_ROADMAP_VERSIONS).insertOne(row, { session }); row._id = inserted.insertedId;
+    await audit(db, options.req, 'ROADMAP_DRAFT_CREATED_FROM_EXISTING', row, { status: current.roadmap.status }, { status: 'draft', version: row.version }, {}, session);
+    return { success: true, roadmap: snapshot(row) };
+  });
 }
 export async function createAdminRoadmap(body = {}, options = {}) {
   const db = options.db || await getMongoDb(), categoryId = Number(body.categoryId);
@@ -272,7 +382,7 @@ export function createAdminRoadmapsRouter(express, requireAdmin) {
   router.get('/summary', roles, async (req,res,next)=>{ try { res.json(await getAdminRoadmapSummary()); } catch(e) { next(e); } });
   router.get('/', roles, async (req,res,next)=>{ try { res.json(await listAdminRoadmaps(req.query)); } catch(e) { next(e); } });
   router.post('/', roles, async (req,res,next)=>{ try { res.status(201).json(await createAdminRoadmap(req.body || {}, { adminId: req.adminId, req })); } catch(e) { next(e); } });
-  router.get('/:id', roles, async (req,res,next)=>{ try { res.json(await getAdminRoadmap(req.params.id)); } catch(e) { next(e); } });
+  router.get('/:id', roles, async (req,res,next)=>{ try { res.json(await ensureAdminRoadmapDraft(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   router.get('/:id/nodes/:nodeId/suggestions', roles, async (req,res,next)=>{ try { const { roadmap } = await getAdminRoadmap(req.params.id); const node = roadmap.stages.flatMap(stage => stage.nodes || []).find(item => item.node_id === req.params.nodeId); if (!node) throw FAIL('Không tìm thấy node.',404,'ROADMAP_NODE_NOT_FOUND'); const courses = await calculateNodeCourseSuggestions(node, { threshold: Math.max(70, roadmap.threshold || node.threshold || 70) }); res.json({ success: true, threshold: Math.max(70, roadmap.threshold || node.threshold || 70), total: courses.length, courses }); } catch(e) { next(e); } });
   router.patch('/:id', roles, async (req,res,next)=>{ try { res.json(await saveAdminRoadmap(req.params.id, req.body || {}, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   router.delete('/:id', roles, async (req,res,next)=>{ try { res.json(await deleteAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });

@@ -13,6 +13,8 @@ export interface CourseChapter {
   no: string;
   title: string;
   meta: string;
+  description?: string;
+  lessons?: Array<{ id: string; title: string; type: string; durationMinutes: number }>;
 }
 
 export interface CourseFinance {
@@ -46,6 +48,7 @@ export interface Course {
   description: string;
   tags: string[];
   curriculumSummary: string;
+  thumbnailUrl?: string;
   chapters: CourseChapter[];
   learners: CourseLearner[];
   finance: CourseFinance;
@@ -183,10 +186,10 @@ export interface Roadmap {
   stages: number;
   nodes: number;
   learners: number;
-  completion: number;
+  completion: number | null;
   coverage: number;
   coverageAvg: number;
-  testPassed: number;
+  testPassed: number | null;
   testTotal: number;
   missingTests: number;
   hidden: boolean;
@@ -203,6 +206,7 @@ export interface RoadmapNode {
   description: string;
   outcomes: string;
   tags: string[];
+  courses?: Array<{ id: string; title: string; match: number; level: CourseLevel }>;
 }
 
 export interface RoadmapPhase {
@@ -227,6 +231,8 @@ export interface RoadmapAnswer {
 
 export interface RoadmapQuestion {
   id: string;
+  nodeId?: string;
+  skillTag?: string;
   index: number;
   title: string;
   meta: string;
@@ -269,8 +275,8 @@ export interface CourseDataSource {
   requestSupplement(id: string, items: string[], issueType: string, detail: string): void;
   toggleRoadmapVisibility(id: string): void;
   updateRoadmapNode(roadmapId: string, node: RoadmapNode): void;
-  saveRoadmapDraft(roadmapId: string): void;
-  publishRoadmap(roadmapId: string): void;
+  saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): Promise<void> | void;
+  publishRoadmap(roadmapId: string, studio?: RoadmapStudio): Promise<void> | void;
   saveRoadmapTest(roadmapId: string, test: RoadmapTest): void;
   reset(): void;
 }

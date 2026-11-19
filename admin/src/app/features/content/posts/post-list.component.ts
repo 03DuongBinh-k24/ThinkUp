@@ -466,8 +466,8 @@ export class ContentPostListComponent {
     if (!await this.write(() => this.store.updatePost(post.id, { status: 'revision', moderationNote: summary }, 'Yêu cầu tác giả chỉnh sửa bài viết.'))) return;
     this.requestTarget.set(null);
     this.notify(
-      'Đã gửi yêu cầu chỉnh sửa cho tác giả.',
-      'Bài chuyển sang Cần chỉnh sửa; tác giả nhận email và thông báo.',
+      'Đã ghi nhận yêu cầu chỉnh sửa.',
+      'Bài đã chuyển sang Cần chỉnh sửa. Hệ thống hiện chưa gửi email hoặc thông báo cho tác giả.',
       'success'
     );
   }
@@ -493,7 +493,7 @@ export class ContentPostListComponent {
     this.hideTarget.set(null);
     this.notify(
       'Đã tạm ẩn bài viết và gỡ ghim Home.',
-      'Tác giả đã nhận thông báo; thao tác được lưu vào nhật ký.',
+      'Thao tác đã được lưu vào nhật ký. Hệ thống hiện chưa gửi thông báo cho tác giả.',
       'success'
     );
   }

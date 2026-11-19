@@ -148,11 +148,13 @@ export class DashboardHttpService implements DashboardStore {
   readonly logsTotal = signal(0);
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly analyticsError = signal('');
   readonly logsError = signal('');
 
   async load(query: DashboardQuery = {}): Promise<void> {
     this.loading.set(true);
     this.error.set('');
+    this.analyticsError.set('');
     this.logsError.set('');
     const params = this.params(query);
     const [overview, analytics, logs] = await Promise.allSettled([
@@ -172,8 +174,7 @@ export class DashboardHttpService implements DashboardStore {
       this.analytics.set(this.mapAnalytics(analytics.value));
     } else {
       this.analytics.set(null);
-      // CA/FA/CS nhận 403 ở analytics theo thiết kế phân quyền; không biến nó thành lỗi toàn trang.
-      if (!this.error()) this.logsError.set('');
+      this.analyticsError.set(apiErrorMessage(analytics.reason, 'Không tải được dữ liệu phân tích.'));
     }
 
     if (logs.status === 'fulfilled') {

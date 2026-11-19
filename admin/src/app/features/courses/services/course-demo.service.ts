@@ -22,6 +22,7 @@ export class CourseDemoService extends CourseStore {
   readonly workspaces = this.workspaceState.asReadonly();
   readonly studios = this.studioState.asReadonly();
   readonly loadError = this.errorState.asReadonly();
+  readonly roadmapLoadError = this.errorState.asReadonly();
 
   retry(): void {
     this.errorState.set(false);

@@ -75,8 +75,8 @@
         <app-custom-select controlId="roadmap-coverage" [value]="coverage()" [options]="coverageOptions" placeholder="Tất cả độ phủ" [menuWidth]="220" (valueChange)="setCoverage($event)"></app-custom-select>
       </div>
       <div class="filter">
-        <span>Bài kiểm tra</span>
-        <app-custom-select controlId="roadmap-test" [value]="testState()" [options]="testOptions" placeholder="Tất cả bài kiểm tra" [menuWidth]="210" (valueChange)="setTestState($event)"></app-custom-select>
+        <span>Đề kiểm tra</span>
+        <app-custom-select controlId="roadmap-test" [value]="testState()" [options]="testOptions" placeholder="Tất cả đề kiểm tra" [menuWidth]="210" (valueChange)="setTestState($event)"></app-custom-select>
       </div>
       <div class="filter">
         <span>Tình trạng bài test</span>
@@ -92,7 +92,7 @@
 
     @if (loadError()) {
       <div class="alert danger" role="alert" style="margin: 14px 18px">
-        <span>Không tải được danh sách lộ trình. Vui lòng thử lại.</span>
+        <span>{{ loadErrorMessage() }}</span>
         <button class="button small" type="button" (click)="retryLoad()">Thử lại</button>
       </div>
     }
@@ -127,8 +127,8 @@
               <th scope="col">Học viên</th>
               <th scope="col">Hoàn thành</th>
               <th scope="col"><app-column-filter label="Khóa học / node" [values]="coverageValues" [selected]="filterFor('coverage')" (changed)="updateColumnFilter('coverage', $event)" [sorts]="numberSorts" [sort]="sortFor('coverage')" (sortChange)="updateColumnSort('coverage', $event)" /></th>
-              <th scope="col">Bài test</th>
-              <th scope="col"><app-column-filter label="Tình trạng bài test" [values]="testValues" [selected]="filterFor('test')" (changed)="updateColumnFilter('test', $event)" [sorts]="textSorts" [sort]="sortFor('test')" (sortChange)="updateColumnSort('test', $event)" /></th>
+              <th scope="col">Lượt test đạt / tổng</th>
+              <th scope="col"><app-column-filter label="Tình trạng đề kiểm tra" [values]="testValues" [selected]="filterFor('test')" (changed)="updateColumnFilter('test', $event)" [sorts]="textSorts" [sort]="sortFor('test')" (sortChange)="updateColumnSort('test', $event)" /></th>
               <th scope="col">Thao tác</th>
             </tr>
           </thead>
@@ -145,9 +145,9 @@
                   <span class="cell-sub">{{ item.hidden ? 'Đang ẩn' : 'Đang hiển thị' }}</span>
                 </td>
                 <td class="nowrap">{{ number(item.learners) }}</td>
-                <td class="nowrap">{{ item.completion }}%</td>
+                <td class="nowrap">{{ item.completion === null ? '—' : item.completion + '%' }}</td>
                 <td class="nowrap">{{ item.coverage }}% · TB {{ decimal(item.coverageAvg) }}</td>
-                <td class="nowrap">{{ item.testPassed }}/{{ item.testTotal }}</td>
+                <td class="nowrap">{{ item.testPassed === null ? '—' : item.testPassed + '/' + item.testTotal }}</td>
                 <td class="roadmap-test-status">
                   <span [class]="'badge roadmap-test-badge ' + (item.missingTests === 0 ? 'success' : 'warning')">{{ testLabel(item) }}</span>
                 </td>
@@ -185,6 +185,20 @@
     }
   </section>
 </main>
+
+@if (createDialogOpen()) {
+  <div class="roadmap-create-backdrop" (click)="closeCreateDialog()">
+    <section class="roadmap-create-dialog" role="dialog" aria-modal="true" aria-labelledby="roadmap-create-title" (click)="$event.stopPropagation()">
+      <header><div><h2 id="roadmap-create-title">Tạo lộ trình mới</h2><p>Tạo bản nháp theo nhóm ngành, sau đó hoàn thiện cấu trúc trong Studio.</p></div><button class="icon-button" type="button" aria-label="Đóng" [disabled]="createBusy()" (click)="closeCreateDialog()">×</button></header>
+      <label>Nhóm ngành (category ID)<input type="number" min="1" [value]="createCategoryId()" (input)="createCategoryId.set($any($event.target).value)" placeholder="Ví dụ: 3" required></label>
+      <label>Tên lộ trình<input [value]="createName()" (input)="createName.set($any($event.target).value)" maxlength="200" placeholder="Ví dụ: Frontend Developer" required></label>
+      <label>Mã lộ trình <span>(không bắt buộc)</span><input [value]="createCode()" (input)="createCode.set($any($event.target).value)" maxlength="40" placeholder="Tự tạo theo nhóm ngành nếu để trống"></label>
+      <label>Mô tả <span>(không bắt buộc)</span><textarea rows="3" [value]="createDescription()" (input)="createDescription.set($any($event.target).value)" maxlength="5000" placeholder="Mục tiêu và đối tượng của lộ trình"></textarea></label>
+      @if (createError()) { <p class="roadmap-create-error" role="alert">{{ createError() }}</p> }
+      <footer><button class="button ghost" type="button" [disabled]="createBusy()" (click)="closeCreateDialog()">Hủy</button><button class="button primary" type="button" [disabled]="createBusy()" (click)="submitCreateRoadmap()">{{ createBusy() ? 'Đang tạo…' : 'Tạo bản nháp' }}</button></footer>
+    </section>
+  </div>
+}
 
 @if (selectionListOpen()) {
   <app-bulk-selection-dialog

@@ -6,14 +6,13 @@
     </div>
   </header>
 
-  <!-- TODO(pre-deploy): Nhớ thay số liệu và quyền demo bằng API rút tiền cùng RBAC thật; backend xử lý duyệt, từ chối, hoàn ví, email và giải ngân. -->
   @if (error() && !dialog()) { <p class="error" role="alert">{{ error() }}</p> }
   @if (payoutsAreDemo()) {
     <p class="notice" role="status">Chế độ minh họa. Các thao tác duyệt và từ chối chỉ áp dụng trong phiên này.</p>
   }
   @if (loadingPayouts()) { <p role="status">Đang tải yêu cầu chi trả…</p> }
   @if (loadFailure()) { <p role="alert">{{ loadFailure() }} <button type="button" (click)="reload()">Thử lại</button></p> }
-  @if (!payoutsAreDemo()) { <p class="notice">Thống kê chỉ tính các yêu cầu thực. Các yêu cầu minh họa được đánh dấu trong bảng.</p> }
+  @if (!payoutsAreDemo()) { <p class="notice">Chỉ số tổng quan bao gồm các yêu cầu thực và minh họa; yêu cầu minh họa được đánh dấu trong bảng.</p> }
   <section class="kpi-grid" aria-label="Tổng quan rút tiền">
     <button class="kpi" type="button" [class.selected]="status() === 'pending'" (click)="filterFromKpi('pending')">
       <span class="kpi-icon pending" aria-hidden="true">
@@ -273,7 +272,7 @@
         }
         @if (item.status === 'pending' && dialog() === 'review') {
           <button class="button danger" type="button" (click)="openReject()">Từ chối yêu cầu</button>
-          <button class="button primary" type="button" (click)="approve()">Xác nhận duyệt</button>
+          <button class="button primary" type="button" [disabled]="checkingApproval() || submitting()" (click)="approve()">{{ checkingApproval() ? 'Đang kiểm tra…' : 'Xác nhận duyệt' }}</button>
         }
       </div>
       }

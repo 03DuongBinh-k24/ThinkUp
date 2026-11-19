@@ -34,11 +34,13 @@ export class DashboardDemoService implements DashboardStore {
   readonly logsTotal = signal(0);
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly analyticsError = signal('');
   readonly logsError = signal('');
 
   async load(query: DashboardQuery = {}): Promise<void> {
     this.loading.set(true);
     this.error.set('');
+    this.analyticsError.set('');
     this.logsError.set('');
     this.overview.set({
       metrics: DASHBOARD_METRICS.map(metric => ({

@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import express from 'express';
 import { ObjectId } from 'mongodb';
+import { signJwt } from '../../../user/db.js';
+import { verifyJwt } from '../../../user/db.js';
 import {
   ADMIN_NOTIFICATIONS_COLLECTION,
   createAdminNotification,
@@ -9,6 +12,8 @@ import {
   listAdminNotifications,
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
+  publishAdminNotificationToRoster,
+  createAdminNotificationsRouter,
 } from '../notifications.admin.js';
 
 const ADMIN_ID = '65f123456789abcdef012345';
@@ -329,4 +334,97 @@ test('P3 index: tạo index hộp thư, chưa đọc và dedupe duy nhất', asy
   assert.deepEqual(names, ['admin_created', 'admin_unread', 'admin_dedupe']);
   const dedupe = db.collectionInstance.indexes.find((entry) => entry.options.name === 'admin_dedupe');
   assert.equal(dedupe.options.unique, true);
+});
+
+test('P4 producer: broadcast tới admin active, tự gắn dedupe key theo người nhận', async () => {
+  const db = new MockDb();
+  const notifications = db.collectionInstance;
+  const admins = [ADMIN_ID, OTHER_ADMIN_ID].map(id => ({ _id: new ObjectId(id), status: 'ACTIVE' }));
+  db.collection = name => {
+    if (name === ADMIN_NOTIFICATIONS_COLLECTION) return notifications;
+    assert.equal(name, 'admins');
+    return { find: () => ({ toArray: async () => admins }) };
+  };
+  const input = {
+    type: 'ticket', severity: 'info', title: 'Ticket được nhận', message: 'Ticket TK-1 đã được nhận.',
+    href: '/support/tickets/TK-1', eventKey: 'admin.ticket.claimed', dedupeKey: 'admin.ticket.claimed:ticket-1',
+  };
+
+  const first = await publishAdminNotificationToRoster(db, input);
+  const second = await publishAdminNotificationToRoster(db, input);
+  assert.deepEqual(first, { created: 2 });
+  assert.deepEqual(second, { created: 0 });
+  assert.equal(notifications.documents.length, 2);
+  assert.deepEqual(new Set(notifications.documents.map(row => String(row.admin_id))), new Set([ADMIN_ID, OTHER_ADMIN_ID]));
+  assert.deepEqual(new Set(notifications.documents.map(row => row.dedupe_key)), new Set([
+    `admin.ticket.claimed:ticket-1:${ADMIN_ID}`,
+    `admin.ticket.claimed:ticket-1:${OTHER_ADMIN_ID}`,
+  ]));
+});
+
+test('P4 HTTP API: bearer auth, inbox cô lập, summary, cursor paging và read mutations', async t => {
+  const db = new MockDb([
+    notification(ID_A, 'security', '2026-11-01T08:00:00Z'),
+    notification(ID_B, 'order', '2026-11-02T08:00:00Z'),
+    notification(ID_C, 'ticket', '2026-11-03T08:00:00Z'),
+    notification(ID_OTHER, 'complaint', '2026-11-04T08:00:00Z', null, OTHER_ADMIN_ID),
+  ]);
+  const requireAdmin = (req, res, next) => {
+    const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    try {
+      const payload = verifyJwt(token, 'admin');
+      if (!payload?.adminId) return res.status(401).json({ message: 'Yêu cầu đăng nhập quản trị viên.', code: 'UNAUTHORIZED' });
+      req.adminId = payload.adminId;
+      return next();
+    } catch {
+      return res.status(401).json({ message: 'Phiên quản trị viên đã hết hạn.', code: 'TOKEN_EXPIRED' });
+    }
+  };
+  const app = express();
+  app.use(express.json());
+  app.use('/api/admin/notifications', createAdminNotificationsRouter(express, requireAdmin, { db }));
+  app.use((error, _req, res, _next) => res.status(error.status || 500).json({ message: error.message, code: error.code }));
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(async () => {
+    server.closeAllConnections?.();
+    await new Promise(resolve => server.close(resolve));
+  });
+
+  const base = `http://127.0.0.1:${server.address().port}/api/admin/notifications`;
+  const tokenA = signJwt({ adminId: ADMIN_ID });
+  const tokenB = signJwt({ adminId: OTHER_ADMIN_ID });
+  const get = (url, token = tokenA) => fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const post = (url, token = tokenA) => fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
+
+  assert.equal((await fetch(`${base}`)).status, 401);
+  const firstResponse = await get(`${base}?limit=2`);
+  assert.equal(firstResponse.status, 200);
+  assert.equal(firstResponse.headers.get('cache-control'), 'no-store');
+  const first = await firstResponse.json();
+  assert.deepEqual(first.items.map(item => item.id), [ID_C, ID_B]);
+  assert.equal(first.hasMore, true);
+  assert.ok(first.nextCursor);
+
+  const next = await (await get(`${base}?limit=2&cursor=${encodeURIComponent(first.nextCursor)}`)).json();
+  assert.deepEqual(next.items.map(item => item.id), [ID_A]);
+  assert.equal(next.hasMore, false);
+
+  const summary = await (await get(`${base}/summary`)).json();
+  assert.deepEqual([summary.total, summary.unread, summary.read], [3, 3, 0]);
+  assert.equal(summary.byType.complaint.total, 0);
+
+  const read = await post(`${base}/${ID_B}/read`);
+  assert.equal(read.status, 200);
+  assert.ok((await read.json()).notification.readAt);
+  assert.equal((await post(`${base}/${ID_OTHER}/read`)).status, 404);
+
+  const readAll = await post(`${base}/read-all`);
+  assert.equal(readAll.status, 200);
+  assert.equal((await readAll.json()).changed, 2);
+  assert.equal((await (await get(`${base}/summary`)).json()).unread, 0);
+  assert.equal(db.collectionInstance.documents.find(doc => doc._id === ID_OTHER).read_at, null);
+
+  const otherInbox = await (await get(base, tokenB)).json();
+  assert.deepEqual(otherInbox.items.map(item => item.id), [ID_OTHER]);
 });

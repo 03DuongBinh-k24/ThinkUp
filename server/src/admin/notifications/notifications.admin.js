@@ -183,6 +183,27 @@ export async function createAdminNotification(adminId, input, options = {}) {
   }
 }
 
+/**
+ * Broadcasts one verified business event to the active admin roster.
+ * Notification persistence is best-effort so it cannot undo the source event.
+ */
+export async function publishAdminNotificationToRoster(db, input, options = {}) {
+  try {
+    const database = db || (await getMongoDb());
+    const admins = await database.collection('admins').find({
+      status: { $in: ['ACTIVE', 'active'] }, is_active: { $ne: false },
+    }, { projection: { _id: 1 } }).toArray();
+    const results = await Promise.all(admins.map((admin) => createAdminNotification(admin._id, {
+      ...input,
+      dedupeKey: `${input.dedupeKey}:${String(admin._id)}`,
+    }, { db: database, ...options })));
+    return { created: results.filter((result) => result.created).length };
+  } catch (error) {
+    console.error('[Admin Notification Error]:', error.message);
+    return { created: 0 };
+  }
+}
+
 export async function listAdminNotifications(adminId, query = {}, options = {}) {
   const owner = adminObjectId(adminId);
   const limit = normalizeLimit(query.limit);
@@ -290,7 +311,7 @@ export async function ensureAdminNotificationIndexes(db) {
   );
 }
 
-export function createAdminNotificationsRouter(express, requireAdmin) {
+export function createAdminNotificationsRouter(express, requireAdmin, options = {}) {
   if (typeof requireAdmin !== 'function') {
     throw new Error('createAdminNotificationsRouter requires admin auth middleware');
   }
@@ -299,7 +320,7 @@ export function createAdminNotificationsRouter(express, requireAdmin) {
   router.get('/summary', requireAdmin, async (req, res, next) => {
     try {
       res.set('Cache-Control', 'no-store');
-      res.json(await getAdminNotificationSummary(req.adminId));
+      res.json(await getAdminNotificationSummary(req.adminId, options));
     } catch (error) {
       next(error);
     }
@@ -308,7 +329,7 @@ export function createAdminNotificationsRouter(express, requireAdmin) {
   router.get('/', requireAdmin, async (req, res, next) => {
     try {
       res.set('Cache-Control', 'no-store');
-      res.json(await listAdminNotifications(req.adminId, req.query || {}));
+      res.json(await listAdminNotifications(req.adminId, req.query || {}, options));
     } catch (error) {
       next(error);
     }
@@ -316,7 +337,8 @@ export function createAdminNotificationsRouter(express, requireAdmin) {
 
   router.post('/read-all', requireAdmin, async (req, res, next) => {
     try {
-      res.json(await markAllAdminNotificationsRead(req.adminId));
+      res.set('Cache-Control', 'no-store');
+      res.json(await markAllAdminNotificationsRead(req.adminId, options));
     } catch (error) {
       next(error);
     }
@@ -324,7 +346,8 @@ export function createAdminNotificationsRouter(express, requireAdmin) {
 
   router.post('/:id/read', requireAdmin, async (req, res, next) => {
     try {
-      res.json(await markAdminNotificationRead(req.adminId, req.params.id));
+      res.set('Cache-Control', 'no-store');
+      res.json(await markAdminNotificationRead(req.adminId, req.params.id, options));
     } catch (error) {
       next(error);
     }

@@ -190,7 +190,7 @@
               <td class="checkbox-cell">
                 <input type="checkbox" [checked]="isSelected(item.id)" [attr.aria-label]="'Chọn ' + item.name" (change)="toggleRow(item.id, $event)" />
               </td>
-              <td class="cell-nowrap">{{ item.id }}</td>
+              <td class="cell-nowrap">{{ item.studentCode || 'Chưa cấp mã' }}</td>
               <td>
                 <div class="identity">
                   <span class="avatar avatar--{{ $index % 5 }}" aria-hidden="true">{{ item.initials }}</span>
@@ -286,7 +286,7 @@
               <h3>Thông tin tài khoản</h3>
               <dl class="kv-rows">
                 <div><dt>Họ và tên</dt><dd>{{ student.name }}</dd></div>
-                <div><dt>Mã học viên</dt><dd>{{ student.id }}</dd></div>
+                <div><dt>Mã học viên</dt><dd>{{ student.studentCode || 'Chưa cấp mã' }}</dd></div>
                 <div><dt>Email</dt><dd>{{ student.email }}</dd></div>
                 <div><dt>Điện thoại</dt><dd>{{ student.phone }}</dd></div>
               </dl>
@@ -409,7 +409,7 @@
         @if (selected(); as student) {
           <div class="subject-lines">
             <span>Học viên: <b>{{ student.name }}</b></span>
-            <span>Mã: <b>{{ student.id }}</b></span>
+            <span>Mã: <b>{{ student.studentCode || 'Chưa cấp mã' }}</b></span>
             <span>Email: <b>{{ student.email }}</b></span>
           </div>
         } @else {
@@ -475,7 +475,7 @@
   <!-- ================= Mở khóa tài khoản ================= -->
   @if (modal() === 'unlock') {
     @if (selected(); as student) {
-      <app-user-modal title="Mở khóa tài khoản" [subtitle]="student.name + ' · ' + student.id" size="md" (closed)="closeModal()">
+      <app-user-modal title="Mở khóa tài khoản" [subtitle]="student.name + ' · ' + (student.studentCode || 'Chưa cấp mã')" size="md" (closed)="closeModal()">
         <div class="info-strip info-strip--danger modal-section">
           <strong>Thông tin tài khoản</strong>
           <span>{{ lockExpiryLabel(student) }}</span>

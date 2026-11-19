@@ -401,7 +401,7 @@ export class ContentReviewsComponent {
       this.askHide(item);
       return;
     }
-    if (!await this.write(() => this.store.updateReview(item.id, { status, rejectionReason: status === 'rejected' ? 'Vi phạm tiêu chuẩn đánh giá của ThinkUp.' : undefined },
+    if (!await this.write(() => this.store.updateReview(item.id, { status: status === 'rejected' ? 'hidden' : status, rejectionReason: status === 'rejected' ? 'Vi phạm tiêu chuẩn đánh giá của ThinkUp.' : undefined },
       `Chuyển trạng thái sang ${REVIEW_STATUS_LABELS[status]}.`))) return;
     this.notify(`Đã chuyển đánh giá ${item.id} sang ${REVIEW_STATUS_LABELS[status]}.`, 'success');
   }
@@ -426,12 +426,12 @@ export class ContentReviewsComponent {
     if (!await this.write(() => this.store.updateReview(item.id, { status: 'hidden', rejectionReason: reason },
       `Ẩn đánh giá: ${reason}`))) return;
     this.hideTarget.set(null);
-    this.notify(`Đã ẩn đánh giá ${item.id} và khóa phản hồi công khai.`, 'success');
+    this.notify(`Đã lưu trạng thái ẩn cho đánh giá ${item.id}; đánh giá được gỡ khỏi điểm sao công khai.`, 'success');
   }
 
   async bulkStatus(status: ReviewStatus, ids: readonly string[] = this.selectedList()): Promise<void> {
     if (!ids.length) return;
-    for (const id of ids) { if (!await this.write(() => this.store.updateReview(id, { status }, `Cập nhật hàng loạt sang ${REVIEW_STATUS_LABELS[status]}.`))) return; }
+    for (const id of ids) { if (!await this.write(() => this.store.updateReview(id, { status: status === 'rejected' ? 'hidden' : status }, `Cập nhật hàng loạt sang ${REVIEW_STATUS_LABELS[status]}.`))) return; }
     this.selected.set(new Set());
     this.notify(`Đã cập nhật ${ids.length} đánh giá.`, 'success');
   }
