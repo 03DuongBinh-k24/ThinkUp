@@ -10,6 +10,8 @@ export interface OrderListFilters {
   from?: string;
   to?: string;
   sort?: 'newest' | 'oldest';
+  page?: number;
+  pageSize?: number;
 }
 
 /** Bộ lọc danh sách voucher — chỉ gồm các trường backend hỗ trợ. */
@@ -31,6 +33,12 @@ export interface VoucherListFilters {
   startsTo?: string;
   endsFrom?: string;
   endsTo?: string;
+}
+
+export interface PayoutListFilters {
+  page: number; pageSize: number; q?: string; status?: string;
+  limitMin?: number | null; limitMax?: number | null; from?: string; to?: string;
+  sort?: 'newest' | 'oldest'; taxOnly?: boolean; paidMonthOnly?: boolean;
 }
 
 export interface OrderTotals {
@@ -70,6 +78,7 @@ export interface BusinessStore {
   readonly payoutsAreDemo: Signal<boolean>;
 
   reloadOrders(filters?: OrderListFilters): Promise<void>;
+  loadOrdersPage(filters: OrderListFilters): Promise<{ items: readonly BusinessOrder[]; total: number; summary: OrderTotals }>;
   reloadVouchers(filters?: VoucherListFilters): Promise<void>;
   exportOrders(format: ExportFormat, filters: OrderListFilters): Promise<void>;
   exportVouchers(format: ExportFormat, filters: VoucherListFilters): Promise<void>;
@@ -81,6 +90,8 @@ export interface BusinessStore {
   /** Backend chưa có API xác nhận/hủy đơn; hiện chỉ cập nhật trong bộ nhớ để xem trước luồng UI. */
   updateOrder(id: string, changes: Partial<BusinessOrder>): void;
   reloadPayouts(): Promise<void>;
+  loadPayoutsPage(filters: PayoutListFilters): Promise<{items: readonly PayoutRequest[];total:number}>;
+  getPayoutSummary(): Promise<void>;
   payoutDetail(id: string): Promise<PayoutRequest>;
   updatePayout(id: string, decision: PayoutDecision): Promise<void>;
 }

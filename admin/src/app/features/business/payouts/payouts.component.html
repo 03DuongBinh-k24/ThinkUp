@@ -56,7 +56,7 @@
   </section>
 
   <section class="filters-toolbar" aria-label="Tìm kiếm và lọc yêu cầu rút tiền">
-    <app-search-field label="Tìm theo mã yêu cầu, tên giảng viên hoặc email" placeholder="Tìm theo mã yêu cầu, tên giảng viên, email..." [value]="search()" (valueChange)="search.set($event)"></app-search-field>
+    <app-search-field label="Tìm theo mã yêu cầu, tên giảng viên hoặc email" placeholder="Tìm theo mã yêu cầu, tên giảng viên, email..." [value]="search()" (valueChange)="setSearch($event)"></app-search-field>
     <div class="filter-select business-dropdown-field">
       <span id="payout-status-label">Trạng thái</span>
       <app-custom-select controlId="payout-status" labelId="payout-status-label" [value]="status()" [options]="statusOptions" (valueChange)="setStatus($any($event))"></app-custom-select>
@@ -175,14 +175,14 @@
       </table>
     </div>
     <div class="table-footer">
-      <span>Hiển thị {{ filtered().length ? (currentPage() - 1) * pageSize + 1 : 0 }} - {{ (currentPage() - 1) * pageSize + visible().length }} của {{ filtered().length }} yêu cầu rút tiền</span>
+      <span>Hiển thị {{ resultTotal() ? (currentPage() - 1) * pageSize + 1 : 0 }} - {{ (currentPage() - 1) * pageSize + visible().length }} của {{ resultTotal() }} yêu cầu rút tiền</span>
       <div class="pagination" aria-label="Phân trang">
-        <button type="button" [disabled]="currentPage() <= 1" aria-label="Trang trước" (click)="page.set(currentPage() - 1)"><img src="/assets/business/orders/chevron-left.svg" alt=""></button>
+        <button type="button" [disabled]="currentPage() <= 1" aria-label="Trang trước" (click)="changePage(currentPage() - 1)"><img src="/assets/business/orders/chevron-left.svg" alt=""></button>
         @for (item of pagination(); track $index) {
-          @if (item.kind === 'page') { <button type="button" [class.current]="item.value === currentPage()" [attr.aria-current]="item.value === currentPage() ? 'page' : null" [attr.aria-label]="'Trang ' + item.value" (click)="page.set(item.value)">{{ item.value }}</button> }
+          @if (item.kind === 'page') { <button type="button" [class.current]="item.value === currentPage()" [attr.aria-current]="item.value === currentPage() ? 'page' : null" [attr.aria-label]="'Trang ' + item.value" (click)="changePage(item.value)">{{ item.value }}</button> }
           @else { <span class="pagination-ellipsis" aria-hidden="true">…</span> }
         }
-        <button type="button" [disabled]="currentPage() >= totalPages()" aria-label="Trang sau" (click)="page.set(currentPage() + 1)"><img src="/assets/business/orders/chevron-right.svg" alt=""></button>
+        <button type="button" [disabled]="currentPage() >= totalPages()" aria-label="Trang sau" (click)="changePage(currentPage() + 1)"><img src="/assets/business/orders/chevron-right.svg" alt=""></button>
       </div>
     </div>
   </section>

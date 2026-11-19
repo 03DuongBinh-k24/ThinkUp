@@ -59,7 +59,14 @@ export interface UserListFilters {
   courseCount?: string;
   from?: string;
   to?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
 }
+
+export interface UserListResult { items: readonly Lecturer[]; total: number; pages: number; summary: { total: number; pending: number; active: number; locked: number }; }
+export interface StudentListResult { items: readonly Student[]; total: number; pages: number; summary: { total: number; fresh: number; active: number; locked: number }; }
 
 /**
  * Hợp đồng dữ liệu của module quản lý người dùng.
@@ -71,6 +78,8 @@ export interface UserManagementDataSource {
   readonly lecturers: Signal<readonly Lecturer[]>;
   readonly students: Signal<readonly Student[]>;
   readonly quickStats: Signal<UserQuickStats>;
+  readonly lecturerSummary: Signal<{ total: number; pending: number; active: number; locked: number }>;
+  readonly studentSummary: Signal<{ total: number; fresh: number; active: number; locked: number }>;
   /** Chi tiết giảng viên đã tải từ `/admin/users/lecturers/:id`. */
   readonly lecturerDetails: Signal<ReadonlyMap<string, Lecturer>>;
   /** Chi tiết học viên đã tải từ `/admin/users/students/:id`. */
@@ -85,6 +94,10 @@ export interface UserManagementDataSource {
   readonly error: Signal<string | null>;
 
   reload(): Promise<void>;
+  loadLecturers(filters: UserListFilters): Promise<UserListResult>;
+  loadStudents(filters: UserListFilters): Promise<StudentListResult>;
+  setLecturerSummary(summary: { total: number; pending: number; active: number; locked: number }): void;
+  setStudentSummary(summary: { total: number; fresh: number; active: number; locked: number }): void;
   loadLecturerDetail(id: string): Promise<Lecturer | undefined>;
   loadStudentDetail(id: string): Promise<Student | undefined>;
   loadCoursesFor(id: string): Promise<readonly LecturerCourseRow[]>;

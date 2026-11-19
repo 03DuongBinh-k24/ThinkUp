@@ -49,7 +49,7 @@ export class ContentCommentsComponent {
     finally { this.writing = false; }
   }
   private readonly store = inject(ContentStore);
-  ngOnInit(): void { void this.store.open('comments'); }
+  ngOnInit(): void { void this.store.open('comments').then(()=>this.loadPage()); }
   readonly loadError = this.store.loadError;
 
   readonly rowMenu = signal<{ item: ContentComment; top: number; left: number } | null>(null);
@@ -62,6 +62,9 @@ export class ContentCommentsComponent {
   readonly status = signal('');
   readonly sort = signal<'newest' | 'oldest' | 'reports'>('newest');
   readonly page = signal(1);
+  readonly resultTotal = signal(0);
+  readonly resultPages = signal(1);
+  private commentRequest=0;
   /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
   private readonly pageSizeService = inject(AdminPageSizeService);
   /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
@@ -115,18 +118,7 @@ export class ContentCommentsComponent {
     this.withSelected([...new Set(this.comments().map(item => formatDate(item.createdAt)))], this.columnFilters.time())
       .map(item => ({ value: item, label: item })));
 
-  readonly counts = computed(() => {
-    const items = this.comments();
-    return {
-      total: items.length,
-      visible: items.filter(item => item.status === 'visible').length,
-      pending: items.filter(item => item.status === 'pending').length,
-      flagged: items.filter(item => item.status === 'flagged').length,
-      hidden: items.filter(item => item.status === 'hidden' || item.status === 'spam').length,
-      course: items.filter(item => item.contextType === 'course').length,
-      blog: items.filter(item => item.contextType === 'blog').length
-    };
-  });
+  readonly counts = computed(() => ({...this.store.commentsSummary(),course:this.comments().filter(x=>x.contextType==='course').length,blog:this.comments().filter(x=>x.contextType==='blog').length}));
   readonly roleOptions: CustomSelectOption[] = [
     { value: '', label: 'Tất cả vai trò' },
     { value: 'Học viên', label: 'Học viên' },
@@ -174,14 +166,17 @@ export class ContentCommentsComponent {
         || item.contextTitle.toLowerCase().includes(term);
       return matches
         && (!role || item.authorRole === role)
-        && (!status || item.status === status)
+        && (!status || (status === 'pending' ? item.status === 'pending' || item.status === 'flagged'
+          : status === 'flagged' ? item.status === 'flagged' || item.safety === 'reported'
+          : item.status === status))
         && (timeRange === 'all' || Date.parse(item.createdAt) >= cutoff)
         && (!authorFilters.length || authorFilters.includes(item.author))
         && (!contextFilters.length || contextFilters.includes(item.contextTitle))
         && (!sourceFilters.length || sourceFilters.includes(item.contextType))
         && (!timeFilters.length || timeFilters.includes(formatDate(item.createdAt)))
         && (!safetyFilters.length || safetyFilters.includes(item.safety))
-        && (!statusFilters.length || statusFilters.includes(item.status));
+        && (!statusFilters.length || statusFilters.includes(item.status)
+          || (item.status === 'flagged' && statusFilters.includes('pending')));
     });
     const columnSort = this.columnSort();
     if (columnSort) {
@@ -194,15 +189,17 @@ export class ContentCommentsComponent {
       return sort === 'oldest' ? -delta : delta;
     });
   });
-  readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
-  readonly visible = computed(() => this.filtered().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize));
-  readonly pagination = computed(() => paginationRange(this.page(), this.pages()));
+  readonly pages = computed(() => this.resultPages());
+  readonly visible = computed(() => this.filtered());
+  readonly pagination = computed(() => paginationRange(Math.min(this.page(),this.pages()), this.pages()));
   readonly rangeLabel = computed(() => {
-    const total = this.filtered().length;
+    const total = this.resultTotal();
     if (!total) return 'Không có bình luận nào';
     const start = (this.page() - 1) * this.pageSize + 1;
-    return `Hiển thị ${start} - ${Math.min(start + this.pageSize - 1, total)} của ${total} bình luận`;
+    return `Hiển thị ${start} - ${start + this.visible().length - 1} của ${total} bình luận`;
   });
+  private async loadPage():Promise<void>{const seq=++this.commentRequest;try{const result=await this.store.loadCommentPage({page:this.page(),pageSize:this.pageSize,q:this.search(),status:this.status(),role:this.role(),timeRange:this.timeRange()});if(seq===this.commentRequest){this.resultTotal.set(result.total);this.resultPages.set(result.pages);}}catch{this.notify('Không thể tải danh sách bình luận.','error');}}
+  changePage(page:number):void{if(page<1||page>this.resultPages()||page===this.page())return;this.page.set(page);void this.loadPage();}
   readonly detail = computed(() => this.comments().find(item => item.id === this.detailId()) ?? null);
   readonly replyTarget = computed(() => this.comments().find(item => item.id === this.replyId()) ?? null);
   readonly allVisibleSelected = computed(() => {
@@ -277,10 +274,10 @@ export class ContentCommentsComponent {
   @HostListener('window:scroll')
   onMenuScroll(): void { this.closeRowMenu(); }
 
-  setSearch(value: string): void { this.search.set(value); this.page.set(1); }
-  setRole(value: string): void { this.role.set(value); this.page.set(1); }
-  setTime(value: string): void { this.timeRange.set(value as '7d' | '30d' | '90d' | 'all'); this.page.set(1); }
-  setStatus(value: string): void { this.status.set(value); this.page.set(1); this.selected.set(new Set()); }
+  setSearch(value: string): void { this.search.set(value); this.page.set(1); void this.loadPage(); }
+  setRole(value: string): void { this.role.set(value); this.page.set(1); void this.loadPage(); }
+  setTime(value: string): void { this.timeRange.set(value as '7d' | '30d' | '90d' | 'all'); this.page.set(1); void this.loadPage(); }
+  setStatus(value: string): void { this.status.set(value); this.page.set(1); this.selected.set(new Set()); void this.loadPage(); }
   setSort(value: string): void { this.sort.set(value as 'newest' | 'oldest' | 'reports'); this.columnSort.set(null); }
 
   clearFilters(): void {
@@ -293,6 +290,7 @@ export class ContentCommentsComponent {
     Object.values(this.columnFilters).forEach(filter => filter.set([]));
     this.page.set(1);
     this.selected.set(new Set());
+    void this.loadPage();
   }
 
   filterFor(key: CommentColumn): readonly string[] {
@@ -303,6 +301,7 @@ export class ContentCommentsComponent {
     this.columnFilters[key].set(values);
     this.page.set(1);
     this.selected.set(new Set());
+    void this.loadPage();
   }
 
   sortFor(key: CommentColumn): string {
@@ -316,6 +315,7 @@ export class ContentCommentsComponent {
       ? null
       : { column: key, direction: direction as 'asc' | 'desc' });
     this.page.set(1);
+    void this.loadPage();
   }
 
   private sortValue(item: ContentComment, column: CommentColumn): string | number {
@@ -355,7 +355,9 @@ export class ContentCommentsComponent {
   closeDetail(): void { this.detailId.set(null); }
 
   async changeStatus(item: ContentComment, status: CommentStatus): Promise<void> {
-    if (!await this.write(() => this.store.updateComment(item.id, { status }, `Chuyển trạng thái sang ${COMMENT_STATUS_LABELS[status]}.`))) return;
+    if (status === 'visible' || status === 'hidden') {
+      if (!await this.write(() => this.store.moderateComment(item.id, status, `Chuyển trạng thái sang ${COMMENT_STATUS_LABELS[status]}.`))) return;
+    } else if (!await this.write(() => this.store.updateComment(item.id, { status }, `Chuyển trạng thái sang ${COMMENT_STATUS_LABELS[status]}.`))) return;
     this.notify(`Đã chuyển bình luận ${item.id} sang ${COMMENT_STATUS_LABELS[status]}.`, 'success');
   }
 
@@ -508,5 +510,5 @@ export class ContentCommentsComponent {
   number = number;
   dateTime = formatDateTime;
   ago = relativeTime;
-  truncate(value: string): string { return value.length > 90 ? `${value.slice(0, 90)}…` : value; }
+  truncate(value: string): string { const plain=value.replace(/<\s*br\s*\/?>/gi,' ').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/\s+/g,' ').trim();return plain.length>90?`${plain.slice(0,90)}…`:plain; }
 }

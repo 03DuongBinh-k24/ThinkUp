@@ -237,7 +237,7 @@ export class CartComponent implements OnInit {
     this.voucherError.set('');
 
     this.commerce
-      .validateVoucher(code, this.saleSubtotal())
+      .validateVoucher(code, this.saleSubtotal(), this.selectedItems().map(item => item.courseId || item.id))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: result => {
@@ -299,7 +299,7 @@ export class CartComponent implements OnInit {
 
     const sequence = ++this.voucherSequence;
     this.commerce
-      .validateVoucher(voucher.code, this.saleSubtotal())
+      .validateVoucher(voucher.code, this.saleSubtotal(), this.selectedItems().map(item => item.courseId || item.id))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: result => {

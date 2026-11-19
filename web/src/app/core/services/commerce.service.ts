@@ -265,11 +265,11 @@ export class CommerceService {
   }
 
   /** POST /api/user/cart/voucher/validate */
-  validateVoucher(code: string, eligibleSubtotal: number): Observable<VoucherValidateResult> {
+  validateVoucher(code: string, eligibleSubtotal: number, courseIds: string[] = []): Observable<VoucherValidateResult> {
     return this.http
       .post<{ success: boolean; data: VoucherValidateResult }>(
         `${this.apiUrl}/user/cart/voucher/validate`,
-        { code, eligibleSubtotal },
+        { code, eligibleSubtotal, ...(courseIds.length ? { courseIds } : {}) },
         { withCredentials: true },
       )
       .pipe(map(res => res.data));

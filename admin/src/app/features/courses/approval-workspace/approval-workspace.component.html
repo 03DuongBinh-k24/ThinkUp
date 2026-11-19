@@ -38,13 +38,13 @@
           </button>
           @if (!isCollapsed(chapter.no)) {
             @for (lesson of chapter.lessons; track lesson.id) {
-              <div class="lesson-row" [class.is-selected]="lesson.id === 'py-3-1'">
+              <button class="lesson-row" [class.is-selected]="lesson.id === selectedLesson().id" type="button" (click)="selectLesson(lesson)">
                 <span class="lesson-icon" aria-hidden="true">{{ icon(lesson.kind) }}</span>
                 <span class="lesson-title">{{ lesson.title }}</span>
                 @if (lesson.trial) {
                   <span class="badge pending lesson-badge">Học thử</span>
                 }
-              </div>
+              </button>
             }
           }
         }
@@ -68,15 +68,15 @@
         }
       </div>
       <div class="workspace-actions">
-        <button class="button danger" type="button" (click)="rejectOpen.set(true)">Từ chối xuất bản</button>
-        <button class="button" type="button" (click)="supplementOpen.set(true)">Yêu cầu bổ sung</button>
+        <button class="button danger" type="button" [disabled]="decisionPending()" (click)="rejectOpen.set(true)">Từ chối xuất bản</button>
+        <button class="button" type="button" [disabled]="decisionPending()" (click)="supplementOpen.set(true)">Yêu cầu bổ sung</button>
         <button
           class="button primary"
           type="button"
-          [disabled]="!allDone()"
+          [disabled]="!allDone() || decisionPending()"
           [title]="allDone() ? '' : 'Hoàn tất đủ ' + checklist().length + ' tiêu chí để phê duyệt'"
           (click)="approve()"
-        >✓ Phê duyệt &amp; Phát hành</button>
+        >{{ decisionPending() ? 'Đang ghi nhận…' : '✓ Phê duyệt & Phát hành' }}</button>
         <button class="button link" type="button" (click)="historyOpen.set(true)">◷ Lịch sử duyệt</button>
       </div>
     </section>
@@ -108,9 +108,12 @@
               <span class="badge neutral">CHẾ ĐỘ HỌC VIÊN</span>
             </div>
             <div class="landing-hero">
-              <div class="trailer">
-                <span>VIDEO GIỚI THIỆU</span>
-                <button class="play" type="button" aria-label="Phát video giới thiệu" (click)="notify('Đang phát video giới thiệu khóa học.', 'info')">▶</button>
+              <div class="course-cover">
+                @if (ws.landing.coverUrl) {
+                  <img [src]="ws.landing.coverUrl" [alt]="'Ảnh bìa khóa học ' + ws.title" />
+                } @else {
+                  <span>Chưa có ảnh bìa khóa học</span>
+                }
               </div>
               <div class="landing-body">
                 <h4>{{ ws.title }}</h4>
@@ -183,30 +186,35 @@
               </div>
             </div>
             <div class="video-frame">
-              <div style="text-align: center; padding: 16px">
-                <strong style="display: block; margin-bottom: 14px; color: #dbe9fb; font-size: 13px">{{ ws.title }}</strong>
-                <button class="play" type="button" aria-label="Phát bài giảng" (click)="notify('Đang phát bài giảng mẫu trong trình kiểm định.', 'info')">▶</button>
-              </div>
-              <div class="progress" aria-hidden="true"><i [style.width.%]="ws.video.progress"></i></div>
+              @if (selectedLesson().preview?.videoUrl; as videoUrl) {
+                <video class="review-video" controls preload="metadata" [src]="videoUrl" [attr.aria-label]="selectedLesson().title" (error)="onVideoError()" (loadeddata)="videoPreviewError.set(false)"></video>
+                @if (videoPreviewError()) {
+                  <div class="video-error" role="status">
+                    <strong>Trình duyệt không phát được video này.</strong>
+                    <a class="button small" [href]="videoUrl" target="_blank" rel="noopener noreferrer">Mở video trực tiếp</a>
+                  </div>
+                }
+              } @else if (selectedLesson().kind === 'reading' && selectedLesson().preview?.bodyHtml; as articleHtml) {
+                <article class="reading-preview" [innerHTML]="articleHtml"></article>
+              } @else {
+                <div class="content-placeholder">{{ selectedLesson().kind === 'video' ? 'Bài học chưa có đường dẫn video.' : 'Chọn một bài video hoặc bài đọc trong cấu trúc khóa học.' }}</div>
+              }
             </div>
             <div class="video-meta">
-              <span>▶ {{ ws.video.playback }}</span>
+              <span>{{ selectedLesson().title }}</span>
               <span class="spacer"></span>
-              <span>▰ HD</span>
-              <span>1×</span>
-              <span aria-hidden="true">⚙</span>
+              <span>{{ selectedLesson().preview?.duration }} phút</span>
             </div>
             <div class="lesson-split">
               <div>
                 <h3 style="margin: 0 0 6px; color: #17345d; font-size: 14px">Mô tả bài học</h3>
-                <p style="margin: 0; color: #3c5577; font-size: 13px; line-height: 1.65">{{ ws.video.description }}</p>
+                <p style="margin: 0; color: #3c5577; font-size: 13px; line-height: 1.65">{{ selectedLesson().kind === 'reading' ? 'Nội dung bài đọc được hiển thị ở khung xem trước.' : ws.video.description }}</p>
               </div>
               <div>
                 <h3 style="margin: 0 0 6px; color: #17345d; font-size: 14px">Tài liệu đính kèm</h3>
-                <div class="attachment-row">
-                  <span class="file-chip pdf" aria-hidden="true">PDF</span>
-                  <span>{{ ws.video.attachments }}</span>
-                </div>
+                @for (file of selectedLesson().preview?.documents ?? []; track file.id) {
+                  <div class="attachment-row"><span class="file-chip pdf" aria-hidden="true">FILE</span><span>{{ file.name }} · {{ file.type }}</span></div>
+                } @empty { <span class="cell-sub">Bài học không có tài liệu đính kèm.</span> }
               </div>
             </div>
             <div class="divider"></div>
@@ -243,8 +251,8 @@
               <h3>{{ ws.ide.title }}</h3>
               <span class="badge info">Độ khó · {{ ws.ide.difficulty }}</span>
             </div>
-            <p class="question-index">ĐỀ BÀI</p>
-            <p class="question-text" style="font-size: 13px; margin: 4px 0 0">{{ ws.ide.prompt }}</p>
+            <p class="question-index">ĐỀ BÀI · {{ selectedLesson().title }}</p>
+            <p class="question-text" style="font-size: 13px; margin: 4px 0 0">{{ selectedLesson().preview?.requirements || ws.ide.prompt }}</p>
             <div class="code-toolbar">
               <div class="lang">
                 <app-custom-select
@@ -269,7 +277,7 @@
                     <div>{{ $index + 1 }}</div>
                   }
                 </div>
-                <pre>{{ ws.ide.code }}</pre>
+                <pre>{{ selectedLesson().preview?.sampleCode || ws.ide.code }}</pre>
               </div>
             </div>
             @if (selectedIds().length) {
@@ -306,7 +314,7 @@
                 </tbody>
               </table>
             </div>
-            <div class="run-result" style="margin-top: 10px">✓ {{ ws.ide.result }}</div>
+            @if (selectedLesson().preview?.expectedOutput) { <div class="run-result" style="margin-top: 10px">Kết quả mong đợi: {{ selectedLesson().preview?.expectedOutput }}</div> }
             <button class="button" type="button" style="margin-top: 10px" (click)="nextCodeLesson()">Chuyển sang bài code tiếp theo</button>
           </section>
           <aside class="workspace-side">
@@ -321,23 +329,24 @@
           <section class="section-card quiz-preview">
             <div class="quiz-head">
               <h3>{{ ws.quiz.title }}</h3>
-              <span class="badge info">{{ ws.quiz.question.total }} câu hỏi</span>
+              <span class="badge info">{{ selectedLesson().preview?.questionCount ?? ws.quiz.question.total }} câu hỏi</span>
             </div>
-            <span class="question-index">{{ questionIndex() }}</span>
-            <p class="question-text">{{ ws.quiz.question.prompt }}</p>
-            @for (answer of ws.quiz.question.answers; track answer.letter) {
-              <div class="quiz-option" [class.is-correct]="answer.correct">
-                <span class="quiz-letter">{{ answer.letter }}</span>
-                <span>{{ answer.text }}</span>
-                @if (answer.correct) {
-                  <span class="badge success answer-badge">✓</span>
+            @for (question of selectedQuizQuestions().length ? selectedQuizQuestions() : [ws.quiz.question]; track question.id) {
+              <section class="quiz-question-card">
+                <span class="question-index">CÂU {{ question.index }} / {{ question.total }}</span>
+                <p class="question-text">{{ question.prompt }}</p>
+                @for (answer of question.answers; track answer.letter) {
+                  <div class="quiz-option" [class.is-correct]="answer.correct">
+                    <span class="quiz-letter">{{ answer.letter }}</span>
+                    <span>{{ answer.text }}</span>
+                    @if (answer.correct) { <span class="badge success answer-badge">✓</span> }
+                  </div>
                 }
-              </div>
+                @if (question.correctLetter || question.explanation) {
+                  <div class="explanation"><strong>ĐÁP ÁN ĐÚNG: {{ question.correctLetter }}</strong> {{ question.explanation }}</div>
+                }
+              </section>
             }
-            <div class="explanation">
-              <strong>ĐÁP ÁN ĐÚNG: {{ correctAnswer() }}</strong>
-              {{ ws.quiz.question.explanation }}
-            </div>
           </section>
           <aside class="workspace-files">
             <section class="section-card">
@@ -395,8 +404,16 @@
     }
   } @else {
     <section class="empty">
-      <strong>Không tìm thấy hồ sơ duyệt</strong>
-      <p>Yêu cầu có thể đã được xử lý hoặc đường dẫn không còn hiệu lực.</p>
+      @if (workspaceLoading()) {
+        <strong>Đang tải chi tiết khóa học</strong>
+        <p>Đang lấy thông tin khóa học và giáo trình để thẩm định.</p>
+      } @else if (workspaceError()) {
+        <strong>Không tải được chi tiết khóa học</strong>
+        <p>Hồ sơ có thể đã được xử lý hoặc có lỗi kết nối. Quay lại hàng đợi và thử mở lại.</p>
+      } @else {
+        <strong>Không tìm thấy hồ sơ duyệt</strong>
+        <p>Yêu cầu có thể đã được xử lý hoặc đường dẫn không còn hiệu lực.</p>
+      }
       <button class="button" type="button" (click)="back()">Quay lại hàng đợi</button>
     </section>
   }

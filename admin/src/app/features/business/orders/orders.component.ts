@@ -70,6 +70,9 @@ export class OrdersComponent {
   readonly dateSorts = DATE_SORT_OPTIONS;
   readonly columnSort = signal<{ column: OrderColumn; direction: 'asc' | 'desc' } | null>(null);
   readonly page = signal(1);
+  readonly resultTotal = signal(0);
+  readonly resultPages = signal(1);
+  private pageRequest = 0;
   readonly selected = signal<BusinessOrder | null>(null);
   readonly downloadingInvoiceId = signal<string | null>(null);
   readonly invoiceError = signal('');
@@ -123,9 +126,9 @@ export class OrdersComponent {
   /** Số dòng mỗi trang đọc từ tham số hệ thống `orders_per_page` (mặc định 8). */
   private readonly pageSizeService = inject(AdminPageSizeService);
   get pageSize(): number { return this.pageSizeService.pageSize(); }
-  readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
+  readonly pages = computed(() => this.resultPages());
   readonly pagination = computed(() => paginationItems(this.page(), this.pages()));
-  readonly visible = computed(() => this.filtered().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize));
+  readonly visible = computed(() => this.orders());
   readonly dateLabel = computed(() => this.from() || this.to()
     ? `${this.shortDate(this.from()) || '...'} - ${this.shortDate(this.to()) || '...'}`
     : 'Tất cả');
@@ -138,6 +141,7 @@ export class OrdersComponent {
   readonly bulkCancelIds = signal<readonly string[] | null>(null);
   readonly toast = signal('');
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchTimer?: ReturnType<typeof setTimeout>;
   readonly selectedIds = computed(() => [...this.selection()]);
   readonly allVisibleSelected = computed(() => {
     const items = this.visible();
@@ -172,19 +176,24 @@ export class OrdersComponent {
     void this.reload();
     this.destroyRef.onDestroy(() => this.removeDatePopoverListeners());
     this.destroyRef.onDestroy(() => { if (this.copiedTimeout) clearTimeout(this.copiedTimeout); });
-    this.destroyRef.onDestroy(() => { if (this.toastTimer) clearTimeout(this.toastTimer); });
+    this.destroyRef.onDestroy(() => { if (this.toastTimer) clearTimeout(this.toastTimer); if(this.searchTimer)clearTimeout(this.searchTimer); });
   }
 
   /** Tải lại danh sách và KPI theo bộ lọc hiện tại (dùng cho lần đầu và nút thử lại). */
   async reload(): Promise<void> {
-    await this.data.reloadOrders({
+    const sequence=++this.pageRequest;
+    try {
+    const result=await this.data.loadOrdersPage({
       q: this.search().trim() || undefined,
       status: this.status() || undefined,
       method: this.method() || undefined,
       from: this.from() || undefined,
       to: this.to() || undefined,
-      sort: this.sort()
+      sort: this.sort(), page:this.page(), pageSize:this.pageSize
     });
+    if(sequence!==this.pageRequest)return;
+    this.resultTotal.set(result.total);this.resultPages.set(Math.max(1,Math.ceil(result.total/this.pageSize)));
+    } catch { /* Shared load error is rendered above the table. */ }
   }
 
   toggleDatePopover(): void {
@@ -233,15 +242,15 @@ export class OrdersComponent {
     this.datePopoverPosition.set({ left, top, maxHeight });
   }
 
-  setStatus(value: OrderStatus | ''): void { this.status.set(value); this.page.set(1); }
-  setMethod(value: string): void { this.method.set(value); this.page.set(1); }
+  setStatus(value: OrderStatus | ''): void { this.status.set(value); this.page.set(1); void this.reload(); }
+  setMethod(value: string): void { this.method.set(value); this.page.set(1); void this.reload(); }
   statusFilterLabel(): string { return this.statusOptions.find(option => option.value === this.status())?.label ?? 'Tất cả trạng thái'; }
-  setSearch(value: string): void { this.search.set(value); this.page.set(1); }
+  setSearch(value: string): void { this.search.set(value); this.page.set(1); clearTimeout(this.searchTimer); this.searchTimer=setTimeout(()=>void this.reload(),250); }
   /** Chỉnh ngày bắt đầu trong popover, chưa áp dụng cho bộ lọc. */
   selectFrom(value: string): void { this.fromDraft.set(value); if (this.toDraft() && value > this.toDraft()) this.toDraft.set(value); this.periodDraft.set(''); }
   /** Chỉnh ngày kết thúc trong popover, chưa áp dụng cho bộ lọc. */
   selectTo(value: string): void { this.toDraft.set(value); if (this.fromDraft() && value < this.fromDraft()) this.fromDraft.set(value); this.periodDraft.set(''); }
-  toggleSort(): void { this.sort.update(value => value === 'newest' ? 'oldest' : 'newest'); this.columnSort.set(null); this.page.set(1); }
+  toggleSort(): void { this.sort.update(value => value === 'newest' ? 'oldest' : 'newest'); this.columnSort.set(null); this.page.set(1); void this.reload(); }
   private today(): string {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -278,6 +287,7 @@ export class OrdersComponent {
     this.activePeriod.set(this.periodDraft());
     this.page.set(1);
     this.closeDatePopover();
+    void this.reload();
   }
   /** Xoá khoảng thời gian đang lọc. */
   clearDateRange(): void {
@@ -288,6 +298,7 @@ export class OrdersComponent {
     this.toDraft.set('');
     this.periodDraft.set('all');
     this.page.set(1);
+    void this.reload();
   }
   clear(): void {
     this.search.set('');
@@ -310,6 +321,7 @@ export class OrdersComponent {
     else if (kind === 'status') this.statusColumnFilters.set(values);
     else this.dateColumnFilters.set(values);
     this.page.set(1);
+    void this.reload();
   }
   sortFor(key: OrderColumn): string {
     const current = this.columnSort();
@@ -321,6 +333,7 @@ export class OrdersComponent {
       ? null
       : { column: key, direction: direction as 'asc' | 'desc' });
     this.page.set(1);
+    void this.reload();
   }
   private sortValue(item: BusinessOrder, column: OrderColumn): string | number {
     switch (column) {

@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import { getMongoDb } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
 import { recordAuditLog } from '../auth/auth.admin.js';
+import { getAdminPayoutSummary } from '../business/payouts.admin.js';
 
 const FAIL = (message, status = 400, code = 'DASHBOARD_INVALID') => Object.assign(new Error(message), { status, code });
 const MAX_RANGE_DAYS = 366;
@@ -67,16 +68,17 @@ export async function getAdminDashboardOverview(query = {}, options = {}) {
   const transactions = db.collection('payment_transactions');
   const complaints = db.collection('support_complaints');
   const tickets = db.collection('support_tickets');
-  const payouts = db.collection('payout_requests');
-  // "Trễ hạn duyệt" = hồ sơ chờ duyệt đã nằm quá 14 ngày (mốc nghiệp vụ của Action Center).
-  const overdueCutoff = new Date(current.end.getTime() - 14 * DAY);
+  // Action Center is a live queue, independent of the revenue date range.
+  const now = options.now || new Date();
+  // "Trễ hạn duyệt" = hồ sơ đang chờ thẩm định quá 14 ngày.
+  const overdueCutoff = new Date(now.getTime() - 14 * DAY);
   const openComplaintFilter = { status: { $in: ['pending', 'reviewing', 'waiting_instructor'] } };
   const [
     usersCurrent, usersPrevious, usersActive, usersNew,
     courseTotal, courseNew, courseStates,
     paidTransactions,
-    payoutsPending, payoutsLargePending,
-    complaintsOpen, overdueCourses, overdueTickets, overdueComplaints,
+    payoutSummary, complaintsOpen,
+    reviewQueue, overdueTicketRows, overdueComplaintRows,
   ] = await Promise.all([
     users.countDocuments({ email_verified: true, created_at: { $lte: current.end } }),
     users.countDocuments({ email_verified: true, created_at: { $lte: current.previousEnd } }),
@@ -85,17 +87,23 @@ export async function getAdminDashboardOverview(query = {}, options = {}) {
     courses.countDocuments({}),
     courses.countDocuments({ $or: [{ created_at: { $gte: current.start, $lte: current.end } }, { createdAt: { $gte: current.start, $lte: current.end } }] }),
     Promise.all(['published', 'pending_review', 'hidden', 'draft'].map(async status => [status, await courses.countDocuments({ status })])),
-    transactions.find({ status: { $in: ['success', 'completed', 'pending'] } }, { projection: { status: 1, paid_at: 1, created_at: 1, actual_paid_amount: 1, amount: 1 } }).toArray(),
-    payouts.countDocuments({ status: 'pending', deleted_at: { $exists: false } }),
-    payouts.countDocuments({ status: 'pending', amount: { $gte: 20000000 }, deleted_at: { $exists: false } }),
+    // Timestamps are stored as both BSON Date and strings in existing data.
+    // Filter by time below in JS after normalizing them with ts().
+    transactions.find({ status: { $in: ['success', 'completed', 'paid', 'pending'] } }, { projection: { status: 1, paid_at: 1, created_at: 1, actual_paid_amount: 1, amount: 1 } }).toArray(),
+    getAdminPayoutSummary({}, { db }),
     complaints.countDocuments(openComplaintFilter),
-    courses.countDocuments({ $or: [
-      { status: 'pending_review', created_at: { $lte: overdueCutoff } },
-      { review_status: { $in: ['pending_review', 'in_review', 'changes_requested'] }, review_submitted_at: { $lte: overdueCutoff } },
-    ] }),
-    tickets.countDocuments({ status: { $ne: 'closed' }, due_at: { $lte: current.end } }),
-    complaints.countDocuments({ ...openComplaintFilter, due_at: { $lte: current.end } }),
+    courses.find({}, { projection: { status: 1, review_status: 1, review_submitted_at: 1, submitted_at: 1, created_at: 1, createdAt: 1 } }).toArray(),
+    tickets.find({ status: { $ne: 'closed' } }, { projection: { response_due_at: 1 } }).toArray(),
+    complaints.find(openComplaintFilter, { projection: { due_at: 1 } }).toArray(),
   ]);
+  const overdueCourses = reviewQueue.filter(course =>
+    ['pending_review', 'in_review', 'changes_requested'].includes(course.review_status || (course.status === 'pending_review' ? 'pending_review' : ''))
+    && (() => { const submitted = ts(course.review_submitted_at || course.submitted_at || (course.status === 'pending_review' ? course.created_at || course.createdAt : null)); return submitted && submitted <= overdueCutoff; })()
+  ).length;
+  const overdueTickets = overdueTicketRows.filter(ticket => { const due = ts(ticket.response_due_at); return due && due < now; }).length;
+  const overdueComplaints = overdueComplaintRows.filter(complaint => { const due = ts(complaint.due_at); return due && due < now; }).length;
+  const payoutsPending = payoutSummary.kpi.pendingCount;
+  const payoutsLargePending = payoutSummary.kpi.largePendingCount;
   const roomDocs = await db.collection('study_rooms').find({ status: { $in: ['active', 'ongoing', 'live', 'focus', 'break'] } }, { projection: { capacity: 1, maxUsers: 1, currentUsers: 1, participants: 1 } }).toArray();
   const online = roomDocs.reduce((sum, room) => sum + Math.max(room.currentUsers || 0, new Set((room.participants || []).map(p => String(p.userId))).size), 0);
   const capacity = roomDocs.reduce((sum, room) => sum + (room.capacity || room.maxUsers || 0), 0);
@@ -140,12 +148,14 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
   const grain = query.grain || 'month';
   if (!['day', 'week', 'month', 'quarter', 'year'].includes(grain)) throw FAIL('Độ chia biểu đồ không hợp lệ.');
   const [transactions, enrollments, progress, courses, reviews, payouts] = await Promise.all([
-    db.collection('payment_transactions').find({ status: { $in: ['success', 'completed'] } }).toArray(),
+    // Existing payment records use both BSON Date and string timestamps. Do
+    // not prefilter by BSON date here or legacy string timestamps disappear.
+    db.collection('payment_transactions').find({ status: { $in: ['success', 'completed', 'paid'] } }, { projection: { status: 1, paid_at: 1, created_at: 1, actual_paid_amount: 1, amount: 1, order_summary: 1, courses: 1 } }).toArray(),
     db.collection('user_enrollments').find({ status: { $ne: 'revoked' } }).toArray(),
-    db.collection('user_course_progress').find({}).toArray(),
-    db.collection('courses').find({}).toArray(),
-    db.collection('course_reviews').find({}).toArray(),
-    db.collection('payout_requests').find({ status: 'paid' }).toArray(),
+    db.collection('user_course_progress').find({}, { projection: { user_id: 1, course_id: 1, progress_percentage: 1, progress: 1 } }).toArray(),
+    db.collection('courses').find({}, { projection: { _id: 1, course_id: 1, id: 1, title: 1, instructor_id: 1 } }).toArray(),
+    db.collection('course_reviews').find({}, { projection: { course_id: 1, rating: 1 } }).toArray(),
+    db.collection('payout_requests').find({ status: 'paid', paid_at: { $gte: current.start, $lte: current.end } }, { projection: { paid_at: 1, net_amount: 1, amount: 1, paid_amount: 1 } }).toArray(),
   ]);
   // paid_at trong DB trộn Date, ISO string và "YYYY-MM-DD HH:mm:ss" → lọc cửa sổ thời gian trong JS.
   const inPeriod = transactions.filter(tx => sameTs(tx.paid_at || tx.created_at, { start: current.start, end: current.end }));
@@ -167,14 +177,17 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
     const key = keyFor(tx.paid_at || tx.created_at); if (!key) continue;
     const bucket = buckets.get(key) || { period: key, original: 0, marketplace: 0, payout: 0 };
     const summary = typeof tx.order_summary === 'string' ? (() => { try { return JSON.parse(tx.order_summary); } catch { return {}; } })() : tx.order_summary || {};
-    const items = summary.courses || tx.courses || [];
+    const items = Array.isArray(summary.courses) && summary.courses.length ? summary.courses : (tx.courses || []);
     const amount = tx.actual_paid_amount ?? tx.amount ?? summary.total ?? 0;
     const totalItems = items.reduce((sum, item) => sum + Number(item.price || item.original_price || 0), 0);
     for (const item of items) {
-      const course = courseById.get(String(item.id || item.course_id || ''));
+      const courseIds = [item.id, item.course_id, item.courseId, item._id].filter(value => value != null).map(String);
+      const course = courseIds.map(id => courseById.get(id)).find(Boolean);
       const itemGross = Number(item.price || item.original_price || 0);
       const itemAmount = totalItems ? amount * itemGross / totalItems : 0;
-      if (course?.instructor_id) bucket.marketplace += itemAmount;
+      // The order snapshot is the source of truth for the sale. Older course IDs
+      // may no longer resolve against the current course document.
+      if (item.instructor_id || course?.instructor_id) bucket.marketplace += itemAmount;
       else bucket.original += itemAmount;
     }
     buckets.set(key, bucket);

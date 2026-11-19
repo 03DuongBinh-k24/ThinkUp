@@ -403,7 +403,7 @@ export class CheckoutComponent implements OnInit {
     this.voucherError.set('');
 
     this.commerce
-      .validateVoucher(code, this.saleSubtotal())
+      .validateVoucher(code, this.saleSubtotal(), this.courses().map(course => course.courseId || course.id))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: result => {

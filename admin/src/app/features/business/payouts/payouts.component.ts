@@ -113,6 +113,9 @@ export class PayoutsComponent {
   readonly dialog = signal<'details' | 'review' | 'reject' | null>(null);
   private readonly returnFromReject = signal<'details' | 'review'>('details');
   readonly page = signal(1);
+  readonly resultTotal = signal(0);
+  readonly resultPages = signal(1);
+  private payoutRequest = 0;
   /** Số dòng mỗi trang đọc từ tham số hệ thống `orders_per_page` (mặc định 8). */
   private readonly pageSizeService = inject(AdminPageSizeService);
   get pageSize(): number { return this.pageSizeService.pageSize(); }
@@ -140,44 +143,20 @@ export class PayoutsComponent {
   readonly error = signal('');
   readonly toast = signal('');
   readonly copiedId = signal(false);
-  readonly filtered = computed(() => {
-    const items = this.payouts().filter(item => {
-      const query = this.search().trim().toLocaleLowerCase('vi-VN');
-      return (!query || [item.id, item.instructor, item.email].some(value => value.toLocaleLowerCase('vi-VN').includes(query)))
-        && (!this.status() || item.status === this.status())
-        && (this.limitMin() === null || item.amount >= this.limitMin()!)
-        && (this.limitMax() === null || item.amount <= this.limitMax()!)
-        && (!this.taxOnly() || (item.taxAmount ?? 0) > 0)
-        && this.matchesColumn(this.instructorColumnFilters(), item.instructor)
-        && this.matchesAmountColumn(item.amount)
-        && this.matchesColumn(this.bankColumnFilters(), item.bank)
-        && (!this.dateColumnFilters().length || this.dateColumnFilters().includes(this.dayOf(item.submittedAt)))
-        && (!this.statusColumnFilters().length || this.statusColumnFilters().includes(item.status))
-        && matchesDates(this.paidMonthOnly() && item.paidAt ? item.paidAt : item.submittedAt, this.from(), this.to());
-    });
-    const columnSort = this.columnSort();
-    if (columnSort) {
-      const factor = columnSort.direction === 'asc' ? 1 : -1;
-      return [...items].sort((a, b) => compareSortValues(this.sortValue(a, columnSort.column), this.sortValue(b, columnSort.column)) * factor);
-    }
-    return [...items].sort((a, b) => this.sort() === 'newest'
-      ? b.submittedAt.localeCompare(a.submittedAt)
-      : a.submittedAt.localeCompare(b.submittedAt));
-  });
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
-  readonly currentPage = computed(() => Math.min(this.page(), this.totalPages()));
+  readonly totalPages = computed(() => this.resultPages());
+  readonly currentPage = computed(() => Math.min(this.page(), this.resultPages()));
   readonly pagination = computed(() => paginationItems(this.currentPage(), this.totalPages()));
-  readonly visible = computed(() => this.filtered().slice((this.currentPage() - 1) * this.pageSize, this.currentPage() * this.pageSize));
-  private readonly kpiRows = computed(() => this.payoutsAreDemo() ? this.payouts() : this.payouts().filter(row => !row.isDemo));
+  readonly visible = computed(() => this.payouts());
+  readonly filtered = computed(() => this.payouts());
   net(item: PayoutRequest): number | null {
     return item.netAmount !== undefined ? item.netAmount : item.taxAmount === null ? null : item.amount - item.taxAmount;
   }
-  readonly pending = computed(() => this.payoutSummary()?.pendingCount ?? this.kpiRows().filter(item => item.status === 'pending').length);
-  readonly largePending = computed(() => this.payoutSummary()?.largePendingCount ?? this.kpiRows().filter(item => item.status === 'pending' && item.amount >= 20000000).length);
-  readonly awaitingAmount = computed(() => this.payoutSummary()?.awaitingDisbursementAmount ?? this.kpiRows().filter(item => item.status === 'approved').reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
-  readonly paidAmount = computed(() => this.payoutSummary()?.paidThisMonthAmount ?? this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
-  readonly paidCount = computed(() => this.payoutSummary()?.paidThisMonthCount ?? this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length);
-  readonly taxAmount = computed(() => this.payoutSummary()?.taxDeductedThisMonthAmount ?? this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (item.taxAmount ?? 0), 0));
+  readonly pending = computed(() => this.payoutSummary()?.pendingCount ?? 0);
+  readonly largePending = computed(() => this.payoutSummary()?.largePendingCount ?? 0);
+  readonly awaitingAmount = computed(() => this.payoutSummary()?.awaitingDisbursementAmount ?? 0);
+  readonly paidAmount = computed(() => this.payoutSummary()?.paidThisMonthAmount ?? 0);
+  readonly paidCount = computed(() => this.payoutSummary()?.paidThisMonthCount ?? 0);
+  readonly taxAmount = computed(() => this.payoutSummary()?.taxDeductedThisMonthAmount ?? 0);
   readonly selection = signal<ReadonlySet<string>>(new Set());
   readonly selectionListOpen = signal(false);
   readonly bulkRejectIds = signal<readonly string[] | null>(null);
@@ -220,21 +199,24 @@ export class PayoutsComponent {
   async reload(): Promise<void> {
     this.loadingPayouts.set(true);
     this.loadFailure.set('');
-    try { await this.data.reloadPayouts(); }
+    try { const sequence=++this.payoutRequest,result=await this.data.loadPayoutsPage({page:this.page(),pageSize:this.pageSize,q:this.search(),status:this.status(),limitMin:this.limitMin(),limitMax:this.limitMax(),from:this.from(),to:this.to(),sort:this.sort(),taxOnly:this.taxOnly(),paidMonthOnly:this.paidMonthOnly()});if(sequence===this.payoutRequest){this.resultTotal.set(result.total);this.resultPages.set(Math.max(1,Math.ceil(result.total/this.pageSize)));} }
     catch (error) { this.loadFailure.set(apiErrorMessage(error)); }
     finally { this.loadingPayouts.set(false); }
   }
   constructor() {
     void this.reload();
+    void this.data.getPayoutSummary().catch(() => undefined);
     this.destroyRef.onDestroy(() => this.removeFilterPopoverListeners());
     this.destroyRef.onDestroy(() => { if (this.bulkToastTimer) clearTimeout(this.bulkToastTimer); });
   }
+  changePage(page: number): void { if (page < 1 || page > this.totalPages() || page === this.page()) return; this.page.set(page); void this.reload(); }
 
   statusLabel(value: PayoutStatus): string { return { pending: 'Chờ duyệt', approved: 'Chờ giải ngân', paid: 'Đã giải ngân', rejected: 'Bị từ chối' }[value]; }
+  setSearch(value: string): void { this.search.set(value); this.page.set(1); void this.reload(); }
   toggleRowActions(id: string): void { this.openActionMenuId.update(current => current === id ? null : id); }
   closeRowActions(): void { this.openActionMenuId.set(null); }
-  setStatus(value: PayoutStatus | ''): void { this.status.set(value); this.taxOnly.set(false); this.paidMonthOnly.set(false); this.page.set(1); }
-  filterFromKpi(value: PayoutStatus): void { this.setStatus(value); this.clearDateRange(); }
+  setStatus(value: PayoutStatus | ''): void { this.status.set(value); this.taxOnly.set(false); this.paidMonthOnly.set(false); this.page.set(1); void this.reload(); }
+  filterFromKpi(value: PayoutStatus): void { this.clearDateRange(); this.setStatus(value); }
   clear(): void {
     this.search.set('');
     this.status.set('');
@@ -255,6 +237,7 @@ export class PayoutsComponent {
     this.sort.set('newest');
     this.columnSort.set(null);
     this.page.set(1);
+    void this.reload();
   }
   /** Áp dụng lựa chọn từ bộ lọc tiêu đề cột và đưa danh sách về trang đầu. */
   setColumnFilter(kind: 'instructor' | 'amount' | 'bank' | 'date' | 'status', values: string[]): void {
@@ -264,6 +247,7 @@ export class PayoutsComponent {
     else if (kind === 'date') this.dateColumnFilters.set(values);
     else this.statusColumnFilters.set(values);
     this.page.set(1);
+    void this.reload();
   }
   sortFor(key: PayoutColumn): string {
     const current = this.columnSort();
@@ -275,6 +259,7 @@ export class PayoutsComponent {
       ? null
       : { column: key, direction: direction as 'asc' | 'desc' });
     this.page.set(1);
+    void this.reload();
   }
   private sortValue(item: PayoutRequest, column: PayoutColumn): string | number {
     switch (column) {
@@ -302,7 +287,7 @@ export class PayoutsComponent {
   dayOf(value: string): string {
     return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(value));
   }
-  toggleSort(): void { this.sort.update(value => value === 'newest' ? 'oldest' : 'newest'); this.columnSort.set(null); this.page.set(1); }
+  toggleSort(): void { this.sort.update(value => value === 'newest' ? 'oldest' : 'newest'); this.columnSort.set(null); this.page.set(1); void this.reload(); }
   formatLimit(value: number): string { return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: this.limitPrecision() }).format(value); }
   /** Rút gọn số tiền cho nút trên toolbar: 1.234.567.890 → "1,2 tỷ". */
   formatLimitCompact(value: number): string {
@@ -410,6 +395,7 @@ export class PayoutsComponent {
     this.limitMax.set(this.limitToVnd(this.limitMaxDraft()));
     this.closeLimitPopover();
     this.page.set(1);
+    void this.reload();
   }
   resetLimit(): void {
     this.limitMin.set(null);
@@ -418,6 +404,7 @@ export class PayoutsComponent {
     this.limitMaxDraft.set(this.limitSliderMax());
     this.closeLimitPopover();
     this.page.set(1);
+    void this.reload();
   }
   /** Chỉnh ngày bắt đầu trong popover, chưa áp dụng cho bộ lọc. */
   selectFrom(value: string): void { this.fromDraft.set(value); if (this.toDraft() && value > this.toDraft()) this.toDraft.set(value); this.rangeDraft.set('custom'); }
@@ -448,6 +435,7 @@ export class PayoutsComponent {
     this.quickRange.set(this.appliedRangeType());
     this.page.set(1);
     this.closeDatePopover();
+    void this.reload();
   }
   /** Xoá khoảng thời gian đang lọc. */
   clearDateRange(): void {
@@ -458,6 +446,7 @@ export class PayoutsComponent {
     this.toDraft.set('');
     this.rangeDraft.set('all');
     this.page.set(1);
+    void this.reload();
   }
   private appliedRangeType(): 'all' | 'today' | 'month' | 'quarter' | 'year' | 'custom' {
     const draft = this.rangeDraft();
@@ -525,9 +514,10 @@ export class PayoutsComponent {
     this.quickRange.set(value === 'all' ? 'all' : value === 'week' ? 'custom' : value as 'today' | 'month' | 'quarter' | 'year');
     this.page.set(1);
     this.closeDatePopover();
+    void this.reload();
   }
-  filterPaid(): void { this.status.set('paid'); this.taxOnly.set(false); this.paidMonthOnly.set(true); this.quickDate('month'); }
-  filterTax(): void { this.status.set('paid'); this.taxOnly.set(true); this.paidMonthOnly.set(true); this.quickDate('month'); }
+  filterPaid(): void { this.status.set('paid'); this.taxOnly.set(false); this.paidMonthOnly.set(true); this.quickDate('month'); void this.reload(); }
+  filterTax(): void { this.status.set('paid'); this.taxOnly.set(true); this.paidMonthOnly.set(true); this.quickDate('month'); void this.reload(); }
   canApprove(item: PayoutRequest): boolean {
     return item.status === 'pending' && this.approvalIssues(item).length === 0;
   }

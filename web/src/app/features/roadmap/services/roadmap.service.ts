@@ -153,6 +153,7 @@ export class RoadmapService {
   private readonly detailsSig = signal<Record<string, RoadmapDetail>>({});
   private readonly myRoadmapSig = signal<MyRoadmapDto | null>(null);
   private readonly loadingSig = signal(false);
+  private backgroundCourseSyncActive = false;
 
   readonly roadmapsList = computed(() => this.roadmapsSig());
   readonly loading = computed(() => this.loadingSig());
@@ -225,15 +226,26 @@ export class RoadmapService {
     this.loadingSig.set(true);
     return forkJoin([
       this.http.get<Envelope<TemplateDto>>(`${this.base}/template/${encodeURIComponent(categoryId)}`),
-      this.loadMyRoadmap().pipe(switchMap(my => {
-        if (!my?.has_roadmap) return of(my);
-        return this.syncCourseProgress().pipe(switchMap(result => result.synced ? this.loadMyRoadmap() : of(my)));
-      }))
+      this.loadMyRoadmap()
     ]).pipe(this.guardAccount,
       map(([response, my]) => {
         if (response.success !== true) throw new Error('Phản hồi cấu trúc lộ trình không hợp lệ.');
         const detail = this.mapTemplate(response.data, my);
         if (detail) this.detailsSig.update(cache => ({ ...cache, [categoryId]: detail }));
+        // Render the template and current personal roadmap first. Course sync
+        // can read several collections, so keep it off the page's critical path.
+        if (detail && my?.has_roadmap && !this.backgroundCourseSyncActive) {
+          this.backgroundCourseSyncActive = true;
+          this.syncCourseProgress().pipe(
+            switchMap(result => result.synced ? this.loadMyRoadmap() : of(null)),
+            catchError(() => of(null))
+          ).subscribe(updated => {
+            this.backgroundCourseSyncActive = false;
+            if (!updated?.has_roadmap || String(updated.category_id) !== categoryId) return;
+            const refreshed = this.mapTemplate(response.data, updated);
+            if (refreshed) this.detailsSig.update(cache => ({ ...cache, [categoryId]: refreshed }));
+          });
+        }
         return detail;
       }),
       tap(() => this.loadingSig.set(false)),

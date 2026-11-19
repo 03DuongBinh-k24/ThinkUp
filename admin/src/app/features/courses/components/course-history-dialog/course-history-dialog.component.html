@@ -4,7 +4,9 @@
   size="md"
   (closed)="close()"
 >
-  @if (history().length) {
+  @if (loading()) {
+    <p role="status">Đang tải lịch sử duyệt…</p>
+  } @else if (history().length) {
     <ol class="history-list">
       @for (entry of history(); track $index) {
         <li>

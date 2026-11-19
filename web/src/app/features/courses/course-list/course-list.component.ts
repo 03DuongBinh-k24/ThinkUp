@@ -96,7 +96,6 @@ export class CourseListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadFilterOptions();
-    this.loadCourses();
   }
 
   loadFilterOptions(): void {
@@ -104,8 +103,13 @@ export class CourseListComponent implements OnInit {
       if (res.success && res.data) {
         this.availableCategories.set(res.data.categories);
         this.availableTags.set(res.data.popularTags);
+        this.courses.set(res.data.courses);
       }
-    }, error: () => this.toast.showToast({ type: 'warning', message: 'Không tải được bộ lọc khóa học.' }) });
+      this.loading.set(false);
+    }, error: () => {
+      this.loading.set(false);
+      this.toast.showToast({ type: 'warning', message: 'Không tải được danh mục khóa học.' });
+    } });
   }
 
   loadCourses(): void {

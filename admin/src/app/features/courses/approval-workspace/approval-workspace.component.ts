@@ -50,15 +50,40 @@ export class ApprovalWorkspaceComponent {
 
   readonly id = toSignal(this.route.paramMap.pipe(map(params => params.get('id') ?? '')), { initialValue: '' });
   readonly workspace = computed(() => this.store.workspaces().find(item => item.approvalId === this.id()) ?? null);
+  readonly workspaceLoading = signal(false);
+  readonly workspaceError = signal(false);
+  readonly decisionPending = signal(false);
+  private loadSequence = 0;
+  private readonly loadWorkspace = effect(() => {
+    const id = this.id();
+    if (!id || this.store.workspaces().some(item => item.approvalId === id)) return;
+    const sequence = ++this.loadSequence;
+    this.workspaceLoading.set(true);
+    this.workspaceError.set(false);
+    void this.store.getApprovalWorkspace(id).then(workspace => {
+      if (sequence === this.loadSequence && !workspace) this.workspaceError.set(true);
+    }).catch(() => {
+      if (sequence === this.loadSequence) this.workspaceError.set(true);
+    }).finally(() => {
+      if (sequence === this.loadSequence) this.workspaceLoading.set(false);
+    });
+  });
 
   readonly tabs = TABS;
   readonly tab = signal<WorkspaceTab>('overview');
+  readonly selectedLessonId = signal('');
+  readonly selectedLesson = computed(() => {
+    const lessons = this.workspace()?.chapters.flatMap(chapter => chapter.lessons) ?? [];
+    return lessons.find(lesson => lesson.id === this.selectedLessonId()) ?? lessons[0] ?? null;
+  });
+  readonly selectedQuizQuestions = computed(() => this.selectedLesson()?.preview?.questions ?? []);
   readonly collapsed = signal<ReadonlySet<string>>(new Set());
   readonly overrides = signal<Record<string, boolean>>({});
   readonly historyOpen = signal(this.route.snapshot.queryParamMap.get('history') === '1');
   readonly rejectOpen = signal(false);
   readonly supplementOpen = signal(false);
   readonly riskFile = signal<WorkspaceFile | null>(null);
+  readonly videoPreviewError = signal(false);
   readonly language = signal('Python 3.11');
   readonly languages = LANGUAGES;
   readonly issueFlag = signal(false);
@@ -70,6 +95,7 @@ export class ApprovalWorkspaceComponent {
     this.id();
     this.selection.set(new Set());
     this.selectionListOpen.set(false);
+    this.selectedLessonId.set('');
   });
 
   readonly checklist = computed(() => (this.workspace()?.checklist ?? []).map(item => ({
@@ -78,9 +104,8 @@ export class ApprovalWorkspaceComponent {
   })));
   readonly doneCount = computed(() => this.checklist().filter(item => item.done).length);
   readonly allDone = computed(() => this.checklist().length > 0 && this.doneCount() === this.checklist().length);
-  readonly codeLines = computed(() => (this.workspace()?.ide.code ?? '').split('\n'));
-  readonly lessonCount = computed(() => (this.workspace()?.chapters ?? [])
-    .reduce((total, chapter) => total + chapter.lessons.length, 0));
+  readonly codeLines = computed(() => (this.selectedLesson()?.preview?.sampleCode || this.workspace()?.ide.code || '').split('\n'));
+  readonly lessonCount = computed(() => (this.workspace()?.chapters ?? []).reduce((total, chapter) => total + chapter.lessons.length, 0));
   readonly testcases = computed(() => this.workspace()?.ide.testcases ?? []);
   readonly selectedIds = computed(() => [...this.selection()]);
   readonly allVisibleSelected = computed(() => {
@@ -146,6 +171,15 @@ export class ApprovalWorkspaceComponent {
   }
 
   setTab(id: WorkspaceTab): void { this.tab.set(id); }
+  selectLesson(lesson: import('../models/course.models').WorkspaceLesson): void {
+    this.selectedLessonId.set(lesson.id);
+    this.videoPreviewError.set(false);
+    this.tab.set(lesson.kind === 'quiz' ? 'quiz' : lesson.kind === 'ide' ? 'ide' : 'video');
+  }
+  onVideoError(): void { this.videoPreviewError.set(true); }
+  selectedQuestion(): import('../models/course.models').WorkspaceQuizQuestion | null {
+    return this.selectedLesson()?.preview?.questions?.[0] ?? null;
+  }
   onTabKeydown(event: KeyboardEvent, current: WorkspaceTab): void {
     if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
@@ -179,6 +213,10 @@ export class ApprovalWorkspaceComponent {
     const question = this.workspace()?.quiz.question;
     const answer = question?.answers.find(item => item.correct);
     return question && answer ? `${question.correctLetter} · ${answer.text}` : '';
+  }
+  selectedCorrectAnswer(): string {
+    const question = this.selectedQuestion();
+    return question?.answers.find(answer => answer.correct)?.letter ?? this.correctAnswer();
   }
   fileMeta(file: WorkspaceFile): string { return `${file.size} · ${file.scanned ? 'Đã quét' : 'Chưa quét'}`; }
   testLabel(state: 'passed' | 'pending'): string { return state === 'passed' ? 'Đạt' : 'Chưa chạy'; }
@@ -218,27 +256,42 @@ export class ApprovalWorkspaceComponent {
     this.supplementOpen.set(true);
   }
 
-  approve(): void {
+  async approve(): Promise<void> {
     const ws = this.workspace();
-    if (!ws || !this.allDone()) return;
-    this.store.approveApproval(ws.approvalId);
-    this.notify('Đã phê duyệt và phát hành khóa học.', 'success');
+    if (!ws || !this.allDone() || this.decisionPending()) return;
+    this.decisionPending.set(true);
+    try {
+      await this.store.approveApproval(ws.approvalId);
+      this.notify('Đã ghi nhận phê duyệt và phát hành khóa học.', 'success');
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không thể phê duyệt khóa học.', 'error');
+    } finally { this.decisionPending.set(false); }
   }
 
-  confirmReject(payload: RejectPayload): void {
+  async confirmReject(payload: RejectPayload): Promise<void> {
     const ws = this.workspace();
-    if (!ws) return;
-    this.store.rejectApproval(ws.approvalId, payload.reason, payload.detail);
-    this.rejectOpen.set(false);
-    this.notify('Đã từ chối xuất bản và gửi lý do tới giảng viên.', 'success');
+    if (!ws || this.decisionPending()) return;
+    this.decisionPending.set(true);
+    try {
+      await this.store.rejectApproval(ws.approvalId, payload.reason, payload.detail);
+      this.rejectOpen.set(false);
+      this.notify('Đã ghi nhận từ chối xuất bản và gửi lý do tới giảng viên.', 'success');
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không thể từ chối xuất bản.', 'error');
+    } finally { this.decisionPending.set(false); }
   }
 
-  confirmSupplement(payload: SupplementPayload): void {
+  async confirmSupplement(payload: SupplementPayload): Promise<void> {
     const ws = this.workspace();
-    if (!ws) return;
-    this.store.requestSupplement(ws.approvalId, payload.items, payload.issueType, payload.detail);
-    this.supplementOpen.set(false);
-    this.notify('Đã gửi yêu cầu bổ sung tới giảng viên.', 'success');
+    if (!ws || this.decisionPending()) return;
+    this.decisionPending.set(true);
+    try {
+      await this.store.requestSupplement(ws.approvalId, payload.items, payload.issueType, payload.detail);
+      this.supplementOpen.set(false);
+      this.notify('Đã ghi nhận yêu cầu bổ sung và gửi tới giảng viên.', 'success');
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Không thể gửi yêu cầu bổ sung.', 'error');
+    } finally { this.decisionPending.set(false); }
   }
 
   notify(message: string, tone: ToastTone): void {

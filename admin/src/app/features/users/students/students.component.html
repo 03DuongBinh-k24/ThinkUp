@@ -145,7 +145,7 @@
     <div class="table-heading">
       <div>
         <h2>Danh sách học viên</h2>
-        <p>{{ formatCount(filtered().length) }} tài khoản khớp bộ lọc hiện tại</p>
+        <p>{{ formatCount(resultTotal()) }} tài khoản khớp bộ lọc hiện tại</p>
       </div>
     </div>
 
@@ -241,7 +241,7 @@
     </div>
 
     <footer class="table-footer">
-      <span>Đang hiển thị {{ rangeStart() }}–{{ rangeEnd() }} trong {{ formatCount(filtered().length) }} học viên</span>
+      <span>Đang hiển thị {{ rangeStart() }}–{{ rangeEnd() }} trong {{ formatCount(resultTotal()) }} học viên</span>
       <nav class="pagination" aria-label="Phân trang danh sách học viên">
         <button type="button" [disabled]="currentPage() === 1" aria-label="Trang trước" (click)="pageTo(currentPage() - 1)">‹</button>
         @for (item of pageItems(); track $index) {
@@ -345,7 +345,7 @@
                 <ul class="progress-list" id="student-course-list">
                   @for (course of visibleCourses(); track course.name) {
                     <li class="progress-item">
-                      <strong>{{ course.name }} <em>{{ course.progress }}%</em></strong>
+                      <strong>{{ course.name }} <em>{{ course.progress }}% · {{ formatStudyTime(course.totalLearningTimeSeconds ?? 0) }}</em></strong>
                       <div
                         class="progress-track"
                         role="progressbar"
@@ -354,6 +354,24 @@
                         [attr.aria-valuenow]="course.progress"
                         [attr.aria-label]="'Tiến độ khóa ' + course.name"
                       ><i [style.width.%]="course.progress"></i></div>
+                      @if (course.sections?.length) {
+                        <div class="student-learning-sections">
+                          @for (section of course.sections; track section.id) {
+                            <details class="student-learning-section">
+                              <summary>{{ section.title }} <span>{{ section.completedLessons }}/{{ section.totalLessons }} bài · {{ section.progress }}%</span></summary>
+                              <ul>
+                                @for (lesson of section.lessons; track lesson.id) {
+                                  <li>
+                                    <div><strong>{{ lesson.title }}</strong><small>{{ lessonTypeLabel(lesson.type) }} · {{ lesson.completed ? 'Hoàn thành' : lesson.status === 'in_progress' ? 'Đang học' : 'Chưa bắt đầu' }} · {{ formatStudyTime(lesson.timeSpentSeconds) }}</small></div>
+                                    @if (lesson.quizAttempts.length) { <small>Kiểm tra: {{ lesson.quizAttempts.length }} lượt · gần nhất {{ lesson.quizAttempts[0].scorePercent }}% {{ lesson.quizAttempts[0].passed ? '(Đạt)' : '(Chưa đạt)' }}</small> }
+                                    @if (lesson.labAttempts.length) { <small>Lab: {{ lesson.labAttempts.length }} lượt · {{ lesson.labAttempts[0].runCount }} lần chạy · {{ lesson.labAttempts[0].passedRuns }} đạt</small> }
+                                  </li>
+                                }
+                              </ul>
+                            </details>
+                          }
+                        </div>
+                      }
                     </li>
                   }
                 </ul>

@@ -28,6 +28,10 @@ export class CourseDemoService extends CourseStore {
     this.errorState.set(false);
   }
 
+  override async getApprovalWorkspace(id: string): Promise<ApprovalWorkspace | null> {
+    return this.workspaceState().find(item => item.approvalId === id) ?? null;
+  }
+
   override ensureRoadmapStudio(id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
     const roadmap = this.roadmapState().find(item => item.id === id);
     const studio = this.studioState().find(item => item.roadmapId === id);
@@ -93,6 +97,12 @@ export class CourseDemoService extends CourseStore {
       ? { ...item, status: 'archived', updatedAt: new Date().toISOString() }
       : item));
     this.setApprovalForCourse(id, 'Đã lưu trữ khóa học', `Lý do: ${reason}. ${explanation}`);
+  }
+
+  restoreArchivedCourse(id: string): void {
+    this.courseState.update(items => items.map(item => item.id === id
+      ? { ...item, status: 'unpublished', updatedAt: new Date().toISOString() }
+      : item));
   }
 
   setCourseStatus(id: string, status: CourseStatus): void {

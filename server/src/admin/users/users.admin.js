@@ -146,14 +146,18 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
     if(query.legalStatus==='incomplete') applicationFilter.legal_status={$ne:'signed'};
     if(query.field) applicationFilter['profile_snapshot.field']=query.field;
     if(query.q){const rx={$regex:escapeRegex(String(query.q).slice(0,100)),$options:'i'};applicationFilter.$or=[{'profile_snapshot.title':rx},{'profile_snapshot.field':rx},{'profile_snapshot.specialty':rx}];}
-    const [profiles,applications] = await Promise.all([
-      db.collection('instructor_profiles').find(profileFilter).toArray(),
-      db.collection('instructor_applications').find(applicationFilter).toArray(),
+    if(query.from||query.to){ const created={}; const from=dateBound(query.from),to=dateBound(query.to,true); if(from) created.$gte=from; if(to) created.$lte=to; profileFilter.created_at=created; applicationFilter.created_at=created; }
+    const [profileTotal, applicationTotal, profiles, applications] = await Promise.all([
+      db.collection('instructor_profiles').countDocuments(profileFilter),
+      db.collection('instructor_applications').countDocuments(applicationFilter),
+      db.collection('instructor_profiles').find(profileFilter,{projection:{_id:1,user_id:1,instructor_id:1,id:1,full_name:1,name:1,status:1,created_at:1,legal_status:1,specialty:1,field:1,title:1,kyc:1,tax_code:1,cccd:1,course_count:1,total_students:1,total_revenue:1,is_public:1}}).toArray(),
+      db.collection('instructor_applications').find(applicationFilter,{projection:{_id:1,user_id:1,instructor_id:1,id:1,profile_id:1,status:1,created_at:1,legal_status:1,profile_snapshot:1}}).toArray(),
     ]);
     lecturerProfiles=profiles;
     profileByUser=new Map(profiles.flatMap(profile=>identityKeys(profile).map(id=>[id,profile])));
     applicationByUser=new Map(applications.flatMap(application=>identityKeys(application).map(id=>[id,application])));
     lecturerIds = [...new Set([...profiles.flatMap(identityKeys),...applications.flatMap(identityKeys)])];
+    options.__lecturerTotal = Math.max(profileTotal, applicationTotal);
     delete filter.status;
     delete filter.role;
     // Lecturer records can be linked through any supported user/profile alias.
@@ -166,16 +170,23 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
   let rows,total;
   if(kind==='students'&&query.courseCount){
     if(!['none','1-3','more'].includes(query.courseCount)) throw bad('Bộ lọc số khóa học không hợp lệ.');
-    const all=await db.collection('users').find(filter,{projection:{password_hash:0,refresh_token:0,security_secret:0}}).sort({created_at:-1,_id:-1}).limit(10000).toArray();
-    const {getUserEnrolledCourses}=await import('../../user/course/course.user.js');
-    const matches=[];
-    for(const row of all){const count=(await getUserEnrolledCourses(String(row._id),{db})).length;const match=query.courseCount==='none'?count===0:query.courseCount==='1-3'?count>=1&&count<=3:count>3;if(match) matches.push(row);}
-    total=matches.length; rows=matches.slice((p-1)*pageSize,p*pageSize);
+    // Count only requested users; batch course joins avoid one query per student.
+    const [allUsers,baseTotal]=await Promise.all([
+      db.collection('users').find(filter,{projection:{_id:1,student_id:1,full_name:1,name:1,email:1,phone:1,status:1,created_at:1,locked_until:1,lock_level:1,lock_reason:1}}).sort({created_at:-1,_id:-1}).toArray(),
+      db.collection('users').countDocuments(filter),
+    ]);
+    const candidates=allUsers;
+    const ids=candidates.map(row=>String(row._id)),ownerVariants=[...new Set([...ids,...candidates.map(row=>row._id)])],ownerQuery={$or:[{user_id:{$in:ownerVariants}},{userId:{$in:ownerVariants}}]};
+    const [owned,enrolled,progress]=await Promise.all(['user_courses','user_enrollments','user_course_progress'].map(name=>db.collection(name).find(ownerQuery,{projection:{user_id:1,userId:1,course_id:1,courseId:1}}).toArray()));
+    const counts=new Map(ids.map(id=>[id,new Set()]));
+    for(const record of [...owned,...enrolled,...progress]){const owner=String(record.user_id??record.userId??''),course=record.course_id??record.courseId;if(course!=null&&counts.has(owner))counts.get(owner).add(String(course));}
+    const matches=candidates.filter(row=>{const count=counts.get(String(row._id))?.size??0;return query.courseCount==='none'?count===0:query.courseCount==='1-3'?count>=1&&count<=3:count>3;});
+    total=matches.length;rows=matches.slice((p-1)*pageSize,p*pageSize); options.__courseCountFilteredTotal=baseTotal;
   } else if(kind==='lecturers') {
-    rows=await db.collection('users').find(filter,{projection:{password_hash:0,refresh_token:0,security_secret:0}}).sort({created_at:-1,_id:-1}).toArray();
-    const matchedKeys=new Set(rows.flatMap(identityKeys));
-    const orphanProfiles=lecturerProfiles;
-    const missingProfiles=orphanProfiles.filter(profile=>profile.is_public!==false&&!identityKeys(profile).some(id=>matchedKeys.has(id)));
+    const userCursor=db.collection('users').find(filter,{projection:{password_hash:0,refresh_token:0,security_secret:0}}).sort({created_at:-1,_id:-1});
+    const [allMatchingUsers,matchingUserCount]=await Promise.all([userCursor.toArray(),db.collection('users').countDocuments(filter)]);
+    const matchedKeys=new Set(allMatchingUsers.flatMap(identityKeys));
+    const missingProfiles=lecturerProfiles.filter(profile=>profile.is_public!==false&&!identityKeys(profile).some(id=>matchedKeys.has(id)));
     const courseCounts=new Map();
     if(missingProfiles.length){
       const ids=[...new Set(missingProfiles.map(profile=>String(profile.instructor_id||'')).filter(Boolean))];
@@ -187,9 +198,19 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
         for(const entry of counts) courseCounts.set(String(entry._id),Number(entry.count)||0);
       }
     }
-    rows.push(...missingProfiles.map(profile=>({_id:profile._id,instructor_id:profile.instructor_id,role:'instructor',full_name:profile.full_name||profile.name||'',status:profile.status||'active',created_at:profile.created_at,_profileOnly:true,_profileCourseCount:courseCounts.get(String(profile.instructor_id||''))||0})));
-    rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)||String(b._id).localeCompare(String(a._id)));
-    total=rows.length; rows=rows.slice((p-1)*pageSize,p*pageSize);
+    const allRows=[...allMatchingUsers,...missingProfiles.map(profile=>({_id:profile._id,instructor_id:profile.instructor_id,role:'instructor',full_name:profile.full_name||profile.name||'',status:profile.status||'active',created_at:profile.created_at,_profileOnly:true,_profileCourseCount:courseCounts.get(String(profile.instructor_id||''))||0}))];
+    const sortBy=query.sortBy==='name'?'full_name':query.sortBy==='status'?'status':'created_at';
+    const direction=query.sortDirection==='asc'?1:-1;
+    allRows.sort((a,b)=>sortBy==='created_at'?(new Date(a.created_at||0)-new Date(b.created_at||0))*direction||String(a._id).localeCompare(String(b._id))*direction:String(a[sortBy]||'').localeCompare(String(b[sortBy]||''),'vi',{sensitivity:'base'})*direction);
+    total=matchingUserCount+missingProfiles.length; rows=allRows.slice((p-1)*pageSize,p*pageSize);
+    lecturerIds=[...new Set(rows.flatMap(identityKeys))];
+    const ids=[...new Set([...lecturerIds,...lecturerIds.filter(asId).map(asId)])];
+    const [profiles,applications]=await Promise.all([
+      db.collection('instructor_profiles').find({$or:[{_id:{$in:ids}},{user_id:{$in:ids}},{instructor_id:{$in:ids}},{id:{$in:ids}}]}).toArray(),
+      db.collection('instructor_applications').find({$or:[{_id:{$in:ids}},{user_id:{$in:ids}},{instructor_id:{$in:ids}},{id:{$in:ids}}]}).toArray(),
+    ]);
+    profileByUser=new Map(profiles.flatMap(profile=>identityKeys(profile).map(id=>[id,profile])));
+    applicationByUser=new Map(applications.flatMap(application=>identityKeys(application).map(id=>[id,application])));
   } else {
     [rows,total]=await Promise.all([
       db.collection('users').find(filter,{projection:{password_hash:0,refresh_token:0,security_secret:0}}).sort({created_at:-1,_id:-1}).skip((p-1)*pageSize).limit(pageSize).toArray(),
@@ -220,9 +241,9 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
     const ownerVariants=[...new Set([...ids,...rows.map(row=>row._id)])];
     const ownerQuery={$or:[{user_id:{$in:ownerVariants}},{userId:{$in:ownerVariants}}]};
     const [owned,enrolled,progress,orders]=await Promise.all([
-      db.collection('user_courses').find(ownerQuery).project({user_id:1,userId:1,course_id:1,courseId:1}).toArray(),
-      db.collection('user_enrollments').find(ownerQuery).project({user_id:1,userId:1,course_id:1,courseId:1}).toArray(),
-      db.collection('user_course_progress').find(ownerQuery).project({user_id:1,userId:1,course_id:1,courseId:1}).toArray(),
+      db.collection('user_courses').find(ownerQuery,{projection:{user_id:1,userId:1,course_id:1,courseId:1}}).toArray(),
+      db.collection('user_enrollments').find(ownerQuery,{projection:{user_id:1,userId:1,course_id:1,courseId:1}}).toArray(),
+      db.collection('user_course_progress').find(ownerQuery,{projection:{user_id:1,userId:1,course_id:1,courseId:1}}).toArray(),
       db.collection('payment_transactions').aggregate([
         {$match:ownerQuery},
         {$project:{owner:{$toString:{$ifNull:['$user_id','$userId']}}}},
@@ -252,6 +273,13 @@ export async function getAdminUserSummary(kind, options = {}) {
   const db = options.db || await getMongoDb(), users = db.collection('users'), now = options.now || new Date();
   if(kind==='lecturers'){
     const profiles=db.collection('instructor_profiles'),base={deleted_at:{$exists:false}};
+    const q=typeof options.query?.q==='string'?options.query.q.trim().slice(0,100):'';
+    const rx=q?{$regex:escapeRegex(q),$options:'i'}:null;
+    if(options.query?.status) base.status=options.query.status;
+    if(options.query?.legalStatus==='signed') base.legal_status='signed';
+    if(options.query?.legalStatus==='incomplete') base.legal_status={$ne:'signed'};
+    if(options.query?.from||options.query?.to){const created={};const from=dateBound(options.query.from),to=dateBound(options.query.to,true);if(from)created.$gte=from;if(to)created.$lte=to;base.created_at=created;}
+    if(rx) base.$or=[{full_name:rx},{name:rx},{email:rx},{instructor_id:rx},{field:rx},{specialty:rx},{tax_code:rx},{cccd:rx}];
     const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
     const [total,fresh,active,locked,pending]=await Promise.all([
       profiles.countDocuments(base),profiles.countDocuments({...base,created_at:{$gte:new Date(+now-30*86400000)}}),
@@ -373,7 +401,20 @@ export function createAdminUsersRouter(express, requireAdmin) {
   router.get('/students', read, async (req,res,next) => { try { res.json(await listAdminUsers('students', req.query, { role:req.adminRole })); } catch(e) { next(e); } });
   router.get('/students/summary', read, async (req,res,next) => { try { res.json(await getAdminUserSummary('students',{role:req.adminRole})); } catch(e) { next(e); } });
   router.get('/lecturers', read, async (req,res,next) => { try { res.json(await listAdminUsers('lecturers', req.query, { role:req.adminRole })); } catch(e) { next(e); } });
-  router.get('/lecturers/summary', read, async (req,res,next) => { try { res.json(await getAdminUserSummary('lecturers')); } catch(e) { next(e); } });
+  router.get('/lecturers/summary', read, async (req,res,next) => { try { res.json(await getAdminUserSummary('lecturers',{query:req.query})); } catch(e) { next(e); } });
+  router.get('/lecturers/:id/discipline-history', read, async (req,res,next) => {
+    try {
+      const db=await getMongoDb(),requestedId=req.params.id;
+      const user=await db.collection('users').findOne({...userLookup(requestedId),deleted_at:{$exists:false}});
+      const objectId=asId(requestedId),profile=user?await db.collection('instructor_profiles').findOne({$or:[{user_id:String(user._id)},{instructor_id:String(user._id)}],deleted_at:{$exists:false}}):await db.collection('instructor_profiles').findOne({$or:[...(objectId?[{_id:objectId}]:[]),{instructor_id:requestedId}],deleted_at:{$exists:false}});
+      if(!user&&!profile) throw bad('Không tìm thấy hồ sơ giảng viên.',404,'LECTURER_PROFILE_NOT_FOUND');
+      const history=Array.isArray(profile?.discipline_history)?profile.discipline_history:[];
+      const adminIds=[...new Set(history.map(row=>String(row.admin_id||'')).filter(ObjectId.isValid))].map(id=>new ObjectId(id));
+      const admins=adminIds.length?await db.collection('admins').find({_id:{$in:adminIds}},{projection:{full_name:1,email:1}}).toArray():[];
+      const adminMap=new Map(admins.map(admin=>[String(admin._id),admin.full_name||admin.email||'Admin']));
+      res.json({success:true,items:history.sort((a,b)=>+new Date(b.created_at||0)-+new Date(a.created_at||0)).map(row=>({action:row.action||'discipline',level:row.level||null,label:row.label||null,reason:row.reason||'',courseIds:row.courseIds||[],evidence:(row.evidence||[]).map(String),at:iso(row.created_at),adminId:row.admin_id?String(row.admin_id):null,adminName:adminMap.get(String(row.admin_id))||'Admin'}))});
+    } catch(e){next(e);}
+  });
   router.get('/students/:id', read, async (req,res,next) => {
     try {
       const db=await getMongoDb(), user=await readUser(db,req.params.id), uid=String(user._id); if(user.role!=='student') throw bad('Tài khoản không thuộc danh sách học viên.',404,'STUDENT_NOT_FOUND');

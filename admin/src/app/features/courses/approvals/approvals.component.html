@@ -233,6 +233,7 @@
     <app-course-history-dialog
       [title]="item.courseTitle + ' · ' + item.courseId"
       [history]="historyWorkspace()?.history ?? []"
+      [loading]="historyLoading()"
       [showDetail]="true"
       (openDetail)="openHistoryDetail()"
       (closed)="closeHistory()"

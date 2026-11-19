@@ -24,6 +24,8 @@ import {
   RejectLecturerCommand,
   UploadedEvidence,
   UserListFilters,
+  UserListResult,
+  StudentListResult,
   UserManagementDataSource,
   UserQuickStats
 } from './user-management.data-source';
@@ -142,9 +144,11 @@ interface LecturerDetailResponse extends ApiEnvelope {
   };
 }
 
+interface LecturerDisciplineHistoryResponse extends ApiEnvelope { items: Array<{ action?: string; level?: number; label?: string; reason?: string; courseIds?: string[]; evidence?: string[]; at?: string; adminName?: string }>; }
+
 interface StudentDetailResponse extends ApiEnvelope {
   user: StudentApiItem;
-  courses?: Array<{ name?: string; title?: string; progress?: number }>;
+  courses?: Array<{ id?: string; name?: string; title?: string; progress?: number; totalLearningTimeSeconds?: number; sections?: NonNullable<EnrolledCourse['sections']> }>;
   orders?: Array<{ id?: string; amount?: number; paidAt?: string; status?: string }>;
   disciplineHistory?: Array<{ action?: string; at?: string; level?: number; reason?: string }>;
 }
@@ -167,9 +171,7 @@ const LECTURER_STATUSES: readonly LecturerStatus[] = [
 /**
  * Adapter HTTP của module quản lý người dùng — gọi `/api/admin/users/*`.
  *
- * Cách tải dữ liệu: mỗi lần `reload()` sẽ đọc hết các trang (pageSize=100) để giữ nguyên bộ lọc,
- * tìm kiếm và phân trang phía client đang có. Khi dữ liệu người dùng đủ lớn để cần lọc server-side
- * thật sự, chuyển các computed trong component sang query API (TODO trong từng trang).
+ * Danh sách giảng viên dùng phân trang và bộ lọc phía server; danh sách học viên hiện vẫn giữ bộ nạp toàn trang.
  */
 @Injectable({ providedIn: 'root' })
 export class HttpUserManagementDataSource implements UserManagementDataSource {
@@ -179,6 +181,7 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
   private readonly lecturerState = signal<readonly Lecturer[]>([]);
   private readonly studentState = signal<readonly Student[]>([]);
   private readonly quickStatsState = signal<UserQuickStats>({ publishedCourses: 0, payoutRequests: 0, openTickets: 0 });
+  private readonly lecturerSummaryState = signal({ total: 0, pending: 0, active: 0, locked: 0 });
   private readonly lecturerDetailState = signal<ReadonlyMap<string, Lecturer>>(new Map());
   private readonly studentDetailState = signal<ReadonlyMap<string, Student>>(new Map());
   private readonly coursesState = signal<ReadonlyMap<string, readonly LecturerCourseRow[]>>(new Map());
@@ -190,6 +193,9 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
   readonly lecturers = this.lecturerState.asReadonly();
   readonly students = this.studentState.asReadonly();
   readonly quickStats = this.quickStatsState.asReadonly();
+  readonly lecturerSummary = this.lecturerSummaryState.asReadonly();
+  private readonly studentSummaryState = signal({ total: 0, fresh: 0, active: 0, locked: 0 });
+  readonly studentSummary = this.studentSummaryState.asReadonly();
   readonly lecturerDetails = this.lecturerDetailState.asReadonly();
   readonly studentDetails = this.studentDetailState.asReadonly();
   readonly coursesByLecturer = this.coursesState.asReadonly();
@@ -218,10 +224,11 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
     this.loadingLecturerState.set(true);
     try {
       const [lecturers, lecturerSummary] = await Promise.all([
-        this.fetchAll<LecturerApiItem, LecturerListResponse>('lecturers'),
+        firstValueFrom(this.http.get<LecturerListResponse>(`${this.api}/lecturers`, { params: new HttpParams({ fromObject: { page: '1', pageSize: '100' } }) })),
         firstValueFrom(this.http.get<LecturerSummaryResponse>(`${this.api}/lecturers/summary`))
       ]);
-      this.lecturerState.set(lecturers.map((item) => this.toLecturer(item)));
+      this.lecturerState.set((lecturers.items ?? []).map(item => this.toLecturer(item)));
+      this.lecturerSummaryState.set({ total: lecturerSummary.total, pending: lecturerSummary.pending, active: lecturerSummary.active, locked: lecturerSummary.locked });
       this.quickStatsState.set({
         publishedCourses: Number(lecturerSummary.quickStats?.publishedCourses ?? 0),
         // Payout request API chưa tồn tại (handoff ghi rõ) — giữ 0, không giả lập số.
@@ -235,14 +242,35 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
     }
   }
 
+  async loadLecturers(filters: UserListFilters): Promise<UserListResult> {
+    const values: Record<string, string> = {};
+    for (const key of ['q', 'status', 'legalStatus', 'from', 'to', 'page', 'pageSize', 'sortBy', 'sortDirection'] as const) {
+      const value = filters[key];
+      if (value !== undefined && value !== '') values[key] = String(value);
+    }
+    const response = await firstValueFrom(this.http.get<LecturerListResponse>(`${this.api}/lecturers`, {
+      params: new HttpParams({ fromObject: values })
+    }));
+    const items = (response.items ?? []).map((item) => this.toLecturer(item));
+    this.lecturerState.set(items);
+    const total = Number(response.pagination?.total ?? 0);
+    const summary = this.lecturerSummaryState();
+    return { items, total, pages: Number(response.pagination?.pages ?? 1), summary };
+  }
+
+  setLecturerSummary(summary: { total: number; pending: number; active: number; locked: number }): void {
+    this.lecturerSummaryState.set(summary);
+  }
+
   private async reloadStudents(): Promise<void> {
     this.loadingStudentState.set(true);
     try {
       const [students, studentSummary] = await Promise.all([
-        this.fetchAll<StudentApiItem, StudentListResponse>('students'),
+        firstValueFrom(this.http.get<StudentListResponse>(`${this.api}/students`, { params: new HttpParams({ fromObject: { page: '1', pageSize: '100' } }) })),
         firstValueFrom(this.http.get<StudentSummaryResponse>(`${this.api}/students/summary`))
       ]);
-      this.studentState.set(students.map((item) => this.toStudent(item)));
+      this.studentState.set((students.items ?? []).map((item) => this.toStudent(item)));
+      this.studentSummaryState.set({ total: studentSummary.total, fresh: studentSummary.fresh, active: studentSummary.active, locked: studentSummary.locked });
       // Summary chỉ dùng để đối chiếu; KPI trong trang vẫn tính từ danh sách đang hiển thị.
       void studentSummary;
     } catch (error) {
@@ -252,13 +280,28 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
     }
   }
 
+  async loadStudents(filters: UserListFilters): Promise<StudentListResult> {
+    const values: Record<string, string> = {};
+    for (const key of ['q','status','courseCount','from','to','page','pageSize'] as const) {
+      const value = filters[key];
+      if (value !== undefined && value !== '') values[key] = String(value);
+    }
+    const response = await firstValueFrom(this.http.get<StudentListResponse>(`${this.api}/students`, { params: new HttpParams({ fromObject: values }) }));
+    const items = (response.items ?? []).map(item => this.toStudent(item));
+    this.studentState.set(items);
+    const summary = this.studentSummaryState();
+    return { items, total: response.pagination?.total ?? 0, pages: response.pagination?.pages ?? 1, summary };
+  }
+
+  setStudentSummary(summary: { total: number; fresh: number; active: number; locked: number }): void { this.studentSummaryState.set(summary); }
+
   async loadLecturerDetail(id: string): Promise<Lecturer | undefined> {
     try {
       const response = await firstValueFrom(
         this.http.get<LecturerDetailResponse>(`${this.api}/lecturers/${encodeURIComponent(id)}`)
       );
       const base = this.lecturerState().find((item) => item.id === id);
-      const detail = this.toLecturerDetail(response, base);
+      const detail = await this.toLecturerDetail(response, base);
       this.lecturerDetailState.update((current) => new Map(current).set(id, detail));
       return detail;
     } catch (error) {
@@ -477,13 +520,14 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
     };
   }
 
-  private toLecturerDetail(response: LecturerDetailResponse, base?: Lecturer): Lecturer {
+  private async toLecturerDetail(response: LecturerDetailResponse, base?: Lecturer): Promise<Lecturer> {
     const user = response.user;
     const profile = response.profile;
     const application = response.application;
     const privateData = response.privateData;
     const documents = (profile?.documents ?? []).map(toDocument);
     const cvDocument = documents.find((doc) => /cv|resume|hồ sơ/i.test(`${doc.label} ${doc.filename ?? ''}`));
+    const historyResponse = await firstValueFrom(this.http.get<LecturerDisciplineHistoryResponse>(`${this.api}/lecturers/${encodeURIComponent(user.id)}/discipline-history`));
 
     return {
       ...(base ?? this.toLecturer(user)),
@@ -520,8 +564,11 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
         address: privateData?.address || privateData?.kyc?.address || '',
         verified: application?.kyc?.verified === true || privateData?.kyc?.verified === true
       },
-      // API chưa có endpoint lịch sử kỷ luật của giảng viên; giữ danh sách rỗng thay vì suy diễn.
-      violations: base?.violations ?? [],
+      violations: (historyResponse.items ?? []).map(row => ({
+        level: row.label || (row.level ? `Kỷ luật · Mức ${row.level}` : row.action === 'unlock' ? 'Mở khóa' : 'Xử lý kỷ luật'),
+        appliedAt: row.at || '', reason: row.reason || '', evidence: row.evidence ?? [], action: row.action === 'unlock' ? 'unlock' : 'discipline',
+        courseIds: row.courseIds ?? [], adminName: row.adminName
+      })),
       documents
     };
   }
@@ -549,8 +596,11 @@ export class HttpUserManagementDataSource implements UserManagementDataSource {
   private toStudentDetail(response: StudentDetailResponse, base?: Student): Student {
     const user = response.user;
     const courses: EnrolledCourse[] = (response.courses ?? []).map((course) => ({
+      id: course.id,
       name: course.name || course.title || '',
-      progress: Number(course.progress ?? 0)
+      progress: Number(course.progress ?? 0),
+      totalLearningTimeSeconds: Number(course.totalLearningTimeSeconds ?? 0),
+      sections: course.sections ?? []
     }));
     const firstOrder = (response.orders ?? [])[0];
     return {

@@ -222,9 +222,7 @@
             <h3 class="preview-title">{{ post.title }}</h3>
             <p class="preview-meta">Tác giả: {{ post.author }} ({{ post.authorRole }}) · Cập nhật: {{ date(post.updatedAt) }} · {{ post.views }} lượt xem</p>
             <p class="preview-summary">{{ post.callout || post.excerpt }}</p>
-            <div class="preview-body">
-              @for (paragraph of post.body; track $index) { <p>{{ paragraph }}</p> }
-            </div>
+            <div class="preview-body" [innerHTML]="post.htmlContent || post.body.join('\n')"></div>
             <div class="preview-tags">
               @for (tag of post.tags; track tag) { <span>#{{ tag }}</span> }
             </div>
@@ -278,7 +276,7 @@
           </div>
           <div class="notice">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-            <div><span>Yêu cầu sẽ được lưu và chuyển bài viết sang trạng thái Cần chỉnh sửa. Hệ thống hiện chưa gửi email hoặc thông báo In-app cho tác giả.</span></div>
+            <div><span>Yêu cầu chỉnh sửa sẽ được gửi đến email tác giả sau khi xác nhận. Nếu địa chỉ email không có hoặc việc gửi thất bại, hệ thống sẽ báo lỗi và không xác nhận hoàn tất.</span></div>
           </div>
         </div>
       </div>
@@ -342,7 +340,7 @@
           </div>
           <div class="notice">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-            <div><span>Yêu cầu sẽ được lưu và chuyển bài viết sang trạng thái Cần chỉnh sửa. Hệ thống hiện chưa gửi email hoặc thông báo In-app cho tác giả.</span></div>
+            <div><span>Yêu cầu xóa và giải trình sẽ được gửi đến email tác giả sau khi xác nhận. Nếu địa chỉ email không có hoặc việc gửi thất bại, hệ thống sẽ báo lỗi và không xác nhận hoàn tất.</span></div>
           </div>
         </div>
       </div>
@@ -464,8 +462,8 @@
       </div>
     </div>
     <div dialogFooter class="bulk-dialog-actions">
-      <button class="btn" type="button" (click)="bulkDeleteIds.set(null)">Hủy</button>
-      <button class="btn danger-solid" type="button" (click)="confirmBulkDelete()">Xóa vĩnh viễn</button>
+      <span>Để gửi email giải trình cho từng tác giả, hãy xử lý bài viết riêng lẻ từ menu thao tác.</span>
+      <button class="btn" type="button" (click)="bulkDeleteIds.set(null)">Đóng</button>
     </div>
   </app-admin-dialog>
 }

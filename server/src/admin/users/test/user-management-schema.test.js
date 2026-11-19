@@ -61,8 +61,8 @@ test('lecturer list includes a linked applicant without a special visibility que
   const application = { _id: new ObjectId(), user_id: String(userId), profile_id: String(profile._id), status: 'pending-review' };
   const user = { _id: userId, role: 'student', status: 'pending', full_name: 'Nguyễn Minh Châu', email: 'teacher@example.invalid' };
   const db = { collection(name) {
-    if (name === 'instructor_profiles') return { find: () => ({ toArray: async () => [profile] }) };
-    if (name === 'instructor_applications') return { find: () => ({ toArray: async () => [application] }) };
+    if (name === 'instructor_profiles') return { countDocuments: async () => 1, find: () => ({ toArray: async () => [profile] }) };
+    if (name === 'instructor_applications') return { countDocuments: async () => 1, find: () => ({ toArray: async () => [application] }) };
     if (name === 'users') return {
       find: query => ({ sort() { return this; }, skip() { return this; }, limit() { return this; }, async toArray() {
         assert.equal(query.role, undefined);

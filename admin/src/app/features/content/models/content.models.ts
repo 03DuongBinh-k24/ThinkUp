@@ -15,6 +15,8 @@ export interface ContentPost {
   status: PostStatus;
   excerpt: string;
   body: string[];
+  /** Sanitized HTML returned by the content API for accurate article preview. */
+  htmlContent?: string;
   thumbnail: string;
   views: number;
   commentCount: number;
@@ -60,6 +62,7 @@ export interface ContentComment {
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
 
 export interface ReviewLearningProgress {
+  completion: number;
   studiedHours: number;
   totalHours: number;
   quizAverage: number | null;

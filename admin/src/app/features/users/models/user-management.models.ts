@@ -31,6 +31,9 @@ export interface DisciplineRecord {
   ticket?: string;
   /** Tên tệp minh chứng đã đính kèm. */
   evidence?: readonly string[];
+  action?: 'discipline' | 'unlock';
+  courseIds?: readonly string[];
+  adminName?: string;
 }
 
 export interface LecturerLinks {
@@ -132,8 +135,27 @@ export interface StudentOrder {
 }
 
 export interface EnrolledCourse {
+  id?: string;
   name: string;
   progress: number;
+  totalLearningTimeSeconds?: number;
+  sections?: Array<{
+    id: string;
+    title: string;
+    progress: number;
+    completedLessons: number;
+    totalLessons: number;
+    lessons: Array<{
+      id: string;
+      title: string;
+      type: string;
+      status: string;
+      completed: boolean;
+      timeSpentSeconds: number;
+      quizAttempts: Array<{ scorePercent: number; passed: boolean; status: string; submittedAt?: string | null }>;
+      labAttempts: Array<{ status: string; submittedAt?: string | null; runCount: number; passedRuns: number }>;
+    }>;
+  }>;
 }
 
 export interface Student {

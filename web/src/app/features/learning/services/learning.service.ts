@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, defer, delay, forkJoin, map, of, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, defer, delay, forkJoin, map, of, shareReplay, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApiResult, StudyDto, OverviewDto, CommunityDto, CommunityPageDto, DocumentsDto } from '../models/learning-api.model';
@@ -47,6 +47,7 @@ export class LearningService {
   private readonly auth = inject(AuthService);
   private readonly base = `${environment.apiUrl}/user/lessons`;
   private currentCourseId = '';
+  private readonly courseRequests = new Map<string, Observable<LearningCourse>>();
 
   private readonly guard = <T>(source: Observable<T>): Observable<T> => defer(() => {
     const token = this.auth.getToken();
@@ -57,12 +58,16 @@ export class LearningService {
   });
 
   getCourse(courseId: string, previewMode = false): Observable<LearningCourse> {
-    if (!previewMode) return forkJoin({
+    const key = `${courseId}:${previewMode ? 'preview' : 'full'}:${this.auth.getToken() || 'anonymous'}`;
+    const cached = this.courseRequests.get(key);
+    if (cached) return cached;
+
+    let request: Observable<LearningCourse>;
+    if (!previewMode) request = forkJoin({
       preview: this.courseService.getCoursePreview(courseId),
       study: this.http.get<ApiResult<StudyDto>>(`${this.base}/study/${encodeURIComponent(courseId)}`),
-      detail: this.courseService.getCourseDetail(courseId),
-    }).pipe(this.guard, map(({ study, detail, preview }) => {
-      if (preview.isPurchased !== true) return this.mapCourse(preview, detail);
+    }).pipe(this.guard, map(({ study, preview }) => {
+      if (preview.isPurchased !== true) return this.mapCourse(preview, null);
       if (!study.success || !study.data?.curriculum) throw new Error('Phản hồi dữ liệu học tập không hợp lệ.');
       const dto = study.data;
       this.currentCourseId = dto.course.course_id;
@@ -70,16 +75,16 @@ export class LearningService {
       return {
         id: dto.course.course_id, title: dto.course.course_name,
         instructor: dto.course.instructor.full_name, instructorTitle: dto.course.instructor.title,
-        instructorAvatar: dto.course.instructor.avatar_url || detail.instructorProfile?.avatar,
+        instructorAvatar: dto.course.instructor.avatar_url,
         progress: progress.progress_percentage, description: dto.course.short_description,
-        thumbnailUrl: dto.course.thumbnail_url || detail.thumbnailUrl,
-        bgGradient: dto.course.bg_gradient || detail.bgGradient,
-        coverGradient: dto.course.bg_gradient || detail.bgGradient || 'linear-gradient(163deg, #041348 0%, #01052c 100%)',
+        thumbnailUrl: dto.course.thumbnail_url,
+        bgGradient: dto.course.bg_gradient,
+        coverGradient: dto.course.bg_gradient || 'linear-gradient(163deg, #041348 0%, #01052c 100%)',
         coverLabel: this.buildCoverLabel(dto.course.course_name), rating: dto.course.rating.average,
         ratingCount: dto.course.rating.total_reviews, studentCount: dto.course.total_students,
-        isPurchased: detail.isPurchased,
-        playerConfig: { allowMarkCompleted: detail.isPurchased === true, allowNotes: detail.isPurchased === true,
-          allowQa: detail.isPurchased === true, qaMessage: '', upsell: null },
+        isPurchased: preview.isPurchased,
+        playerConfig: { allowMarkCompleted: preview.isPurchased === true, allowNotes: preview.isPurchased === true,
+          allowQa: preview.isPurchased === true, qaMessage: '', upsell: null },
         chapters: dto.curriculum.sections.map(section => ({ id: section.section_id, title: section.title,
           lessons: section.lessons.map(lesson => ({ id: lesson.lesson_id, order: lesson.lesson_number,
             title: lesson.title, type: lesson.lesson_type === 'article' ? 'reading' as const : lesson.lesson_type,
@@ -96,10 +101,26 @@ export class LearningService {
       if (![401, 403].includes(error?.status)) return throwError(() => error);
       return this.getCourse(courseId, true);
     }));
-    return forkJoin({
+    else request = forkJoin({
       preview: this.courseService.getCoursePreview(courseId),
       detail: this.courseService.getCourseDetail(courseId),
     }).pipe(this.guard, map(({ preview, detail }) => this.mapCourse(preview, detail)));
+
+    let emitted = false;
+    const sharedRequest = request.pipe(
+      map(course => { emitted = true; return course; }),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.courseRequests.set(key, sharedRequest);
+    // Keep only fulfilled results briefly; a failed or stale request can be retried.
+    sharedRequest.subscribe({
+      error: () => this.courseRequests.delete(key),
+      complete: () => {
+        if (!emitted) this.courseRequests.delete(key);
+        else setTimeout(() => this.courseRequests.delete(key), 30_000);
+      },
+    });
+    return sharedRequest;
   }
 
   loadLessonVideo(courseId: string, lessonId: string): Observable<{ lessonId: string; videoUrl: string; playback: import('../../../core/models/course.model').LearningPlayback } | null> {

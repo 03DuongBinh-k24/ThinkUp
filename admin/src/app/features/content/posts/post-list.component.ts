@@ -330,15 +330,9 @@ export class ContentPostListComponent {
   async confirmBulkDelete(): Promise<void> {
     const ids = this.bulkDeleteIds();
     if (!ids?.length) return;
-    if (!await this.write(() => this.store.removePosts([...ids]))) return;
-    this.clearSelection();
+    this.notify('Không thể xóa hàng loạt', 'Hãy xử lý từng bài từ menu thao tác để gửi lý do và giải trình qua email cho đúng tác giả.', 'error');
     this.bulkDeleteIds.set(null);
-    this.page.set(Math.min(this.page(), this.pages()));
-    this.notify(
-      `Đã xóa ${ids.length} bài viết khỏi giao diện công khai.`,
-      'Bình luận được giữ nội bộ; thao tác đã lưu vào nhật ký kiểm duyệt.',
-      'success'
-    );
+    return;
   }
 
   runSelectionAction(key: string, ids?: readonly string[]): void {
@@ -463,11 +457,12 @@ export class ContentPostListComponent {
     const reasons = [...this.requestReasons()];
     const note = this.requestNote().trim();
     const summary = [reasons.join('; '), note].filter(Boolean).join(' — ');
-    if (!await this.write(() => this.store.updatePost(post.id, { status: 'revision', moderationNote: summary }, 'Yêu cầu tác giả chỉnh sửa bài viết.'))) return;
+    if (!summary.trim()) return;
+    if (!await this.write(() => this.store.requestPostRevision(post.id, summary))) return;
     this.requestTarget.set(null);
     this.notify(
       'Đã ghi nhận yêu cầu chỉnh sửa.',
-      'Bài đã chuyển sang Cần chỉnh sửa. Hệ thống hiện chưa gửi email hoặc thông báo cho tác giả.',
+      'Email yêu cầu chỉnh sửa đã được máy chủ gửi cho tác giả.',
       'success'
     );
   }
@@ -508,7 +503,7 @@ export class ContentPostListComponent {
   async submitRestore(): Promise<void> {
     const post = this.restoreTarget();
     if (!post) return;
-    if (!await this.write(() => this.store.updatePost(post.id, { status: 'published' }, 'Khôi phục xuất bản bài viết.'))) return;
+    if (!await this.write(() => this.store.restorePost(post.id))) return;
     this.restoreTarget.set(null);
     this.notify('Đã khôi phục xuất bản bài viết.', 'Bài viết đã hiển thị công khai trở lại.', 'success');
   }
@@ -526,11 +521,11 @@ export class ContentPostListComponent {
   async submitDelete(): Promise<void> {
     const post = this.deleteTarget();
     if (!post || !this.canDelete()) return;
-    if (!await this.write(() => this.store.removePosts([post.id]))) return;
+    if (!await this.write(() => this.store.archivePostWithEmail(post.id, this.deleteReason().trim(), this.deleteNote().trim()))) return;
     this.deleteTarget.set(null);
     this.notify(
-      'Đã xóa bài viết khỏi giao diện công khai.',
-      'Bình luận được giữ nội bộ; lý do đã gửi tác giả và lưu nhật ký.',
+      'Đã lưu trữ bài viết khỏi giao diện công khai.',
+      'Email giải trình đã được gửi cho tác giả; bài viết đã được lưu trữ và ghi nhật ký.',
       'success'
     );
   }

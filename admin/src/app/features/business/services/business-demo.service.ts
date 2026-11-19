@@ -43,12 +43,12 @@ export class BusinessDemoService implements BusinessStore {
     const rows = this.payoutState();
     const paid = rows.filter(row => row.status === 'paid' && row.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7));
     return {
-      pendingCount: rows.filter(row => row.status === 'pending').length,
-      largePendingCount: rows.filter(row => row.status === 'pending' && row.amount >= 20_000_000).length,
-      awaitingDisbursementAmount: rows.filter(row => row.status === 'approved').reduce((sum, row) => sum + (row.netAmount ?? row.amount - (row.taxAmount ?? 0)), 0),
-      paidThisMonthAmount: paid.reduce((sum, row) => sum + (row.netAmount ?? row.amount - (row.taxAmount ?? 0)), 0),
-      paidThisMonthCount: paid.length,
-      taxDeductedThisMonthAmount: paid.reduce((sum, row) => sum + (row.taxAmount ?? 0), 0)
+      pendingCount: MOCK_PAYOUTS.filter(row => row.status === 'pending').length,
+      largePendingCount: MOCK_PAYOUTS.filter(row => row.status === 'pending' && row.amount >= 20_000_000).length,
+      awaitingDisbursementAmount: MOCK_PAYOUTS.filter(row => row.status === 'approved').reduce((sum, row) => sum + (row.netAmount ?? row.amount - (row.taxAmount ?? 0)), 0),
+      paidThisMonthAmount: MOCK_PAYOUTS.filter(row => row.status === 'paid' && row.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, row) => sum + (row.netAmount ?? row.amount - (row.taxAmount ?? 0)), 0),
+      paidThisMonthCount: MOCK_PAYOUTS.filter(row => row.status === 'paid' && row.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length,
+      taxDeductedThisMonthAmount: MOCK_PAYOUTS.filter(row => row.status === 'paid' && row.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, row) => sum + (row.taxAmount ?? 0), 0)
     };
   });
   readonly payoutRole = signal<'finance' | 'super'>(MOCK_PAYOUT_ADMIN_ROLE).asReadonly();
@@ -59,6 +59,7 @@ export class BusinessDemoService implements BusinessStore {
   async reloadOrders(_filters?: OrderListFilters): Promise<void> {
     // Dữ liệu demo đã nằm trong bộ nhớ; không có gì để tải lại.
   }
+  async loadOrdersPage(filters: OrderListFilters) { const all=this.orderState().filter(row=>(!filters.status||row.status===filters.status)&&(!filters.method||row.method===filters.method)&&(!filters.q||[row.id,row.transactionId,row.learner,row.email].join(' ').toLocaleLowerCase('vi-VN').includes(filters.q.toLocaleLowerCase('vi-VN'))));const size=filters.pageSize??25,page=filters.page??1;return{items:all.slice((page-1)*size,page*size),total:all.length,summary:this.orderTotals()}; }
 
   async reloadVouchers(_filters?: VoucherListFilters): Promise<void> {
     // Dữ liệu demo đã nằm trong bộ nhớ; không có gì để tải lại.
@@ -113,6 +114,8 @@ export class BusinessDemoService implements BusinessStore {
   }
 
   async reloadPayouts(): Promise<void> {}
+  async getPayoutSummary(): Promise<void> {}
+  async loadPayoutsPage(filters:{page:number;pageSize:number;q?:string;status?:string;limitMin?:number|null;limitMax?:number|null;from?:string;to?:string;sort?:'newest'|'oldest';taxOnly?:boolean;paidMonthOnly?:boolean}){const rows=this.payoutState().filter(row=>(!filters.q||[row.id,row.instructor,row.email,row.accountNumber].some(v=>String(v||'').toLocaleLowerCase('vi-VN').includes(filters.q!.toLocaleLowerCase('vi-VN'))))&&(!filters.status||row.status===filters.status)&&(filters.limitMin==null||row.amount>=filters.limitMin)&&(filters.limitMax==null||row.amount<=filters.limitMax)&&(!filters.taxOnly||(row.taxAmount??0)>0)&&(!filters.from||row.submittedAt.slice(0,10)>=filters.from)&&(!filters.to||row.submittedAt.slice(0,10)<=filters.to)).sort((a,b)=>filters.sort==='oldest'?a.submittedAt.localeCompare(b.submittedAt):b.submittedAt.localeCompare(a.submittedAt));const items=rows.slice((filters.page-1)*filters.pageSize,filters.page*filters.pageSize);return{items,total:rows.length};}
   async payoutDetail(id: string): Promise<PayoutRequest> {
     const item = this.payouts().find(row => row.id === id);
     if (!item) throw new Error('Không tìm thấy yêu cầu.');

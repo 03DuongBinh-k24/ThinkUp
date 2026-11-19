@@ -7,6 +7,8 @@ import { SearchFieldComponent } from '../../../shared/components/search-field/se
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
 import { ColumnFilterComponent, ColumnFilterValue, DATE_SORT_OPTIONS, TEXT_SORT_OPTIONS, compareSortValues } from '../../../shared/components/column-filter/column-filter.component';
 import { ExportFormat } from '../../../shared/utils/export-formats';
+import { downloadPrivateFile } from '../../../shared/utils/api-export';
+import { HttpClient } from '@angular/common/http';
 import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { AdminNumberPipe } from '../../../shared/pipes/admin-number.pipe';
 import { AdminPrivacyPipe } from '../../../shared/pipes/admin-privacy.pipe';
@@ -54,6 +56,7 @@ const JOINED_FILTER_VALUES: readonly ColumnFilterValue[] = [
   styleUrls: ['../user-page.css', '../user-modal-content.css', './lecturers.component.css']
 })
 export class LecturersComponent {
+  private readonly http = inject(HttpClient);
   private readonly data = inject(UserManagementService);
   private readonly toastService = inject(UserToastService);
   private readonly destroyRef = inject(DestroyRef);
@@ -82,6 +85,11 @@ export class LecturersComponent {
   readonly from = signal('');
   readonly to = signal('');
   readonly page = signal(1);
+  readonly total = signal(0);
+  readonly pages = signal(1);
+  readonly resultTotal = signal(0);
+  readonly resultPages = signal(1);
+  private requestSequence = 0;
   private readonly columnFilters: Record<LecturerColumn, WritableSignal<string[]>> = {
     name: signal<string[]>([]),
     specialty: signal<string[]>([]),
@@ -230,18 +238,13 @@ export class LecturersComponent {
     }
     return items;
   });
-
-  readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
-  readonly currentPage = computed(() => Math.min(this.page(), this.pages()));
-  readonly visible = computed(() => {
-    const page = this.currentPage();
-    return this.filtered().slice((page - 1) * this.pageSize, page * this.pageSize);
-  });
-  readonly rangeStart = computed(() => (this.filtered().length ? (this.currentPage() - 1) * this.pageSize + 1 : 0));
-  readonly rangeEnd = computed(() => Math.min(this.currentPage() * this.pageSize, this.filtered().length));
+  readonly currentPage = computed(() => Math.min(this.page(), this.resultPages()));
+  readonly visible = computed(() => this.lecturers());
+  readonly rangeStart = computed(() => (this.resultTotal() ? (this.currentPage() - 1) * this.pageSize + 1 : 0));
+  readonly rangeEnd = computed(() => Math.min(this.currentPage() * this.pageSize, this.resultTotal()));
 
   readonly pageItems = computed<Array<number | 'gap'>>(() => {
-    const total = this.pages();
+    const total = this.resultPages();
     const current = this.currentPage();
     if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
     if (current <= 3) return [1, 2, 3, 'gap', total];
@@ -277,6 +280,7 @@ export class LecturersComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => clearTimeout(this.searchTimer));
+    queueMicrotask(() => void this.loadPage());
   }
 
   menuItemsFor(lecturer: Lecturer): readonly UserRowMenuItem[] {
@@ -312,23 +316,27 @@ export class LecturersComponent {
     this.searchTimer = setTimeout(() => {
       this.query.set(value);
       this.page.set(1);
+      void this.loadPage();
     }, 250);
   }
 
   setStatus(value: string): void {
     this.status.set(value);
     this.page.set(1);
+    void this.loadPage();
   }
 
   setLegal(value: string): void {
     this.legal.set(value);
     this.page.set(1);
+    void this.loadPage();
   }
 
   setRange(range: { from: string; to: string }): void {
     this.from.set(range.from);
     this.to.set(range.to);
     this.page.set(1);
+    void this.loadPage();
   }
 
   hasActiveFilters(): boolean {
@@ -347,6 +355,7 @@ export class LecturersComponent {
     this.columnSort.set(null);
     this.clearColumnFilters();
     this.page.set(1);
+    void this.loadPage();
   }
 
   filterFor(key: LecturerColumn): readonly string[] {
@@ -356,6 +365,7 @@ export class LecturersComponent {
   updateColumnFilter(key: LecturerColumn, values: string[]): void {
     this.columnFilters[key].set(values);
     this.page.set(1);
+    if (key === 'legal' || key === 'joined' || key === 'status') void this.loadPage();
   }
 
   private clearColumnFilters(): void {
@@ -373,6 +383,7 @@ export class LecturersComponent {
       ? null
       : { column: key, direction: direction as 'asc' | 'desc' });
     this.page.set(1);
+    void this.loadPage();
   }
 
   private sortValue(item: Lecturer, column: LecturerColumn): string | number {
@@ -387,7 +398,8 @@ export class LecturersComponent {
   }
 
   pageTo(value: number): void {
-    this.page.set(Math.max(1, Math.min(this.pages(), value)));
+    this.page.set(Math.max(1, Math.min(this.resultPages(), value)));
+    void this.loadPage();
   }
 
   isSelected(id: string): boolean {
@@ -613,8 +625,35 @@ export class LecturersComponent {
     }
   }
 
+  viewCv(lecturer: Lecturer): void {
+    const document = lecturer.documents.find((item) =>
+      item.filename === lecturer.cv?.fileName || item.label === lecturer.cv?.fileName);
+    if (!document?.downloadUrl) {
+      this.notify('Tài liệu này chưa có đường dẫn tải xuống hợp lệ hoặc vai trò của bạn không được tải.');
+      return;
+    }
+    void downloadPrivateFile(this.http, document.downloadUrl, lecturer.cv?.fileName || document.label)
+      .catch((error: unknown) => this.notify(error instanceof Error ? error.message : 'Không mở được tài liệu.'));
+  }
+
   retryLoad(): void {
     void this.data.reload();
+    void this.loadPage();
+  }
+
+  private async loadPage(): Promise<void> {
+    const sequence = ++this.requestSequence;
+    try {
+      const result = await this.data.loadLecturers({
+        q: this.query(), status: this.status(), legalStatus: this.legal(), from: this.from(), to: this.to(),
+        page: this.page(), pageSize: this.pageSize,
+        ...(this.columnSort() ? { sortBy: this.columnSort()!.column, sortDirection: this.columnSort()!.direction } : {})
+      });
+      if (sequence !== this.requestSequence) return;
+      this.resultTotal.set(result.total);
+      this.resultPages.set(result.pages);
+      this.data.updateLecturerSummary(result.summary);
+    } catch { /* The shared data-source error is rendered above the table. */ }
   }
 
   private async loadCourses(lecturer: Lecturer): Promise<void> {

@@ -1036,9 +1036,13 @@ export async function getRoadmapTemplate(categoryId, options = {}) {
   if (options.versionId) {
     template = await versions.findOne({ category_id: numId, version_id: String(options.versionId), status: { $in: ['published', 'superseded', 'hidden'] } });
   } else {
+    // Drafts must not take a career offline; the learner-facing curriculum is
+    // the latest published version. A hidden version explicitly suppresses it.
     const latest = await versions.findOne({ category_id: numId }, { sort: { version: -1 } });
-    if (latest && latest.status !== 'published') return null;
-    template = latest;
+    if (latest?.status === 'hidden') return null;
+    template = latest?.status === 'published'
+      ? latest
+      : await versions.findOne({ category_id: numId, status: 'published' }, { sort: { version: -1 } });
   }
   if (!template && !options.versionId) template = await db.collection('roadmap_templates').findOne({ category_id: numId });
   if (!template) return null;
@@ -1195,8 +1199,13 @@ export async function getCareerRoadmapsList() {
   for (const cat of categories) {
     const numId = Number(cat.category_id);
     const latestVersion = latestVersions.get(numId);
-    if (latestVersion && latestVersion.status !== 'published') continue;
-    const dbTpl = latestVersion || tplMap.get(numId);
+    // A draft is only an editorial workspace. Keep serving the prior published
+    // version (or legacy template) until the draft is published. A hidden
+    // latest version remains an explicit learner-facing hide action.
+    if (latestVersion?.status === 'hidden') continue;
+    const dbTpl = latestVersion?.status === 'published'
+      ? latestVersion
+      : versionRows.find(row => Number(row.category_id) === numId && row.status === 'published') || tplMap.get(numId);
     const customTpl = dbTpl;
     const hasCustom = Boolean(customTpl);
     if (!hasCustom) continue;

@@ -45,6 +45,7 @@ function viewCourse(row, instructor = null) {
     status: status.businessStatus, reviewStatus: status.reviewStatus, reviewRevision: reviewRevision(row),
     price: Number(row.price ?? 0), originalPrice: Number(row.original_price ?? row.price ?? 0),
     rating: Number(row.rating ?? row.average_rating ?? 0), ratingCount: Number(row.total_reviews ?? row.rating_count ?? 0),
+    durationHours: Number(row.duration_hours ?? row.durationHours ?? 0),
     learnerCount: Number(row.total_students ?? row.student_count ?? 0), createdAt: iso(row.created_at || row.createdAt), updatedAt: iso(row.updated_at || row.updatedAt),
     thumbnailUrl: row.thumbnail_url || '', archivedAt: iso(row.archived_at), hidden: status.businessStatus === 'hidden',
     reviewSubmittedAt: iso(submittedAt), reviewStartedAt: iso(row.review_started_at),
@@ -155,13 +156,94 @@ export async function getAdminCourse(id, options = {}) {
   const lessonIds = lessons.map(lesson => String(lesson.lesson_id || lesson._id));
   const videos = lessonIds.length ? await db.collection('lesson_videos').find({ lesson_id: { $in: lessonIds } }).toArray() : [];
   const videoByLesson = new Map(videos.map(video => [String(video.lesson_id), video]));
+  const [articles, labs, quizzes] = await Promise.all([
+    lessonIds.length ? db.collection('lesson_articles').find({ lesson_id: { $in: lessonIds } }).toArray() : [],
+    lessonIds.length ? db.collection('lesson_labs').find({ lesson_id: { $in: lessonIds } }).toArray() : [],
+    lessonIds.length ? db.collection('lesson_quizzes').find({ lesson_id: { $in: lessonIds } }).toArray() : [],
+  ]);
+  const articleByLesson = new Map(articles.map(article => [String(article.lesson_id), article]));
+  const labByLesson = new Map(labs.map(lab => [String(lab.lesson_id), lab]));
+  const quizByLesson = new Map(quizzes.map(quiz => [String(quiz.lesson_id), quiz]));
+  const quizIds = quizzes.map(quiz => String(quiz.lesson_quiz_id)).filter(Boolean);
+  const questions = quizIds.length ? await db.collection('quiz_questions').find({ lesson_quiz_id: { $in: quizIds } }).toArray() : [];
+  const questionIds = questions.map(question => String(question.quiz_question_id || question.question_id || question._id));
+  const answerOptions = questionIds.length ? await db.collection('quiz_answer_options').find({ question_id: { $in: questionIds } }).toArray() : [];
+  const optionsByQuestion = new Map();
+  for (const option of answerOptions) {
+    const key = String(option.question_id);
+    optionsByQuestion.set(key, [...(optionsByQuestion.get(key) || []), option]);
+  }
+  const questionsByQuiz = new Map();
+  for (const question of questions) {
+      const key = String(question.lesson_quiz_id), questionId = String(question.quiz_question_id || question.question_id || question._id);
+    const answers = (optionsByQuestion.get(questionId) || []).map((option, index) => ({
+      letter: String(option.option_label || option.option_key || option.option_order || String.fromCharCode(65 + index)),
+      text: String(option.option_text || option.option_content || option.text || ''),
+      correct: option.is_correct === true || option.is_correct === 1 || option.is_correct === '1'
+    }));
+    const list = questionsByQuiz.get(key) || [];
+    list.push({ id: questionId, index: list.length + 1, total: 0, prompt: String(question.question_text || question.question || question.prompt || ''), answers, correctLetter: answers.find(answer => answer.correct)?.letter || '', explanation: String(question.explanation || question.feedback || '') });
+    questionsByQuiz.set(key, list);
+  }
+  for (const list of questionsByQuiz.values()) for (const question of list) question.total = list.length;
   const documentsByLesson = new Map();
   for (const doc of documents) { const key = String(doc.lesson_id || ''); documentsByLesson.set(key, [...(documentsByLesson.get(key) || []), { id: String(doc._id), name: doc.name || doc.file_name || '', type: doc.mime_type || doc.file_type || '', url: doc.download_url || doc.file_url || null }]); }
   const sectionIdByAlias = new Map(sections.flatMap(section => [section.section_id, section._id].filter(value => value != null).map(value => [String(value), String(section.section_id || section._id)])));
-  const lessonViews = lessons.map(lesson => ({ id: String(lesson.lesson_id || lesson._id), sectionId: sectionIdByAlias.get(String(lesson.section_id || lesson.sectionId || '')) || String(lesson.section_id || lesson.sectionId || ''), title: lesson.title || '', type: lesson.lesson_type || lesson.type || 'video', durationMinutes: Number(lesson.duration_minutes || lesson.durationMinutes || 0), video: videoByLesson.has(String(lesson.lesson_id || lesson._id)) ? { title: videoByLesson.get(String(lesson.lesson_id || lesson._id)).title || lesson.title || '', duration: videoByLesson.get(String(lesson.lesson_id || lesson._id)).duration || null } : null, documents: documentsByLesson.get(String(lesson.lesson_id || lesson._id)) || [] }));
+  const lessonViews = lessons.map(lesson => {
+    const id = String(lesson.lesson_id || lesson._id), video = videoByLesson.get(id), article = articleByLesson.get(id), lab = labByLesson.get(id), quiz = quizByLesson.get(id);
+    const articleText = String(article?.content || '').replace(/<[^>]*>/g, ' ');
+    const articleMinutes = Math.ceil(articleText.split(/\s+/).filter(Boolean).length / 200);
+    const storedMinutes = Number(lesson.duration_minutes || lesson.durationMinutes || 0);
+    const durationMinutes = storedMinutes || Number(video?.duration || 0) || Number(quiz?.time_limit || 0) || articleMinutes || 0;
+    return {
+      id, sectionId: sectionIdByAlias.get(String(lesson.section_id || lesson.sectionId || '')) || String(lesson.section_id || lesson.sectionId || ''),
+      title: lesson.title || '', type: lesson.lesson_type || lesson.type || 'video', durationMinutes,
+      video: video ? { title: video.title || lesson.title || '', url: video.video_url || '', duration: video.duration || null } : null,
+      reading: article ? { contentHtml: article.content || '', references: article.references_data || [] } : null,
+      lab: lab ? { requirements: lab.requirements || '', sampleCode: lab.sample_code || '', expectedOutput: lab.expected_output || '', testCases: lab.test_cases || [] } : null,
+      quiz: quiz ? { questionCount: (questionsByQuiz.get(String(quiz.lesson_quiz_id)) || []).length, questions: questionsByQuiz.get(String(quiz.lesson_quiz_id)) || [] } : null,
+      documents: documentsByLesson.get(id) || []
+    };
+  });
+  const durationHours = Number((lessonViews.reduce((total, lesson) => total + lesson.durationMinutes, 0) / 60).toFixed(1));
   const category = await db.collection('course_categories').findOne({ category_id: course.category_id });
+  const reviewRows = Array.isArray(course.admin_review_history) ? [...course.admin_review_history] : [];
+  if (course.review_decision_at && course.review_decision) {
+    const action = String(course.review_decision), actorId = String(course.review_decision_by || ''), at = course.review_decision_at;
+    if (!reviewRows.some(entry => entry.action === action && +new Date(entry.created_at || entry.at || 0) === +new Date(at))) {
+      reviewRows.push({ action, actor_id: actorId, created_at: at, reason: course.review_reason || '', details: course.review_details || '' });
+    }
+  }
+  const courseAuditIds = [...new Set([course.course_id, course.id, course._id].filter(value => value != null).map(String))];
+  const reviewAuditRows = await db.collection('admin_audit_logs').find({
+    action: { $in: ['COURSE_REVIEW_APPROVE', 'COURSE_REVIEW_REJECT', 'COURSE_REVIEW_REQUEST_CHANGES', 'COURSE_REVIEW_CLAIMED'] },
+    'details.entity.type': 'course', 'details.entity.id': { $in: courseAuditIds }
+  }).sort({ created_at: -1 }).toArray();
+  const actionFromAudit = { COURSE_REVIEW_APPROVE: 'approve', COURSE_REVIEW_REJECT: 'reject', COURSE_REVIEW_REQUEST_CHANGES: 'request_changes', COURSE_REVIEW_CLAIMED: 'claim' };
+  for (const audit of reviewAuditRows) {
+    const action = actionFromAudit[audit.action];
+    const at = audit.created_at;
+    const actorId = audit.admin_id ? String(audit.admin_id) : '';
+    const duplicate = reviewRows.some(entry => entry.action === action
+      && String(entry.actor_id || '') === actorId
+      && +new Date(entry.created_at || entry.at || 0) === +new Date(at || 0));
+    if (duplicate) continue;
+    const metadata = audit.details?.metadata || {};
+    reviewRows.push({ action, actor_id: actorId, created_at: at, reason: metadata.reason || '', details: metadata.details || '' });
+  }
+  reviewRows.sort((a, b) => +new Date(b.created_at || b.at || 0) - +new Date(a.created_at || a.at || 0));
+  const adminIds = [...new Set(reviewRows.map(entry => String(entry.actor_id || '')).filter(id => ObjectId.isValid(id)).map(id => new ObjectId(id)))];
+  const admins = adminIds.length ? await db.collection('admins').find({ _id: { $in: adminIds } }, { projection: { full_name: 1, name: 1, email: 1 } }).toArray() : [];
+  const adminNames = new Map(admins.map(admin => [String(admin._id), admin.full_name || admin.name || admin.email || String(admin._id)]));
+  const reviewHistory = reviewRows.map(entry => ({
+    at: iso(entry.created_at || entry.at),
+    actor: adminNames.get(String(entry.actor_id || '')) || String(entry.actor_id || 'Quản trị viên'),
+    action: String(entry.action || ''),
+    reason: String(entry.reason || ''),
+    details: String(entry.details || '')
+  }));
   const types = lessons.reduce((counts, lesson) => { const type = String(lesson.lesson_type || 'video').toLowerCase(); const normalized = ['article','reading','doc','text'].includes(type) ? 'article' : ['quiz','test','exam','assessment'].includes(type) ? 'quiz' : ['lab','coding','practice'].includes(type) ? 'lab' : 'video'; counts[normalized]++; return counts; }, { video: 0, article: 0, quiz: 0, lab: 0 });
-  return { success: true, course: { ...viewCourse(course, instructors.get(String(course.instructor_id ?? course.instructorId))), description: course.description || '', shortDescription: course.short_description || course.subtitle || '', language: course.language || '', tags: course.tags || [], category: category?.name || course.category_name || course.category || '', curriculumSummary: { sectionCount: sections.length, lessonCount: lessons.length, ...types }, sections: sections.map(section => ({ id: String(section.section_id || section._id), title: section.title || '', order: section.order_index ?? null })), lessons: lessonViews, instructor: { id: String(course.instructor_id ?? ''), name: instructors.get(String(course.instructor_id ?? course.instructorId))?.full_name || course.instructor_name || '', email: instructors.get(String(course.instructor_id ?? course.instructorId))?.email || null } } };
+  return { success: true, course: { ...viewCourse(course, instructors.get(String(course.instructor_id ?? course.instructorId))), durationHours: durationHours || Number(course.duration_hours ?? course.durationHours ?? 0), description: course.description || '', shortDescription: course.short_description || course.subtitle || '', language: course.language || '', tags: course.tags || [], courseOutcomes: course.what_you_will_learn || course.course_outcomes || [], requirements: course.requirements || course.prerequisites || [], certificateSample: course.certificate_sample || null, reviewHistory, category: category?.name || course.category_name || course.category || '', curriculumSummary: { sectionCount: sections.length, lessonCount: lessons.length, ...types }, sections: sections.map(section => ({ id: String(section.section_id || section._id), title: section.title || '', order: section.order_index ?? null })), lessons: lessonViews, instructor: { id: String(course.instructor_id ?? ''), name: instructors.get(String(course.instructor_id ?? course.instructorId))?.full_name || course.instructor_name || '', email: instructors.get(String(course.instructor_id ?? course.instructorId))?.email || null } } };
 }
 
 export async function listAdminCourseLearners(id, query = {}, options = {}) {
@@ -267,6 +349,24 @@ export async function changeCourseStatus(id, { businessStatus, reason, explanati
   return { success: true, course: viewCourse(updated) };
   });
 }
+export async function restoreArchivedCourse(id, req, options = {}) {
+  const db = options.db || await getMongoDb();
+  return courseTransaction(db, async session => {
+    const current = await db.collection('courses').findOne(courseQuery(id), { session });
+    if (!current) throw FAIL('Không tìm thấy khóa học.', 404, 'COURSE_NOT_FOUND');
+    if (statusOf(current).businessStatus !== 'archived') throw FAIL('Chỉ có thể khôi phục khóa học đã lưu trữ.', 409, 'COURSE_NOT_ARCHIVED');
+    const now = options.now || new Date();
+    const updated = await db.collection('courses').findOneAndUpdate(
+      { _id: current._id, status: current.status, updated_at: current.updated_at ?? { $exists: false } },
+      { $set: { business_status: 'unpublished', status: 'draft', admin_hidden: true, updated_at: now }, $inc: { admin_version: 1 } },
+      { returnDocument: 'after', session }
+    );
+    if (!updated) throw FAIL('Khóa học vừa được cập nhật. Tải lại rồi thử tiếp.', 409, 'COURSE_UPDATE_CONFLICT');
+    await logCourseAction(db, { ...req, auditSession: session }, 'COURSE_RESTORED', current.course_id || current._id,
+      { businessStatus: 'archived' }, { businessStatus: 'unpublished' }, { note: 'Khôi phục về trạng thái chưa xuất bản.' });
+    return { success: true, course: viewCourse(updated) };
+  });
+}
 export async function decideCourseReview(id, body, req, options = {}) {
   const rawDecision = text(body?.decision);
   const decision = rawDecision === 'supplement' || rawDecision === 'request_supplement' ? 'request_changes' : rawDecision;
@@ -336,6 +436,7 @@ export function createAdminCoursesRouter(express, requireAdmin) {
   router.get('/:id/learners', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await listAdminCourseLearners(req.params.id, req.query)); } catch (error) { next(error); } });
   router.get('/:id/finance', createAdminRoleMiddleware(['SA', 'FA']), async (req, res, next) => { try { res.json(await getAdminCourseFinance(req.params.id, req.query)); } catch (error) { next(error); } });
   router.patch('/:id/business-status', createAdminRoleMiddleware(['SA']), async (req, res, next) => { try { res.json(await changeCourseStatus(req.params.id, req.body || {}, req)); } catch (error) { next(error); } });
+  router.post('/:id/restore', createAdminRoleMiddleware(['SA']), async (req, res, next) => { try { res.json(await restoreArchivedCourse(req.params.id, req)); } catch (error) { next(error); } });
   router.patch('/:id/pricing', createAdminRoleMiddleware(['SA']), async (req, res, next) => { try { const price = Number(req.body?.price), originalPrice = Number(req.body?.originalPrice); if (!Number.isSafeInteger(price) || price < 0 || price > 1000000000 || !Number.isSafeInteger(originalPrice) || originalPrice < price || originalPrice > 1000000000) throw FAIL('Giá bán/giá niêm yết không hợp lệ.'); const db = await getMongoDb(); const result = await courseTransaction(db, async session => { const course = await db.collection('courses').findOne(courseQuery(req.params.id), { session }); if (!course) throw FAIL('Không tìm thấy khóa học.',404,'COURSE_NOT_FOUND'); const now = new Date(); const changed = await db.collection('courses').updateOne({ _id: course._id, updated_at: course.updated_at ?? { $exists: false } }, { $set: { price, original_price: originalPrice, updated_at: now }, $inc: { admin_version: 1 } }, { session }); if (!changed.modifiedCount) throw FAIL('Khóa học vừa được cập nhật. Tải lại rồi thử tiếp.',409,'COURSE_UPDATE_CONFLICT'); await logCourseAction(db, { ...req, auditSession: session }, 'COURSE_PRICE_CHANGED', course.course_id || course._id, { price: course.price, originalPrice: course.original_price }, { price, originalPrice }); return { courseId: String(course.course_id || course._id), price, originalPrice }; }); res.json({ success: true, ...result }); } catch (error) { next(error); } });
   router.post('/:id/review-decision', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await decideCourseReview(req.params.id, req.body || {}, req)); } catch (error) { next(error); } });
   return router;

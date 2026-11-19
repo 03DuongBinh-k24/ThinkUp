@@ -130,6 +130,9 @@ export class StudentsComponent {
   readonly from = signal('');
   readonly to = signal('');
   readonly page = signal(1);
+  readonly resultTotal = signal(0);
+  readonly resultPages = signal(1);
+  private requestSequence = 0;
   private readonly columnFilters: Record<StudentColumn, WritableSignal<string[]>> = {
     name: signal<string[]>([]),
     status: signal<string[]>([]),
@@ -231,14 +234,11 @@ export class StudentsComponent {
     return items;
   });
 
-  readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
-  readonly currentPage = computed(() => Math.min(this.page(), this.pages()));
-  readonly visible = computed(() => {
-    const page = this.currentPage();
-    return this.filtered().slice((page - 1) * this.pageSize, page * this.pageSize);
-  });
-  readonly rangeStart = computed(() => (this.filtered().length ? (this.currentPage() - 1) * this.pageSize + 1 : 0));
-  readonly rangeEnd = computed(() => Math.min(this.currentPage() * this.pageSize, this.filtered().length));
+  readonly pages = computed(() => this.resultPages());
+  readonly currentPage = computed(() => Math.min(this.page(), this.resultPages()));
+  readonly visible = computed(() => this.students());
+  readonly rangeStart = computed(() => (this.resultTotal() ? (this.currentPage() - 1) * this.pageSize + 1 : 0));
+  readonly rangeEnd = computed(() => Math.min(this.currentPage() * this.pageSize, this.resultTotal()));
 
   readonly pageItems = computed<Array<number | 'gap'>>(() => {
     const total = this.pages();
@@ -319,6 +319,7 @@ export class StudentsComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => clearTimeout(this.searchTimer));
+    queueMicrotask(() => void this.loadPage());
   }
 
   menuItemsFor(student: Student): readonly UserRowMenuItem[] {
@@ -348,23 +349,27 @@ export class StudentsComponent {
     this.searchTimer = setTimeout(() => {
       this.query.set(value);
       this.page.set(1);
+      void this.loadPage();
     }, 250);
   }
 
   setStatus(value: string): void {
     this.status.set(value);
     this.page.set(1);
+    void this.loadPage();
   }
 
   setCourseCount(value: string): void {
     this.courseCount.set(value);
     this.page.set(1);
+    void this.loadPage();
   }
 
   setRange(range: { from: string; to: string }): void {
     this.from.set(range.from);
     this.to.set(range.to);
     this.page.set(1);
+    void this.loadPage();
   }
 
   hasActiveFilters(): boolean {
@@ -383,6 +388,7 @@ export class StudentsComponent {
     this.columnSort.set(null);
     this.clearColumnFilters();
     this.page.set(1);
+    void this.loadPage();
   }
 
   filterFor(key: StudentColumn): readonly string[] {
@@ -394,6 +400,7 @@ export class StudentsComponent {
     // Dòng đã chọn có thể không còn hiển thị sau khi lọc — bỏ chọn để tránh khoá nhầm.
     this.selection.set([]);
     this.page.set(1);
+    void this.loadPage();
   }
 
   private clearColumnFilters(): void {
@@ -411,6 +418,7 @@ export class StudentsComponent {
       ? null
       : { column: key, direction: direction as 'asc' | 'desc' });
     this.page.set(1);
+    void this.loadPage();
   }
 
   private sortValue(item: Student, column: StudentColumn): string | number {
@@ -423,7 +431,8 @@ export class StudentsComponent {
   }
 
   pageTo(value: number): void {
-    this.page.set(Math.max(1, Math.min(this.pages(), value)));
+    this.page.set(Math.max(1, Math.min(this.resultPages(), value)));
+    void this.loadPage();
   }
 
   isSelected(id: string): boolean {
@@ -603,9 +612,32 @@ export class StudentsComponent {
 
   retryLoad(): void {
     void this.data.reload();
+    void this.loadPage();
+  }
+
+  private async loadPage(): Promise<void> {
+    const sequence = ++this.requestSequence;
+    try {
+      const result = await this.data.loadStudents({ q:this.query(),status:this.status(),courseCount:this.courseCount(),from:this.from(),to:this.to(),page:this.page(),pageSize:this.pageSize });
+      if(sequence!==this.requestSequence)return;
+      this.resultTotal.set(result.total);this.resultPages.set(result.pages);this.data.updateStudentSummary(result.summary);
+    } catch { /* Shared data-source error is shown above the table. */ }
   }
 
   notify(message: string): void {
     this.toastService.show(message);
+  }
+
+  formatStudyTime(seconds: number): string {
+    const totalMinutes = Math.floor(Math.max(0, Number(seconds) || 0) / 60);
+    if (totalMinutes < 60) return `${totalMinutes} phút`;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return minutes ? `${hours} giờ ${minutes} phút` : `${hours} giờ`;
+  }
+
+  lessonTypeLabel(type: string): string {
+    const labels: Record<string, string> = { video: 'Video', article: 'Bài đọc', reading: 'Bài đọc', quiz: 'Bài kiểm tra', test: 'Bài kiểm tra', exam: 'Bài kiểm tra', lab: 'Thực hành lab', coding: 'Thực hành lab', practice: 'Thực hành' };
+    return labels[type.toLowerCase()] || 'Bài học';
   }
 }

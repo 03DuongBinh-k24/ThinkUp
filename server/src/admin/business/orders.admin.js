@@ -32,8 +32,12 @@ export function parseOrderQuery(query = {}) {
   return { q: q.trim().toLocaleLowerCase('vi-VN'), status, method, from, to, page, pageSize, sort };
 }
 
-async function rowsFor(db) {
-  const transactions = await db.collection('payment_transactions').find({ record_type: { $ne: 'gateway_receipt' } }).toArray();
+async function rowsFor(db, filters = {}) {
+  const query = { record_type: { $ne: 'gateway_receipt' } };
+  if (filters.status) query.status = filters.status === 'success' ? { $in: ['success','completed','paid'] } : filters.status === 'pending' ? 'pending' : { $in: ['failed','cancelled','expired'] };
+  if (filters.from || filters.to) { query.created_at = {}; if (filters.from) query.created_at.$gte = filters.from; if (filters.to) query.created_at.$lte = filters.to; }
+  if (filters.q && /^[A-Za-z0-9_-]{2,100}$/.test(filters.q)) query.$or = [{ order_id: { $regex: filters.q, $options: 'i' } }, { transaction_id: { $regex: filters.q, $options: 'i' } }];
+  const transactions = await db.collection('payment_transactions').find(query, { projection: { _id:1,user_id:1,order_id:1,transaction_id:1,status:1,payment_method:1,amount:1,currency:1,created_at:1,paid_at:1,invoice_code:1,order_summary:1,voucher_code:1,voucher_discount:1 } }).sort({created_at:filters.sort==='oldest'?1:-1,_id:filters.sort==='oldest'?1:-1}).toArray();
   const ids = [...new Set(transactions.map(row => String(row.user_id || '')).filter(ObjectId.isValid))].map(id => new ObjectId(id));
   const users = ids.length ? await db.collection('users').find({ _id: { $in: ids } }, { projection: { full_name: 1, name: 1, email: 1 } }).toArray() : [];
   const byId = new Map(users.map(user => [String(user._id), user]));
@@ -58,7 +62,7 @@ function filtered(rows, filters) {
 
 export async function listAdminOrders(query = {}, options = {}) {
   const filters = parseOrderQuery(query);
-  const rows = filtered(await rowsFor(options.db || await getMongoDb()), filters);
+  const rows = filtered(await rowsFor(options.db || await getMongoDb(), filters), filters);
   return { success: true, items: rows.slice((filters.page - 1) * filters.pageSize, filters.page * filters.pageSize), total: rows.length, page: filters.page, pageSize: filters.pageSize };
 }
 export async function getAdminOrder(id, options = {}) {
@@ -69,7 +73,7 @@ export async function getAdminOrder(id, options = {}) {
 }
 export async function getAdminOrderSummary(query = {}, options = {}) {
   const filters = parseOrderQuery(query);
-  const rows = filtered(await rowsFor(options.db || await getMongoDb()), { ...filters, status: '', q: '', method: '' });
+  const rows = filtered(await rowsFor(options.db || await getMongoDb(), { ...filters, status: '', q: '', method: '' }), { ...filters, status: '', q: '', method: '' });
   return { success: true, total: rows.length, successCount: rows.filter(row => row.status === 'success').length, pendingCount: rows.filter(row => row.status === 'pending').length, cancelledCount: rows.filter(row => row.status === 'cancelled').length };
 }
 export async function exportAdminOrders(query = {}, options = {}) {

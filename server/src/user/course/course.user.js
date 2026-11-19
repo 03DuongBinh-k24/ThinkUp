@@ -1,6 +1,7 @@
 import { resolveLearningPlayback } from '../learning-settings/learning-settings.user.js';
 import { ObjectId } from 'mongodb';
 import { getMongoDb } from '../db.js';
+import { getRecordedCourseLearningTimes, getRecordedLessonLearningTimes } from '../learning-activity/learning-activity.user.js';
 
 // ─── 0. Danh mục Collection CSDL MongoDB ─────────────────────────────────────
 export const COLLECTION_COURSES = 'courses';
@@ -16,6 +17,8 @@ export const COLLECTION_ENROLLMENTS = 'user_enrollments';
 export const COLLECTION_SECTIONS = 'course_sections';
 export const COLLECTION_LESSONS = 'lessons';
 export const COLLECTION_LESSON_VIDEOS = 'lesson_videos';
+export const COLLECTION_QUIZ_ATTEMPTS = 'user_quiz_attempts';
+export const COLLECTION_LAB_ATTEMPTS = 'user_lab_attempts';
 export const COLLECTION_REVIEWS = 'course_reviews';
 export const COLLECTION_DOCUMENTS = 'course_documents';
 export const COLLECTION_COURSE_COUPONS = 'course_coupons';
@@ -788,7 +791,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
   }
 
   // 3. Tính toán thống kê đánh giá (Rating Breakdown 1-5 sao)
-  const publicReviewsQuery = { course_id: courseIdStr, status: { $ne: 'hidden' } };
+  const publicReviewsQuery = { course_id: courseIdStr, status: { $nin: ['hidden', 'deleted', 'removed', 'rejected', 'declined'] } };
   const reviewsCount = await db.collection(COLLECTION_REVIEWS).countDocuments(publicReviewsQuery);
   const ratingAgg = await db.collection(COLLECTION_REVIEWS).aggregate([
     { $match: publicReviewsQuery },
@@ -1213,7 +1216,7 @@ export async function getCourseReviews(courseId, { rating, sort = 'newest', page
 
   const db = dbInstance || (await getMongoDb());
   const courseIdStr = String(courseId).trim();
-  const baseQuery = { course_id: courseIdStr, status: { $ne: 'hidden' } };
+  const baseQuery = { course_id: courseIdStr, status: { $nin: ['hidden', 'deleted', 'removed', 'rejected', 'declined'] } };
 
   // 1. Lấy thống kê tổng số lượng của từng mức sao (1-5 sao) phục vụ Menu Dropdown lọc
   const ratingAgg = await db.collection(COLLECTION_REVIEWS).aggregate([
@@ -1496,10 +1499,12 @@ export async function getUserEnrolledCourses(userId, options = {}) {
     ...(uidObj ? [{ user_id: uidObj }, { userId: uidObj }] : [])] };
 
   // 1. Tìm các bản ghi ghi danh / sở hữu từ user_courses, user_enrollments và user_course_progress
-  const [userCoursesDocs, enrollmentDocs, progressDocs] = await Promise.all([
+  const [userCoursesDocs, enrollmentDocs, progressDocs, recordedCourseTimes, recordedLessonTimes] = await Promise.all([
     db.collection(COLLECTION_USER_COURSES).find(ownerQuery).toArray(),
     db.collection(COLLECTION_ENROLLMENTS).find(ownerQuery).toArray(),
     db.collection('user_course_progress').find(ownerQuery).toArray(),
+    uidObj ? getRecordedCourseLearningTimes(uidStr, { db }) : Promise.resolve(new Map()),
+    uidObj ? getRecordedLessonLearningTimes(uidStr, { db }) : Promise.resolve(new Map()),
   ]);
 
   // Tập hợp danh sách mã course_id duy nhất
@@ -1542,18 +1547,28 @@ export async function getUserEnrolledCourses(userId, options = {}) {
   };
   const courseAliases = variants(coursesDocs.flatMap(course => [course._id, course.course_id]));
   const instructorAliases = variants(coursesDocs.flatMap(course => [course.instructor_id, course.instructor?.id]));
-  const [sections, lessonProgress, instructorProfiles] = await Promise.all([
-    db.collection(COLLECTION_SECTIONS).find({ course_id: { $in: courseAliases } }).toArray(),
+  const [sections, lessonProgress, instructorProfiles, quizAttempts, labAttempts] = await Promise.all([
+    db.collection(COLLECTION_SECTIONS).find({ $or: [{ course_id: { $in: courseAliases } }, { courseId: { $in: courseAliases } }] }).toArray(),
     db.collection('user_lesson_progress').find(ownerQuery).toArray(),
     db.collection(COLLECTION_INSTRUCTORS).find({ $or: ['_id','instructor_id','user_id','id'].map(field => ({ [field]: { $in: instructorAliases } })) }).toArray(),
+    db.collection(COLLECTION_QUIZ_ATTEMPTS).find(ownerQuery).toArray(),
+    db.collection(COLLECTION_LAB_ATTEMPTS).find(ownerQuery).toArray(),
+  ]);
+  const attemptPassed = attempt => attempt.passed === true || String(attempt.passed) === '1' ||
+    ['passed', 'completed'].includes(String(attempt.status || '').toLowerCase()) ||
+    (Array.isArray(attempt.run_history) && attempt.run_history.some(run => run.passed === true || String(run.passed) === '1'));
+  const completedAttemptLessonIds = new Set([
+    ...quizAttempts.filter(attemptPassed).map(attempt => String(attempt.lesson_id ?? attempt.lessonId)),
+    ...labAttempts.filter(attemptPassed).map(attempt => String(attempt.lesson_id ?? attempt.lessonId)),
   ]);
   const linkedInstructorAliases = variants([...instructorAliases, ...instructorProfiles.map(profile => profile.user_id)]);
   const instructorUsers = await db.collection(COLLECTION_USERS).find({
     $or: ['_id','instructor_id','user_id','id'].map(field => ({ [field]: { $in: linkedInstructorAliases } })),
   }).toArray();
-  const sectionAliases = variants(sections.flatMap(section => [section._id, section.section_id]));
+  const sectionAliases = variants(sections.flatMap(section => [section._id, section.section_id, section.id]));
   const lessons = await db.collection(COLLECTION_LESSONS).find({ $or: [
-    { course_id: { $in: courseAliases } }, { section_id: { $in: sectionAliases } },
+    { course_id: { $in: courseAliases } }, { courseId: { $in: courseAliases } },
+    { section_id: { $in: sectionAliases } }, { sectionId: { $in: sectionAliases } },
   ] }).toArray();
   const instructorMap = new Map();
   for (const instructor of [...instructorUsers, ...instructorProfiles]) {
@@ -1570,10 +1585,10 @@ export async function getUserEnrolledCourses(userId, options = {}) {
   const enrolledList = coursesDocs.map((c) => {
     const cidStr = String(c.course_id || c._id);
     const aliases = new Set([c._id, c.course_id].filter(value => value != null).map(String));
-    const courseSections = new Set(sections.filter(section => aliases.has(String(section.course_id)))
+    const courseSections = new Set(sections.filter(section => aliases.has(String(section.course_id ?? section.courseId)))
       .flatMap(section => [section._id, section.section_id]).filter(value => value != null).map(String));
-    const courseLessons = lessons.filter(lesson => aliases.has(String(lesson.course_id)) ||
-      (lesson.course_id == null && courseSections.has(String(lesson.section_id))));
+    const courseLessons = lessons.filter(lesson => aliases.has(String(lesson.course_id ?? lesson.courseId)) ||
+      ((lesson.course_id ?? lesson.courseId) == null && courseSections.has(String(lesson.section_id ?? lesson.sectionId))));
     const courseProgress = progressDocs.filter(row => aliases.has(String(row.course_id ?? row.courseId)))
       .sort((a, b) => updatedAt(b) - updatedAt(a));
     const prog = courseProgress[0];
@@ -1587,10 +1602,43 @@ export async function getUserEnrolledCourses(userId, options = {}) {
     const completedLessons = courseLessons.filter(lesson => {
       const ids = [lesson.lesson_id, lesson._id].filter(value => value != null).map(String);
       const rows = ids.map(id => perLesson.get(id)).filter(Boolean).sort((a, b) => updatedAt(b) - updatedAt(a));
-      if (rows.length) return rows[0].is_completed === true || rows[0].status === 'completed';
-      return ids.some(id => completedIds.has(id));
+      const completedInLessonProgress = rows.some(row => row.is_completed === true || row.is_completed === 1 ||
+        String(row.is_completed) === '1' || row.status === 'completed');
+      // Keep completion recorded by the aggregate document even when a stale
+      // per-lesson row still says in_progress/not_started. A successful quiz
+      // or lab attempt is also completion evidence when no lesson row exists.
+      return completedInLessonProgress || ids.some(id => completedIds.has(id) || completedAttemptLessonIds.has(id));
     }).length;
     const isCompleted = totalLessons > 0 && completedLessons === totalLessons;
+    // The lesson rows are the source of truth for learner-visible progress.
+    // Stored aggregate percentages can lag behind lesson completion updates.
+    const courseProgressPercent = totalLessons ? Math.round(completedLessons / totalLessons * 100) : 0;
+    const courseSectionsList = sections.filter(section => aliases.has(String(section.course_id ?? section.courseId)));
+    const sectionRows = courseSectionsList.map(section => {
+      const sectionIds = [section._id, section.section_id, section.id].filter(value => value != null).map(String);
+      const sectionLessons = courseLessons.filter(lesson => sectionIds.includes(String(lesson.section_id ?? lesson.sectionId)));
+      const lessonRows = sectionLessons.map(lesson => {
+        const lessonIds = [lesson.lesson_id, lesson._id].filter(value => value != null).map(String);
+        const progressRow = lessonIds.map(id => perLesson.get(id)).filter(Boolean).sort((a, b) => updatedAt(b) - updatedAt(a))[0];
+        const quizRows = quizAttempts.filter(attempt => lessonIds.includes(String(attempt.lesson_id ?? attempt.lessonId)))
+          .sort((a, b) => updatedAt(b) - updatedAt(a));
+        const labRows = labAttempts.filter(attempt => lessonIds.includes(String(attempt.lesson_id ?? attempt.lessonId)))
+          .sort((a, b) => updatedAt(b) - updatedAt(a));
+        const completedByAttempt = lessonIds.some(id => completedAttemptLessonIds.has(id));
+        return {
+          id: String(lesson.lesson_id ?? lesson._id), title: lesson.title || lesson.name || 'Bài học',
+          type: lesson.lesson_type || lesson.type || 'lesson',
+          status: completedByAttempt ? 'completed' : progressRow?.status || (progressRow?.is_completed ? 'completed' : 'not_started'),
+          completed: completedByAttempt || progressRow?.is_completed === true || progressRow?.status === 'completed' || lessonIds.some(id => completedIds.has(id)),
+          timeSpentSeconds: Math.max(Number(progressRow?.time_spent_seconds || 0), ...[...aliases].flatMap(courseAlias => lessonIds.map(lessonId => recordedLessonTimes.get(`${courseAlias}:${lessonId}`) || 0))),
+          quizAttempts: quizRows.map(attempt => ({ scorePercent: Number(attempt.score_percent ?? attempt.scorePercent ?? 0), passed: Boolean(attempt.passed), status: attempt.status || '', submittedAt: attempt.submitted_at || attempt.updated_at || attempt.created_at || null })),
+          labAttempts: labRows.map(attempt => ({ status: attempt.status || '', submittedAt: attempt.submitted_at || attempt.updated_at || attempt.created_at || null, runCount: Array.isArray(attempt.run_history) ? attempt.run_history.length : 0, passedRuns: Array.isArray(attempt.run_history) ? attempt.run_history.filter(run => run.passed).length : 0 })),
+        };
+      });
+      const done = lessonRows.filter(lesson => lesson.completed).length;
+      return { id: String(section.section_id ?? section._id), title: section.title || section.name || 'Chương học', order: Number(section.order ?? section.sort_order ?? 0), completedLessons: done, totalLessons: lessonRows.length, progress: lessonRows.length ? Math.round(done / lessonRows.length * 100) : 0, lessons: lessonRows };
+    }).sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
+    const totalLearningTimeSeconds = Math.max(Number(prog?.total_learning_time_seconds || 0), ...[...aliases].map(courseAlias => recordedCourseTimes.get(courseAlias) || 0), Number(courseProgress[0]?.total_learning_time_seconds || 0), [...perLesson.values()].reduce((sum, row) => sum + Number(row.time_spent_seconds || 0), 0));
     const lastDate = [...courseProgress, ...lessonProgress.filter(row => aliases.has(String(row.course_id ?? row.courseId)))]
       .sort((a, b) => updatedAt(b) - updatedAt(a))[0];
     const lastStudiedAt = lastDate && updatedAt(lastDate) ? formatTimeAgo(updatedAt(lastDate)) : '';
@@ -1608,6 +1656,9 @@ export async function getUserEnrolledCourses(userId, options = {}) {
       instructorId: String(c.instructor_id ?? c.instructor?.id ?? ''),
       totalLessons,
       completedLessons,
+      progress: courseProgressPercent,
+      totalLearningTimeSeconds,
+      sections: sectionRows,
       image: c.thumbnail_url || c.thumbnail || '',
       thumbnailUrl: c.thumbnail_url || c.thumbnail || '',
       cover: c.cover_color || coverColors[colorIndex],

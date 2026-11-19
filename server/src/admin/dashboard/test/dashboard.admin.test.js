@@ -11,7 +11,7 @@ import { normalizeAdminRole } from '../../auth/admin-rbac.js';
 class Collection {
   constructor(rows = []) { this.rows = rows; }
   countDocuments(filter = {}) { return Promise.resolve(this.rows.filter(row => matches(row, filter)).length); }
-  find(filter = {}) { let rows = this.rows.filter(row => matches(row, filter)); const cursor = { sort(spec) { rows.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); return cursor; }, limit(n) { rows = rows.slice(0, n); return cursor; }, toArray: async () => rows }; return cursor; }
+  find(filter = {}) { let rows = this.rows.filter(row => matches(row, filter)); const cursor = { sort(spec) { rows.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); return cursor; }, limit(n) { rows = rows.slice(0, n); return cursor; }, project() { return cursor; }, toArray: async () => rows }; return cursor; }
   findOne(filter = {}) { return Promise.resolve(this.rows.find(row => matches(row, filter)) || null); }
   aggregate(pipeline) { let rows = this.rows; for (const step of pipeline) { if (step.$match) rows = rows.filter(row => matches(row, step.$match)); if (step.$group) rows = [{ total: rows.reduce((sum,row) => sum + (row.actual_paid_amount ?? row.amount ?? 0),0) }]; } return { toArray: async () => rows }; }
 }
@@ -66,7 +66,7 @@ test('overview aggregates verified accounts, courses, paid revenue, room capacit
   assert.equal(result.actions.payoutsPending, 2);
   assert.equal(result.actions.payoutsLargePending, 1);
   assert.equal(result.actions.complaints, 1);
-  assert.equal(result.actions.alerts, 2);
+  assert.equal(result.actions.alerts, 1);
 });
 
 test('overview limits action counts for non-super-admin roles', async () => {
@@ -83,6 +83,28 @@ test('overview limits action counts for non-super-admin roles', async () => {
   const support = await getAdminDashboardOverview({ period: 'month' }, { db, now, role: 'CS' });
   assert.equal(support.actions.complaints, 1);
   assert.equal(support.actions.payoutsPending, undefined);
+});
+
+test('Action Center uses live SLA fields and normalizes legacy string dates', async () => {
+  const now = new Date('2026-11-21T12:00:00Z');
+  const db = dbOf({
+    users: new Collection(),
+    courses: new Collection([{ review_status: 'in_review', review_submitted_at: '2026-11-01 10:00:00' }]),
+    payment_transactions: new Collection(), study_rooms: new Collection(), payout_requests: new Collection(),
+    support_tickets: new Collection([
+      { status: 'open', response_due_at: '2026-11-20 10:00:00' },
+      { status: 'closed', response_due_at: '2026-11-20 10:00:00' },
+    ]),
+    support_complaints: new Collection([
+      { status: 'reviewing', due_at: '2026-11-20 10:00:00' },
+      { status: 'resolved', due_at: '2026-11-20 10:00:00' },
+    ]),
+  });
+
+  const result = await getAdminDashboardOverview({ period: 'year' }, { db, now });
+  assert.equal(result.actions.courseApprovals, 1);
+  assert.equal(result.actions.alerts, 2);
+  assert.equal(result.actions.complaints, 1);
 });
 
 test('dashboard analytics counts enrollments and progress without a special test-data marker', async () => {
@@ -111,6 +133,23 @@ test('dashboard analytics counts enrollments and progress without a special test
   assert.equal(result.revenue.payout, 50);
   assert.equal(result.revenue.payoutAvailable, true);
   assert.equal(result.revenue.rows[0].payout, 50);
+});
+
+test('dashboard revenue includes legacy string dates and classifies from the order snapshot', async () => {
+  const now = new Date('2026-11-09T12:00:00Z');
+  const db = dbOf({
+    payment_transactions: new Collection([{
+      status: 'paid', amount: 125_000, paid_at: '2026-11-09 10:00:00',
+      order_summary: JSON.stringify({ courses: [{ id: 'removed-course', instructor_id: 'instructor-1', price: 125_000 }] }),
+    }]),
+    user_enrollments: new Collection(), user_course_progress: new Collection(),
+    courses: new Collection(), course_reviews: new Collection(), payout_requests: new Collection(),
+  });
+
+  const result = await getAdminDashboardAnalytics({ period: 'month' }, { db, now });
+  assert.equal(result.revenue.total, 125_000);
+  assert.equal(result.revenue.marketplace, 125_000);
+  assert.equal(result.revenue.original, 0);
 });
 
 test('audit reads return full IP and user agent, role filter and log ID', async () => {

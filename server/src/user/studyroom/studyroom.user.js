@@ -28,6 +28,7 @@ async function pruneStaleRoomParticipants(db, roomId = null, now = new Date()) {
   for (const room of rooms) {
     const participants = Array.isArray(room.participants) ? room.participants : [];
     const active = participants.filter(participant => {
+      if (participant.isPersistent === true) return true;
       const hasHeartbeat = Boolean(participant.lastSeenAt);
       const lastSeenAt = participant.lastSeenAt || participant.joinedAt;
       return lastSeenAt && new Date(lastSeenAt) >= (hasHeartbeat ? cutoff : legacyCutoff);
@@ -40,6 +41,48 @@ async function pruneStaleRoomParticipants(db, roomId = null, now = new Date()) {
       : now;
     await db.collection(COLLECTION_STUDY_ROOMS).updateOne({ _id: room._id }, {
       $set: { participants: active, currentUsers, emptySince: currentUsers ? null : (room.emptySince || lastPresenceAt), updatedAt: now }
+    });
+  }
+}
+
+const DEFAULT_ROOM_MEMBERS = [
+  { name: 'Minh Anh', initials: 'MA', position: { x: 430, y: 250 } },
+  { name: 'Gia Huy', initials: 'GH', position: { x: 560, y: 250 } },
+  { name: 'Khánh Linh', initials: 'KL', position: { x: 690, y: 250 } },
+];
+
+function getDefaultRoomParticipants(roomId, count, joinedAt = new Date()) {
+  return DEFAULT_ROOM_MEMBERS.slice(0, count).map((member, index) => ({
+    userId: `room-member:${roomId}:${index + 1}`,
+    name: member.name,
+    avatar: '',
+    initials: member.initials,
+    role: 'member',
+    roleLabel: getRoleLabel('member'),
+    position: member.position,
+    joinedAt,
+    isPersistent: true,
+  }));
+}
+
+/** Add permanent sample members to active rooms, without duplicating existing entries. */
+async function ensureDefaultRoomParticipants(db) {
+  const rooms = await db.collection(COLLECTION_STUDY_ROOMS)
+    .find({ isActive: { $ne: false } })
+    .toArray();
+  for (const room of rooms) {
+    const participants = Array.isArray(room.participants) ? room.participants : [];
+    const existingIds = new Set(participants.map(participant => String(participant.userId || '')));
+    const roomKey = String(room.roomId || room.roomCode || room._id);
+    const capacity = Math.max(0, Number(room.capacity || room.maxUsers || 20) - participants.length);
+    const desiredCount = 2 + (roomKey.charCodeAt(0) % 2);
+    const additions = getDefaultRoomParticipants(roomKey, Math.min(desiredCount, capacity))
+      .filter(participant => !existingIds.has(participant.userId));
+    if (!additions.length) continue;
+    const updatedParticipants = [...participants, ...additions];
+    const uniqueCount = new Set(updatedParticipants.map(participant => String(participant.userId || ''))).size;
+    await db.collection(COLLECTION_STUDY_ROOMS).updateOne({ _id: room._id }, {
+      $set: { participants: updatedParticipants, currentUsers: uniqueCount, emptySince: null, updatedAt: new Date() },
     });
   }
 }
@@ -371,8 +414,24 @@ export async function createStudyRoom(creatorId, payload = {}) {
     }
   }
 
+  const roomId = roomCode.toLowerCase();
+  const participants = [
+    {
+      userId: creatorId || 'owner_' + Date.now(),
+      name: resolvedCreatorName,
+      avatar: resolvedCreatorAvatar,
+      initials: getInitials(resolvedCreatorName),
+      role: 'owner',
+      roleLabel: getRoleLabel('owner'),
+      position: { x: 300, y: 250 },
+      joinedAt: new Date(),
+      lastSeenAt: new Date()
+    },
+    ...getDefaultRoomParticipants(roomId, Math.min(2 + (roomId.charCodeAt(0) % 2), Math.max(0, parsedCapacity - 1)))
+  ];
+
   const newRoom = {
-    roomId: roomCode.toLowerCase(),
+    roomId,
     roomCode: roomCode.toUpperCase(),
     roomLink,
     name: trimmedName,
@@ -382,7 +441,7 @@ export async function createStudyRoom(creatorId, payload = {}) {
     tags: formattedTags,
     capacity: parsedCapacity,
     maxUsers: parsedCapacity, // Đồng bộ với model FE maxUsers
-    currentUsers: 1, // Chủ phòng vừa tạo coi như vào 1 slot
+    currentUsers: participants.length,
     roomTheme: typeof roomTheme === 'string' ? roomTheme.trim() : '',
     theme: typeof roomTheme === 'string' ? roomTheme.trim() : '', // tương thích FE
     password: hashedPassword,
@@ -403,19 +462,7 @@ export async function createStudyRoom(creatorId, payload = {}) {
       approvalRequired: roomType === 'private' // Duyệt yêu cầu vào phòng
     },
     // Danh sách thành viên đang có mặt với vai trò và vị trí canvas
-    participants: [
-      {
-        userId: creatorId || 'owner_' + Date.now(),
-        name: resolvedCreatorName,
-        avatar: resolvedCreatorAvatar,
-        initials: getInitials(resolvedCreatorName),
-        role: 'owner', // 'owner' | 'moderator' | 'member'
-        roleLabel: getRoleLabel('owner'), // 'Chủ phòng'
-        position: { x: 300, y: 250 },
-        joinedAt: new Date(),
-        lastSeenAt: new Date()
-      }
-    ],
+    participants,
     // Danh sách yêu cầu xin vào phòng đang chờ duyệt
     joinRequests: [],
     emptySince: null, // Ghi nhận thời điểm phòng không còn ai, nếu quá 1 tiếng sẽ tự động xóa
@@ -1996,6 +2043,9 @@ export async function leaveStudyRoom(roomId, userId) {
   if (!room) {
     return { success: true, message: 'Phòng không tồn tại hoặc đã bị xóa.' };
   }
+  if ((room.participants || []).some(participant => String(participant.userId) === String(userId) && participant.isPersistent === true)) {
+    throw createStudyRoomError('Thành viên mặc định luôn ở trong phòng cho đến khi phòng bị xóa.', 403, 'PERSISTENT_ROOM_MEMBER');
+  }
 
   const now = new Date();
   const departingOwner = String(room.creatorId) === String(userId);
@@ -2114,6 +2164,9 @@ export async function kickRoomParticipant(roomId, actorId, targetUserId, options
     throw createStudyRoomError('Chỉ chủ phòng hoặc moderator mới được mời thành viên ra.', 403, 'KICK_PERMISSION_REQUIRED');
   }
   if (!targetParticipant) throw createStudyRoomError('Thành viên này không còn trong phòng.', 404, 'ROOM_MEMBER_NOT_FOUND');
+  if (targetParticipant.isPersistent === true) {
+    throw createStudyRoomError('Không thể mời thành viên mặc định ra khỏi phòng.', 403, 'PERSISTENT_ROOM_MEMBER');
+  }
   if (targetParticipant.role === 'owner' || String(room.creatorId) === target) {
     throw createStudyRoomError('Không thể mời chủ phòng ra khỏi phòng.', 403, 'ROOM_OWNER_CANNOT_BE_KICKED');
   }
@@ -2311,6 +2364,7 @@ export async function getRoomSessionMessages(roomId, userId, options = {}) {
  */
 export async function cleanupExpiredEmptyRooms(maxIdleMs = ROOM_IDLE_TIMEOUT_MS) {
   const db = await getMongoDb();
+  await ensureDefaultRoomParticipants(db);
   await pruneStaleRoomParticipants(db);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
   const msgsColl = db.collection(COLLECTION_STUDY_ROOM_MESSAGES);
@@ -2382,7 +2436,10 @@ export async function getRoomParticipants(roomId, currentUserId = null) {
   const candidate = await db.collection(COLLECTION_STUDY_ROOMS).findOne({
     $or: [{ roomId: roomId.toLowerCase() }, { roomCode: roomId.toUpperCase() }], isActive: { $ne: false }
   }, { projection: { _id: 1 } });
-  if (candidate) await pruneStaleRoomParticipants(db, candidate._id);
+  if (candidate) {
+    await ensureDefaultRoomParticipants(db);
+    await pruneStaleRoomParticipants(db, candidate._id);
+  }
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
 
   const room = await roomsColl.findOne({
@@ -2452,7 +2509,8 @@ export async function getRoomParticipants(roomId, currentUserId = null) {
       role,
       roleLabel,
       position: p.position || { x: 300, y: 250 },
-      joinedAt: p.joinedAt || room.createdAt
+      joinedAt: p.joinedAt || room.createdAt,
+      isPersistent: p.isPersistent === true
     };
   });
 

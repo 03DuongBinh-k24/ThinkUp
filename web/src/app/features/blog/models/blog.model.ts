@@ -10,7 +10,7 @@ export interface BlogPost {
 }
 export interface BlogCategory { id: string; label: string; }
 export interface BlogTopic extends BlogCategory { count: number; }
-export interface BlogListQuery { category?: string; topic?: string; search?: string; ownerEmail?: string; page: number; limit: number; }
+export interface BlogListQuery { category?: string; topic?: string; search?: string; ownerEmail?: string; status?: string; page: number; limit: number; }
 export interface BlogListResponse { posts: BlogPost[]; total: number; hasMore: boolean; }
 export interface BlogViewedArticle { id: string; title: string; coverImage: string; views: number | string; }
 export type BlogRelatedArticle = Pick<BlogPost, 'id' | 'title' | 'coverImage' | 'readTime' | 'category'> & { categoryId?: string; };

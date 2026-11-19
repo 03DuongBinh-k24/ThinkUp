@@ -4,9 +4,11 @@ import { LucideCalendarDays, LucideChevronDown } from '@lucide/angular';
 import { TransactionRow } from '../../../core/models/commerce.model';
 import { PurchaseHistoryService } from '../services/purchase-history.service';
 import { DateCalendarComponent } from './components/date-calendar/date-calendar.component';
-import { Subscription, forkJoin } from 'rxjs';
+import { Observable, Subscription, forkJoin, map } from 'rxjs';
 
 type StatusFilter = 'all' | 'success' | 'pending' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'needs_review';
+type PurchaseSummary = { totalTransactions: number; totalSpent: number; totalCoursesPurchased: number };
+type PurchaseLoad = { rows: TransactionRow[]; summary: PurchaseSummary | null };
 
 @Component({
   selector: 'app-purchase-history',
@@ -19,6 +21,7 @@ export class PurchaseHistoryComponent implements OnInit {
   private readonly purchaseHistory = inject(PurchaseHistoryService);
   private readonly destroyRef = inject(DestroyRef);
   private request?: Subscription;
+  private summaryLoaded = false;
   readonly loading = signal(true);
   readonly error = signal('');
   readonly transactions = signal<TransactionRow[]>([]);
@@ -96,15 +99,22 @@ export class PurchaseHistoryComponent implements OnInit {
     this.request?.unsubscribe();
     const presets: Record<string, string> = { 'Hôm nay': 'today', 'Hôm qua': 'yesterday', '7 ngày qua': 'last7days', '30 ngày qua': 'last30days', 'Tháng này': 'thismonth', 'Tháng trước': 'lastmonth' };
     const range = this.selectedDate() === 'Tùy chọn khác' ? this.appliedCustomRange() : null;
-    this.request = forkJoin({ rows: this.purchaseHistory.list({
+    const rows = this.purchaseHistory.list({
       status: this.selectedStatus() === 'all' ? '' : this.selectedStatus(), keyword: this.query().trim(),
       datePreset: presets[this.selectedDate()], dateFrom: range?.from, dateTo: range?.to,
-    }), summary: this.purchaseHistory.summary() }).subscribe({
+    });
+    const request: Observable<PurchaseLoad> = this.summaryLoaded
+      ? rows.pipe(map(rows => ({ rows, summary: null })))
+      : forkJoin({ rows, summary: this.purchaseHistory.summary() });
+    this.request = request.subscribe({
       next: ({ rows, summary }) => {
         this.transactions.set(rows);
-        this.totalTransactions.set(summary.totalTransactions);
-        this.totalSpent.set(summary.totalSpent);
-        this.totalCoursesPurchased.set(summary.totalCoursesPurchased);
+        if (summary) {
+          this.summaryLoaded = true;
+          this.totalTransactions.set(summary.totalTransactions);
+          this.totalSpent.set(summary.totalSpent);
+          this.totalCoursesPurchased.set(summary.totalCoursesPurchased);
+        }
         this.loading.set(false);
       },
       error: () => { this.loading.set(false); this.error.set('Không thể tải lịch sử mua hàng. Vui lòng thử lại.'); },

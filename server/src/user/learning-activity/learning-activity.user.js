@@ -273,3 +273,36 @@ export async function getRecordedCourseLearningTimes(userId, options = {}) {
   }
   return totals;
 }
+
+/** Read deduplicated credited time for each lesson, keyed by `courseId:lessonId`. */
+export async function getRecordedLessonLearningTimes(userId, options = {}) {
+  if (typeof userId !== 'string' || !userId.trim()) throw failure('Yêu cầu đăng nhập bằng tài khoản hợp lệ.', 401, 'ACTIVITY_AUTH_REQUIRED');
+  const db = options.db || await getMongoDb();
+  const sessions = await db.collection(COLLECTION_LEARNING_ACTIVITY).find(ownerQuery(userId)).toArray();
+  const grouped = new Map();
+  for (const session of sessions) {
+    if (session.kind !== 'lesson') continue;
+    const { course_id: courseId, lesson_id: lessonId } = session.target || {};
+    if (typeof courseId !== 'string' || typeof lessonId !== 'string' || !Array.isArray(session.intervals)) continue;
+    const key = `${courseId}:${lessonId}`;
+    const intervals = grouped.get(key) || [];
+    for (const interval of session.intervals) {
+      const start = +new Date(interval.started_at), end = +new Date(interval.ended_at);
+      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) intervals.push([start, end]);
+    }
+    grouped.set(key, intervals);
+  }
+  const totals = new Map();
+  for (const [key, intervals] of grouped) {
+    intervals.sort((a, b) => a[0] - b[0]);
+    let start = null, end = null, milliseconds = 0;
+    for (const [nextStart, nextEnd] of intervals) {
+      if (start === null) { start = nextStart; end = nextEnd; }
+      else if (nextStart <= end) end = Math.max(end, nextEnd);
+      else { milliseconds += end - start; start = nextStart; end = nextEnd; }
+    }
+    if (start !== null) milliseconds += end - start;
+    totals.set(key, Math.floor(milliseconds / 1000));
+  }
+  return totals;
+}

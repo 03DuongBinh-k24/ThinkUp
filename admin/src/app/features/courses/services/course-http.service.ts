@@ -47,6 +47,93 @@ export class CourseHttpService extends CourseDemoService {
   constructor() { super(); void this.load(); }
   override retry(): void { void this.load(); }
 
+  override async getApprovalWorkspace(id: string): Promise<ApprovalWorkspace | null> {
+    const response = await firstValueFrom(this.http.get<{ course?: Record<string, unknown> }>(`${this.base}/admin/courses/approvals/${encodeURIComponent(id)}`));
+    const course = response.course;
+    if (!course) return null;
+    const approval = this.approvals().find(item => item.id === id);
+    const sections = Array.isArray(course['sections']) ? course['sections'] as Array<Record<string, unknown>> : [];
+    const lessons = Array.isArray(course['lessons']) ? course['lessons'] as Array<Record<string, unknown>> : [];
+    const asText = (value: unknown): string => value == null ? '' : String(value);
+    const asList = (value: unknown): string[] => {
+      if (Array.isArray(value)) return value.map(asText).map(item => item.trim()).filter(Boolean);
+      if (typeof value !== 'string' || !value.trim()) return [];
+      try {
+        const parsed: unknown = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed.map(asText).map(item => item.trim()).filter(Boolean) : [value.trim()];
+      } catch { return value.split(/\r?\n/).map(item => item.trim()).filter(Boolean); }
+    };
+    const plainText = (value: unknown): string => asText(value).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/\s+/g, ' ').trim();
+    const title = asText(course['title']) || approval?.courseTitle || 'Khóa học';
+    const instructor = asText(course['instructorName']) || approval?.instructor || '';
+    const chapters = sections.map((section, index) => ({
+      no: String(section['order'] ?? index + 1).padStart(2, '0'),
+      title: asText(section['title']) || `Chương ${index + 1}`,
+      lessons: lessons.filter(lesson => asText(lesson['sectionId']) === asText(section['id'])).map((lesson, lessonIndex) => {
+        const video = lesson['video'] as Record<string, unknown> | null;
+        const reading = lesson['reading'] as Record<string, unknown> | null;
+        const lab = lesson['lab'] as Record<string, unknown> | null;
+        const quiz = lesson['quiz'] as Record<string, unknown> | null;
+        const questions = Array.isArray(quiz?.['questions']) ? quiz['questions'] as Array<Record<string, unknown>> : [];
+        const mappedQuestions = questions.map(question => {
+          const answers = Array.isArray(question['answers']) ? question['answers'] as Array<Record<string, unknown>> : [];
+          return {
+            id: asText(question['id']), index: Number(question['index']) || 1,
+            total: Number(question['total'] ?? quiz?.['questionCount'] ?? questions.length),
+            prompt: asText(question['prompt']),
+            answers: answers.map((answer, answerIndex) => ({ letter: asText(answer['letter']) || String.fromCharCode(65 + answerIndex), text: asText(answer['text']), correct: answer['correct'] === true })),
+            correctLetter: asText(question['correctLetter']), explanation: asText(question['explanation'])
+          };
+        });
+        return {
+          id: asText(lesson['id']) || `${index + 1}-${lessonIndex + 1}`,
+          kind: lessonKind(asText(lesson['type'])),
+          title: asText(lesson['title']) || `Bài học ${lessonIndex + 1}`,
+          preview: {
+            videoUrl: video ? asText(video['url']) : undefined,
+            duration: asText(video?.['duration'] ?? lesson['durationMinutes']),
+            bodyHtml: reading ? asText(reading['contentHtml']) : undefined,
+            requirements: lab ? asText(lab['requirements']) : undefined,
+            sampleCode: lab ? asText(lab['sampleCode']) : undefined,
+            expectedOutput: lab ? asText(lab['expectedOutput']) : undefined,
+            questionCount: Number(quiz?.['questionCount'] ?? 0),
+            questions: mappedQuestions,
+            documents: Array.isArray(lesson['documents']) ? (lesson['documents'] as Array<Record<string, unknown>>).map(doc => ({ id: asText(doc['id']), name: asText(doc['name']), type: asText(doc['type']) })) : []
+          }
+        };
+      })
+    }));
+    const lessonTotal = lessons.length;
+    const emptyQuestion = { id: '', index: 0, total: 0, prompt: 'Khóa học chưa có dữ liệu câu hỏi xem trước.', answers: [], correctLetter: '', explanation: '' };
+    const workspace: ApprovalWorkspace = {
+      approvalId: id,
+      courseId: asText(course['courseId']) || approval?.courseId || id,
+      title,
+      level: approval?.level ?? 'Cơ bản',
+      instructor: { name: instructor, role: asText(course['instructorRole']) || 'Giảng viên', initials: instructor.split(/\\s+/).map(part => part[0] ?? '').slice(-2).join('').toUpperCase(), verified: false },
+      checklist: [
+        { id: 'identity', label: 'Kiểm tra thông tin khóa học', done: !!title.trim() && !!asText(course['description']).trim() },
+        { id: 'curriculum', label: 'Kiểm tra giáo trình và bài học', done: sections.length > 0 && lessonTotal > 0 },
+        { id: 'pricing', label: 'Kiểm tra giá đề xuất', done: Number(course['price']) >= 0 },
+        { id: 'instructor', label: 'Kiểm tra thông tin giảng viên', done: !!instructor.trim() }
+      ],
+      landing: { coverUrl: asText(course['thumbnailUrl']), subtitle: plainText(course['shortDescription']) || plainText(course['description']), price: Number(course['price']) || 0, originalPrice: Number(course['originalPrice'] ?? course['price']) || 0, discount: approval?.discount ?? 0, stats: `${sections.length} chương · ${lessonTotal} bài học`, outcomes: asList(course['courseOutcomes']), requirement: asList(course['requirements']).join(' · '), categories: [approval?.category || asText(course['category'])].filter(Boolean), subtags: asList(course['tags']), certificate: asText((course['certificateSample'] as Record<string, unknown> | null)?.['title']), certificateNote: '' },
+      chapters,
+      video: { title: 'Nội dung bài học', type: 'Nội dung khóa học', progress: 0, duration: '', playback: '', description: 'Chọn bài học trong cấu trúc khóa học để đối chiếu nội dung.', attachments: '' },
+      ide: { title: 'Bài tập lập trình', difficulty: '', prompt: 'Chưa có dữ liệu bài tập lập trình trong API.', language: '', code: '', testcases: [], result: '' },
+      quiz: { title: 'Câu hỏi kiểm tra', question: emptyQuestion },
+      files: [],
+      history: (Array.isArray(course['reviewHistory']) ? course['reviewHistory'] as Array<Record<string, unknown>> : []).map(entry => {
+        const action = asText(entry['action']);
+        const actionLabel: Record<string, string> = { approve: 'Đồng ý phê duyệt', reject: 'Từ chối xuất bản', request_changes: 'Yêu cầu bổ sung', claim: 'Tiếp nhận thẩm định' };
+        const note = [asText(entry['reason']), asText(entry['details'])].filter(Boolean).join(' · ');
+        return { at: asText(entry['at']), actor: asText(entry['actor']) || 'Quản trị viên', action: actionLabel[action] || action, note };
+      })
+    };
+    this.workspaces.update(items => [...items.filter(item => item.approvalId !== id), workspace]);
+    return workspace;
+  }
+
   override async createRoadmap(input: { categoryId: number; name: string; code?: string; description?: string }): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
     const response = await firstValueFrom(this.http.post<{ roadmap: Record<string, unknown> }>(`${this.base}/admin/roadmaps`, input));
     const id = text(response.roadmap, 'versionId', 'id');
@@ -266,6 +353,10 @@ export class CourseHttpService extends CourseDemoService {
     return rows;
   }
   override async archiveCourse(id: string, reason: string, explanation: string): Promise<void> { await this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: 'archived', reason, explanation }); }
+  override async restoreArchivedCourse(id: string): Promise<void> {
+    const response = await firstValueFrom(this.http.post<{ course?: Record<string, unknown> }>(`${this.base}/admin/courses/${encodeURIComponent(id)}/restore`, {}));
+    if (response.course) this.courses.update(items => items.map(item => item.id === id ? toCourse(response.course!) : item));
+  }
   override async setCourseStatus(id: string, status: CourseStatus): Promise<void> { await this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: status }); }
   override async approveApproval(id: string): Promise<void> { await this.decide(id, { decision: 'approve' }); }
   override async rejectApproval(id: string, reason: string, detail: string): Promise<void> {
@@ -280,6 +371,7 @@ export class CourseHttpService extends CourseDemoService {
     await firstValueFrom(this.http.post(`${this.base}/admin/courses/approvals/${encodeURIComponent(id)}/decision`,
       { ...body, expectedRevision: revision }));
     await this.load();
+    await this.getApprovalWorkspace(id);
   }
   override async toggleRoadmapVisibility(id: string): Promise<void> {
     const item = this.roadmaps().find(roadmap => roadmap.id === id);
@@ -327,11 +419,23 @@ const text = (row: Record<string, unknown>, ...keys: string[]): string => {
 };
 const num = (row: Record<string, unknown>, ...keys: string[]): number => Number(keys.map(key => row[key]).find(value => value != null && typeof value !== 'object') ?? 0);
 const COURSE_STATUSES: readonly string[] = ['published', 'pending', 'hidden', 'archived', 'unpublished'];
-const COURSE_LEVELS: readonly string[] = ['Cơ bản', 'Trung cấp', 'Nâng cao'];
-const toLevel = (value: string): CourseLevel => COURSE_LEVELS.includes(value) ? value as CourseLevel : 'Cơ bản';
+const toLevel = (value: string): CourseLevel => {
+  const normalized = value.trim().toLocaleLowerCase();
+  if (['cơ bản', 'co ban', 'basic', 'beginner', 'elementary'].includes(normalized)) return 'Cơ bản';
+  if (['trung cấp', 'trung cap', 'intermediate', 'mid'].includes(normalized)) return 'Trung cấp';
+  if (['nâng cao', 'nang cao', 'advanced', 'expert'].includes(normalized)) return 'Nâng cao';
+  return 'Cơ bản';
+};
 const toNodeType = (value: string): RoadmapNode['type'] => {
   const types: Record<string, RoadmapNode['type']> = { framework: 'Framework', language: 'Ngôn ngữ', tool: 'Công cụ', skill: 'Kỹ năng', project: 'Dự án', Framework: 'Framework', 'Ngôn ngữ': 'Ngôn ngữ', 'Công cụ': 'Công cụ', 'Kỹ năng': 'Kỹ năng', 'Dự án': 'Dự án' };
   return types[value] ?? 'Kỹ năng';
+};
+const lessonKind = (value: string): ApprovalWorkspace['chapters'][number]['lessons'][number]['kind'] => {
+  const type = value.toLowerCase();
+  if (['article', 'reading', 'text', 'doc'].includes(type)) return 'reading';
+  if (['quiz', 'test', 'exam', 'assessment'].includes(type)) return 'quiz';
+  if (['lab', 'coding', 'practice', 'ide'].includes(type)) return 'ide';
+  return 'video';
 };
 
 /** Không dùng bản ghi mock theo index: mỗi dòng API phải tự đủ field, thiếu thì để giá trị rỗng an toàn. */

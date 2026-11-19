@@ -208,11 +208,17 @@
   }
 
   }
-  <p class="detail-hero-meta" style="margin: 16px 0 0">
-    Chế độ chỉ xem · Các tab hiển thị nội dung, học viên và doanh thu
-  </p>
+  @if (restoreError()) { <p class="alert danger" role="alert">{{ restoreError() }}</p> }
+  @if (course().status === 'archived') {
+    <p class="detail-hero-meta" style="margin: 16px 0 0">Khôi phục sẽ đưa khóa học về trạng thái chưa xuất bản.</p>
+  } @else {
+    <p class="detail-hero-meta" style="margin: 16px 0 0">Chế độ chỉ xem · Các tab hiển thị nội dung, học viên và doanh thu</p>
+  }
 
-  <div dialogFooter style="display: flex; justify-content: flex-end">
+  <div dialogFooter style="display: flex; justify-content: flex-end; gap: 10px">
+    @if (course().status === 'archived') {
+      <button class="button primary" type="button" [disabled]="restorePending()" (click)="restoreArchivedCourse()">{{ restorePending() ? 'Đang khôi phục…' : 'Khôi phục khóa học' }}</button>
+    }
     <button class="button" type="button" (click)="close()">Đóng</button>
   </div>
 </app-admin-dialog>

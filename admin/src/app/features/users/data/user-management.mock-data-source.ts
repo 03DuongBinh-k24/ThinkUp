@@ -22,6 +22,8 @@ import {
   RejectLecturerCommand,
   UploadedEvidence,
   UserListFilters,
+  UserListResult,
+  StudentListResult,
   UserManagementDataSource,
   UserQuickStats
 } from './user-management.data-source';
@@ -55,6 +57,10 @@ export class MockUserManagementDataSource implements UserManagementDataSource {
   readonly lecturers = this.lecturerState.asReadonly();
   readonly students = this.studentState.asReadonly();
   readonly quickStats = this.quickStatsState.asReadonly();
+  private readonly lecturerSummaryState = signal({ total: 0, pending: 0, active: 0, locked: 0 });
+  readonly lecturerSummary = this.lecturerSummaryState.asReadonly();
+  private readonly studentSummaryState = signal({ total: 0, fresh: 0, active: 0, locked: 0 });
+  readonly studentSummary = this.studentSummaryState.asReadonly();
   readonly lecturerDetails = this.detailState.asReadonly();
   readonly studentDetails = this.studentDetailState.asReadonly();
   readonly coursesByLecturer = this.coursesState.asReadonly();
@@ -67,7 +73,51 @@ export class MockUserManagementDataSource implements UserManagementDataSource {
     this.lecturerState.set(MOCK_LECTURERS);
     this.studentState.set(MOCK_STUDENTS);
     this.quickStatsState.set({ ...USER_MODULE_QUICK_STATS });
+    this.lecturerSummaryState.set(this.summaryFor(MOCK_LECTURERS));
+    this.studentSummaryState.set(this.studentSummaryFor(MOCK_STUDENTS));
   }
+
+  async loadLecturers(filters: UserListFilters): Promise<UserListResult> {
+    const q = (filters.q ?? '').toLocaleLowerCase('vi-VN');
+    const all = MOCK_LECTURERS.filter((item) =>
+      (!q || [item.name, item.email, item.phone, item.lecturerCode, item.specialty].join(' ').toLocaleLowerCase('vi-VN').includes(q))
+      && (!filters.status || item.status === filters.status)
+      && (!filters.legalStatus || item.legalStatus === filters.legalStatus)
+      && (!filters.from || item.joinedAt >= filters.from)
+      && (!filters.to || item.joinedAt.slice(0, 10) <= filters.to));
+    const pageSize = filters.pageSize ?? 25;
+    const page = filters.page ?? 1;
+    const items = all.slice((page - 1) * pageSize, page * pageSize);
+    this.lecturerState.set(items);
+    return { items, total: all.length, pages: Math.max(1, Math.ceil(all.length / pageSize)), summary: this.summaryFor(all) };
+  }
+
+  setLecturerSummary(summary: { total: number; pending: number; active: number; locked: number }): void {
+    this.lecturerSummaryState.set(summary);
+  }
+
+  async loadStudents(filters: UserListFilters): Promise<StudentListResult> {
+    const q = (filters.q ?? '').toLocaleLowerCase('vi-VN');
+    const all = MOCK_STUDENTS.filter(item => (!q || [item.studentCode,item.name,item.email,item.phone].join(' ').toLocaleLowerCase('vi-VN').includes(q))
+      && (!filters.status || item.status === filters.status)
+      && (!filters.courseCount || (filters.courseCount === 'none' ? item.courseCount === 0 : filters.courseCount === '1-3' ? item.courseCount >= 1 && item.courseCount <= 3 : item.courseCount > 3))
+      && (!filters.from || item.registeredAt >= filters.from) && (!filters.to || item.registeredAt <= filters.to));
+    const pageSize=filters.pageSize??25,page=filters.page??1,items=all.slice((page-1)*pageSize,page*pageSize),summary=this.studentSummaryFor(all);
+    this.studentState.set(items); this.studentSummaryState.set(summary);
+    return {items,total:all.length,pages:Math.max(1,Math.ceil(all.length/pageSize)),summary};
+  }
+  setStudentSummary(summary: { total: number; fresh: number; active: number; locked: number }): void { this.studentSummaryState.set(summary); }
+
+  private summaryFor(items: readonly Lecturer[]) {
+    return {
+      total: items.length,
+      pending: items.filter(item => ['pending-review','pending-docs','pending-contract'].includes(item.status)).length,
+      active: items.filter(item => item.status === 'active').length,
+      locked: items.filter(item => ['warning','violation','frozen'].includes(item.status)).length
+    };
+  }
+
+  private studentSummaryFor(items: readonly Student[]) { return { total:items.length,fresh:items.filter(item=>item.registeredAt>=new Date(Date.now()-30*86400000).toISOString().slice(0,10)).length,active:items.filter(item=>item.status==='active').length,locked:items.filter(item=>item.status==='locked').length }; }
 
   async loadLecturerDetail(id: string): Promise<Lecturer | undefined> {
     const item = this.lecturerState().find((entry) => entry.id === id);

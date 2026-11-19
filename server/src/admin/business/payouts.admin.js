@@ -202,14 +202,35 @@ async function getRawPayouts(db) {
 export async function listAdminPayouts(query = {}, options = {}) {
   const filters = parsePayoutQuery(query);
   const db = options.db || await getMongoDb();
-  const raw = await getRawPayouts(db);
-  const rows = filterPayoutRows(raw.map(payoutView), filters);
-
+  const mongoFilter={deleted_at:{$exists:false}};
+  if(filters.status) mongoFilter.status=filters.status;
+  if(filters.limitMin!==null||filters.limitMax!==null){mongoFilter.amount={};if(filters.limitMin!==null)mongoFilter.amount.$gte=filters.limitMin;if(filters.limitMax!==null)mongoFilter.amount.$lte=filters.limitMax;}
+  const currentMonth=filters.paidMonthOnly?vietnamMonth(new Date()):null;
+  if(filters.paidMonthOnly){mongoFilter.status='paid';const [year,month]=currentMonth.split('-').map(Number);const start=new Date(Date.UTC(year,month-1,1)-7*60*60*1000),end=new Date(Date.UTC(year,month,1)-7*60*60*1000);mongoFilter.paid_at={$gte:start,$lt:end};}
+  if(filters.taxOnly) mongoFilter.tax_amount={$gt:0};
+  const collection=db.collection(PAYOUT_COLLECTION);
+  const projection={request_id:1,_id:1,instructor_id:1,instructor_name:1,email:1,amount:1,tax_amount:1,net_amount:1,bank:1,bank_info:1,account_number:1,account_name:1,available_balance:1,verified:1,contract_valid:1,disputed:1,tax_policy_snapshot:1,status:1,submitted_at:1,created_at:1,approved_at:1,approved_by:1,paid_at:1,bank_reference:1,is_demo:1,rejection_reason:1,rejection:1};
   const start = (filters.page - 1) * filters.pageSize;
+  // Paginate and count in Mongo after applying indexed/filterable fields. Text search is
+  // additionally matched after mapping because legacy records may store IDs differently.
+  const search=filters.q?{$or:[
+    {request_id:{$regex:filters.q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),$options:'i'}},
+    {instructor_name:{$regex:filters.q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),$options:'i'}},
+    {email:{$regex:filters.q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),$options:'i'}},
+    {account_number:{$regex:filters.q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),$options:'i'}},
+  ]}:{};
+  const dateQuery=filters.from||filters.to?{[filters.paidMonthOnly?'paid_at':'submitted_at']:{...(filters.from?{$gte:filters.from}:{}),...(filters.to?{$lte:filters.to}:{})}}:{};
+  const amountQuery=filters.limitMin!==null||filters.limitMax!==null?{amount:{...(filters.limitMin!==null?{$gte:filters.limitMin}:{}),...(filters.limitMax!==null?{$lte:filters.limitMax}:{})}}:{};
+  const queryFilter={$and:[mongoFilter,dateQuery,amountQuery,...(filters.q?[search]:[])]};
+  const [candidateRows,total]=await Promise.all([
+    collection.find(queryFilter,{projection}).sort({submitted_at:filters.sort==='oldest'?1:-1,_id:filters.sort==='oldest'?1:-1}).skip(start).limit(filters.pageSize).toArray(),
+    collection.countDocuments(queryFilter),
+  ]);
+  const rows=candidateRows.map(payoutView);
   return {
     success: true,
-    items: rows.slice(start, start + filters.pageSize),
-    total: rows.length,
+    items: rows,
+    total,
     page: filters.page,
     pageSize: filters.pageSize,
   };

@@ -32,6 +32,14 @@ async function allVouchers(db) {
   const [managed, ...old] = await Promise.all([VOUCHERS, ...legacy].map(name => db.collection(name).find({}).toArray()));
   return [...managed.filter(row => !row.deleted_at).map(row => view(row)), ...old.flatMap((rows, i) => rows.map(row => view(row, legacy[i])))];
 }
+async function allVouchersPage(db, page, pageSize) {
+  const perCollection=page*pageSize;
+  const [managed,...old]=await Promise.all([VOUCHERS,...legacy].map(name=>db.collection(name).find({deleted_at:{$exists:false}}).sort({created_at:-1,_id:-1}).limit(perCollection).toArray()));
+  const rows=[...managed.map(row=>view(row)),...old.flatMap((rows,index)=>rows.map(row=>view(row,legacy[index])))].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b.id).localeCompare(String(a.id)));
+  const counts=await Promise.all([VOUCHERS,...legacy].map(name=>db.collection(name).countDocuments({deleted_at:{$exists:false}})));
+  const total=counts.reduce((sum,count)=>sum+count,0);
+  return {items:rows.slice((page-1)*pageSize,page*pageSize),total};
+}
 function filterRows(rows, query) {
   const q = String(query.q || query.code || '').trim().toUpperCase(), sponsor = query.sponsor || '', status = query.status || '';
   if (q.length > 100 || (sponsor && !['thinkup', 'instructor'].includes(sponsor)) || (status && !['active', 'scheduled', 'locked', 'expired', 'hidden'].includes(status))) throw bad('Bộ lọc không hợp lệ.');
@@ -54,10 +62,11 @@ function filterRows(rows, query) {
     && dates.every(({ from, to, field }) => { const value = date(row[field]); return (!from || value && value >= from) && (!to || value && value <= to); }));
 }
 export async function listVouchers(query = {}, options = {}) {
-  const rows = filterRows(await allVouchers(options.db || await getMongoDb()), query);
   const page = Number(query.page || 1), pageSize = Number(query.pageSize || 10);
   if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw bad('Phân trang không hợp lệ.');
-  return { success: true, items: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length, page, pageSize };
+  const rows=filterRows(await allVouchers(options.db||await getMongoDb()),query);
+  const start=(page-1)*pageSize;
+  return { success:true,items:rows.slice(start,start+pageSize),total:rows.length,page,pageSize,pages:Math.ceil(rows.length/pageSize)||1 };
 }
 export async function voucherSummary(options = {}) {
   const db = options.db || await getMongoDb();

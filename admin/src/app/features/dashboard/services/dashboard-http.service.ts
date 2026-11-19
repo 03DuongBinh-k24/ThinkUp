@@ -151,7 +151,7 @@ export class DashboardHttpService implements DashboardStore {
   readonly analyticsError = signal('');
   readonly logsError = signal('');
 
-  async load(query: DashboardQuery = {}): Promise<void> {
+  async load(query: DashboardQuery = { period: 'year' }): Promise<void> {
     this.loading.set(true);
     this.error.set('');
     this.analyticsError.set('');

@@ -126,12 +126,12 @@
     <div class="table-footer">
       <span>{{ rangeLabel() }}</span>
       <div class="pagination" aria-label="Phân trang bình luận">
-        <button type="button" [disabled]="page() === 1" aria-label="Trang trước" (click)="page.update(value => value - 1)">‹</button>
+        <button type="button" [disabled]="page() === 1" aria-label="Trang trước" (click)="changePage(page() - 1)">‹</button>
         @for (item of pagination(); track $index) {
           @if (item === '...') { <button type="button" disabled aria-hidden="true">…</button> }
-          @else { <button type="button" [class.current]="item === page()" [attr.aria-current]="item === page() ? 'page' : null" [attr.aria-label]="'Trang ' + item" (click)="page.set(item)">{{ item }}</button> }
+          @else { <button type="button" [class.current]="item === page()" [attr.aria-current]="item === page() ? 'page' : null" [attr.aria-label]="'Trang ' + item" (click)="changePage(item)">{{ item }}</button> }
         }
-        <button type="button" [disabled]="page() >= pages()" aria-label="Trang sau" (click)="page.update(value => value + 1)">›</button>
+        <button type="button" [disabled]="page() >= pages()" aria-label="Trang sau" (click)="changePage(page() + 1)">›</button>
       </div>
     </div>
     }

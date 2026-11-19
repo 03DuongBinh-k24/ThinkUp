@@ -97,7 +97,7 @@ export async function validateVoucherLogic(db, rawCode, eligibleSubtotal, userId
   }
 
   // 2. Kiểm tra trạng thái kích hoạt
-  const isActive = voucherDoc.status === 'active' || voucherDoc.is_active === '1' || voucherDoc.is_active === 1;
+  const isActive = voucherDoc.status === 'active' || voucherDoc.is_active === true || voucherDoc.is_active === '1' || voucherDoc.is_active === 1;
   if (!isActive) {
     return { isValid: false, code, discount: 0, message: 'Mã giảm giá này hiện đang bị khóa hoặc ngưng sử dụng' };
   }
@@ -110,11 +110,30 @@ export async function validateVoucherLogic(db, rawCode, eligibleSubtotal, userId
     }
   }
 
+  if (voucherDoc.starts_at) {
+    const start = new Date(voucherDoc.starts_at);
+    if (!Number.isNaN(start.getTime()) && start.getTime() > Date.now()) {
+      return { isValid: false, code, discount: 0, message: 'Mã giảm giá chưa đến thời gian sử dụng' };
+    }
+  }
+
   // 4. Kiểm tra giới hạn lượt dùng
   const usageLimit = parseInt(voucherDoc.usage_limit || voucherDoc.quantity_limit || '0', 10);
   const usageCount = parseInt(voucherDoc.usage_count || '0', 10);
   if (usageLimit > 0 && usageCount >= usageLimit) {
     return { isValid: false, code, discount: 0, message: 'Mã giảm giá đã hết lượt sử dụng' };
+  }
+
+  const targetIds = (voucherDoc.course_ids || voucherDoc.scope_target_ids || []).map(String);
+  const instructorId = String(voucherDoc.instructor_id || '');
+  const eligible = courses.filter(course =>
+    (!targetIds.length || [course.id, course.course_id, ...(course.aliases || [])].filter(Boolean).some(id => targetIds.includes(String(id)))) &&
+    (!instructorId || String(course.instructor_id || '') === instructorId) &&
+    (voucherDoc.min_rating == null || Number(course.rating || 0) >= Number(voucherDoc.min_rating)));
+  const discountBase = courses.length ? eligible.reduce((sum, course) => sum + (Number(course.price) || 0), 0) : eligibleSubtotal;
+  if ((courses.length && (!eligible.length || eligible.length < Number(voucherDoc.min_course_count || 1))) ||
+      discountBase < Number(voucherDoc.min_order_value ?? voucherDoc.minimum_amount ?? 0)) {
+    return { isValid: false, code, discount: 0, message: 'Đơn hàng không đáp ứng điều kiện voucher' };
   }
 
   // 5. Tính số tiền giảm giá
@@ -124,7 +143,7 @@ export async function validateVoucherLogic(db, rawCode, eligibleSubtotal, userId
 
   let calculatedDiscount = 0;
   if (discountType === 'percent') {
-    calculatedDiscount = Math.round((eligibleSubtotal * discountVal) / 100);
+    calculatedDiscount = Math.round((discountBase * discountVal) / 100);
     if (maxDiscount > 0 && calculatedDiscount > maxDiscount) {
       calculatedDiscount = maxDiscount;
     }
@@ -133,7 +152,7 @@ export async function validateVoucherLogic(db, rawCode, eligibleSubtotal, userId
   }
 
   // Quy tắc chống giảm giá âm: Chiết khấu voucher không vượt quá tổng phụ
-  calculatedDiscount = Math.min(calculatedDiscount, eligibleSubtotal);
+  calculatedDiscount = Math.min(calculatedDiscount, discountBase);
 
   return {
     isValid: true,
@@ -577,17 +596,32 @@ export function createCartRouter(express, requireAuth, optionalAuth = null) {
   // 4.2. Kiểm tra mã Voucher độc lập (Validate voucher)
   router.post('/voucher/validate', extractAuthOptional, async (req, res, next) => {
     try {
-      const { code, eligibleSubtotal, courseIds } = req.body;
+      const { code, courseIds } = req.body;
       const db = await getMongoDb();
       let result;
-      if (await findBusinessVoucher(db, code)) {
-        if (!Array.isArray(courseIds) || !courseIds.length || courseIds.length > 50 || courseIds.some(id => typeof id !== 'string' || id.length > 100)) {
-          result = { isValid: false, code, discount: 0, message: 'Cần chọn khóa học để kiểm tra voucher.' };
-        } else {
-          const cart = await getCartDetails({ userId: req.userId || null, guestCourseIds: req.userId ? [] : courseIds, selectedCourseIds: courseIds, voucherCode: code });
-          result = { isValid: cart.summary.isVoucherValid, code: cart.summary.voucherCode, discount: cart.summary.voucherDiscount, message: cart.summary.voucherMessage };
-        }
-      } else result = await validateVoucherLogic(db, code, Number(eligibleSubtotal) || 0, req.userId || null);
+      if (!Array.isArray(courseIds) || !courseIds.length || courseIds.length > 50 || courseIds.some(id => typeof id !== 'string' || id.length > 100)) {
+        result = { isValid: false, code, discount: 0, message: 'Cần chọn khóa học để kiểm tra voucher.' };
+      } else {
+        const ids = [...new Set(courseIds)];
+        const clauses = ids.flatMap(id => {
+          const variants = [{ course_id: id }, { slug: id }];
+          if (ObjectId.isValid(id)) variants.push({ _id: new ObjectId(id) });
+          return variants;
+        });
+        const selected = await db.collection(COLLECTION_COURSES).find({ $or: clauses, status: 'published', admin_hidden: { $ne: true } }).toArray();
+        const selectedIds = new Set(ids);
+        const canonicalCourses = selected.map(course => ({
+          id: String(course._id), course_id: String(course.course_id || course._id),
+          aliases: [course.slug, course._id, course.course_id].filter(Boolean).map(String),
+          instructor_id: String(course.instructor_id || ''), rating: Number(course.rating) || 0,
+          price: Math.max(0, Number(course.sale_price ?? course.price ?? course.original_price ?? 0) || 0),
+        })).filter(course => [...selectedIds].some(id => [course.id, course.course_id, ...course.aliases].includes(id)));
+        const eligible = req.userId ? await Promise.all(canonicalCourses.map(async course =>
+          await checkCourseOwnership(db, req.userId, course.course_id) ? null : course)) : canonicalCourses;
+        const courses = eligible.filter(Boolean);
+        const subtotal = courses.reduce((sum, course) => sum + course.price, 0);
+        result = await validateVoucherLogic(db, code, subtotal, req.userId || null, courses);
+      }
       res.json({
         success: result.isValid,
         data: result,

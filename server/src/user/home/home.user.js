@@ -153,28 +153,43 @@ async function learningCourses(db, userId) {
     .filter(row => row.status == null || row.status === 'active')
     .map(row => row.course_id));
   if (!ownedIds.length) return { total: 0, courses: [] };
-  const courses = await db.collection('courses').find({
-    status: 'published',
-    admin_hidden: { $ne: true },
-    deleted_at: { $exists: false },
+  const courses = (await db.collection('courses').find({
     $or: [
       { _id: { $in: ownedIds } }, { course_id: { $in: ownedIds } }, { id: { $in: ownedIds } },
     ],
-  }).toArray();
-  const current = [];
-  for (const course of courses) {
-    const aliases = new Set([course._id, course.course_id, course.id].filter(value => value != null).map(String));
-    const row = progress.filter(item => aliases.has(String(item.course_id)))
-      .sort((a, b) => timestamp(b.updated_at || b.last_accessed_at) - timestamp(a.updated_at || a.last_accessed_at))[0];
-    const effectiveRow = row || { progress_percentage: 0, updated_at: null, last_accessed_at: null };
-    const study = await getCourseStudyCurriculum(String(course.course_id || course._id), String(userId), { db });
-    const percentage = study.learning_progress.progress_percentage;
-    if (typeof percentage !== 'number' || !Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
-      throw failure('Tiến độ học tập chưa hợp lệ.', 503, 'HOME_PROGRESS_INVALID');
+  }).toArray()).filter(course => course.status === 'published' && course.admin_hidden !== true && course.deleted_at == null);
+  // These reads are independent, but each study projection performs several
+  // database lookups. Bound concurrency to reduce serial latency without
+  // creating an unbounded burst against MongoDB for learners with many courses.
+  const progressByCourse = new Map();
+  for (const item of progress) {
+    const id = String(item.course_id ?? item.courseId ?? '');
+    const previous = progressByCourse.get(id);
+    if (!previous || timestamp(item.updated_at || item.last_accessed_at) > timestamp(previous.updated_at || previous.last_accessed_at)) {
+      progressByCourse.set(id, item);
     }
-    if (percentage >= 100) continue;
-    current.push({ course, row: effectiveRow, percentage, aliases, study });
   }
+  const evaluated = new Array(courses.length);
+  let nextCourse = 0;
+  const workerCount = Math.min(4, courses.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const index = nextCourse++;
+      if (index >= courses.length) return;
+      const course = courses[index];
+      const aliases = new Set([course._id, course.course_id, course.id].filter(value => value != null).map(String));
+      const row = [...aliases].map(id => progressByCourse.get(id)).filter(Boolean)
+        .sort((a, b) => timestamp(b.updated_at || b.last_accessed_at) - timestamp(a.updated_at || a.last_accessed_at))[0];
+      const effectiveRow = row || { progress_percentage: 0, updated_at: null, last_accessed_at: null };
+      const study = await getCourseStudyCurriculum(String(course.course_id || course._id), String(userId), { db });
+      const percentage = study.learning_progress.progress_percentage;
+      if (typeof percentage !== 'number' || !Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+        throw failure('Tiến độ học tập chưa hợp lệ.', 503, 'HOME_PROGRESS_INVALID');
+      }
+      if (percentage < 100) evaluated[index] = { course, row: effectiveRow, percentage, aliases, study };
+    }
+  }));
+  const current = evaluated.filter(Boolean);
   current.sort((a, b) => timestamp(b.row.updated_at || b.row.last_accessed_at) - timestamp(a.row.updated_at || a.row.last_accessed_at)
     || String(a.course._id).localeCompare(String(b.course._id)));
   const cards = await Promise.all(current.slice(0, HOME_COURSE_LIMIT).map(async ({ course, row, percentage, aliases, study }) => {
@@ -240,8 +255,21 @@ async function totalRecordedCourseLearningSeconds(db, userId) {
     perCourse.set(courseId, Math.max(perCourse.get(courseId) ?? 0, seconds));
   }
   const recorded = await getRecordedCourseLearningTimes(userId, { db });
+  // Resolve only course IDs present in this learner's progress/activity rows;
+  // scanning the entire catalog makes every home request slower as it grows.
+  const ids = [...new Set([...perCourse.keys(), ...recorded.keys()])];
+  if (!ids.length) return 0;
+  const lookupIds = identifiers(ids);
+  const numericIds = ids.map(Number).filter((value, index) => Number.isSafeInteger(value) && String(value) === ids[index]);
+  const courseQuery = { $or: [
+    { course_id: { $in: [...lookupIds, ...numericIds] } },
+    { id: { $in: [...lookupIds, ...numericIds] } },
+    { _id: { $in: lookupIds } },
+  ] };
+  const courses = await db.collection('courses').find(courseQuery, {
+    projection: { _id: 1, course_id: 1, id: 1 },
+  }).toArray();
   // Canonicalize both old progress IDs and the session target IDs before merging.
-  const courses = await db.collection('courses').find({}).toArray();
   const canonicalIds = new Map();
   for (const course of courses) {
     const canonical = String(course.course_id || course._id);

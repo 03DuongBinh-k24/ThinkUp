@@ -85,6 +85,7 @@ export class CourseApprovalsComponent {
   readonly bulkRejectTouched = signal(false);
   readonly bulkRejectReasons = BULK_REJECT_REASONS;
   readonly historyItem = signal<ApprovalItem | null>(null);
+  readonly historyLoading = signal(false);
   readonly historyWorkspace = computed(() => {
     const item = this.historyItem();
     return item ? this.store.workspaces().find(ws => ws.approvalId === item.id) ?? null : null;
@@ -346,10 +347,15 @@ export class CourseApprovalsComponent {
 
   openHistory(item: ApprovalItem): void {
     this.historyItem.set(item);
+    if (this.store.workspaces().some(workspace => workspace.approvalId === item.id)) return;
+    this.historyLoading.set(true);
+    void this.store.getApprovalWorkspace(item.id).catch(error => this.notify(apiErrorMessage(error), 'error'))
+      .finally(() => this.historyLoading.set(false));
   }
 
   closeHistory(): void {
     this.historyItem.set(null);
+    this.historyLoading.set(false);
   }
 
   openHistoryDetail(): void {

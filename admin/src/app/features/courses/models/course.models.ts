@@ -84,6 +84,17 @@ export interface WorkspaceLesson {
   kind: LessonKind;
   title: string;
   trial?: boolean;
+  preview?: {
+    videoUrl?: string;
+    duration?: string;
+    bodyHtml?: string;
+    requirements?: string;
+    sampleCode?: string;
+    expectedOutput?: string;
+    questionCount?: number;
+    questions?: WorkspaceQuizQuestion[];
+    documents?: Array<{ id: string; name: string; type: string }>;
+  };
 }
 
 export interface WorkspaceChapter {
@@ -139,6 +150,7 @@ export interface ApprovalWorkspace {
   instructor: { name: string; role: string; initials: string; verified: boolean };
   checklist: ChecklistItem[];
   landing: {
+    coverUrl?: string;
     subtitle: string;
     price: number;
     originalPrice: number;

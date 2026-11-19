@@ -7,7 +7,7 @@ import {
   MOCK_CONTENT_REVIEWS
 } from '../../../core/data/mock/content.mock';
 import { ContentComment, ContentPost, ContentReport, ContentReview, ModerationLog, ReportSeverity } from '../models/content.models';
-import { ContentStore } from './content.store';
+import { CommentSummary, ContentStore, ReviewPageFilters, ReviewPageResult, ReviewSummary } from './content.store';
 
 // TODO(pre-deploy): Nhớ thay ContentDemoService bằng adapter HTTP khi backend cung cấp API quản lý nội dung.
 @Injectable()
@@ -18,6 +18,8 @@ export class ContentDemoService extends ContentStore {
   private readonly reportState = signal<ContentReport[]>(clone(MOCK_CONTENT_REPORTS));
   private readonly logState = signal<ModerationLog[]>(clone(MOCK_CONTENT_LOGS));
   private readonly errorState = signal(readDemoLoadError());
+  readonly reviewSummary=signal<ReviewSummary>(summarizeReviews(MOCK_CONTENT_REVIEWS));
+  readonly commentsSummary=signal<CommentSummary>(summarizeComments(MOCK_CONTENT_COMMENTS));
 
   readonly posts = this.postState.asReadonly();
   readonly comments = this.commentState.asReadonly();
@@ -29,11 +31,23 @@ export class ContentDemoService extends ContentStore {
   retry(): void {
     this.errorState.set(false);
   }
+  override async loadReviewPage(filters: ReviewPageFilters): Promise<ReviewPageResult> {
+    let rows=clone(MOCK_CONTENT_REVIEWS);
+    if(filters.q){const q=filters.q.toLowerCase();rows=rows.filter(item=>[item.learner,item.learnerEmail,item.title,item.content,item.courseTitle,item.instructor].some(value=>value.toLowerCase().includes(q)));}
+    if(filters.status)rows=rows.filter(item=>item.status===filters.status);
+    if(filters.rating)rows=rows.filter(item=>filters.rating==='negative'?item.rating<=2:item.rating===Number(filters.rating));
+    if(filters.nps==='promoter')rows=rows.filter(item=>item.nps>=9);else if(filters.nps==='passive')rows=rows.filter(item=>item.nps>=7&&item.nps<=8);else if(filters.nps==='detractor')rows=rows.filter(item=>item.nps<=6);
+    if(filters.response)rows=rows.filter(item=>filters.response==='replied'?!!item.reply:!item.reply);
+    if(filters.timeRange&&filters.timeRange!=='all'){const days=Number(filters.timeRange.replace('d','')),cutoff=Date.now()-days*86400000;rows=rows.filter(item=>Date.parse(item.createdAt)>=cutoff);}
+    const total=rows.length,pages=Math.max(1,Math.ceil(total/filters.pageSize));this.reviewState.set(rows.slice((filters.page-1)*filters.pageSize,filters.page*filters.pageSize));this.reviewSummary.set(summarizeReviews(MOCK_CONTENT_REVIEWS));return{total,pages,page:filters.page};
+  }
+  override async loadCommentPage(filters: import('./content.store').CommentPageFilters):Promise<ReviewPageResult>{let rows=clone(MOCK_CONTENT_COMMENTS);if(filters.q){const q=filters.q.toLowerCase();rows=rows.filter(x=>[x.author,x.content,x.contextTitle].some(v=>v.toLowerCase().includes(q)));}if(filters.status)rows=rows.filter(x=>x.status===filters.status);const total=rows.length,pages=Math.max(1,Math.ceil(total/filters.pageSize));this.commentState.set(rows.slice((filters.page-1)*filters.pageSize,filters.page*filters.pageSize));this.commentsSummary.set(summarizeComments(MOCK_CONTENT_COMMENTS));return{total,pages,page:filters.page};}
 
   updatePost(id: string, patch: Partial<ContentPost>, note: string): void {
     this.postState.update(items => items.map(item => item.id === id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item));
     this.log(`Bài viết ${id}`, patch.status ? statusAction(patch.status) : 'Cập nhật', note);
   }
+  restorePost(id: string): Promise<void> { this.updatePost(id, { status: 'published' }, 'Khôi phục xuất bản bài viết.'); return Promise.resolve(); }
 
   createPost(post: ContentPost): void {
     this.postState.update(items => [post, ...items]);
@@ -45,10 +59,18 @@ export class ContentDemoService extends ContentStore {
     ids.forEach(id => this.log(`Bài viết ${id}`, 'Xóa', 'Xóa vĩnh viễn bài viết khỏi hệ thống.'));
   }
 
+  archivePostWithEmail(_id: string, _reason: string, _note: string): Promise<void> {
+    return Promise.reject(new Error('Chức năng gửi email chỉ khả dụng khi kết nối máy chủ thật.'));
+  }
+  requestPostRevision(_id: string, _reason: string): Promise<void> {
+    return Promise.reject(new Error('Chức năng gửi email chỉ khả dụng khi kết nối máy chủ thật.'));
+  }
+
   updateComment(id: string, patch: Partial<ContentComment>, note: string): void {
     this.commentState.update(items => items.map(item => item.id === id ? { ...item, ...patch } : item));
     this.log(`Bình luận ${id}`, patch.status === 'hidden' ? 'Ẩn' : patch.status === 'visible' ? 'Hiện lại' : 'Cập nhật', note);
   }
+  moderateComment(id: string, status: 'visible' | 'hidden', reason: string): Promise<void> { this.updateComment(id, { status }, reason); return Promise.resolve(); }
 
   removeComments(ids: string[], reason: string): void {
     this.commentState.update(items => items.filter(item => !ids.includes(item.id)));
@@ -155,3 +177,5 @@ function readDemoLoadError(): boolean {
 function clone<T>(value: T): T {
   return typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
 }
+function summarizeReviews(rows:readonly ContentReview[]):ReviewSummary{const visible=rows.filter(x=>x.status==='approved'),promoters=visible.filter(x=>x.nps>=9).length,detractors=visible.filter(x=>x.nps<=6).length,replied=visible.filter(x=>!!x.reply).length;return{total:rows.length,average:visible.length?visible.reduce((a,x)=>a+x.rating,0)/visible.length:0,negative:visible.filter(x=>x.rating<=2).length,nps:visible.length?Math.round((promoters-detractors)*100/visible.length):0,responseRate:visible.length?Math.round(replied*100/visible.length):0,pending:rows.filter(x=>x.status==='pending').length,approved:visible.length};}
+function summarizeComments(rows:readonly ContentComment[]):CommentSummary{return{total:rows.length,visible:rows.filter(x=>x.status==='visible').length,pending:rows.filter(x=>x.status==='pending').length,flagged:rows.filter(x=>x.status==='flagged').length,hidden:rows.filter(x=>x.status==='hidden'||x.status==='spam').length};}

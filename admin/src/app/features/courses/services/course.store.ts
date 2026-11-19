@@ -15,6 +15,7 @@ export abstract class CourseStore {
   abstract readonly roadmapLoadError: Signal<boolean>;
 
   abstract retry(): void;
+  abstract getApprovalWorkspace(id: string): Promise<ApprovalWorkspace | null>;
   ensureRoadmapStudio(_id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> { return Promise.reject(new Error('Nguồn dữ liệu không hỗ trợ cấu hình lộ trình.')); }
   async getRoadmapNodeSuggestions(roadmapId: string, _nodeId: string): Promise<CourseSuggestion[]> {
     return this.studios().find(studio => studio.roadmapId === roadmapId)?.suggestions ?? [];
@@ -28,6 +29,7 @@ export abstract class CourseStore {
    */
   abstract getCourseFinance(id: string): Promise<CourseFinance | null>;
   abstract archiveCourse(id: string, reason: string, explanation: string): void;
+  abstract restoreArchivedCourse(id: string): Promise<void> | void;
   abstract setCourseStatus(id: string, status: CourseStatus): void;
   abstract approveApproval(id: string): Promise<void> | void;
   abstract rejectApproval(id: string, reason: string, detail: string): Promise<void> | void;

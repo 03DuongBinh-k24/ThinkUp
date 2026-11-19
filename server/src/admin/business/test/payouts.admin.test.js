@@ -112,7 +112,21 @@ function createMockDb(initialPayouts = mockPayouts) {
       };
       if (name === 'payout_requests') {
         return {
-          find: () => ({ toArray: async () => payouts }),
+          find: (filter = {}) => {
+            const matches=(row,condition)=>Object.entries(condition||{}).every(([key,value])=>{
+              if(key==='$exists')return value?row!==undefined:row===undefined;
+              const actual=row?.[key];
+              if(value&&typeof value==='object'&&!Array.isArray(value)){if('$gte'in value&&!(new Date(actual)>=new Date(value.$gte)))return false;if('$lte'in value&&!(new Date(actual)<=new Date(value.$lte)))return false;if('$lt'in value&&!(new Date(actual)<new Date(value.$lt)))return false;if('$gt'in value&&!(Number(actual)>value.$gt))return false;if('$regex'in value&&!String(actual||'').toLowerCase().includes(value.$regex.toLowerCase()))return false;return true;}
+              return actual===value;
+            });
+            const match=(row,condition)=>Object.entries(condition||{}).every(([key,value])=>key==='$and'?value.every(part=>match(row,part)):key==='$or'?value.some(part=>match(row,part)):matches(row,{[key]:value}));
+            let rows=payouts.filter(row=>match(row,filter));
+            const cursor={sort(){return cursor;},skip(n){rows=rows.slice(n);return cursor;},limit(n){rows=rows.slice(0,n);return cursor;},toArray:async()=>rows};return cursor;
+          },
+          countDocuments: async filter => {
+            let rows=payouts.filter(p=>p.deleted_at==null&&(!filter.$and||filter.$and.every(part=>Object.entries(part).every(([key,value])=>key==='$or'?value.some(clause=>Object.entries(clause).some(([field,condition])=>String(p[field]||'').toLowerCase().includes(condition.$regex.toLowerCase()))):key==='amount'?(value.$gte==null||p.amount>=value.$gte)&&(value.$lte==null||p.amount<=value.$lte):key==='status'?p.status===value:key==='paid_at'?new Date(p.paid_at)>=value.$gte&&new Date(p.paid_at)<value.$lt:true))));
+            return rows.length;
+          },
           findOne: async query => {
             return payouts.find(p => {
               if (query.request_id && p.request_id === query.request_id) return true;
@@ -196,6 +210,9 @@ test('AC-03 & AC-04: Thống kê KPI rút tiền và lọc theo bộ lọc', asy
   const largeList = await listAdminPayouts({ limitMin: LARGE_PAYOUT_THRESHOLD }, { db });
   assert.equal(largeList.total, 1);
   assert.equal(largeList.items[0].id, 'PO-2026-002');
+  const secondPage = await listAdminPayouts({ page: 2, pageSize: 1 }, { db });
+  assert.equal(secondPage.items.length, 1);
+  assert.equal(secondPage.items[0].id, 'PO-2026-002');
 });
 
 test('AC-02 & AC-08: Phân quyền duyệt (FA chỉ duyệt < 20M, SA duyệt >= 20M)', async () => {

@@ -23,6 +23,8 @@ export class CourseDetailDialogComponent {
   readonly detail = signal<Course | null>(null);
   readonly course = computed(() => this.detail() ?? this.selection());
   readonly detailError = signal('');
+  readonly restorePending = signal(false);
+  readonly restoreError = signal('');
   readonly learnersError = signal('');
   readonly learners = signal<Course['learners'] | null>(null);
   readonly closed = output<void>();
@@ -76,6 +78,19 @@ export class CourseDetailDialogComponent {
       } catch {
         this.learnersError.set('Không tải được danh sách học viên.');
       }
+    }
+  }
+
+  async restoreArchivedCourse(): Promise<void> {
+    this.restorePending.set(true);
+    this.restoreError.set('');
+    try {
+      await this.store.restoreArchivedCourse(this.course().id);
+      this.closed.emit();
+    } catch (error) {
+      this.restoreError.set(error instanceof Error ? error.message : 'Không thể khôi phục khóa học.');
+    } finally {
+      this.restorePending.set(false);
     }
   }
 

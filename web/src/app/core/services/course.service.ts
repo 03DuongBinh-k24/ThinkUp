@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, defer, throwError, forkJoin, of, switchMap } from 'rxjs';
+import { Observable, defer, throwError, forkJoin } from 'rxjs';
 import { AuthService } from './auth.service';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -695,7 +695,7 @@ export class CourseService {
     return date.toLocaleDateString('vi-VN');
   }
 
-  getFilterOptions(): Observable<{ success: boolean; data: CourseFilterOptions }> {
+  getFilterOptions(): Observable<{ success: boolean; data: CourseFilterOptions & { courses: Course[] } }> {
     return forkJoin({
       careers: this.http.get<{ success: boolean; data: { category_id: number; career_name: string }[] }>(`${this.apiUrl}/user/roadmap/careers`),
       catalog: this.getCourses(),
@@ -705,6 +705,7 @@ export class CourseService {
       return { success: true, data: {
         categories: careers.data.map(item => item.career_name),
         popularTags: [...new Set(catalog.data.flatMap(course => course.tags || []))],
+        courses: catalog.data,
       } };
     }));
   }
@@ -735,37 +736,6 @@ export class CourseService {
         throw new Error('Dữ liệu khóa học đã đăng ký không hợp lệ.');
       }
       return response;
-    }), switchMap(response => {
-      if (!response.data.length) return of(response);
-      // The list handler can disagree with the learning handler. Use the same
-      // server-owned progress as the course dashboard/player, never infer completion.
-      return forkJoin(response.data.map(course => this.http.get<{
-        success: boolean;
-        data: {
-          actions: {
-            resume_learning: { lesson_id: string | null; title: string };
-            certificate?: { certificate_id?: string | null; certificate_code?: string | null };
-          };
-          course: { course_id: string };
-          learning_progress: {
-            completed_lessons: number; total_lessons: number; progress_percentage: number;
-          };
-        };
-      }>(this.apiUrl + '/user/lessons/study/' + encodeURIComponent(course.id)).pipe(map(study => {
-        const progress = study.data?.learning_progress;
-        if (!study.success || String(study.data?.course?.course_id) !== course.id || !progress ||
-            !Number.isSafeInteger(progress.completed_lessons) || !Number.isSafeInteger(progress.total_lessons) ||
-            progress.total_lessons < 0 || progress.completed_lessons < 0 || progress.completed_lessons > progress.total_lessons ||
-            !Number.isFinite(progress.progress_percentage) || progress.progress_percentage < 0 || progress.progress_percentage > 100) {
-          throw new Error('Không tải được tiến độ khóa học đã xác minh.');
-        }
-        const resume = study.data.actions?.resume_learning;
-        const certAction = study.data.actions?.certificate;
-        return { ...course, completedLessons: progress.completed_lessons, totalLessons: progress.total_lessons,
-          progress: progress.progress_percentage,
-          resumeLesson: resume?.lesson_id ? { id: resume.lesson_id, title: resume.title } : null,
-          certificateCode: certAction?.certificate_id || certAction?.certificate_code || null };
-      })))).pipe(map(data => ({ success: true, data })));
     }), this.guardAccount);
   }
 

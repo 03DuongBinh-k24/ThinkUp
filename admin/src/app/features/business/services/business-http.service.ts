@@ -14,6 +14,7 @@ import {
   BusinessStore,
   OrderListFilters,
   OrderTotals,
+  PayoutListFilters,
   PayoutSummary,
   VoucherListFilters
 } from './business.store';
@@ -167,6 +168,18 @@ export class BusinessHttpService implements BusinessStore {
     } finally {
       this.loadingState.set(false);
     }
+  }
+
+  async loadOrdersPage(filters: OrderListFilters): Promise<{ items: readonly BusinessOrder[]; total: number; summary: OrderTotals }> {
+    const params = new HttpParams({ fromObject: { ...this.orderParamRecord(filters), page: String(filters.page ?? 1), pageSize: String(filters.pageSize ?? 25) } });
+    const [list,summary] = await Promise.all([
+      firstValueFrom(this.http.get<ApiOrderList>(this.ordersApi,{params})),
+      firstValueFrom(this.http.get<{success:boolean;total:number;successCount:number;pendingCount:number;cancelledCount:number}>(`${this.ordersApi}/summary`,{params:this.orderParams(filters)}))
+    ]);
+    const items=(list.items??[]).map(item=>this.toOrder(item));
+    const totals={total:Number(summary.total??0),success:Number(summary.successCount??0),pending:Number(summary.pendingCount??0),cancelled:Number(summary.cancelledCount??0)};
+    this.orderState.set(items);this.orderTotalsState.set(totals);
+    return {items,total:Number(list.total??0),summary:totals};
   }
 
   async exportOrders(format: ExportFormat, filters: OrderListFilters): Promise<void> {
@@ -442,20 +455,19 @@ export class BusinessHttpService implements BusinessStore {
   }
 
   async reloadPayouts(): Promise<void> {
-    const [summary, { items }] = await Promise.all([
-      firstValueFrom(this.http.get<ApiPayoutSummary>(`${this.payoutApi}/summary`)),
-      collectAllPages<PayoutRequest>(async (page, pageSize) => {
-        const result = await firstValueFrom(this.http.get<{ items: PayoutRequest[]; total: number; pageSize: number }>(
-          this.payoutApi, { params: { page, pageSize } }
-        ));
-        if (!Array.isArray(result.items)) throw new Error('Danh sách chi trả không hợp lệ.');
-        return { ...result, page, pages: Math.ceil(result.total / result.pageSize) };
-      })
-    ]);
+    await this.getPayoutSummary();
+  }
+
+  async getPayoutSummary(): Promise<void> {
+    const summary = await firstValueFrom(this.http.get<ApiPayoutSummary>(`${this.payoutApi}/summary`));
     if (!summary.kpi) throw new Error('Thống kê chi trả không hợp lệ.');
-    this.payoutState.set(items);
-    // Thẻ tổng quan phản ánh toàn bộ hàng đang hiển thị, gồm cả hàng minh họa.
     this.payoutSummaryState.set(summary.kpi);
+  }
+
+  async loadPayoutsPage(filters: PayoutListFilters): Promise<{items: readonly PayoutRequest[];total:number}> {
+    const result=await firstValueFrom(this.http.get<{items:PayoutRequest[];total:number}>(this.payoutApi,{params:compact(filters)}));
+    if(!Array.isArray(result.items))throw new Error('Danh sách chi trả không hợp lệ.');
+    const items=result.items;this.payoutState.set(items);return{items,total:Number(result.total??0)};
   }
 
   async payoutDetail(id: string): Promise<PayoutRequest> {

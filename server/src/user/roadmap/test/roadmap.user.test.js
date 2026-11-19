@@ -536,6 +536,31 @@ test('Roadmap Backend Service Test Suite', async (t) => {
     assert.equal((await getCareerRoadmapsList()).some(item => item.category_id === 2), false);
   });
 
+  await t.test('11.1 Draft roadmap versions keep the current learner roadmap visible', async () => {
+    const versions = db.collection('admin_roadmap_versions');
+    await db.collection('course_categories').updateOne({ category_id: 1 }, { $set: { name: 'Frontend Developer' } });
+    await versions.insertMany([
+      { category_id: 1, version: 1, version_id: 'frontend-published-v1', status: 'published',
+        name: 'Frontend Developer Published', stages: [{ stage_id: 'fe-pub-stage', title: 'Published', nodes: [{ node_id: 'fe-pub-node', title: 'Published node' }] }] },
+      { category_id: 1, version: 2, version_id: 'frontend-draft-v2', status: 'draft',
+        name: 'Frontend Developer Draft', stages: [{ stage_id: 'fe-draft-stage', title: 'Draft', nodes: [] }] },
+      { category_id: 2, version: 1, version_id: 'backend-draft-v1', status: 'draft',
+        name: 'Backend Developer Draft', stages: [{ stage_id: 'be-draft-stage', title: 'Draft', nodes: [] }] },
+    ]);
+
+    const careers = await getCareerRoadmapsList();
+    assert.equal(careers.find(item => item.category_id === 1)?.career_name, 'Frontend Developer Published');
+    assert.equal(careers.find(item => item.category_id === 2)?.career_name, 'Backend Developer');
+    assert.equal((await getRoadmapTemplate(1))?.stages[0].stage_id, 'fe-pub-stage');
+    assert.equal((await getRoadmapTemplate(2))?.stages[0].stage_id, 'backend-stage-1');
+
+    await versions.updateOne({ version_id: 'backend-draft-v1' }, { $set: { status: 'hidden' } });
+    assert.equal((await getCareerRoadmapsList()).some(item => item.category_id === 2), false,
+      'An explicit hidden version still hides the roadmap');
+    assert.equal(await getRoadmapTemplate(2), null);
+    await versions.deleteMany({ category_id: { $in: [1, 2] } });
+  });
+
   await t.test('12. Reconcile curriculum by ID, preserve review and archive removed progress', async () => {
     const userId = 'curriculum-reconciliation-test';
     await roadmapsColl.insertOne({ user_id: userId, category_id: 1, is_active: true,

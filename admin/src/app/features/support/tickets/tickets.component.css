@@ -1,7 +1,7 @@
 .support-page {
   --ticket-accent: #0965e4;
 }
-.ticket-code-link { padding: 0; border: 0; background: transparent; color: #075fc8; font: inherit; font-weight: var(--admin-font-weight-semibold); cursor: pointer; }
+.ticket-code-link { max-width: 100%; padding: 0; border: 0; background: transparent; color: #075fc8; font: inherit; font-weight: var(--admin-font-weight-semibold); cursor: pointer; text-align: left; overflow-wrap: anywhere; word-break: break-word; }
 .ticket-code-link:hover { text-decoration: underline; }
 .ticket-code-link:focus-visible { outline: 2px solid #0965e4; outline-offset: 2px; border-radius: 3px; }
 .ticket-code-cell { display: grid; justify-items: start; gap: 5px; }

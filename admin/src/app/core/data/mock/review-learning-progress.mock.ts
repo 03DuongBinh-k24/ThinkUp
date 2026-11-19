@@ -21,6 +21,6 @@ export function mockReviewLearningProgress(completion: number, course: string): 
     if (activity.kind === 'quiz' && activity.progress === 100) activity.score = 82 + index % 3 * 4;
   });
   const scores = activities.flatMap(activity => activity.score === undefined ? [] : [activity.score]);
-  return { studiedHours: Math.round(22 * completion / 100 * 10) / 10, totalHours: 22,
+  return { completion, studiedHours: Math.round(22 * completion / 100 * 10) / 10, totalHours: 22,
     quizAverage: scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null, chapters };
 }

@@ -55,7 +55,7 @@ export class ContentReviewsComponent {
     finally { this.writing = false; }
   }
   private readonly store = inject(ContentStore);
-  ngOnInit(): void { void this.store.open('reviews'); }
+  ngOnInit(): void { void this.store.open('reviews').then(() => this.loadPage()); }
   readonly loadError = this.store.loadError;
 
   readonly rowMenu = signal<{ item: ContentReview; top: number; left: number } | null>(null);
@@ -75,6 +75,9 @@ export class ContentReviewsComponent {
   readonly exportItems = signal<readonly ContentReview[]>([]);
   readonly exportScope = signal<readonly { label: string; value: string }[]>([]);
   readonly page = signal(1);
+  readonly resultTotal = signal(0);
+  readonly resultPages = signal(1);
+  private requestSequence = 0;
   private readonly pageSizeService = inject(AdminPageSizeService);
   /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
   get pageSize(): number { return this.pageSizeService.pageSize(); }
@@ -122,22 +125,7 @@ export class ContentReviewsComponent {
     this.withSelected([...new Set(this.reviews().flatMap(item => item.feedbackTags))], this.columnFilters.tag())
       .map(item => ({ value: item, label: item })));
 
-  readonly counts = computed(() => {
-    const items = this.reviews();
-    const approved = items.filter(item => item.status === 'approved');
-    const promoters = items.filter(item => item.nps >= 9).length;
-    const detractors = items.filter(item => item.nps <= 6).length;
-    return {
-      total: items.length,
-      pending: items.filter(item => item.status === 'pending').length,
-      approved: approved.length,
-      average: approved.length ? approved.reduce((sum, item) => sum + item.rating, 0) / approved.length : 0,
-      nps: items.length ? Math.round(((promoters - detractors) / items.length) * 100) : 0,
-      negative: items.filter(item => item.rating <= 2).length,
-      replied: items.filter(item => !!item.reply).length,
-      responseRate: items.length ? Math.round((items.filter(item => !!item.reply).length / items.length) * 100) : 0
-    };
-  });
+  readonly counts = computed(() => this.store.reviewSummary());
   readonly averageLabel = computed(() => `${this.counts().average.toFixed(1)} / 5.0`);
   readonly statusOptions: CustomSelectOption[] = [
     { value: '', label: 'Tất cả trạng thái' },
@@ -170,7 +158,7 @@ export class ContentReviewsComponent {
     { value: '90d', label: '90 ngày qua' }
   ];
 
-  readonly filtered = computed(() => {
+  readonly localFiltered = computed(() => {
     const term = this.search().trim().toLowerCase();
     const status = this.status();
     const rating = this.rating();
@@ -217,14 +205,18 @@ export class ContentReviewsComponent {
     }
     return [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   });
-  readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
-  readonly visible = computed(() => this.filtered().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize));
-  readonly pagination = computed(() => paginationRange(this.page(), this.pages()));
+  readonly pages = computed(() => this.resultPages());
+  readonly visible = computed(() => this.filtered());
+  readonly filtered = computed(() => {
+    const status=this.columnFilters.status(),learners=this.columnFilters.learner(),courses=this.columnFilters.course(),instructors=this.columnFilters.instructor(),ratings=this.columnFilters.rating(),nps=this.columnFilters.nps(),tags=this.columnFilters.tag();
+    return this.reviews().filter(item=>(!status.length||status.includes(item.status))&&(!learners.length||learners.includes(item.learner))&&(!courses.length||courses.includes(item.courseTitle))&&(!instructors.length||instructors.includes(item.instructor))&&(!ratings.length||ratings.includes(String(item.rating)))&&(!nps.length||nps.includes(this.npsBandKey(item.nps)))&&(!tags.length||item.feedbackTags.some(tag=>tags.includes(tag))));
+  });
+  readonly pagination = computed(() => paginationRange(Math.min(this.page(),this.pages()), this.pages()));
   readonly rangeLabel = computed(() => {
-    const total = this.filtered().length;
+    const total = this.resultTotal();
     if (!total) return 'Không có đánh giá nào';
     const start = (this.page() - 1) * this.pageSize + 1;
-    return `Hiển thị ${start} - ${Math.min(start + this.pageSize - 1, total)} của ${total} đánh giá`;
+    return `Hiển thị ${start} - ${start + this.visible().length - 1} của ${total} đánh giá`;
   });
   readonly detail = computed(() => this.reviews().find(item => item.id === this.detailId()) ?? null);
   readonly allVisibleSelected = computed(() => {
@@ -313,12 +305,14 @@ export class ContentReviewsComponent {
   @HostListener('window:scroll')
   onMenuScroll(): void { this.closeRowMenu(); }
 
-  setSearch(value: string): void { this.search.set(value); this.page.set(1); }
-  setStatus(value: string): void { this.status.set(value); this.page.set(1); this.selected.set(new Set()); }
-  setRating(value: string): void { this.rating.set(value); this.page.set(1); }
-  setNps(value: string): void { this.nps.set(value); this.page.set(1); }
-  setResponse(value: string): void { this.response.set(value); this.page.set(1); }
-  setTime(value: string): void { this.timeRange.set(value); this.page.set(1); }
+  private async loadPage(): Promise<void> {const seq=++this.requestSequence;try{const result=await this.store.loadReviewPage({page:this.page(),pageSize:this.pageSize,q:this.search(),status:this.status(),rating:this.rating(),nps:this.nps(),response:this.response(),timeRange:this.timeRange()});if(seq===this.requestSequence){this.resultTotal.set(result.total);this.resultPages.set(result.pages);}}catch{this.notify('Không thể tải trang đánh giá. Vui lòng thử lại.','error');}}
+  changePage(value:number):void{if(value<1||value>this.pages()||value===this.page())return;this.page.set(value);void this.loadPage();}
+  setSearch(value: string): void { this.search.set(value); this.page.set(1); void this.loadPage(); }
+  setStatus(value: string): void { this.status.set(value); this.page.set(1); this.selected.set(new Set()); void this.loadPage(); }
+  setRating(value: string): void { this.rating.set(value); this.page.set(1); void this.loadPage(); }
+  setNps(value: string): void { this.nps.set(value); this.page.set(1); void this.loadPage(); }
+  setResponse(value: string): void { this.response.set(value); this.page.set(1); void this.loadPage(); }
+  setTime(value: string): void { this.timeRange.set(value); this.page.set(1); void this.loadPage(); }
 
   clearFilters(): void {
     this.search.set(''); this.status.set(''); this.rating.set(''); this.nps.set('');
@@ -326,6 +320,7 @@ export class ContentReviewsComponent {
     this.columnSort.set(null);
     Object.values(this.columnFilters).forEach(filter => filter.set([]));
     this.page.set(1); this.selected.set(new Set());
+    void this.loadPage();
   }
 
   filterFor(key: ReviewColumn): readonly string[] {
@@ -336,6 +331,7 @@ export class ContentReviewsComponent {
     this.columnFilters[key].set(values);
     this.page.set(1);
     this.selected.set(new Set());
+    void this.loadPage();
   }
 
   sortFor(key: ReviewColumn): string {
@@ -349,6 +345,7 @@ export class ContentReviewsComponent {
       ? null
       : { column: key, direction: direction as 'asc' | 'desc' });
     this.page.set(1);
+    void this.loadPage();
   }
 
   private sortValue(item: ContentReview, column: ReviewColumn): string | number {
@@ -490,6 +487,10 @@ export class ContentReviewsComponent {
 
   openExport(): void {
     if (this.exportBusy()) return;
+    if (this.store.requiresReportDecision) {
+      this.notify('Xuất toàn bộ tập kết quả cần endpoint export riêng; bảng hiện tải theo trang để giữ hiệu năng.', 'error');
+      return;
+    }
     const label = (options: readonly CustomSelectOption[], value: string) => options.find(option => option.value === value)?.label ?? value;
     this.exportItems.set(structuredClone(this.filtered()));
     this.exportScope.set([

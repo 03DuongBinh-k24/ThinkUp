@@ -172,18 +172,24 @@ async function quoteVoucher(db, code, subtotal, userId, session, courses = []) {
     return reserveBusinessVoucher(db, managed, quote, userId, session);
   }
   let coupon, collection;
-  for(const name of ['platform_coupons','payment_vouchers']) {
+  for(const name of ['platform_coupons','payment_vouchers','course_coupons']) {
     coupon=await db.collection(name).findOne({code},{session});
     if(coupon){collection=name;break;}
   }
   if(!coupon)throw paymentError('Mã giảm giá không tồn tại.',400,'VOUCHER_INVALID');
   const now=new Date();
   if ([coupon.starts_at,coupon.expires_at].some(value=>value && !Number.isFinite(new Date(value).getTime())))throw paymentError('Ngày hiệu lực voucher không hợp lệ.',400,'VOUCHER_INVALID');
-  if(coupon.course_ids || coupon.instructor_id || coupon.usage_limit_per_user)throw paymentError('Voucher có điều kiện riêng chưa được hỗ trợ ở checkout này.',400,'VOUCHER_SCOPE_UNSUPPORTED');
   const active=coupon.status==='active'||coupon.is_active===true||coupon.is_active===1||coupon.is_active==='1';
+  const courseIds=(coupon.course_ids || coupon.scope_target_ids || []).map(String);
+  const instructorId=String(coupon.instructor_id || '');
+  const eligible=courses.filter(course=>(!courseIds.length || course.aliases.some(id=>courseIds.includes(String(id)) || courseIds.includes(String(course.id)))) &&
+    (!instructorId || String(course.instructor_id || '')===instructorId) &&
+    (coupon.min_rating == null || Number(course.rating || 0)>=Number(coupon.min_rating)));
+  const eligibleSubtotal=paymentMoney(eligible.reduce((sum,course)=>sum+course.price,0));
+  const minimumCourses=Number(coupon.min_course_count ?? coupon.minimum_course_count ?? 1);
   if(!active || (coupon.starts_at && new Date(coupon.starts_at)>now) || (coupon.expires_at && new Date(coupon.expires_at)<=now) ||
      (coupon.allowed_user_ids && !coupon.allowed_user_ids.map(String).includes(String(userId))) ||
-     subtotal < Number(coupon.min_order_value ?? coupon.minimum_amount ?? 0)) {
+     subtotal < Number(coupon.min_order_value ?? coupon.minimum_amount ?? 0) || eligible.length < minimumCourses || eligibleSubtotal <= 0) {
     throw paymentError('Mã giảm giá không áp dụng cho đơn này.',400,'VOUCHER_INVALID');
   }
   const limit=Number(coupon.usage_limit ?? coupon.quantity_limit ?? 0), count=Number(coupon.usage_count || 0);
@@ -191,9 +197,13 @@ async function quoteVoucher(db, code, subtotal, userId, session, courses = []) {
   const value=Number(coupon.discount_value ?? coupon.percent_off ?? 0);
   const type=coupon.discount_type || (coupon.percent_off!==undefined?'percent':'fixed');
   if(!['percent','fixed'].includes(type)||!Number.isFinite(value)||value<0||type==='percent'&&value>100) throw paymentError('Cấu hình voucher không hợp lệ.',400,'VOUCHER_INVALID');
-  let discount=type==='percent'?Math.round(subtotal*value/100):paymentMoney(value);
+  let discount=type==='percent'?Math.round(eligibleSubtotal*value/100):paymentMoney(value);
   if(coupon.max_discount!==undefined && coupon.max_discount!==null)discount=Math.min(discount,paymentMoney(coupon.max_discount));
-  discount=Math.min(subtotal,discount);
+  discount=Math.min(eligibleSubtotal,discount);
+  if(coupon.usage_limit_per_user) {
+    const uses=await db.collection(COLLECTION_TRANSACTIONS).countDocuments({user_id:String(userId),voucher_code:String(code),voucher_released:{$ne:true},status:{$in:['pending','paid','success']}},{session});
+    if(uses>=Number(coupon.usage_limit_per_user))throw paymentError('Bạn đã đạt giới hạn dùng voucher.',409,'VOUCHER_USER_LIMIT');
+  }
   const held=await db.collection(collection).updateOne({_id:coupon._id,usage_count:coupon.usage_count ?? {$exists:false}},{$inc:{usage_count:1}},{session});
   if(held.matchedCount!==1)throw paymentError('Voucher vừa thay đổi. Vui lòng thử lại.',409,'VOUCHER_CHANGED');
   return {discount,id:coupon._id,collection};

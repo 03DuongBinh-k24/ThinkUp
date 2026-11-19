@@ -164,7 +164,7 @@
     <div class="table-heading">
       <div>
         <h2>Danh sách giảng viên</h2>
-        <p>{{ formatCount(filtered().length) }} hồ sơ khớp bộ lọc hiện tại</p>
+        <p>{{ formatCount(resultTotal()) }} hồ sơ khớp bộ lọc hiện tại</p>
       </div>
     </div>
 
@@ -288,7 +288,7 @@
     </div>
 
     <footer class="table-footer">
-      <span>Đang hiển thị {{ rangeStart() }}–{{ rangeEnd() }} trên {{ formatCount(filtered().length) }} giảng viên</span>
+      <span>Đang hiển thị {{ rangeStart() }}–{{ rangeEnd() }} trên {{ formatCount(resultTotal()) }} giảng viên</span>
       <nav class="pagination" aria-label="Phân trang danh sách giảng viên">
         <button type="button" [disabled]="currentPage() === 1" aria-label="Trang trước" (click)="pageTo(currentPage() - 1)">‹</button>
         @for (item of pageItems(); track $index) {
@@ -375,7 +375,7 @@
                 <strong>{{ lecturer.cv.fileName }} · {{ lecturer.cv.size }}</strong>
               </div>
               <div class="file-actions">
-                <button class="btn btn--outline btn--sm" type="button" (click)="notify('Mở tab Thẩm định hồ sơ để tải tài liệu đính kèm.')">Xem tài liệu</button>
+                <button class="btn btn--outline btn--sm" type="button" (click)="viewCv(lecturer)">Xem tài liệu</button>
               </div>
             </div>
           } @else {
@@ -417,7 +417,10 @@
               @for (violation of lecturer.violations; track $index) {
                 <div class="violation-pill">
                   <strong>{{ violation.level }}</strong>
-                  <span>{{ formatDate(violation.appliedAt) }} · {{ violation.reason }}</span>
+                  <span>{{ violation.action === 'unlock' ? 'Mở khóa' : 'Xử lý vi phạm' }} · {{ formatDate(violation.appliedAt) }} · {{ violation.reason }}</span>
+                  @if (violation.courseIds; as courseIds) { @if (courseIds.length) { <span>Khóa học bị xử lý: {{ courseIds.length }}</span> } }
+                  @if (violation.evidence; as evidence) { @if (evidence.length) { <span>Minh chứng: {{ evidence.join(', ') }}</span> } }
+                  @if (violation.adminName) { <span>Người xử lý: {{ violation.adminName }}</span> }
                 </div>
               }
             </div>

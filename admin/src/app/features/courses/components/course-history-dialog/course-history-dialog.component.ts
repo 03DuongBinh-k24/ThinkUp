@@ -12,6 +12,7 @@ import { formatDateTime } from '../../course-utils';
 export class CourseHistoryDialogComponent {
   readonly title = input.required<string>();
   readonly history = input.required<ReadonlyArray<{ at: string; actor: string; action: string; note: string }>>();
+  readonly loading = input(false);
   readonly showDetail = input(false);
   readonly closed = output<void>();
   readonly openDetail = output<void>();

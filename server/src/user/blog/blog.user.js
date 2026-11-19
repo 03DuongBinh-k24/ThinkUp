@@ -548,6 +548,8 @@ export async function getBlogList(query = {}, options = {}) {
 
   // QUY TẮC: /main/blog CHỈ HIỂN THỊ CÁC BÀI ĐÃ XUẤT BẢN HOẶC ĐÃ CẬP NHẬT.
   // Tuyệt đối không để lọt bài 'draft' ra ngoài công chúng.
+  // Admin moderation and user publishing share blog_posts. Normalize legacy or
+  // differently-cased status values so restored posts are visible consistently.
   filter.status = { $in: ['published', 'updated', 'edited'] };
 
   if (query.category && query.category !== 'all' && query.category !== 'Tất cả') {
@@ -1294,7 +1296,12 @@ export async function getBlogComments(idOrSlug, options = {}) {
   }
 
   const rawComments = await commentColl
-    .find({ postId: { $in: possibleIds }, status: { $nin: ['hidden', 'deleted', 'reported'] } })
+    .find({ $and: [
+      { $or: [{ postId: { $in: possibleIds } }, { post_id: { $in: possibleIds } }, { blog_post_id: { $in: possibleIds } }] },
+      // Public discussion includes only approved comments. Pending and reported
+      // comments remain visible to moderators, never to student readers.
+      { $or: [{ status: { $in: ['visible', 'approved', 'published'] } }, { status: { $exists: false } }, { status: null }] },
+    ] })
     .sort({ createdAt: -1, _id: -1 })
     .toArray();
 
@@ -1698,7 +1705,7 @@ export async function getPopularTopics(options = {}) {
 
   const docs = await collection
     .find({
-      status: { $in: ['published', 'updated', 'edited'] },
+      status: { $in: ['published', 'updated', 'edited', 'PUBLISHED', 'UPDATED', 'EDITED'] },
       category: { $exists: true, $ne: '' },
     })
     .project({ category: 1 })
@@ -1746,7 +1753,7 @@ export async function getMostViewedBlogPosts(options = {}) {
   const pipeline = [
     {
       $match: {
-      status: { $in: ['published', 'updated', 'edited'] },
+      status: { $in: ['published', 'updated', 'edited', 'PUBLISHED', 'UPDATED', 'EDITED'] },
       },
     },
     {
