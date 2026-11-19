@@ -257,6 +257,9 @@ test('VNPay encodes once, does not mutate input, separates Return URL and signed
   const f=await fixture(),s=await f.create({paymentMethod:'vnpay'}),params=signedVnp({vnp_TxnRef:s.transactionId});
   const before=JSON.stringify(params);assert.equal((await verifyVnpayCallback(params,f.options)).isSuccess,true);assert.equal(JSON.stringify(params),before);assert.equal(txOf(f,s.transactionId).status,'pending');
   assert.equal((await verifyVnpayCallback({...params,vnp_Amount:'1'},f.options)).code,'97');
+  // A valid signed Return can settle for local sandbox use when explicitly enabled.
+  assert.equal((await verifyVnpayCallback(params,{...f.options,settle:true,settleOnCallback:true})).status,'success');
+  assert.equal(txOf(f,s.transactionId).status,'success');
   assert.equal((await verifyVnpayCallback(params,{...f.options,settle:true})).status,'success');
 });
 test('Stripe creation charges precisely the DB-derived total and uses provider idempotency',async()=>{
