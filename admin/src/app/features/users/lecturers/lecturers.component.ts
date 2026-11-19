@@ -140,7 +140,7 @@ export class LecturersComponent {
   readonly unlockReason = signal('');
   readonly saving = signal(false);
   readonly loadError = this.data.error;
-  readonly loading = this.data.loading;
+  readonly loading = this.data.loadingLecturers;
 
   readonly statusOptions: ReadonlyArray<CustomSelectOption> = [
     { value: '', label: 'Tất cả trạng thái' },

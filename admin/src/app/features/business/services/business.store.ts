@@ -1,6 +1,6 @@
 import { InjectionToken, Signal } from '@angular/core';
 import { ExportFormat } from '../../../shared/utils/export-formats';
-import { BusinessOrder, BusinessVoucher, OrderStatus, PayoutRequest } from '../models/business.models';
+import { BusinessOrder, BusinessVoucher, OrderStatus, PayoutRequest, PayoutDecision } from '../models/business.models';
 
 /** Bộ lọc danh sách đơn hàng — dùng cho cả danh sách lẫn export server-side. */
 export interface OrderListFilters {
@@ -71,7 +71,9 @@ export interface BusinessStore {
 
   /** Backend chưa có API xác nhận/hủy đơn; hiện chỉ cập nhật trong bộ nhớ để xem trước luồng UI. */
   updateOrder(id: string, changes: Partial<BusinessOrder>): void;
-  updatePayout(id: string, changes: Partial<PayoutRequest>): void;
+  reloadPayouts(): Promise<void>;
+  payoutDetail(id: string): Promise<PayoutRequest>;
+  updatePayout(id: string, decision: PayoutDecision): Promise<void>;
 }
 
 export const BUSINESS_STORE = new InjectionToken<BusinessStore>('BUSINESS_STORE');

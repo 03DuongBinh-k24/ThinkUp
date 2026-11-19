@@ -35,6 +35,9 @@ import { SystemStore } from './system.store';
  */
 @Injectable({ providedIn: 'root' })
 export class SystemDemoService implements SystemStore {
+  readonly loading = signal(false);
+  readonly loadError = signal('');
+  open(): void {}
   private readonly router = inject(Router);
   private readonly adminState = signal<readonly AdminPerson[]>(ADMIN_PERSONS);
   private readonly candidateState = signal<readonly InternalStaff[]>(INTERNAL_STAFF);

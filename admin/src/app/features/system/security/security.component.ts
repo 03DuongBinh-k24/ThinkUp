@@ -54,6 +54,7 @@ export class SecurityComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly store = inject(SYSTEM_STORE);
+  ngOnInit(): void { this.store.open('security'); }
   private readonly toast = inject(SystemToastService);
 
   private readonly queryParams = toSignal(this.route.queryParamMap);

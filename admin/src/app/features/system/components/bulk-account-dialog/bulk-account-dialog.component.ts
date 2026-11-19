@@ -139,7 +139,10 @@ export class BulkAccountDialogComponent {
     this.peopleError.set('');
   }
 
-  submit(): void {
+  readonly submitting = signal(false);
+
+  async submit(): Promise<void> {
+    if (this.submitting()) return;
     this.reasonError.set('');
     this.otpError.set('');
     this.peopleError.set('');
@@ -155,11 +158,6 @@ export class BulkAccountDialogComponent {
       this.otpError.set('Vui lòng nhập đủ mã xác thực 6 số.');
       return;
     }
-    // TODO(pre-deploy): Nhớ xóa mô phỏng lỗi máy chủ bằng OTP 000000 khi nối API thật.
-    if (this.otp() === SERVER_FAILURE_OTP) {
-      this.serverError.set(true);
-      return;
-    }
 
     const kind = this.kind();
     const reason = this.reason().trim();
@@ -169,15 +167,18 @@ export class BulkAccountDialogComponent {
     // TODO(pre-deploy): Nhớ thay vòng lặp bằng API thao tác hàng loạt nguyên tử của backend.
     let applied = 0;
     for (const person of people) {
-      const result = kind === 'reset'
-        ? this.store.resetTwoFactor(person.id, reason, otp)
-        : this.store.setAccountLocked(person.id, kind === 'lock', reason, otp);
-      if (!result.ok) {
+      this.submitting.set(true);
+    const result = kind === 'reset'
+        ? await this.store.resetTwoFactor(person.id, reason, otp)
+        : await this.store.setAccountLocked(person.id, kind === 'lock', reason, otp);
+      this.submitting.set(false);
+    if (!result.ok) {
         if (result.message.startsWith('Mã xác thực')) this.otpError.set(result.message);
         else if (result.message.startsWith('Lý do')) this.reasonError.set(result.message);
         else this.otpError.set(result.message);
         return;
       }
+      this.remove(person);
       applied += 1;
     }
 

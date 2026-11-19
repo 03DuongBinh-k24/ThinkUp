@@ -46,6 +46,7 @@ function allowedRoles(area, method, path) {
     return ['SA'];
   }
   if (area === 'users') {
+    if (method === 'DELETE' && path === '/evidence/:id') return ['SA', 'CA'];
     if (method === 'GET' && (path === '/evidence/:id' || path === '/lecturers/:id/documents/:documentId/download')) return ['SA', 'CA'];
     if (path === '/:id' && method === 'PUT' || path === '/:id' && method === 'DELETE') return ['SA'];
     if (path === '/students/lock' || path === '/students/:id/unlock' || path === '/lecturers/:id/unlock' || path === '/evidence/:userId') return ['SA', 'CS'];

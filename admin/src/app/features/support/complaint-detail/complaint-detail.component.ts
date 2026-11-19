@@ -77,11 +77,11 @@ export class ComplaintDetailComponent {
     if (action === 'discipline') return this.sanctions().length > 0 && this.actionText().trim().length >= 30 && this.confirmRisk();
     return false;
   }
-  private saving = false;
+  readonly submitting = signal(false);
   async confirmAction(): Promise<void> {
     const item = this.caseFile();
-    if (!item || this.saving || !this.canConfirmAction()) return;
-    this.saving = true;
+    if (!item || this.submitting() || !this.canConfirmAction()) return;
+    this.submitting.set(true);
     try {
       if (this.action() === 'explanation') await this.data.requestInstructorExplanation(item.id, this.explanationDeadline(), this.freezeCommission(), this.actionText().trim());
       if (this.action() === 'refund') await this.data.approveComplaintRefund(item.id, this.refundAmount(), this.revokeAccess(), this.revokeCertificate(), this.actionText().trim());
@@ -91,7 +91,7 @@ export class ComplaintDetailComponent {
     } catch (error) {
       this.notify(apiErrorMessage(error));
     } finally {
-      this.saving = false;
+      this.submitting.set(false);
     }
   }
   canIssue(): boolean { return !!this.decision(); }

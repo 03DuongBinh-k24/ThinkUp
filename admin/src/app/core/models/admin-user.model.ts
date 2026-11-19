@@ -20,6 +20,7 @@ export interface AdminUser {
   email: string;
   fullName: string;
   role: AdminRole;
+  accessRole?: string;
   avatar?: string | null;
   /** Thời điểm mật khẩu hết hạn (ISO). Không có nghĩa là chính sách xoay vòng đang tắt. */
   passwordExpiresAt?: string | null;
