@@ -6,3 +6,8 @@
 .text-field.textarea{display:inline-block;padding-right:48px}.text-field.pr-12{padding-right:48px}
 
 .secondary-button{line-height:20px}
+:host ::ng-deep .blog-preview-content a {
+  color: #1e64ef;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

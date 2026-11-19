@@ -313,7 +313,7 @@
             <p>Chọn loại phòng và setup nhanh không gian học của bạn.</p>
           </div>
         </div>
-        <form (ngSubmit)="createRoom()" class="create-room-form">
+        <form (ngSubmit)="createRoom($event)" class="create-room-form" novalidate>
           <div class="create-room-body">
           <fieldset class="room-type">
             <legend>Loại phòng</legend>
@@ -410,14 +410,18 @@
             <div class="room-theme-grid">
               @for (theme of roomThemes; track theme.id) {
                 <label [class.selected]="newRoomTheme === theme.id"
+                  (click)="selectRoomTheme(theme.id)"
                   ><input
                     type="radio"
                     name="theme"
                     [value]="theme.id"
                     [(ngModel)]="newRoomTheme"
+                    [attr.aria-label]="'Chọn theme ' + theme.name"
                   /><span
                     class="theme-chip"
                     [style.background]="themeBackground(theme.id)"
+                    (click)="$event.preventDefault(); selectRoomTheme(theme.id)"
+                    aria-hidden="true"
                   >
                     @if (createRoomPreviews.has(theme.id)) {
                       <img [src]="'/assets/study-room/create-room/' + theme.id + '.png'" alt="" loading="lazy" />
@@ -451,7 +455,7 @@
             @if (feedback) {
               <p class="form-error" role="alert">{{ feedback }}</p>
             }
-            <button class="modal-submit" type="submit" [disabled]="submitting()">
+            <button class="modal-submit" type="button" [disabled]="submitting()" (click)="createRoom()">
               <img src="/assets/study-room/create-room/plus.svg" alt="" />
               {{ submitting() ? 'Đang tạo phòng…' : 'Tạo phòng' }}
               <img src="/assets/study-room/create-room/next.svg" alt="" />

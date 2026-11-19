@@ -32,7 +32,7 @@ import {
 import { createBlogRouter } from './user/blog/blog.user.js';
 import { createPurchaseRouter } from './user/purchase/purchase.user.js';
 import { createBillingRouter } from './user/purchase/billing.user.js';
-import { createStudyRoomRouter } from './user/studyroom/studyroom.user.js';
+import { cleanupExpiredEmptyRooms, createStudyRoomRouter } from './user/studyroom/studyroom.user.js';
 import { createRoadmapRouter } from './user/roadmap/roadmap.user.js';
 import { createFlashcardRouter } from './user/flashcard/flashcard.user.js';
 import { createPaymentRouter } from './user/payment/payment.router.js';
@@ -69,7 +69,6 @@ import { createPaymentSettingsRouter } from './user/payment-settings/payment-set
 import { createLearningSettingsRouter } from './user/learning-settings/learning-settings.user.js';
 import { createHomeRouter } from './user/home/home.user.js';
 import { createLearningActivityRouter } from './user/learning-activity/learning-activity.user.js';
-import { getMongoDb } from './user/db.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -722,6 +721,17 @@ if (isDirectRun || process.env.NODE_ENV === 'production') {
     console.log(`🚀 ThinkUp Backend Server is listening on http://localhost:${PORT}`);
     console.log(`🔗 Allowed Client Demo URL: ${CLIENT_URL}`);
   });
+  let cleaningStudyRooms = false;
+  const cleanStudyRooms = async () => {
+    if (cleaningStudyRooms) return;
+    cleaningStudyRooms = true;
+    try { await cleanupExpiredEmptyRooms(); }
+    catch (error) { console.error('[Study rooms] Không dọn được phòng trống hết hạn:', error.message); }
+    finally { cleaningStudyRooms = false; }
+  };
+  cleanStudyRooms();
+  const studyRoomCleanupTimer = setInterval(cleanStudyRooms, 60000);
+  studyRoomCleanupTimer.unref();
   let recoveringSecurity = false;
   const securityRecoveryTimer = setInterval(async () => {
     if (recoveringSecurity) return;

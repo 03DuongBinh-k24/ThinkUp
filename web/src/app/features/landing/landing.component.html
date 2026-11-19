@@ -109,6 +109,7 @@
                 @for (card of popularCards(); track card.id) {
                   <app-course-card
                     [card]="card"
+                    [disabled]="true"
                     (saveToggle)="requireAccount()"
                     (addToCart)="requireAccount()"
                   />
@@ -412,3 +413,4 @@
         </section>
       </main>
     </div>
+

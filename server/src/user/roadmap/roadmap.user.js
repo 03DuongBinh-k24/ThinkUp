@@ -1232,6 +1232,7 @@ export async function selectUserRoadmap(userId, categoryId) {
           status: STATUS_NOT_STARTED,
           score: 0,
           is_review: false,
+          flashcard_review_completed: false,
           last_quiz_score: null,
           course_score: null,
           updated_at: new Date()
@@ -1273,7 +1274,7 @@ export async function reconcileUserRoadmap(roadmap, template, db) {
   for (const node of roadmap.nodes || []) prior.set(node.node_id, node);
   const nodes = (template.stages || []).flatMap(stage => (stage.nodes || []).map(node => ({
     ...(prior.get(node.node_id) || {
-      status: STATUS_NOT_STARTED, score: 0, is_review: false,
+      status: STATUS_NOT_STARTED, score: 0, is_review: false, flashcard_review_completed: false,
       last_quiz_score: null, course_score: null,
     }),
     node_id: node.node_id, stage_id: stage.stage_id, title: node.title,
@@ -1320,10 +1321,20 @@ export async function unselectUserRoadmap(userId, categoryId) {
 
 /** Lấy lộ trình đang kích hoạt cùng tiến độ đã lưu của học viên. */
 export function manualStatusPermission(node) {
+  if (node.flashcard_review_completed === true) {
+    return { manual_status_allowed: true, status_lock_reason: null };
+  }
   if (node.is_review || (node.status === STATUS_REVIEW && node.status_source !== 'manual')) {
     return { manual_status_allowed: false, status_lock_reason: 'REVIEW_REQUIRED' };
   }
-  if (node.last_quiz_score != null || node.course_score != null || Number(node.score) > 0) {
+  const failedQuiz = node.status_source === 'test'
+    && typeof node.last_quiz_score === 'number' && node.last_quiz_score < 40;
+  const failedCourseProgress = node.status_source === 'course'
+    && typeof node.course_score === 'number'
+    && (node.last_quiz_score == null ? node.course_score : (node.last_quiz_score + node.course_score) / 2) < 40;
+  const failedCombinedScore = !['test', 'course'].includes(node.status_source)
+    && typeof node.score === 'number' && node.score > 0 && node.score < 40;
+  if (failedQuiz || failedCourseProgress || failedCombinedScore) {
     return { manual_status_allowed: false, status_lock_reason: 'LEARNING_RESULT_EXISTS' };
   }
   return { manual_status_allowed: true, status_lock_reason: null };
@@ -1665,6 +1676,7 @@ export async function submitStageTest(userId, stageId, answers = []) {
         status: nextStatus,
         is_review: isReviewFlag,
         status_source: 'test',
+        flashcard_review_completed: false,
         last_quiz_score: nodeQuizScore,
         updated_at: new Date()
       };
@@ -1868,6 +1880,7 @@ export async function syncCourseProgressToRoadmap(userId) {
       return {
         ...node,
         status_source: 'course',
+        flashcard_review_completed: false,
         course_score: avgCourseProgress,
         score: combinedScore,
         status: nextStatus,
@@ -2045,22 +2058,26 @@ export async function getNodeCourseRecommendations(userId, nodeId, options = {})
   const [profiles, users] = instructorIds.length ? await Promise.all([
     db.collection('instructor_profiles').find({ $or: [
       { instructor_id: { $in: lookupIds } }, { user_id: { $in: lookupIds } }, { _id: { $in: lookupIds } },
-    ] }, { projection: { instructor_id: 1, user_id: 1, full_name: 1, name: 1 } }).toArray(),
+    ] }, { projection: { instructor_id: 1, user_id: 1, full_name: 1, name: 1, avatar_url: 1, avatar: 1 } }).toArray(),
     db.collection('users').find({ $or: [
-      { id: { $in: lookupIds } }, { instructor_id: { $in: lookupIds } }, { _id: { $in: lookupIds } },
-    ] }, { projection: { id: 1, instructor_id: 1, full_name: 1, name: 1 } }).toArray(),
+      { id: { $in: lookupIds } }, { instructor_id: { $in: lookupIds } }, { user_id: { $in: lookupIds } }, { _id: { $in: lookupIds } },
+    ] }, { projection: { id: 1, instructor_id: 1, full_name: 1, name: 1, avatar_url: 1, avatar: 1 } }).toArray(),
   ]) : [[], []];
   const names = new Map();
+  const avatars = new Map();
   for (const instructor of [...profiles, ...users]) {
     const name = (instructor.full_name || instructor.name || '').trim();
-    if (!name) continue;
+    const avatar = instructor.avatar_url || instructor.avatar || '';
     for (const id of [instructor.instructor_id, instructor.user_id, instructor.id, instructor._id]) {
-      if (id != null && !names.has(String(id))) names.set(String(id), name);
+      if (id == null) continue;
+      if (name && !names.has(String(id))) names.set(String(id), name);
+      if (avatar && !avatars.has(String(id))) avatars.set(String(id), avatar);
     }
   }
   const finalCourses = selectedCourses.map(course => ({
     ...course,
     instructor_name: names.get(course.instructor_id) || course.instructor_name || null,
+    instructor_avatar: avatars.get(course.instructor_id) || '',
   }));
 
   return {

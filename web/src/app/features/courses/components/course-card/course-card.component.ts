@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Input, inject, signal } from '@angular/core';
+import { Component, DestroyRef, Input, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -7,6 +7,7 @@ import { FavoritesService } from '../../../../core/services/favorites.service';
 import { CommerceService } from '../../../../core/services/commerce.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { finalize, map, switchMap, timeout } from 'rxjs';
 
 @Component({
@@ -23,6 +24,8 @@ export class CourseCardComponent {
   private router = inject(Router);
   private favoritesService = inject(FavoritesService);
   private commerceService = inject(CommerceService);
+  private readonly authService = inject(AuthService);
+  readonly isLoggedIn = computed(() => this.authService.isAuthenticated());
   private readonly toast = inject(ToastService);
   private changingFavorite = false;
   readonly addingCart = signal(false);
@@ -51,7 +54,7 @@ export class CourseCardComponent {
   }
 
   toggleWishlist(): void {
-    if (this.changingFavorite) return;
+    if (!this.isLoggedIn() || this.changingFavorite) return;
     this.changingFavorite = true;
     const request = this.isWishlisted() ? this.favoritesService.removeFavorite(this.course.id) : this.favoritesService.addFavorite(this.course);
     request.pipe(finalize(() => this.changingFavorite = false)).subscribe({
@@ -60,7 +63,7 @@ export class CourseCardComponent {
   }
 
   addToCart(): void {
-    if (this.isPurchased() || this.addingCart()) return;
+    if (!this.isLoggedIn() || this.isPurchased() || this.addingCart()) return;
     this.addingCart.set(true);
     const id = this.course.id;
     this.commerceService.refreshCart().pipe(
@@ -218,3 +221,5 @@ export class CourseCardComponent {
     return String(num);
   }
 }
+
+

@@ -1248,6 +1248,19 @@ export function formatBlogComment(doc) {
   };
 }
 
+async function getBlogCommentUser(userId, options = {}) {
+  const db = options.db || await getMongoDb();
+  const id = String(userId);
+  const objectId = ObjectId.isValid(id) ? new ObjectId(id) : null;
+  const user = await db.collection('users').findOne({ $or: [
+    { id }, { user_id: id }, ...(objectId ? [{ _id: objectId }] : []),
+  ] }, { projection: { _id: 1, id: 1, user_id: 1, email: 1, full_name: 1, name: 1, avatar_url: 1, avatar: 1 } });
+  if (!user) return null;
+  return { id: String(user.id || user.user_id || user._id),
+    full_name: user.full_name || user.name || '', email: user.email || '',
+    avatar_url: user.avatar_url || user.avatar || null };
+}
+
 /**
  * Lấy danh sách các bình luận liên quan đến một bài viết cụ thể.
  * @param {string} idOrSlug - ID hoặc Slug của bài viết
@@ -1324,11 +1337,12 @@ export async function getBlogComments(idOrSlug, options = {}) {
     const uid = String(comment.userId || comment.user_id || '');
     const name = (comment.authorName || comment.author_name || '').trim().toLowerCase();
     const matched = userById.get(uid) || userByEmail.get(email) || userByName.get(name);
+    const isCurrentUser = options.currentUser && uid && uid === String(options.currentUser.id);
 
     return {
       ...comment,
-      authorName: matched?.name || comment.authorName || comment.author_name || 'Học viên ThinkUp',
-      authorAvatar: matched?.avatar || comment.authorAvatar || comment.author_avatar || '/assets/blog/default-avatar.jpg',
+      authorName: (isCurrentUser ? options.currentUser.full_name : '') || matched?.name || comment.authorName || comment.author_name || 'Học viên ThinkUp',
+      authorAvatar: (isCurrentUser ? options.currentUser.avatar_url : '') || matched?.avatar || comment.authorAvatar || comment.author_avatar || '/assets/blog/default-avatar.jpg',
     };
   });
 
@@ -1402,20 +1416,21 @@ export async function addBlogComment(idOrSlug, commentData = {}, options = {}) {
 
   const postId = post.id ? String(post.id) : post._id.toString();
   const now = new Date();
-  const authorName = (commentData.authorName || options.user?.full_name || 'Học viên ThinkUp').trim();
-  const authorAvatar = commentData.authorAvatar || options.user?.avatar_url || '/assets/blog/default-avatar.jpg';
+  const authorName = (options.user?.full_name || commentData.authorName || 'Học viên ThinkUp').trim();
+  const authorAvatar = options.user?.avatar_url || commentData.authorAvatar || '/assets/blog/default-avatar.jpg';
 
   const currentUserId = String(options.user?.id || options.user?._id || options.user?.user_id || '');
   const insertDoc = {
     postId,
     userId: currentUserId || null,
+    user_id: currentUserId || null,
     authorName,
     authorAvatar,
     content: cleanContent,
     likesCount: 0,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
-    userEmail: (commentData.userEmail || options.user?.email || '').toLowerCase(),
+    userEmail: (options.user?.email || commentData.userEmail || '').toLowerCase(),
   };
 
   const result = await commentColl.insertOne(insertDoc);
@@ -2302,7 +2317,8 @@ export function createBlogRouter(expressModule, requireAuthMiddleware, requireAd
   // 15. Lấy danh sách bình luận thảo luận của bài viết
   router.get('/:id/comments', async (req, res, next) => {
     try {
-      const result = await getBlogComments(req.params.id);
+      const user = req.userId ? await getBlogCommentUser(req.userId) : null;
+      const result = await getBlogComments(req.params.id, { currentUser: user });
       res.json(result);
     } catch (err) {
       next(err);
@@ -2312,7 +2328,8 @@ export function createBlogRouter(expressModule, requireAuthMiddleware, requireAd
   // 16. Thêm bình luận thảo luận mới cho bài viết
   router.post('/:id/comments', async (req, res, next) => {
     try {
-      const result = await addBlogComment(req.params.id, req.body, { user: req.userId ? { id: req.userId } : null });
+      const user = req.userId ? await getBlogCommentUser(req.userId) : null;
+      const result = await addBlogComment(req.params.id, req.body, { user });
       res.status(201).json(result);
     } catch (err) {
       next(err);

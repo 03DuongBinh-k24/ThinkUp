@@ -6,6 +6,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   Course,
+  CourseSeoMetadata,
   CourseFilters,
   CourseFilterOptions,
   CourseListResponse,
@@ -26,6 +27,7 @@ interface CourseCardDto {
   course_id?: string;
   slug?: string;
   title: string;
+  created_at?: string | null;
   thumbnail_url?: string;
   badge?: string;
   level?: string;
@@ -139,6 +141,7 @@ interface CourseDetailDto {
       trial_preview_url?: string;
     };
   };
+  seo?: CourseSeoMetadata;
 }
 
 interface CourseReviewDto {
@@ -267,7 +270,7 @@ export class CourseService {
     const requests = categories.map(category => this.http.get<CourseCardsResponse>(`${this.apiUrl}/courses`, {
       params: category ? params.set('category_id', this.categoryIds.get(category) || category) : params,
     }));
-    if (categories.length > 1 && ['newest', 'recommended'].includes(filters.sort || '')) requests.push(this.http.get<CourseCardsResponse>(`${this.apiUrl}/courses`, { params }));
+    if (categories.length > 1 && filters.sort === 'recommended') requests.push(this.http.get<CourseCardsResponse>(`${this.apiUrl}/courses`, { params }));
     return forkJoin(requests).pipe(this.guardAccount, map(responses => {
       if (responses.some(response => response.success !== true || !Array.isArray(response.data?.courses))) {
         throw new Error('Phản hồi danh sách khóa học không hợp lệ.');
@@ -289,15 +292,26 @@ export class CourseService {
         && (!filters.tags?.length || filters.tags.some(tag => course.tags?.includes(tag)))
         && (!filters.maxDuration || course.durationMinutes == null || course.durationMinutes <= filters.maxDuration * 60)
       );
-      if (responses.length > 1) {
-        if (filters.sort === 'price-low') courses.sort((a, b) => a.salePrice - b.salePrice);
-        if (filters.sort === 'price-high') courses.sort((a, b) => b.salePrice - a.salePrice);
-        if (filters.sort === 'rating') courses.sort((a, b) => b.rating - a.rating);
-        if (!filters.sort || filters.sort === 'popular') courses.sort((a, b) => (b.studentsCount || 0) - (a.studentsCount || 0));
-        if (filters.sort === 'newest' || filters.sort === 'recommended') {
-          const order = new Map(responses[responses.length - 1].data.courses.map((course, index) => [course.course_id || course.id, index]));
-          courses.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
-        }
+      if (filters.sort === 'recommended' && responses.length > categories.length) {
+        const order = new Map(responses[responses.length - 1].data.courses.map((course, index) => [course.course_id || course.id, index]));
+        courses.sort((a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER));
+      } else if (filters.sort === 'price-low') {
+        courses.sort((a, b) => a.salePrice - b.salePrice || a.id.localeCompare(b.id));
+      } else if (filters.sort === 'price-high') {
+        courses.sort((a, b) => b.salePrice - a.salePrice || a.id.localeCompare(b.id));
+      } else if (filters.sort === 'rating') {
+        courses.sort((a, b) => b.rating - a.rating || Number(b.ratingCount) - Number(a.ratingCount) || a.id.localeCompare(b.id));
+      } else if (filters.sort === 'newest') {
+        const timestamp = (value?: string | null) => {
+          if (!value) return 0;
+          const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+            ? `${value.replace(' ', 'T')}Z` : value;
+          const result = Date.parse(normalized);
+          return Number.isFinite(result) ? result : 0;
+        };
+        courses.sort((a, b) => timestamp(b.createdAt) - timestamp(a.createdAt) || a.id.localeCompare(b.id));
+      } else if (!filters.sort || filters.sort === 'popular') {
+        courses.sort((a, b) => (b.studentsCount || 0) - (a.studentsCount || 0) || a.id.localeCompare(b.id));
       }
       if (query) courses.sort((a, b) => matchPosition(a) - matchPosition(b));
       return { success: true, data: courses, total: courses.length };
@@ -306,11 +320,14 @@ export class CourseService {
 
   private mapCourseCard(course: CourseCardDto): Course {
     const instructorAvatar = course.instructor?.avatar_url || course.instructor?.avatar;
+    const ratingCount = this.toNumber(course.total_reviews);
+    const rating = ratingCount > 0 ? this.toNumber(course.rating) : 0;
     return {
       id: course.course_id || course.id,
       courseId: course.course_id,
       slug: course.slug,
       title: course.title,
+      createdAt: course.created_at,
       instructor: course.instructor?.name || 'Giảng viên ThinkUp',
       instructorId: course.instructor?.id,
       instructorInitial: (course.instructor?.name || 'G').charAt(0).toUpperCase(),
@@ -319,14 +336,14 @@ export class CourseService {
         name: course.instructor?.name || 'Giảng viên ThinkUp',
         title: '',
         bio: '',
-        rating: this.toNumber(course.rating),
+        rating,
         studentsCount: this.toNumber(course.total_students),
         coursesCount: 0,
         avatar: instructorAvatar,
       },
       level: formatCourseLevel(course.level),
-      rating: this.toNumber(course.rating),
-      ratingCount: this.toNumber(course.total_reviews),
+      rating,
+      ratingCount,
       studentsCount: this.toNumber(course.total_students),
       duration: course.duration_formatted,
       durationMinutes: course.duration_minutes,
@@ -425,8 +442,8 @@ export class CourseService {
       }))
       .filter(group => group.items.length > 0);
     const pricing = dto.pricing ?? {};
-    const rating = this.toNumber(dto.reviews_summary?.average_rating ?? dto.rating);
     const ratingCount = this.toNumber(dto.reviews_summary?.total_reviews ?? dto.total_reviews);
+    const rating = ratingCount > 0 ? this.toNumber(dto.reviews_summary?.average_rating ?? dto.rating) : 0;
     const studentCount = this.toNumber(dto.total_students);
 
     return {
@@ -502,6 +519,7 @@ export class CourseService {
       isInCart: dto.user_state?.is_in_cart === true,
       learningUrl: dto.user_state?.navigation?.learning_url,
       trialPreviewUrl: dto.user_state?.navigation?.trial_preview_url,
+      seo: dto.seo,
     };
   }
 
@@ -703,10 +721,12 @@ export class CourseService {
       if (response?.success !== true || !Array.isArray(response.data)) {
         throw new Error('Không tải được khóa học đã đăng ký.');
       }
-      const optionalTextFields = ['image', 'thumbnailUrl', 'cover', 'coverTitle', 'coverSubtitle', 'badge', 'lastStudiedAt'] as const;
+      const optionalTextFields = ['image', 'thumbnailUrl', 'cover', 'coverTitle', 'coverSubtitle', 'badge', 'lastStudiedAt', 'instructorAvatar', 'instructorId'] as const;
       const valid = response.data.every(course => course &&
         typeof course.id === 'string' && course.id.trim().length > 0 &&
         typeof course.title === 'string' && typeof course.instructor === 'string' &&
+        (course.instructorAvatar === undefined || typeof course.instructorAvatar === 'string') &&
+        (course.instructorId === undefined || typeof course.instructorId === 'string') &&
         Number.isSafeInteger(course.totalLessons) && course.totalLessons >= 0 &&
         Number.isSafeInteger(course.completedLessons) && course.completedLessons >= 0 &&
         course.completedLessons <= course.totalLessons &&

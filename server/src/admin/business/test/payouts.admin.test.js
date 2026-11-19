@@ -107,6 +107,9 @@ function createMockDb(initialPayouts = mockPayouts) {
   return {
     client: { startSession: () => ({ withTransaction: work => work(), endSession: async () => {} }) },
     collection(name) {
+      if (name === 'system_settings') return {
+        findOne: async query => query._id === 'global_config' ? null : null,
+      };
       if (name === 'payout_requests') {
         return {
           find: () => ({ toArray: async () => payouts }),

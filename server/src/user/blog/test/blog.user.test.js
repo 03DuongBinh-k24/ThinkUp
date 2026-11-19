@@ -154,7 +154,7 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
     await collection.deleteMany({ owner_user_id: { $in: [testOwnerId, otherOwnerId] } });
     await db.collection('users').deleteMany({ id: { $in: [testOwnerId, otherOwnerId] } });
     await db.collection('users').insertMany([
-      { id: testOwnerId, email: testOwnerEmail, full_name: 'Blog Owner' },
+      { id: testOwnerId, email: testOwnerEmail, full_name: 'Blog Owner', avatar_url: 'https://cdn.test/blog-owner.png' },
       { id: otherOwnerId, email: 'other_author_tester@thinkup.vn', full_name: 'Other Owner' },
     ]);
     await db.collection('newsletter_subscribers').deleteMany({ email: { $in: [testSubEmail1, testSubEmail2] } });
@@ -752,6 +752,13 @@ describe('Chức Năng Blog User (Kiểm thử đơn vị & tích hợp CSDL)', 
       const updatedComments = await getBlogComments(testArticleSlug, { db });
       const found = updatedComments.comments.find(c => c.id === commentRes.comment.id);
       assert.ok(found, 'Bình luận mới phải xuất hiện trong phần thảo luận bài viết');
+      const authenticatedComment = await addBlogComment(testArticleSlug, { content: 'Bình luận từ tài khoản đã đăng nhập.', authorName: 'Tên giả', authorAvatar: 'https://fake.test/avatar.png' }, {
+        db, user: { id: testOwnerId, full_name: 'Blog Owner', email: testOwnerEmail, avatar_url: 'https://cdn.test/blog-owner.png' },
+      });
+      assert.equal(authenticatedComment.comment.authorName, 'Blog Owner');
+      assert.equal(authenticatedComment.comment.authorAvatar, 'https://cdn.test/blog-owner.png');
+      const enriched = await getBlogComments(testArticleSlug, { db, currentUser: { id: testOwnerId, full_name: 'Blog Owner', email: testOwnerEmail, avatar_url: 'https://cdn.test/blog-owner-new.png' } });
+      assert.equal(enriched.comments.find(comment => comment.id === authenticatedComment.comment.id).authorAvatar, 'https://cdn.test/blog-owner-new.png');
     });
 
     it('TC-COMMENT-03: addBlogComment báo lỗi khi nội dung bình luận để trống', async () => {

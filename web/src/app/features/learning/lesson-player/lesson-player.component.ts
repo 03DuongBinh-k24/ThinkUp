@@ -82,6 +82,10 @@ export class LessonPlayerComponent implements OnDestroy {
     return selected ?? lessons.find((lesson) => !lesson.completed) ?? lessons[0] ?? null;
   });
 
+  private readonly orderedLessons = computed(() => this.course()?.chapters
+    .flatMap(chapter => chapter.lessons)
+    .sort((left, right) => left.order - right.order) ?? []);
+
   readonly activeChapter = computed<LearningChapter | null>(() => {
     const course = this.course();
     const lesson = this.activeLesson();
@@ -90,19 +94,17 @@ export class LessonPlayerComponent implements OnDestroy {
   });
 
   readonly previousLesson = computed<LearningLesson | null>(() => {
-    const course = this.course();
     const lesson = this.activeLesson();
-    if (!course || !lesson) return null;
-    const lessons = course.chapters.flatMap((chapter) => chapter.lessons);
+    if (!lesson) return null;
+    const lessons = this.orderedLessons();
     const index = lessons.findIndex((item) => item.id === lesson.id);
     return index > 0 ? lessons[index - 1] : null;
   });
 
   readonly nextLesson = computed<LearningLesson | null>(() => {
-    const course = this.course();
     const lesson = this.activeLesson();
-    if (!course || !lesson) return null;
-    const lessons = course.chapters.flatMap((chapter) => chapter.lessons);
+    if (!lesson) return null;
+    const lessons = this.orderedLessons();
     const index = lessons.findIndex((item) => item.id === lesson.id);
     return index >= 0 && index < lessons.length - 1 ? lessons[index + 1] : null;
   });

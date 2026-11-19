@@ -226,6 +226,7 @@ export async function getCourseStudyCurriculum(courseIdOrSlug, userId = null, op
     error.status = 404;
     throw error;
   }
+  if (courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   if (courseDoc.admin_hidden === true && !await hasCourseEnrollment(courseDoc, userId, { db })) {
     throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   }
@@ -537,6 +538,8 @@ export async function getCourseStudyCurriculum(courseIdOrSlug, userId = null, op
     ? await getRecordedCourseLearningTimes(String(userId), { db }) : new Map();
   const synchronizedLearningSeconds = Math.max(Number(totalUserSpentSeconds) || 0,
     ...studyCourseIds.map(id => recordedTimes.get(String(id)) || 0));
+  const courseReviewCount = parseInt(courseDoc.total_reviews, 10) || 0;
+  const courseAverageRating = courseReviewCount > 0 ? (parseFloat(courseDoc.rating) || 0) : 0;
 
   return {
     learning_preferences: userId ? await getLearningPreferences(String(userId), { db }) : { ...DEFAULT_LEARNING_PREFERENCES, revision: 0 },
@@ -552,9 +555,9 @@ export async function getCourseStudyCurriculum(courseIdOrSlug, userId = null, op
       instructor: instructorInfo,
       // Lưu ý: Đánh giá và số học viên ở đây là của khóa học
       rating: {
-        average: Math.round((parseFloat(courseDoc.rating) || 5.0) * 10) / 10,
-        total_reviews: parseInt(courseDoc.total_reviews, 10) || 0,
-        total_reviews_formatted: `(${new Intl.NumberFormat('vi-VN').format(parseInt(courseDoc.total_reviews, 10) || 0)} đánh giá)`,
+        average: Math.round(courseAverageRating * 10) / 10,
+        total_reviews: courseReviewCount,
+        total_reviews_formatted: `(${new Intl.NumberFormat('vi-VN').format(courseReviewCount)} đánh giá)`,
       },
       total_students: parseInt(courseDoc.total_students, 10) || 0,
       total_students_formatted: `${new Intl.NumberFormat('vi-VN').format(parseInt(courseDoc.total_students, 10) || 0)} học viên`,
@@ -682,6 +685,7 @@ export async function updateLessonProgress(userId, courseId, lessonId, payload =
     error.status = 404;
     throw error;
   }
+  if (courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   if (courseDoc.admin_hidden === true && !await hasCourseEnrollment(courseDoc, uid, { db })) {
     throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   }
@@ -863,6 +867,7 @@ export async function getCourseOverview(courseIdOrSlug, userId = null) {
     error.status = 404;
     throw error;
   }
+  if (courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   if (courseDoc.admin_hidden === true && !await hasCourseEnrollment(courseDoc, userId, { db })) {
     throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   }
@@ -1888,7 +1893,7 @@ export async function getCourseDocuments(courseIdOrSlug, userId = null, options 
     ],
   });
 
-  if (!courseDoc) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404 });
+  if (!courseDoc || courseDoc.deleted_at != null) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   const enrolled = await hasCourseEnrollment(courseDoc, userId, { db });
   if (courseDoc.admin_hidden === true && !enrolled) throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
 
@@ -2025,7 +2030,7 @@ export async function downloadCourseDocument(documentId, userId, options = {}) {
   const courseId = String(doc.course_id || '');
   const course = await db.collection(COLLECTION_COURSES).findOne({ $or: [{ course_id: courseId }, { id: courseId },
     ...(ObjectId.isValid(courseId) ? [{ _id: new ObjectId(courseId) }] : [])] });
-  if (!course) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404 });
+  if (!course || course.deleted_at != null) throw Object.assign(new Error('Khóa học không tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
   const enrolled = await hasCourseEnrollment(course, userId, { db });
   if (course.admin_hidden === true && !enrolled) throw Object.assign(new Error('Khóa học hiện không khả dụng.'), { status: 404, code: 'COURSE_UNAVAILABLE' });
   if (!(doc.is_free === true || String(doc.is_free) === '1' || doc.is_preview === true) &&
@@ -2108,6 +2113,7 @@ export async function resolveLessonContext(lessonId, userId = null, options = {}
     };
     course = await db.collection(COLLECTION_COURSES).findOne(courseQuery);
   }
+  if (course?.deleted_at != null) throw Object.assign(new Error('Khóa học không còn tồn tại.'), { status: 404, code: 'COURSE_NOT_FOUND' });
 
   const isFree = lesson.is_free === true || String(lesson.is_free) === '1' || lesson.is_preview === true;
   if (course?.admin_hidden === true && (!userId || !await hasCourseEnrollment(course, userId, { db }))) {
@@ -2623,7 +2629,7 @@ export async function getQuizHistory(lessonId, userId) {
   }));
 }
 
-export function labActivityRows(attempts, users, userId, demos = []) {
+export function labActivityRows(attempts, users, userId) {
   const names = new Map(users.flatMap(user => [user.user_id, user.id, user._id].filter(value => value != null).map(id => [String(id), user.full_name || user.name || 'Học viên'])));
   const grouped = new Map();
   const submissions = [];
@@ -2652,7 +2658,7 @@ export function labActivityRows(attempts, users, userId, demos = []) {
       execution_ms: exercise?.execution_ms || 0, submittedAt };
     grouped.set(id, previous && (previous.score > score || previous.score === score && previous.execution_ms <= entry.execution_ms) ? { ...previous, attempts: entry.attempts } : entry);
   }
-  const leaderboard = [...demos, ...grouped.values()].sort((a,b) => b.score - a.score || a.execution_ms - b.execution_ms)
+  const leaderboard = [...grouped.values()].sort((a,b) => b.score - a.score || a.execution_ms - b.execution_ms)
     .map((entry,index) => ({ ...entry, rank: index + 1, initials: entry.name.split(/\s+/).slice(-2).map(part => part[0]).join(''),
       color: ['#155DFC','#7C3AED','#059669'][index % 3], execTime: String(entry.execution_ms),
       medal: ['gold','silver','bronze'][index] }));
@@ -2667,17 +2673,7 @@ export async function getLabActivity(lessonId, userId, options = {}) {
   const users = ids.length ? await db.collection(COLLECTION_USERS).find({ $or: [
     { user_id: { $in: ids } }, { id: { $in: ids } }, { _id: { $in: ids } }, { _id: { $in: ids.filter(value => ObjectId.isValid(value)).map(value => new ObjectId(value)) } },
   ] }).toArray() : [];
-  const samples = db.collection('lab_leaderboard_samples');
-  if (!attempts.some(attempt => attempt.status === 'submitted') && !await samples.findOne({ lesson_id: id })) {
-    for (const [index, name] of ['Minh Anh (mẫu)', 'Hoàng Nam (mẫu)', 'Thu Hà (mẫu)'].entries()) {
-      await samples.updateOne({ lesson_id: id, id: 'sample-' + index }, { $setOnInsert: {
-        lesson_id: id, id: 'sample-' + index, name, score: 100 - index * 10, attempts: index + 1,
-        execution_ms: 80 + index * 25, submittedAt: '09:00:00 05/11/2026', is_sample: true,
-      } }, { upsert: true });
-    }
-  }
-  const demos = await samples.find({ lesson_id: id }).toArray();
-  return labActivityRows(attempts, users, userId, demos);
+  return labActivityRows(attempts, users, userId);
 }
 
 /**

@@ -153,9 +153,14 @@ async function learningCourses(db, userId) {
     .filter(row => row.status == null || row.status === 'active')
     .map(row => row.course_id));
   if (!ownedIds.length) return { total: 0, courses: [] };
-  const courses = await db.collection('courses').find({ $or: [
-    { _id: { $in: ownedIds } }, { course_id: { $in: ownedIds } }, { id: { $in: ownedIds } },
-  ] }).toArray();
+  const courses = await db.collection('courses').find({
+    status: 'published',
+    admin_hidden: { $ne: true },
+    deleted_at: { $exists: false },
+    $or: [
+      { _id: { $in: ownedIds } }, { course_id: { $in: ownedIds } }, { id: { $in: ownedIds } },
+    ],
+  }).toArray();
   const current = [];
   for (const course of courses) {
     const aliases = new Set([course._id, course.course_id, course.id].filter(value => value != null).map(String));

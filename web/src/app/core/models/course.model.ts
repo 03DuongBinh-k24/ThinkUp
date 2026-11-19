@@ -31,6 +31,7 @@ export interface Course {
   coverSubtitle?: string;
   language?: string;
   updatedAtLabel?: string;
+  createdAt?: string | null;
   outcomes?: string[];
   outcomeGroups?: CourseOutcomeGroup[];
   curriculum?: CourseChapter[];
@@ -49,6 +50,18 @@ export interface Course {
   isInCart?: boolean;
   learningUrl?: string;
   trialPreviewUrl?: string;
+  seo?: CourseSeoMetadata;
+}
+
+export interface CourseSeoMetadata {
+  title: string;
+  description: string;
+  canonicalUrl: string;
+  robots: string;
+  image: string;
+  keywords: string[];
+  openGraph: { title: string; description: string; image: string; url: string; type: string };
+  schemaMarkup: Record<string, unknown>;
 }
 
 export interface CourseOutcomeGroup {
@@ -248,6 +261,8 @@ export interface EnrolledCourse {
   id: string;
   title: string;
   instructor: string;
+  instructorAvatar?: string;
+  instructorId?: string;
   totalLessons: number;
   completedLessons: number;
   image?: string;

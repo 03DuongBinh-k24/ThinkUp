@@ -44,7 +44,7 @@ export class CartComponent implements OnInit {
   private commerce = inject(CommerceService);
   private courseService = inject(CourseService);
   private favorites = inject(FavoritesService);
-  private auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private toast = inject(ToastService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
@@ -161,6 +161,7 @@ export class CartComponent implements OnInit {
   // ─── Thao tác giỏ hàng ─────────────────────────────────────────────────────
 
   removeItem(item: CartItem, notify = true): void {
+    if (!this.auth.isAuthenticated()) return;
     if (this.removingIds().includes(item.id)) return;
 
     this.removingIds.update(ids => [...ids, item.id]);
@@ -185,7 +186,7 @@ export class CartComponent implements OnInit {
 
   /** Lưu/bỏ yêu thích nhưng giữ nguyên khóa học trong giỏ hàng. */
   toggleCartFavorite(item: CartItem): void {
-    if (this.removingIds().includes(item.id)) return;
+    if (!this.auth.isAuthenticated() || this.removingIds().includes(item.id)) return;
 
     this.favorites
       .toggleFavorite(item)
@@ -352,6 +353,7 @@ export class CartComponent implements OnInit {
   }
 
   toggleSuggestionFavorite(course: Course): void {
+    if (!this.auth.isAuthenticated()) return;
     this.favorites
       .toggleFavorite(course)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -369,6 +371,7 @@ export class CartComponent implements OnInit {
   }
 
   addSuggestionToCart(course: Course): void {
+    if (!this.auth.isAuthenticated()) return;
     this.commerce
       .addToCart(course.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -465,3 +468,4 @@ export class CartComponent implements OnInit {
     this.selectedIds.set(current.length > 0 || this.cartItems().length === 0 ? current : selectable);
   }
 }
+

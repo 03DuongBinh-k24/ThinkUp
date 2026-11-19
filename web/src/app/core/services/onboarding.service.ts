@@ -42,7 +42,9 @@ export class OnboardingService {
   }
 
   private mapCourses(courses: BackendOnboardingCourse[]): Course[] {
-    return courses.map(course => ({
+    return courses.map(course => {
+      const ratingCount = this.toNumber(course.total_reviews);
+      return ({
         id: course.id,
         courseId: course.course_id || undefined,
         title: course.title,
@@ -51,15 +53,16 @@ export class OnboardingService {
         instructor: 'Giảng viên ThinkUp',
         category: course.category_id || undefined,
         level: course.level || undefined,
-        rating: this.toNumber(course.rating),
-        ratingCount: this.toNumber(course.total_reviews),
+        rating: ratingCount > 0 ? this.toNumber(course.rating) : 0,
+        ratingCount,
         studentsCount: this.toNumber(course.total_students),
         originalPrice: this.toNumber(course.original_price ?? course.price),
         salePrice: this.toNumber(course.price),
         thumbnailUrl: course.thumbnail_url || undefined,
         badge: course.badge || undefined,
         tags: course.tag_ids || [],
-      }));
+      });
+    });
   }
 
   private toNumber(value: number | string | null | undefined): number {

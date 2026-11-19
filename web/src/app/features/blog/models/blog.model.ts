@@ -17,13 +17,13 @@ export type BlogRelatedArticle = Pick<BlogPost, 'id' | 'title' | 'coverImage' | 
 export interface BlogSidebarData { popularTopics: BlogTopic[]; mostViewedArticles: BlogViewedArticle[]; }
 export interface BlogNavigationPost { id: string; title: string; }
 export interface BlogDetailResponse { post: BlogPost; prevPost: BlogNavigationPost | null; nextPost: BlogNavigationPost | null; relatedPosts: BlogRelatedArticle[]; userInteraction: BlogReaction | null; }
-export interface BlogComment { id: string; authorName: string; content: string; createdAt: string; likesCount: number; authorAvatar?: string; }
+export interface BlogComment { id: string; authorName: string; content: string; createdAt: string; likesCount: number; authorAvatar?: string | null; author_avatar?: string | null; }
 export interface BlogAuthor { email: string; name: string; }
 export interface BlogDraft {
   title: string; slug: string; content: string; featuredContent: string; seoTitle: string;
   seoDescription: string; keywords: string[]; categories: string[]; tags: string[]; summary: string;
   status: BlogStatus; commentsEnabled: boolean; pinned: boolean; showOnHome: boolean;
 }
-export interface BlogSaveRequest extends BlogDraft { id?: string; ownerEmail: string; author: string; coverImage: string; contentImages: string[]; }
+export interface BlogSaveRequest extends BlogDraft { id?: string; ownerEmail: string; author: string; coverImage: string; contentImages: string[]; category?: string; }
 export interface BlogSaveResponse { id: string; status: BlogStatus; }
 export interface NewsletterResponse { success?: boolean; alreadySubscribed?: boolean; message?: string; }

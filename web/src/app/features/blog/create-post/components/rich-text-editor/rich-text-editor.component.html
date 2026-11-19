@@ -18,9 +18,10 @@
     <span class="mx-1 h-5 w-px shrink-0 bg-[#E0E5EB]"></span>
 
     @for (action of actions; track action.label) {
+      @if (action.command !== 'insertTable') {
       <button
         type="button"
-        (mousedown)="execute($event, action)"
+        (click)="execute($event, action)"
         [attr.aria-label]="action.label"
         [attr.aria-pressed]="
           action.state === 'bold' ? boldActive()
@@ -40,40 +41,8 @@
       >
         <app-blog-icon [name]="action.icon" />
       </button>
-    }
-
-    <div class="relative shrink-0" data-more-root>
-      <button
-        type="button"
-        (mousedown)="toggleMore($event)"
-        aria-label="Thêm tùy chọn định dạng"
-        aria-haspopup="menu"
-        [attr.aria-expanded]="moreOpen()"
-        title="Thêm tùy chọn"
-        class="rte-tool"
-        [class.rte-tool--active]="moreOpen()"
-      >
-        <app-blog-icon name="more" />
-      </button>
-      @if (moreOpen()) {
-        <div
-          role="menu"
-          class="absolute right-0 top-full z-20 mt-1 w-56 max-w-[calc(100vw-32px)] rounded-lg border border-[#E0E5EB] bg-white p-1 shadow-lg"
-        >
-          @for (action of moreActions; track action.label) {
-            <button
-              type="button"
-              role="menuitem"
-              (mousedown)="runMore($event, action)"
-              class="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-[#344054] hover:bg-[#F1F5F9]"
-            >
-              <app-blog-icon [name]="action.icon" />
-              {{ action.label }}
-            </button>
-          }
-        </div>
       }
-    </div>
+    }
 
     <span class="min-w-4 flex-1"></span>
     <button type="button" (mousedown)="$event.preventDefault(); runCommand('undo')" aria-label="Hoàn tác" title="Hoàn tác" class="rte-tool">
@@ -116,25 +85,17 @@
           </button>
         </div>
 
-        @if (prompt() === 'image') {
-          <label class="block w-full cursor-pointer rounded border border-[#E0E5EB] bg-[#F8FAFD] py-2 text-center text-sm text-[#1E4AD7]">
-            {{ uploading() ? 'Đang tải lên...' : 'Tải ảnh từ máy tính' }}
-            <input type="file" accept="image/*" (change)="upload($event)" class="hidden" [disabled]="uploading()" />
-          </label>
-          <p class="my-2 text-center text-xs text-[#677283]">hoặc dán đường dẫn ảnh:</p>
-        }
-
-        <form (ngSubmit)="insertUrl($event)">
+        <form (submit)="insertUrl($event)">
           <input
             type="text"
             [value]="url()"
             (input)="url.set($any($event.target).value)"
-            [placeholder]="prompt() === 'link' ? 'https://vi-du.com' : 'https://.../anh.png'"
+            placeholder="https://vi-du.com"
             aria-label="Đường dẫn"
             class="w-full rounded border border-[#E0E5EB] px-3 py-2 text-sm"
           />
           <button type="submit" class="mt-3 w-full rounded bg-[#1E4AD7] py-2 text-sm font-medium text-white">
-            {{ prompt() === 'link' ? 'Chèn liên kết' : 'Chèn ảnh' }}
+            Chèn liên kết
           </button>
         </form>
 
@@ -143,6 +104,16 @@
         }
       </div>
     }
+
+    <input
+      #imageInput
+      type="file"
+      accept="image/*"
+      (change)="upload($event)"
+      class="hidden"
+      [disabled]="uploading()"
+      aria-label="Chọn ảnh từ máy tính"
+    />
 
     <div
       #editor
@@ -154,6 +125,7 @@
       (input)="inputContent()"
       (paste)="onPaste($event)"
       (click)="onEditorClick($event)"
+      (keydown)="captureSelection()"
       class="rich-content min-h-[360px] px-5 py-4 text-sm leading-6 text-[#0B1628] outline-none"
     ></div>
   </div>

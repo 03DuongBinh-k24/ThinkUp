@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, defer, map, of, tap } from 'rxjs';
+import { Observable, defer, map, of, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Course } from '../models/course.model';
 import { AuthService } from './auth.service';
@@ -102,28 +102,16 @@ export class FavoritesService {
   }
 
   addFavorite(course: Course): Observable<boolean> {
-    if (!this.auth.isAuthenticated()) return this.isFavorite(course.id) ? of(true) : this.toggleFavorite(course).pipe(map(result => result.isFavorite));
+    if (!this.auth.isAuthenticated()) return throwError(() => new Error('Vui lòng đăng nhập để sử dụng danh sách yêu thích.'));
     return this.mutate('add', course.id, course);
   }
   removeFavorite(courseId: string): Observable<boolean> {
-    if (!this.auth.isAuthenticated()) {
-      const next = this.guestCourses().filter(course => course.id !== courseId);
-      localStorage.setItem(GUEST_KEY, JSON.stringify(next));
-      this._favorites.set(next); this.ids.set(next.map(course => course.id));
-      return of(false);
-    }
+    if (!this.auth.isAuthenticated()) return throwError(() => new Error('Vui lòng đăng nhập để sử dụng danh sách yêu thích.'));
     return this.mutate('remove', courseId);
   }
 
   toggleFavorite(course: Course): Observable<{ success: boolean; data: Course[]; isFavorite: boolean }> {
-    if (!this.auth.isAuthenticated()) {
-      const courses = this.guestCourses();
-      const next = courses.some(item => item.id === course.id) ? courses.filter(item => item.id !== course.id) : [course, ...courses];
-      localStorage.setItem(GUEST_KEY, JSON.stringify(next));
-      this._favorites.set(next);
-      this.ids.set(next.map(item => item.id));
-      return of({ success: true, data: next, isFavorite: next.some(item => item.id === course.id) });
-    }
+    if (!this.auth.isAuthenticated()) return throwError(() => new Error('Vui lòng đăng nhập để sử dụng danh sách yêu thích.'));
     return this.mutate('toggle', course.id, course).pipe(map(isFavorite => ({ success: true, data: this._favorites(), isFavorite })));
   }
 
@@ -156,6 +144,8 @@ export class FavoritesService {
     const duration = dto.duration_formatted || this.formatDuration(durationMinutes);
     const instructorName = dto.instructor?.name || 'Giảng viên ThinkUp';
     const instructorAvatar = dto.instructor?.avatar_url || dto.instructor?.avatar;
+    const ratingCount = Number(dto.total_reviews) || 0;
+    const rating = ratingCount > 0 ? Number(dto.rating) || 0 : 0;
     return { id: dto.course_id || dto.id!, courseId: dto.course_id, slug: dto.slug, title: dto.title,
       instructor: instructorName, instructorId: dto.instructor?.id,
       instructorInitial: instructorName.charAt(0).toUpperCase(),
@@ -165,7 +155,7 @@ export class FavoritesService {
         coursesCount: 0, avatar: instructorAvatar,
       },
       level: formatCourseLevel(dto.level), duration, durationMinutes,
-      rating: dto.rating, ratingCount: dto.total_reviews, studentsCount: dto.total_students,
+      rating, ratingCount, studentsCount: dto.total_students,
       salePrice: dto.price.sale, originalPrice: dto.price.original, thumbnailUrl: dto.thumbnail_url,
       tags: dto.tag_names, isInWishlist: true, isInCart: dto.is_in_cart, isPurchased: dto.is_purchased };
   }

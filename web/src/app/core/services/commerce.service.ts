@@ -24,6 +24,8 @@ const cartDemoAdapter = getCartDemoAdapter();
 function mapApiCartCourse(course: ApiCartCourse): CartItem {
   const instructorName = course.instructor?.name || 'Giảng viên ThinkUp';
   const instructorAvatar = course.instructor?.avatar_url || course.instructor?.avatar;
+  const ratingCount = Number(course.total_reviews) || 0;
+  const rating = ratingCount > 0 ? Number(course.rating) || 0 : 0;
   return {
     id: course.course_id,
     courseId: course.course_id,
@@ -37,14 +39,14 @@ function mapApiCartCourse(course: ApiCartCourse): CartItem {
       name: instructorName,
       title: '',
       bio: '',
-      rating: course.rating,
+      rating,
       studentsCount: course.total_students ?? 0,
       coursesCount: 0,
       avatar: instructorAvatar,
     },
     instructorInitial: instructorName.charAt(0).toUpperCase(),
-    rating: course.rating,
-    ratingCount: course.total_reviews,
+    rating,
+    ratingCount,
     studentsCount: course.total_students,
     students: `${new Intl.NumberFormat('vi-VN').format(course.total_students || 0)} học viên`,
     originalPrice: course.price?.original ?? 0,
@@ -187,10 +189,7 @@ export class CommerceService {
       return of({ success: true, data, added });
     }
     if (!this.auth.isAuthenticated()) {
-      const ids = this.readGuestCourseIds();
-      const added = !ids.includes(courseId);
-      localStorage.setItem('thinkup_guest_cart_ids', JSON.stringify([...new Set([...ids, courseId])]));
-      return this.loadCartView().pipe(map(data => ({ success: true, data, added })));
+      return throwError(() => new Error('Vui lòng đăng nhập để thêm khóa học vào giỏ hàng.'));
     }
     return this.http.post<{ success: boolean; data: CartView }>(
       `${this.apiUrl}/user/cart`, { courseId }, { withCredentials: true }
@@ -212,8 +211,7 @@ export class CommerceService {
       return of({ success: true, data });
     }
     if (!this.auth.isAuthenticated()) {
-      localStorage.setItem('thinkup_guest_cart_ids', JSON.stringify(this.readGuestCourseIds().filter(id => id !== courseId)));
-      return this.loadCartView().pipe(map(data => ({ success: true, data })));
+      return throwError(() => new Error('Vui lòng đăng nhập để cập nhật giỏ hàng.'));
     }
     return this.http.delete<{ success: boolean; data: unknown }>(
       `${this.apiUrl}/user/cart`, { body: { courseId }, withCredentials: true }

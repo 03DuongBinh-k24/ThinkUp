@@ -5,6 +5,7 @@ import { CourseCardComponent } from '../../shared/components/course-card/course-
 import { CourseCardView } from '../../shared/components/course-card/course-card.model';
 import { formatMoney, toCourseCardView } from '../../shared/components/course-card/course-card.mapper';
 import { CommerceService } from '../../core/services/commerce.service';
+import { AuthService } from '../../core/services/auth.service';
 import { FavoritesService } from '../../core/services/favorites.service';
 import { Course } from '../../core/models/course.model';
 import { HomeCourseDto, HomeLearningDay, HomeLearningStreak, HomeOverview, HomeService } from './home.service';
@@ -41,6 +42,8 @@ const EMPTY_ROADMAP: RoadmapBanner = {
 })
 export class HomeComponent implements OnInit {
   private readonly commerceService = inject(CommerceService);
+  private readonly authService = inject(AuthService);
+  readonly isLoggedIn = computed(() => this.authService.isAuthenticated());
   private readonly favoritesService = inject(FavoritesService);
   private readonly homeService = inject(HomeService);
 
@@ -127,6 +130,7 @@ export class HomeComponent implements OnInit {
   }
 
   toggleSave(card: FeaturedCard): void {
+    if (!this.isLoggedIn()) return;
     if (!card.course) { this.showToast('Không thể cập nhật yêu thích cho khóa học này.'); return; }
     this.favoritesService.toggleFavorite(card.course).subscribe({
       next: result => {
@@ -138,6 +142,7 @@ export class HomeComponent implements OnInit {
   }
 
   addToCart(card: FeaturedCard): void {
+    if (!this.isLoggedIn()) return;
     this.commerceService.addToCart(card.id).subscribe({
       next: result => this.showToast(result.added ? `Đã thêm "${card.title}" vào giỏ hàng!` : 'Khóa học đã có trong giỏ hàng.'),
       error: error => this.showToast(error?.error?.message || 'Chưa thể thêm vào giỏ hàng, vui lòng thử lại.'),
@@ -233,7 +238,7 @@ export class HomeComponent implements OnInit {
         avatar: dto.instructor_avatar || dto.instructor?.avatar_url,
       },
       level: dto.level || undefined,
-      rating: dto.rating ?? 0,
+      rating: Number(dto.total_reviews) > 0 ? dto.rating ?? 0 : 0,
       ratingCount: dto.total_reviews ?? 0,
       studentsCount: dto.total_students ?? 0,
       duration: this.formatDuration(dto.duration_minutes),
@@ -330,3 +335,4 @@ export class HomeComponent implements OnInit {
     setTimeout(() => this.toastMessage.set(''), 3200);
   }
 }
+

@@ -14,6 +14,167 @@ export const COLLECTION_STUDY_ROOM_MESSAGES = 'study_room_messages';
  * Thời gian tối đa phòng không có người trước khi tự động xóa (1 tiếng = 3600 giây = 3.600.000 ms)
  */
 export const ROOM_IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+export const ROOM_RECOMMENDATION_ACTIVITY_WINDOW_MS = 60 * 1000;
+export const ROOM_RECOMMENDATION_FALLBACK_COURSE_ID = '73';
+export const ROOM_PRESENCE_TIMEOUT_MS = 60 * 1000;
+const ROOM_LEGACY_PRESENCE_TIMEOUT_MS = 5 * 60 * 1000;
+
+async function pruneStaleRoomParticipants(db, roomId = null, now = new Date()) {
+  const cutoff = new Date(now.getTime() - ROOM_PRESENCE_TIMEOUT_MS);
+  const legacyCutoff = new Date(now.getTime() - ROOM_LEGACY_PRESENCE_TIMEOUT_MS);
+  const query = { isActive: { $ne: false } };
+  if (roomId) query._id = roomId;
+  const rooms = await db.collection(COLLECTION_STUDY_ROOMS).find(query).toArray();
+  for (const room of rooms) {
+    const participants = Array.isArray(room.participants) ? room.participants : [];
+    const active = participants.filter(participant => {
+      const hasHeartbeat = Boolean(participant.lastSeenAt);
+      const lastSeenAt = participant.lastSeenAt || participant.joinedAt;
+      return lastSeenAt && new Date(lastSeenAt) >= (hasHeartbeat ? cutoff : legacyCutoff);
+    });
+    if (active.length === participants.length) continue;
+    const currentUsers = new Set(active.map(participant => String(participant.userId ?? participant.user_id ?? '')).filter(Boolean)).size;
+    const staleParticipants = participants.filter(participant => !active.includes(participant));
+    const lastPresenceAt = staleParticipants.every(participant => participant.lastSeenAt)
+      ? new Date(Math.max(...staleParticipants.map(participant => new Date(participant.lastSeenAt).getTime())))
+      : now;
+    await db.collection(COLLECTION_STUDY_ROOMS).updateOne({ _id: room._id }, {
+      $set: { participants: active, currentUsers, emptySince: currentUsers ? null : (room.emptySince || lastPresenceAt), updatedAt: now }
+    });
+  }
+}
+
+function recommendationHash(value) {
+  let hash = 2166136261;
+  for (const character of String(value)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function formatRoomRecommendationCourse(course) {
+  if (!course) return null;
+  const courseId = String(course.course_id || course._id);
+  const instructorId = course.instructor_id ? String(course.instructor_id) : null;
+  return {
+    id: courseId,
+    courseId,
+    slug: course.slug || courseId,
+    title: course.title || '',
+    thumbnailUrl: course.thumbnail_url || '',
+    rating: Number(course.rating) || 0,
+    duration: course.duration_formatted || course.total_duration_formatted || '',
+    originalPrice: Number(course.original_price ?? course.pricing?.original_price) || 0,
+    salePrice: Number(course.price ?? course.pricing?.price) || 0,
+    instructor: instructorId ? {
+      id: instructorId,
+      url: `/instructors/${encodeURIComponent(instructorId)}`,
+    } : null,
+  };
+}
+
+async function getFallbackRoomRecommendation(db, excludedCourseIds) {
+  if (excludedCourseIds.has(ROOM_RECOMMENDATION_FALLBACK_COURSE_ID)) return { course: null };
+  const fallbackCourse = await db.collection('courses').findOne({
+    course_id: ROOM_RECOMMENDATION_FALLBACK_COURSE_ID,
+    status: 'published',
+    admin_hidden: { $ne: true },
+  });
+  return { course: formatRoomRecommendationCourse(fallbackCourse) };
+}
+
+/** Pick a currently active public course studied by another member in the room. */
+export async function getRoomCourseRecommendation(roomId, currentUserId, options = {}) {
+  const cleanRoomId = typeof roomId === 'string' ? roomId.trim() : '';
+  const viewerId = currentUserId == null ? '' : String(currentUserId).trim();
+  if (!cleanRoomId) throw createStudyRoomError('Thiếu roomId để lấy gợi ý khóa học.', 400, 'INVALID_ROOM_ID');
+  if (!viewerId) throw createStudyRoomError('Vui lòng đăng nhập để lấy gợi ý khóa học.', 401, 'AUTH_REQUIRED');
+
+  const db = options.db || await getMongoDb();
+  const now = options.now || new Date();
+  const activitySince = new Date(now.getTime() - ROOM_RECOMMENDATION_ACTIVITY_WINDOW_MS);
+  const room = await db.collection(COLLECTION_STUDY_ROOMS).findOne({
+    $or: [{ roomId: cleanRoomId.toLowerCase() }, { roomCode: cleanRoomId.toUpperCase() }],
+    isActive: { $ne: false },
+  });
+  if (!room) throw createStudyRoomError('Không tìm thấy phòng học ảo.', 404, 'ROOM_NOT_FOUND');
+
+  const participants = Array.isArray(room.participants) ? room.participants : [];
+  if (!participants.some(participant => String(participant.userId) === viewerId)) {
+    throw createStudyRoomError('Bạn không phải thành viên của phòng học này.', 403, 'ROOM_MEMBERSHIP_REQUIRED');
+  }
+
+  const peerIds = [...new Set(participants
+    .map(participant => String(participant.userId || ''))
+    .filter(userId => userId && userId !== viewerId))];
+
+  const activeSessions = await db.collection('learning_activity_sessions').find({
+    user_id: { $in: [...peerIds, viewerId] },
+    kind: 'lesson',
+    state: 'tracking',
+    last_seen_at: { $gte: activitySince },
+    expires_at: { $gt: now },
+  }).toArray();
+
+  const memberIds = [...new Set([viewerId, ...peerIds])];
+  const coursesByMember = new Map(memberIds.map(userId => [userId, new Set()]));
+  for (const session of activeSessions) {
+    const userId = String(session.user_id);
+    const courseId = String(session.target?.course_id || '');
+    if (courseId && coursesByMember.has(userId)) coursesByMember.get(userId).add(courseId);
+  }
+  const roomCourseIds = [...new Set([...coursesByMember.values()].flatMap(courseIds => [...courseIds]))];
+  const viewerCourseIds = coursesByMember.get(viewerId);
+  if (!peerIds.length || !roomCourseIds.length) return getFallbackRoomRecommendation(db, viewerCourseIds);
+
+  const { ObjectId } = await import('mongodb');
+  const lookupCourseIds = [...new Set([...roomCourseIds, ROOM_RECOMMENDATION_FALLBACK_COURSE_ID])];
+  const objectIds = lookupCourseIds.filter(ObjectId.isValid).map(courseId => new ObjectId(courseId));
+  const courses = await db.collection('courses').find({
+    $and: [
+      { $or: [{ course_id: { $in: lookupCourseIds } }, { _id: { $in: objectIds } }] },
+      { status: 'published', admin_hidden: { $ne: true } },
+    ],
+  }).toArray();
+  const publishedCourses = new Map(courses.filter(course => {
+    const courseId = String(course.course_id || course._id || '');
+    return lookupCourseIds.includes(courseId) && course.status === 'published' && course.admin_hidden !== true;
+  }).map(course => [String(course.course_id || course._id), course]));
+  if (!publishedCourses.size) return getFallbackRoomRecommendation(db, viewerCourseIds);
+
+  const bucket = Math.floor(now.getTime() / ROOM_RECOMMENDATION_ACTIVITY_WINDOW_MS);
+  const seed = `${room.roomId || cleanRoomId}:${bucket}`;
+  const orderedMembers = [...memberIds].sort((left, right) =>
+    recommendationHash(`${seed}:${left}`) - recommendationHash(`${seed}:${right}`));
+  const courseToMember = new Map();
+  const assignCourse = (memberId, visited) => {
+    const memberCourses = coursesByMember.get(memberId);
+    const eligibleCourseIds = [...publishedCourses.keys()]
+      .filter(courseId => !memberCourses.has(courseId)
+        && (roomCourseIds.includes(courseId) || courseId === ROOM_RECOMMENDATION_FALLBACK_COURSE_ID))
+      .sort((left, right) => {
+        const fallbackOrder = Number(left === ROOM_RECOMMENDATION_FALLBACK_COURSE_ID) - Number(right === ROOM_RECOMMENDATION_FALLBACK_COURSE_ID);
+        return fallbackOrder || recommendationHash(`${seed}:${memberId}:${left}`) - recommendationHash(`${seed}:${memberId}:${right}`);
+      });
+    for (const courseId of eligibleCourseIds) {
+      if (visited.has(courseId)) continue;
+      visited.add(courseId);
+      const assignedMember = courseToMember.get(courseId);
+      if (!assignedMember || assignCourse(assignedMember, visited)) {
+        courseToMember.set(courseId, memberId);
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const memberId of orderedMembers) assignCourse(memberId, new Set());
+
+  const assignedCourseId = [...courseToMember.entries()].find(([, memberId]) => memberId === viewerId)?.[0];
+  const selected = assignedCourseId ? publishedCourses.get(assignedCourseId) : null;
+  if (!selected) return getFallbackRoomRecommendation(db, viewerCourseIds);
+  return { course: formatRoomRecommendationCourse(selected) };
+}
 
 function normalizeInviteTarget(value) {
   const target = typeof value === 'string' ? value.trim() : '';
@@ -251,7 +412,8 @@ export async function createStudyRoom(creatorId, payload = {}) {
         role: 'owner', // 'owner' | 'moderator' | 'member'
         roleLabel: getRoleLabel('owner'), // 'Chủ phòng'
         position: { x: 300, y: 250 },
-        joinedAt: new Date()
+        joinedAt: new Date(),
+        lastSeenAt: new Date()
       }
     ],
     // Danh sách yêu cầu xin vào phòng đang chờ duyệt
@@ -390,8 +552,17 @@ export async function getStudyRoomCards(options = {}) {
     roomsColl.countDocuments(query)
   ]);
 
+  // The persisted counter can lag after disconnects; show the unique current participants.
+  const normalizedRooms = rooms.map(room => {
+    const participantIds = (room.participants || [])
+      .map(participant => String(participant.userId ?? participant.user_id ?? ''))
+      .filter(Boolean);
+    const currentUsers = new Set(participantIds).size;
+    return { ...room, currentUsers };
+  });
+
   return {
-    rooms,
+    rooms: normalizedRooms,
     total,
     page: Math.floor(parsedSkip / parsedLimit) + 1,
     limit: parsedLimit
@@ -617,6 +788,7 @@ export async function searchStudyRoomsByNameAndTopic({ name = '', topic = '', in
  */
 export async function filterStudyRoomsByTagOrStatus({ tag = '', status = '', includePrivate = true } = {}) {
   const db = await getMongoDb();
+  await pruneStaleRoomParticipants(db);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
 
   const query = { isActive: { $ne: false } };
@@ -973,6 +1145,38 @@ export function createStudyRoomRouter(express, requireAuth) {
     }
   });
 
+  router.post('/:roomId/presence/heartbeat', requireAuth, async (req, res, next) => {
+    try {
+      res.json(await heartbeatStudyRoom(req.params.roomId, req.userId));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** POST /api/study-room/:roomId/participants/:targetUserId/kick */
+  router.post('/:roomId/participants/:targetUserId/kick', requireAuth, async (req, res, next) => {
+    try {
+      const result = await kickRoomParticipant(req.params.roomId, req.userId, req.params.targetUserId);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * GET /api/study-room/:roomId/recommendation
+   * Gợi ý khóa đang được thành viên khác học, không trùng khóa người gọi đang học.
+   */
+  router.get('/:roomId/recommendation', requireAuth, async (req, res, next) => {
+    try {
+      const result = await getRoomCourseRecommendation(req.params.roomId, req.userId);
+      res.set('Cache-Control', 'no-store');
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   /**
    * PUT /api/study-room/:roomId/position
    * Cập nhật vị trí kéo thả avatar của người dùng trên canvas
@@ -1286,6 +1490,7 @@ export async function generateLiveKitToken({ roomId, userId, userName = 'Học v
 
   const roleLabel = getRoleLabel(userRole);
   const initials = getInitials(effectiveUserName);
+  const now = new Date();
 
   // Cập nhật người dùng vào danh sách participants của phòng trong DB
   const participantDoc = {
@@ -1296,10 +1501,10 @@ export async function generateLiveKitToken({ roomId, userId, userName = 'Học v
     role: userRole,
     roleLabel,
     position,
-    joinedAt: existingParticipant?.joinedAt || new Date()
+    joinedAt: now,
+    lastSeenAt: now
   };
 
-  const now = new Date();
   const capacityCondition = {
     $or: [
       { 'participants.userId': String(userId) },
@@ -1788,36 +1993,146 @@ export async function leaveStudyRoom(roomId, userId) {
   }
 
   const now = new Date();
-  await roomsColl.updateOne(
-    { _id: room._id, 'participants.userId': String(userId) },
-    [
-      { $set: {
-        participants: {
-          $filter: {
-            input: { $ifNull: ['$participants', []] },
-            as: 'participant',
-            cond: { $ne: ['$$participant.userId', String(userId)] }
+  const departingOwner = String(room.creatorId) === String(userId);
+  const leavePipeline = departingOwner
+    ? [
+        { $set: {
+          _leavingParticipants: {
+            $filter: {
+              input: { $ifNull: ['$participants', []] },
+              as: 'participant',
+              cond: { $ne: ['$$participant.userId', String(userId)] }
+            }
           }
-        }
-      } },
-      { $set: {
-        currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
-        emptySince: { $cond: [{ $eq: [{ $size: '$participants' }, 0] }, now, null] },
-        updatedAt: now
-      } }
-    ]
-  );
+        } },
+        { $set: {
+          _leavingSuccessor: {
+            $ifNull: [
+              { $first: { $filter: { input: '$_leavingParticipants', as: 'participant', cond: { $eq: ['$$participant.role', 'moderator'] } } } },
+              { $first: '$_leavingParticipants' }
+            ]
+          }
+        } },
+        { $set: {
+          participants: {
+            $map: {
+              input: '$_leavingParticipants',
+              as: 'participant',
+              in: {
+                $cond: [
+                  { $eq: ['$$participant.userId', '$_leavingSuccessor.userId'] },
+                  { $mergeObjects: ['$$participant', { role: 'owner', roleLabel: getRoleLabel('owner') }] },
+                  '$$participant'
+                ]
+              }
+            }
+          },
+          creatorId: { $ifNull: ['$_leavingSuccessor.userId', null] },
+          currentUsers: { $size: { $setUnion: [{ $map: { input: '$_leavingParticipants', as: 'participant', in: '$$participant.userId' } }, []] } },
+          emptySince: { $cond: [{ $eq: [{ $size: '$_leavingParticipants' }, 0] }, now, null] },
+          updatedAt: now,
+          _leavingParticipants: '$$REMOVE',
+          _leavingSuccessor: '$$REMOVE'
+        } }
+      ]
+    : [
+        { $set: {
+          participants: {
+            $filter: {
+              input: { $ifNull: ['$participants', []] },
+              as: 'participant',
+              cond: { $ne: ['$$participant.userId', String(userId)] }
+            }
+          }
+        } },
+        { $set: {
+          currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
+          emptySince: { $cond: [{ $eq: [{ $size: '$participants' }, 0] }, now, null] },
+          updatedAt: now
+        } }
+      ];
+  const leaveFilter = departingOwner
+    ? { _id: room._id, creatorId: String(userId) }
+    : { _id: room._id, 'participants.userId': String(userId) };
+
+  await roomsColl.updateOne(leaveFilter, leavePipeline);
 
   const updatedRoom = await roomsColl.findOne({ _id: room._id });
   const newCurrentUsers = updatedRoom?.currentUsers || 0;
+  const newOwnerId = departingOwner && updatedRoom?.creatorId ? String(updatedRoom.creatorId) : null;
 
   return {
     success: true,
     message: 'Đã rời khỏi phòng học.',
     roomId: room.roomId,
     currentUsers: newCurrentUsers,
-    isRoomEmpty: newCurrentUsers === 0
+    isRoomEmpty: newCurrentUsers === 0,
+    ownershipTransferred: Boolean(newOwnerId),
+    newOwnerId
   };
+}
+
+/** Remove an active room member after validating the owner/moderator's authority. */
+export async function kickRoomParticipant(roomId, actorId, targetUserId, options = {}) {
+  const cleanRoomId = typeof roomId === 'string' ? roomId.trim() : '';
+  const actor = actorId == null ? '' : String(actorId).trim();
+  const target = targetUserId == null ? '' : String(targetUserId).trim();
+  if (!cleanRoomId || !actor || !target) {
+    throw createStudyRoomError('Thiếu mã phòng hoặc thành viên cần mời ra.', 400, 'INVALID_KICK_REQUEST');
+  }
+  if (actor === target) throw createStudyRoomError('Bạn không thể tự mời mình ra khỏi phòng.', 400, 'INVALID_KICK_TARGET');
+
+  const db = options.db || await getMongoDb();
+  const now = options.now || new Date();
+  const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
+  const room = await roomsColl.findOne({
+    $or: [{ roomId: cleanRoomId.toLowerCase() }, { roomCode: cleanRoomId.toUpperCase() }],
+    isActive: { $ne: false },
+  });
+  if (!room) throw createStudyRoomError('Không tìm thấy phòng học ảo.', 404, 'ROOM_NOT_FOUND');
+
+  const participants = Array.isArray(room.participants) ? room.participants : [];
+  const actorParticipant = participants.find(participant => String(participant.userId) === actor);
+  const targetParticipant = participants.find(participant => String(participant.userId) === target);
+  const isOwner = String(room.creatorId) === actor;
+  if (!actorParticipant || (!isOwner && actorParticipant.role !== 'moderator')) {
+    throw createStudyRoomError('Chỉ chủ phòng hoặc moderator mới được mời thành viên ra.', 403, 'KICK_PERMISSION_REQUIRED');
+  }
+  if (!targetParticipant) throw createStudyRoomError('Thành viên này không còn trong phòng.', 404, 'ROOM_MEMBER_NOT_FOUND');
+  if (targetParticipant.role === 'owner' || String(room.creatorId) === target) {
+    throw createStudyRoomError('Không thể mời chủ phòng ra khỏi phòng.', 403, 'ROOM_OWNER_CANNOT_BE_KICKED');
+  }
+  if (!isOwner && targetParticipant.role === 'moderator') {
+    throw createStudyRoomError('Moderator không thể mời moderator khác ra khỏi phòng.', 403, 'KICK_PERMISSION_REQUIRED');
+  }
+
+  const actorCondition = isOwner
+    ? { creatorId: actor, 'participants.userId': actor }
+    : { participants: { $elemMatch: { userId: actor, role: 'moderator' } } };
+  const result = await roomsColl.updateOne({ $and: [
+    { _id: room._id, 'participants.userId': target },
+    actorCondition,
+  ] }, [
+    { $set: {
+      participants: {
+        $filter: {
+          input: { $ifNull: ['$participants', []] },
+          as: 'participant',
+          cond: { $ne: ['$$participant.userId', target] },
+        },
+      },
+    } },
+    { $set: {
+      currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
+      emptySince: { $cond: [{ $eq: [{ $size: '$participants' }, 0] }, now, null] },
+      updatedAt: now,
+    } },
+  ]);
+  if (!result.matchedCount) {
+    throw createStudyRoomError('Thành viên hoặc quyền phòng vừa thay đổi. Vui lòng tải lại phòng.', 409, 'ROOM_KICK_CONFLICT');
+  }
+  const updatedRoom = await roomsColl.findOne({ _id: room._id });
+  return { roomId: room.roomId, removedUserId: target, currentUsers: updatedRoom?.currentUsers ?? Math.max(0, participants.length - 1) };
 }
 
 /**
@@ -1908,12 +2223,12 @@ export async function sendRoomMessage(roomId, payload = {}) {
  * @param {string} roomId
  * @param {string} userId - ID của người đang yêu cầu đọc tin nhắn
  */
-export async function getRoomSessionMessages(roomId, userId) {
+export async function getRoomSessionMessages(roomId, userId, options = {}) {
   if (!roomId || !userId) {
     return [];
   }
 
-  const db = await getMongoDb();
+  const db = options.db || await getMongoDb();
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
 
   const room = await roomsColl.findOne({
@@ -1975,6 +2290,7 @@ export async function getRoomSessionMessages(roomId, userId) {
  */
 export async function cleanupExpiredEmptyRooms(maxIdleMs = ROOM_IDLE_TIMEOUT_MS) {
   const db = await getMongoDb();
+  await pruneStaleRoomParticipants(db);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
   const msgsColl = db.collection(COLLECTION_STUDY_ROOM_MESSAGES);
 
@@ -2041,6 +2357,10 @@ export async function getRoomParticipants(roomId, currentUserId = null) {
   }
 
   const db = await getMongoDb();
+  const candidate = await db.collection(COLLECTION_STUDY_ROOMS).findOne({
+    $or: [{ roomId: roomId.toLowerCase() }, { roomCode: roomId.toUpperCase() }], isActive: { $ne: false }
+  }, { projection: { _id: 1 } });
+  if (candidate) await pruneStaleRoomParticipants(db, candidate._id);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
 
   const room = await roomsColl.findOne({
@@ -2121,6 +2441,21 @@ export async function getRoomParticipants(roomId, currentUserId = null) {
     currentUserId: currentUserId ? String(currentUserId) : null,
     participants
   };
+}
+
+export async function heartbeatStudyRoom(roomId, userId, options = {}) {
+  if (!roomId || !userId) throw createStudyRoomError('Thiếu roomId hoặc userId để đồng bộ hiện diện.', 400, 'INVALID_ROOM_PRESENCE');
+  const db = options.db || await getMongoDb();
+  const now = options.now || new Date();
+  const rooms = db.collection(COLLECTION_STUDY_ROOMS);
+  const room = await rooms.findOne({ $or: [{ roomId: roomId.toLowerCase() }, { roomCode: roomId.toUpperCase() }], isActive: { $ne: false } });
+  if (!room || !(room.participants || []).some(participant => String(participant.userId) === String(userId))) {
+    throw createStudyRoomError('Bạn không còn trong phòng học này.', 404, 'ROOM_MEMBERSHIP_REQUIRED');
+  }
+  await rooms.updateOne({ _id: room._id, 'participants.userId': String(userId) }, {
+    $set: { 'participants.$.lastSeenAt': now }
+  });
+  return { success: true, lastSeenAt: now };
 }
 
 /**

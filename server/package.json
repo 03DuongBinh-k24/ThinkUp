@@ -44,6 +44,7 @@
     "livekit-server-sdk": "^2.19.1",
     "mongodb": "^7.1.0",
     "nodemailer": "^7.0.13",
-    "pdfkit": "^0.20.2"
+    "pdfkit": "^0.20.2",
+    "qrcode": "^1.5.4"
   }
 }

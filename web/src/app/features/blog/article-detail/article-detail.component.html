@@ -32,7 +32,7 @@
               [src]="data.post.coverImage"
               [attr.srcset]="data.post.coverImage | blogImageSrcset:true"
               sizes="(max-width: 1023px) 100vw, 505px"
-              [alt]="data.post.title"
+              [alt]="data.post.title" (error)="$any($event.target).src='/assets/blog/no-image.png'; $any($event.target).removeAttribute('srcset')"
               class="h-full w-full object-cover"
             />
           </div>
@@ -65,16 +65,6 @@
           <div class="article-content w-full min-w-0" appArticleContent [headings]="headings()" [innerHTML]="data.post.content"></div>
         } @else {
           <div class="text-[#5D646F] py-8 text-center">Chưa có nội dung bài viết.</div>
-        }
-
-        @if (data.post.contentImages?.length) {
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full min-w-0">
-            @for (image of data.post.contentImages; track image) {
-              @if (!data.post.content.includes(image)) {
-                <img [src]="image" alt="Ảnh trong bài viết" loading="lazy" class="w-full min-w-0 rounded-lg object-cover" />
-              }
-            }
-          </div>
         }
 
         <footer class="flex flex-col w-full gap-6">

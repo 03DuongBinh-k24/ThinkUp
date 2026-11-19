@@ -7,6 +7,10 @@
     <button
       type="button"
       class="course-cover__fav"
+      [disabled]="!isLoggedIn()"
+      [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
+      [class.opacity-50]="!isLoggedIn()"
+      [class.cursor-not-allowed]="!isLoggedIn()"
       [class.is-active]="isFavorite()"
       [attr.aria-label]="isFavorite() ? 'Bỏ khóa học khỏi yêu thích' : 'Thêm khóa học vào yêu thích'"
       (click)="toggleFavorite($event)"
@@ -25,7 +29,11 @@
 
     <div class="course-card__meta">
       <span class="course-card__instructor" [appInstructorTrigger]="course().instructorId || course().instructor">
-        <svg lucideUserRound aria-hidden="true" [size]="13" [strokeWidth]="1.7"></svg>
+        @if (course().instructorProfile?.avatar) {
+          <img class="course-card__instructor-avatar" [src]="course().instructorProfile?.avatar" [alt]="''" loading="lazy" />
+        } @else {
+          <svg lucideUserRound aria-hidden="true" [size]="13" [strokeWidth]="1.7"></svg>
+        }
         {{ course().instructor }}
       </span>
       <span class="course-card__level">{{ course().level }}</span>
@@ -33,7 +41,7 @@
 
     <div class="course-card__rating">
       <svg lucideStar aria-hidden="true" [size]="13" [strokeWidth]="1.6" class="course-card__star"></svg>
-      <strong>{{ course().rating }}</strong>
+      <strong>{{ course().rating | number:'1.1-1' }}</strong>
       <span>({{ course().ratingCount }})</span>
       <span class="course-card__students">
         <svg lucideUserRound aria-hidden="true" [size]="12" [strokeWidth]="1.7"></svg>
@@ -56,7 +64,7 @@
           <span>{{ formatPrice(course().originalPrice) }}</span>
         }
       </div>
-      <button type="button" class="course-card__cart" aria-label="Thêm khóa học vào giỏ" (click)="onAddToCart($event)">
+      <button type="button" class="course-card__cart" aria-label="Thêm khóa học vào giỏ" [disabled]="!isLoggedIn()" [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng giỏ hàng'" [class.opacity-50]="!isLoggedIn()" [class.cursor-not-allowed]="!isLoggedIn()" (click)="onAddToCart($event)">
         <svg lucideShoppingCart aria-hidden="true" [size]="16" [strokeWidth]="1.8"></svg>
       </button>
     </div>

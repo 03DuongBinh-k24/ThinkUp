@@ -22,73 +22,58 @@
                 <a class="skill-sidebar__roadmap" [routerLink]="['/learning/roadmap', roadmapId]">{{ rm.title }}</a>
               </div>
 
-              <button
-                type="button"
-                class="skill-sidebar__toggle"
-                [attr.aria-expanded]="sidebarOpen()"
-                aria-controls="skill-sidebar-stages"
-                (click)="toggleSidebar()"
-              >
-                <span class="skill-sidebar__toggle-main">
-                  <span class="sidebar-stage__number">{{ st.number }}</span>
-                  <span class="rm-truncate">{{ st.name }}</span>
-                </span>
-                <span class="skill-sidebar__toggle-meta">
-                  {{ stagePercent(st) }}%
-                  <svg lucideChevronDown class="skill-sidebar__chevron" [class.is-open]="sidebarOpen()" aria-hidden="true" [size]="16" [strokeWidth]="2"></svg>
-                </span>
-              </button>
+              <ul class="skill-sidebar__stages" id="skill-sidebar-stages">
+                @for (sidebarStage of stages(); track sidebarStage.id) {
+                  <li class="sidebar-stage" [class.sidebar-stage--active]="sidebarStage.id === st.id">
+                    <button
+                      type="button"
+                      class="sidebar-stage__toggle"
+                      [attr.aria-expanded]="isStageExpanded(sidebarStage)"
+                      [attr.aria-controls]="'skill-stage-' + sidebarStage.id"
+                      (click)="toggleStage(sidebarStage)"
+                    >
+                      <span class="sidebar-stage__number">{{ sidebarStage.number }}</span>
+                      <span class="sidebar-stage__name rm-truncate">{{ sidebarStage.name }}</span>
+                      <span class="sidebar-stage__percent">{{ stagePercent(sidebarStage) }}%</span>
+                      <svg lucideChevronDown class="skill-sidebar__chevron" [class.is-open]="isStageExpanded(sidebarStage)" aria-hidden="true" [size]="16" [strokeWidth]="2"></svg>
+                    </button>
+                    <span class="sidebar-stage__count">
+                      {{ roadmapService.getStageProgress(sidebarStage).completed }}/{{
+                        roadmapService.getStageProgress(sidebarStage).total
+                      }} kỹ năng
+                    </span>
+                    <app-roadmap-progress
+                      [value]="stagePercent(sidebarStage)"
+                      [success]="stagePercent(sidebarStage) === 100"
+                      [small]="true"
+                    />
 
-              @if (sidebarOpen()) {
-                <ul class="skill-sidebar__stages" id="skill-sidebar-stages">
-                  @for (sidebarStage of stages(); track sidebarStage.id) {
-                    <li class="sidebar-stage" [class.sidebar-stage--active]="sidebarStage.id === st.id">
-                      <div class="sidebar-stage__top">
-                        <span class="sidebar-stage__number">{{ sidebarStage.number }}</span>
-                        <a class="sidebar-stage__name" [routerLink]="['/learning/roadmap', roadmapId]">
-                          {{ sidebarStage.name }}
-                        </a>
-                        <span class="sidebar-stage__percent">{{ stagePercent(sidebarStage) }}%</span>
-                      </div>
-                      <span class="sidebar-stage__count">
-                        {{ roadmapService.getStageProgress(sidebarStage).completed }}/{{
-                          roadmapService.getStageProgress(sidebarStage).total
-                        }}
-                        kỹ năng
-                      </span>
-                      <app-roadmap-progress
-                        [value]="stagePercent(sidebarStage)"
-                        [success]="stagePercent(sidebarStage) === 100"
-                        [small]="true"
-                      />
-
-                      @if (sidebarStage.id === st.id) {
-                        <ul class="sidebar-stage__skills">
-                          @for (sidebarSkill of sidebarStage.skills; track sidebarSkill.id) {
-                            <li>
-                              <button
-                                type="button"
-                                class="sidebar-skill"
-                                [class.sidebar-skill--active]="sidebarSkill.id === sk.id"
-                                (click)="goToSkill(sidebarSkill.id)"
-                              >
-                                <span
-                                  class="sidebar-skill__dot"
-                                  [class.sidebar-skill__dot--completed]="sidebarSkill.status === 'completed'"
-                                  [class.sidebar-skill__dot--in-progress]="sidebarSkill.status === 'in-progress'"
-                                  [class.sidebar-skill__dot--review]="sidebarSkill.status === 'review'"
-                                  aria-hidden="true"
-                                ></span>
-                                <span class="rm-truncate">{{ sidebarSkill.title }}</span>
-                              </button>
-                            </li>
-                          }
-                        </ul>
-                      }
-                    </li>
-                  }
-                </ul>
-              }
+                    @if (isStageExpanded(sidebarStage)) {
+                      <ul class="sidebar-stage__skills" [id]="'skill-stage-' + sidebarStage.id">
+                        @for (sidebarSkill of sidebarStage.skills; track sidebarSkill.id) {
+                          <li>
+                            <button
+                              type="button"
+                              class="sidebar-skill"
+                              [class.sidebar-skill--active]="sidebarSkill.id === sk.id"
+                              (click)="goToSkill(sidebarSkill.id)"
+                            >
+                              <span
+                                class="sidebar-skill__dot"
+                                [class.sidebar-skill__dot--completed]="sidebarSkill.status === 'completed'"
+                                [class.sidebar-skill__dot--in-progress]="sidebarSkill.status === 'in-progress'"
+                                [class.sidebar-skill__dot--review]="sidebarSkill.status === 'review'"
+                                aria-hidden="true"
+                              ></span>
+                              <span class="rm-truncate">{{ sidebarSkill.title }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </li>
+                }
+              </ul>
 
               <button type="button" class="skill-sidebar__back" (click)="goBack()">
                 <svg lucideArrowLeft aria-hidden="true" [size]="15" [strokeWidth]="2"></svg>
@@ -151,13 +136,11 @@
 
                 <p class="rm-base skill-status__hint">
                   @if (sk.manualStatusAllowed) {
-                    Bạn có thể tự chọn trạng thái trước khi có kết quả bài test hoặc khóa học.
-                  } @else if (sk.statusLockReason === 'REVIEW_REQUIRED') {
-                    Hoàn thành bộ flashcard ôn tập để gỡ trạng thái ôn tập bắt buộc.
-                  } @else if (sk.statusLockReason === 'LEARNING_RESULT_EXISTS') {
-                    Trạng thái được cập nhật theo kết quả bài test và tiến độ khóa học.
+                    Bạn có thể tự do cập nhật trạng thái kỹ năng.
+                  } @else if (sk.statusLockReason === 'REVIEW_REQUIRED' || sk.statusLockReason === 'LEARNING_RESULT_EXISTS') {
+                    Kết quả học chưa đạt yêu cầu. Hãy tạo flashcard ôn tập và đánh dấu đã học hết các thẻ để mở khóa trạng thái.
                   } @else {
-                    Chọn lộ trình này để cập nhật trạng thái kỹ năng.
+                    Không thể cập nhật trạng thái kỹ năng lúc này.
                   }
                 </p>
 
@@ -174,7 +157,7 @@
                             ? 'Cần hoàn thành flashcard ôn tập trước khi đổi trạng thái'
                             : sk.statusLockReason === 'LEARNING_RESULT_EXISTS'
                               ? 'Trạng thái được cập nhật tự động theo kết quả học tập'
-                              : 'Chọn lộ trình này để đổi trạng thái'
+                            : 'Không thể cập nhật trạng thái kỹ năng lúc này'
                           : 'Đặt trạng thái: ' + option.label
                       "
                       [attr.aria-pressed]="sk.status === option.id"
@@ -207,19 +190,18 @@
                   }
                 </div>
 
-                @if (sk.status === 'review') {
+                @if (!sk.manualStatusAllowed && (sk.statusLockReason === 'REVIEW_REQUIRED' || sk.statusLockReason === 'LEARNING_RESULT_EXISTS')) {
                   <div class="skill-note">
                     <span class="skill-note__icon" aria-hidden="true">
                       <svg lucideInfo [size]="16" [strokeWidth]="2"></svg>
                     </span>
                     <div class="skill-note__body">
-                      <strong>Lưu ý khi chuyển sang "Ôn tập lại"</strong>
+                      <strong>Cần ôn tập trước khi đổi trạng thái</strong>
                       <p>
-                        Kỹ năng sẽ được chuyển sang danh sách cần ôn tập. Hãy xem lại nội dung và luyện tập thêm để
-                        củng cố kiến thức.
+                        Tạo ít nhất 5 thẻ cho kỹ năng này và xác nhận đã học hết bộ thẻ để mở khóa cập nhật trạng thái.
                       </p>
                     </div>
-                    <button type="button" class="rm-btn rm-btn--sm skill-note__cta" (click)="createFlashcard()">
+                    <button type="button" class="rm-btn rm-btn--sm skill-note__cta" [disabled]="creatingReviewSet()" (click)="createFlashcard()">
                       Tạo flashcard để ôn tập
                     </button>
                   </div>

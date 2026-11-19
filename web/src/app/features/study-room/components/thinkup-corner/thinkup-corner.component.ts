@@ -1,12 +1,14 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, ElementRef, HostListener, ViewChild, inject, input, output, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, computed, inject, input, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, finalize, of } from 'rxjs';
+import { catchError, finalize, map, of, switchMap } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommerceService } from '../../../../core/services/commerce.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { CourseService } from '../../../../core/services/course.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { StudyRoomService } from '../../services/study-room.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { LucideClock3, LucideExternalLink, LucideShoppingCart, LucideStar, LucideUserRound, LucideX } from '@lucide/angular';
 
 export type ThinkUpCornerDismissReason = 'not-relevant' | 'distracting' | 'already-seen' | 'too-frequent' | 'other';
@@ -20,24 +22,35 @@ export type ThinkUpCornerDismissReason = 'not-relevant' | 'distracting' | 'alrea
 })
 export class ThinkUpCornerComponent {
   readonly position = input.required<{ x: number; y: number }>();
+  readonly roomId = input.required<string>();
   readonly scale = input(1);
   readonly draggable = input(false);
   readonly dark = input(false);
   readonly theme = input('');
-  // TODO(pre-deploy): Nhớ thay ID demo bằng ID khóa học từ nguồn cấu hình quảng cáo đã thống nhất.
-  readonly courseId = '73';
-  readonly course = toSignal(inject(CourseService).getCourseDetail(this.courseId).pipe(catchError(() => of(null))));
+  private readonly studyRoom = inject(StudyRoomService);
+  private readonly courseService = inject(CourseService);
+  readonly course = toSignal(toObservable(this.roomId).pipe(
+    switchMap(roomId => this.studyRoom.courseRecommendation(roomId)),
+    map(recommendation => recommendation.course?.courseId || '73'),
+    switchMap(courseId => this.courseService.getCourseDetail(courseId)),
+    catchError(() => this.courseService.getCourseDetail('73').pipe(catchError(() => of(null))))
+  ), { initialValue: null });
+  readonly courseId = computed(() => this.course()?.id || '73');
+  readonly instructorId = computed(() => this.course()?.instructorId || '');
   readonly addingToCart = signal(false);
   private readonly commerce = inject(CommerceService);
+  private readonly auth = inject(AuthService);
+  readonly isLoggedIn = computed(() => this.auth.isAuthenticated());
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   addToCart(): void {
-    if (this.addingToCart()) return;
+    if (!this.isLoggedIn() || this.addingToCart()) return;
+    const courseId = this.courseId();
     this.addingToCart.set(true);
-    this.commerce.addToCart(this.courseId).pipe(finalize(() => this.addingToCart.set(false))).subscribe({
+    this.commerce.addToCart(courseId).pipe(finalize(() => this.addingToCart.set(false))).subscribe({
       next: ({ data, added }) => {
-        if (!data.some(item => item.id === this.courseId)) {
+        if (!data.some(item => item.id === courseId)) {
           this.toast.showToast({ type: 'error', message: 'Không tìm thấy khóa học trong giỏ hàng.' });
           return;
         }

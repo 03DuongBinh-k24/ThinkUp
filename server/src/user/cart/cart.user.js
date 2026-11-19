@@ -334,6 +334,7 @@ export async function getCartDetails({
       actionButtonLabel = 'Không khả dụng';
     }
 
+    const totalReviews = parseInt(doc.total_reviews, 10) || 0;
     enrichedCourses.push({
       id: String(doc._id || rawId),
       course_id: cId,
@@ -345,8 +346,8 @@ export async function getCartDetails({
         name: inst?.full_name || 'Giảng viên ThinkUp',
         avatar_url: inst?.avatar_url || '',
       },
-      rating: parseFloat(doc.rating) || 5.0,
-      total_reviews: parseInt(doc.total_reviews, 10) || 0,
+      rating: totalReviews > 0 ? (parseFloat(doc.rating) || 0) : 0,
+      total_reviews: totalReviews,
       total_students: parseInt(doc.total_students, 10) || 0,
       tags: courseTagsMap.get(cId) || (Array.isArray(doc.tags) ? doc.tags : []),
       price: {
