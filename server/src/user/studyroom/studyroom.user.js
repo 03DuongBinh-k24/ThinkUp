@@ -34,8 +34,12 @@ async function pruneStaleRoomParticipants(db, roomId = null, now = new Date()) {
     });
     if (active.length === participants.length) continue;
     const currentUsers = new Set(active.map(participant => String(participant.userId ?? participant.user_id ?? '')).filter(Boolean)).size;
+    const staleParticipants = participants.filter(participant => !active.includes(participant));
+    const lastPresenceAt = staleParticipants.every(participant => participant.lastSeenAt)
+      ? new Date(Math.max(...staleParticipants.map(participant => new Date(participant.lastSeenAt).getTime())))
+      : now;
     await db.collection(COLLECTION_STUDY_ROOMS).updateOne({ _id: room._id }, {
-      $set: { participants: active, currentUsers, emptySince: currentUsers ? null : (room.emptySince || now), updatedAt: now }
+      $set: { participants: active, currentUsers, emptySince: currentUsers ? null : (room.emptySince || lastPresenceAt), updatedAt: now }
     });
   }
 }
@@ -488,7 +492,6 @@ export async function getStudyRoomCards(options = {}) {
   } = options;
 
   const db = await getMongoDb();
-  await pruneStaleRoomParticipants(db);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
 
   const query = {
@@ -2287,6 +2290,7 @@ export async function getRoomSessionMessages(roomId, userId, options = {}) {
  */
 export async function cleanupExpiredEmptyRooms(maxIdleMs = ROOM_IDLE_TIMEOUT_MS) {
   const db = await getMongoDb();
+  await pruneStaleRoomParticipants(db);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
   const msgsColl = db.collection(COLLECTION_STUDY_ROOM_MESSAGES);
 
