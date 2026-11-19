@@ -104,7 +104,17 @@ export class ContentHttpService extends ContentStore {
   reset(): void { void this.load(); }
 
   private async postAction(id: string, patch: Partial<ContentPost>, note: string): Promise<void> {
-    const action = patch.body !== undefined ? null : patch.status === 'revision' ? 'request-revision' : patch['status'] === 'archived' ? 'archive' : patch['status'] === 'hidden' ? 'hide' : patch['status'] === 'published' ? 'approve' : null;
+    const previous = this.posts().find(item => item.id === id)?.status;
+    const statusActions = {
+      revision: 'request-revision',
+      archived: 'archive',
+      hidden: 'hide',
+      published: previous === 'hidden' ? 'restore' : 'approve'
+    } as const;
+    const status = patch.status;
+    const moderation = status && status in statusActions ? statusActions[status as keyof typeof statusActions] : null;
+    const pinAction = patch.pinned === undefined ? null : patch.pinned ? 'feature' : 'unfeature';
+    const action = patch.body === undefined ? moderation ?? pinAction : null;
     if (action) await this.request(`posts/${encodeURIComponent(id)}/${action}`, 'POST', { reason: action === 'request-revision' ? patch.moderationNote : note });
     else await this.request(`posts/${encodeURIComponent(id)}`, 'PATCH', postPayload(patch));
     await this.load();
@@ -155,7 +165,21 @@ function reviewStatus(value: unknown): ContentReview['status'] {
     default: return 'approved';
   }
 }
-function toPost(row: Record<string, unknown>): ContentPost { return { id: text(row, 'id'), title: text(row, 'title'), slug: text(row, 'slug'), category: text(row, 'category') as ContentPost['category'], author: text(row, 'author'), authorRole: 'Tác giả', tags: Array.isArray(row['tags']) ? row['tags'].map(String) : [], status: text(row, 'status') as ContentPost['status'] || 'published', excerpt: text(row, 'excerpt'), body: text(row, 'content').split('\n'), thumbnail: text(row, 'coverImage'), views: num(row, 'views'), commentCount: 0, createdAt: text(row, 'createdAt'), updatedAt: text(row, 'updatedAt'), featured: false, pinned: Boolean(row['pinned']), allowComments: row['allowComments'] !== false, loginRequired: Boolean(row['loginRequired']) }; }
+function postStatus(value: unknown): ContentPost['status'] {
+  switch (value) {
+    case 'pending_review': return 'pending';
+    case 'draft':
+    case 'pending':
+    case 'revision':
+    case 'rejected':
+    case 'scheduled':
+    case 'hidden':
+    case 'archived': return value;
+    default: return 'published';
+  }
+}
+
+function toPost(row: Record<string, unknown>): ContentPost { return { id: text(row, 'id'), title: text(row, 'title'), slug: text(row, 'slug'), category: text(row, 'category') as ContentPost['category'], author: text(row, 'author'), authorRole: 'Tác giả', tags: Array.isArray(row['tags']) ? row['tags'].map(String) : [], status: postStatus(row['status']), excerpt: text(row, 'excerpt'), body: text(row, 'content').split('\n'), thumbnail: text(row, 'coverImage'), views: num(row, 'views'), commentCount: 0, createdAt: text(row, 'createdAt'), updatedAt: text(row, 'updatedAt'), featured: false, pinned: Boolean(row['pinned']), allowComments: row['allowComments'] !== false, loginRequired: Boolean(row['loginRequired']) }; }
 function toComment(row: Record<string, unknown>): ContentComment { return { id: text(row, 'id'), transferredReportId: text(row, 'reportId', 'report_id') || undefined, postId: text(row, 'postId', 'post_id', 'blog_post_id', 'course_id', 'courseId'), postTitle: text(row, 'contextTitle', 'context_title', 'course_title', 'post_title'), contextTitle: text(row, 'contextTitle', 'context_title', 'course_title', 'post_title'), contextType: row['source'] === 'blog' ? 'blog' : 'course', author: text(row, 'author', 'authorName', 'author_name', 'reviewer_name') || 'Học viên', authorRole: 'Học viên', email: text(row, 'email', 'userEmail'), content: text(row, 'content'), status: text(row, 'status') as ContentComment['status'] || 'visible', safety: row['status'] === 'reported' ? 'reported' : 'clean', reportCount: num(row, 'reportCount', 'report_count', 'reports_count'), likeCount: num(row, 'likesCount', 'like_count'), replyCount: num(row, 'replyCount', 'reply_count'), createdAt: text(row, 'createdAt', 'created_at') }; }
 function toReview(row: Record<string, unknown>): ContentReview { return { id: text(row, 'id'), courseId: text(row, 'courseId', 'course_id'), courseTitle: text(row, 'courseTitle', 'course_title') || 'Đang tải khóa học', instructor: text(row, 'instructor', 'instructorName', 'instructor_name') || 'Chưa có thông tin', learner: text(row, 'learner', 'reviewerName', 'reviewer_name') || 'Học viên', learnerEmail: text(row, 'learnerEmail', 'learner_email'), completion: num(row, 'completion'), learningProgress: row['learningProgress'] as ContentReview['learningProgress'], rating: num(row, 'rating'), nps: num(row, 'nps'), feedbackTags: Array.isArray(row['feedbackTags']) ? row['feedbackTags'].map(String) : [], title: text(row, 'title'), content: text(row, 'content'), status: reviewStatus(row['status']), helpfulCount: num(row, 'helpfulCount'), reportCount: num(row, 'reportCount'), createdAt: text(row, 'createdAt'), reply: reviewReply(row['reply']) }; }
 function toReport(row: Record<string, unknown>): ContentReport { return { id: text(row, 'id'), code: text(row, 'code'), type: text(row, 'type') as ContentReport['type'], targetId: text(row, 'targetId'), targetTitle: text(row, 'targetTitle'), targetAuthor: text(row, 'targetAuthor'), priorOffenses: 0, reportedBy: text(row, 'reportedBy'), reason: text(row, 'reason'), description: text(row, 'description'), evidenceSnippet: text(row, 'evidenceSnippet'), severity: text(row, 'severity') as ContentReport['severity'] || 'medium', status: row['status'] === 'pending' ? 'new' : row['status'] === 'in_review' ? 'processing' : text(row, 'status') as ContentReport['status'] || 'new', createdAt: text(row, 'createdAt'), slaDueAt: text(row, 'slaDueAt'), assignee: text(row, 'assignee'), evidence: [] }; }
