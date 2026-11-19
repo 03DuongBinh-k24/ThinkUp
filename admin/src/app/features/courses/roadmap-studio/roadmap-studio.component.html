@@ -1,4 +1,12 @@
-@if (roadmap(); as rm) {
+@if (loading()) {
+  <div class="panel empty" role="status">Đang tải cấu hình lộ trình…</div>
+} @else if (loadMessage()) {
+  <div class="panel empty">
+    <p role="alert">{{ loadMessage() }}</p>
+    <button class="button" type="button" (click)="loadStudio()">Thử lại</button>
+    <button class="button" type="button" (click)="back()">Quay lại danh sách</button>
+  </div>
+} @else if (roadmap(); as rm) {
   @if (studio(); as st) {
     <main class="studio">
       <header class="studio-head">
@@ -8,8 +16,8 @@
         </div>
         <div class="studio-actions">
           <button class="button ghost" type="button" (click)="back()">← Danh sách lộ trình</button>
-          <button class="button" type="button" (click)="saveDraft()">Lưu bản nháp</button>
-          <button class="button primary" type="button" (click)="publish()">Xuất bản</button>
+          <button class="button" type="button" [disabled]="saving()" (click)="saveDraft()">Lưu bản nháp</button>
+          <button class="button primary" type="button" [disabled]="saving()" (click)="publish()">Xuất bản</button>
         </div>
       </header>
 
@@ -44,7 +52,7 @@
                 @for (phase of st.phases; track phase.id) {
                   <div class="tree-phase">
                     <span class="idx">{{ phase.no }}</span>
-                    <span class="tree-label">{{ phase.name }}</span>
+                    <input class="tree-label" [attr.aria-label]="'Tên giai đoạn ' + phase.no" maxlength="160" [value]="phase.name" (change)="renamePhase(phase, $any($event.target).value)" />
                     <button class="icon-button add" type="button" [attr.aria-label]="'Thêm node vào giai đoạn ' + phase.name" (click)="addNode(phase)">+</button>
                   </div>
                   @for (node of phase.nodes; track node.id) {
@@ -156,7 +164,7 @@
                 <div class="threshold-row">
                   <label for="threshold">Ngưỡng phù hợp tối thiểu</label>
                   <span class="threshold-input">
-                    <input id="threshold" type="number" min="0" max="100" step="1" [value]="threshold()" (input)="setThreshold($any($event.target).value)" />
+                    <input id="threshold" type="number" min="70" max="100" step="1" [value]="threshold()" (change)="setThreshold($any($event.target).value)" />
                     <span aria-hidden="true">%</span>
                   </span>
                 </div>

@@ -201,6 +201,7 @@ export interface RoadmapNode {
   id: string;
   name: string;
   type: RoadmapNodeType;
+  icon?: string;
   level: CourseLevel;
   industry: string;
   description: string;
@@ -213,7 +214,9 @@ export interface RoadmapPhase {
   id: string;
   no: string;
   name: string;
+  description?: string;
   nodes: RoadmapNode[];
+  test?: RoadmapTest;
 }
 
 export interface CourseSuggestion {

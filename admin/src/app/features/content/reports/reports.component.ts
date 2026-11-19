@@ -42,13 +42,14 @@ const SLA_STATE_VALUES: ColumnFilterValue[] = [
   styleUrls: ['../content-page.css', '../content-moderation.css', './reports.component.css']
 })
 export class ContentReportsComponent {
-  private writing = false;
+  readonly writing = signal(false);
+
   private async write(action: () => void | Promise<void>): Promise<boolean> {
-    if (this.writing) return false;
-    this.writing = true;
+    if (this.writing()) return false;
+    this.writing.set(true);
     try { await action(); return true; }
     catch (error) { this.notify(apiErrorMessage(error), 'error'); return false; }
-    finally { this.writing = false; }
+    finally { this.writing.set(false); }
   }
   private readonly store = inject(ContentStore);
   ngOnInit(): void { void this.store.open('reports'); }
@@ -250,7 +251,9 @@ export class ContentReportsComponent {
   readonly selectionCandidates = computed<BulkSelectionItem[]>(() => this.filtered()
     .filter(item => !this.selection().has(item.id))
     .map(item => ({ id: item.id, label: item.code, detail: `${item.id} · Người báo cáo: ${item.reportedBy}` })));
-  readonly selectionActions = computed<readonly SelectionAction[]>(() => [
+  readonly selectionActions = computed<readonly SelectionAction[]>(() => this.store.requiresReportDecision ? [
+    { key: 'investigate', label: 'Mở hồ sơ xử lý', tone: 'primary' }
+  ] : [
     { key: 'resolved', label: 'Giải quyết', tone: 'primary' },
     { key: 'escalated', label: 'Leo thang' },
     { key: 'dismissed', label: 'Bác bỏ' }
@@ -392,6 +395,13 @@ export class ContentReportsComponent {
 
   runSelectionAction(key: string, ids?: readonly string[]): void {
     this.selectionListOpen.set(false);
+    if (key === 'investigate') {
+      const selected = ids ?? this.selectedIds();
+      const report = this.reports().find(item => selected.includes(item.id) && (item.status === 'new' || item.status === 'processing'));
+      if (report) void this.openDetail(report);
+      else this.notify('Chọn hồ sơ mới hoặc đang điều tra để xử lý.', 'info');
+      return;
+    }
     if (key === 'resolved' || key === 'escalated' || key === 'dismissed') this.bulkStatus(key, ids);
   }
 

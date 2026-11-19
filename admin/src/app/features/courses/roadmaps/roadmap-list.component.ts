@@ -145,7 +145,7 @@ export class RoadmapListComponent {
       const coverageOk = !coverage
         || (coverage === 'full' ? item.coverage >= 100 : item.coverage < 100);
       const testOk = !testState
-        || (testState === 'complete' ? item.missingTests === 0 : item.missingTests > 0);
+        || testState === (this.hasCompleteTests(item) ? 'complete' : 'missing');
       const visibilityOk = !visibility
         || (visibility === 'hidden' ? item.hidden : !item.hidden);
       const columnStatus = item.hidden ? 'hidden' : 'visible';
@@ -156,7 +156,7 @@ export class RoadmapListComponent {
         && visibilityOk
         && (!names.length || names.includes(item.name))
         && (!coverages.length || coverages.includes(item.coverage >= 100 ? 'full' : 'partial'))
-        && (!testStates.length || testStates.includes(item.missingTests === 0 ? 'complete' : 'missing'))
+        && (!testStates.length || testStates.includes(this.hasCompleteTests(item) ? 'complete' : 'missing'))
         && (!visibilities.length || visibilities.includes(columnStatus));
     });
     const columnSort = this.columnSort();
@@ -220,7 +220,7 @@ export class RoadmapListComponent {
 
   setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
 
-  runSelectionAction(key: string, ids?: readonly string[]): void {
+  async runSelectionAction(key: string, ids?: readonly string[]): Promise<void> {
     this.selectionListOpen.set(false);
     const targetIds = ids ?? this.selectedIds();
     if (!targetIds.length) return;
@@ -231,9 +231,15 @@ export class RoadmapListComponent {
       this.notify(key === 'publish' ? 'Các lộ trình đã chọn đều đang hiển thị.' : 'Các lộ trình đã chọn đều đang ẩn.', 'info');
       return;
     }
-    targets.forEach(item => key === 'publish' ? this.store.publishRoadmap(item.id) : this.store.toggleRoadmapVisibility(item.id));
-    this.clearSelection();
-    this.notify(key === 'publish' ? `Đã xuất bản ${targets.length} lộ trình.` : `Đã ẩn ${targets.length} lộ trình.`, 'success');
+    try {
+      for (const item of targets) {
+        await (key === 'publish' ? this.store.publishRoadmap(item.id) : this.store.toggleRoadmapVisibility(item.id));
+      }
+      this.clearSelection();
+      this.notify(key === 'publish' ? `Đã xuất bản ${targets.length} lộ trình.` : `Đã ẩn ${targets.length} lộ trình.`, 'success');
+    } catch (error) {
+      this.notify(apiErrorMessage(error, 'Không cập nhật được trạng thái lộ trình.'), 'error');
+    }
   }
 
   private exportSelection(ids: readonly string[]): void {
@@ -316,8 +322,8 @@ export class RoadmapListComponent {
   openStudio(item: Roadmap): void {
     this.menuId.set(null);
     this.menuTrigger = null;
-    void this.store.ensureRoadmapStudio(item.id).then(({ id, roadmap, studio }) => {
-      void this.router.navigate(['/courses/roadmaps', id, 'studio'], { state: { roadmap, studio } });
+    void this.store.ensureRoadmapStudio(item.id).then(({ id }) => {
+      void this.router.navigate(['/courses/roadmaps', id, 'studio']);
     }).catch(error => this.notify(apiErrorMessage(error, 'Không tải được dữ liệu cấu hình lộ trình. Vui lòng thử lại.'), 'error'));
   }
 
@@ -327,11 +333,15 @@ export class RoadmapListComponent {
     this.menuTrigger = this.menuId() ? event.currentTarget as HTMLElement : null;
   }
 
-  toggleVisibility(item: Roadmap): void {
-    this.store.toggleRoadmapVisibility(item.id);
+  async toggleVisibility(item: Roadmap): Promise<void> {
     this.menuId.set(null);
     this.menuTrigger = null;
-    this.notify(item.hidden ? `Đã hiển thị lộ trình ${item.code}.` : `Đã ẩn lộ trình ${item.code}.`, 'success');
+    try {
+      await this.store.toggleRoadmapVisibility(item.id);
+      this.notify(item.hidden ? `Đã hiển thị lộ trình ${item.code}.` : `Đã ẩn lộ trình ${item.code}.`, 'success');
+    } catch (error) {
+      this.notify(apiErrorMessage(error, 'Không cập nhật được trạng thái lộ trình.'), 'error');
+    }
   }
 
   createRoadmap(): void {
@@ -352,7 +362,7 @@ export class RoadmapListComponent {
     try {
       const result = await this.store.createRoadmap({ categoryId, name, code: this.createCode().trim(), description: this.createDescription().trim() });
       this.createDialogOpen.set(false);
-      await this.router.navigate(['/courses/roadmaps', result.id, 'studio'], { state: { roadmap: result.roadmap, studio: result.studio } });
+      await this.router.navigate(['/courses/roadmaps', result.id, 'studio']);
     } catch (error) {
       this.createError.set(apiErrorMessage(error, 'Không tạo được bản nháp lộ trình. Vui lòng thử lại.'));
     } finally { this.createBusy.set(false); }
@@ -388,7 +398,12 @@ export class RoadmapListComponent {
   }
 
   testLabel(item: Roadmap): string {
+    if (item.stages === 0) return 'Chưa có giai đoạn';
     return item.missingTests === 0 ? 'Đủ đề kiểm tra' : `Thiếu đề ở ${item.missingTests} giai đoạn`;
+  }
+
+  hasCompleteTests(item: Roadmap): boolean {
+    return item.stages > 0 && item.missingTests === 0;
   }
 
   @HostListener('document:click')
