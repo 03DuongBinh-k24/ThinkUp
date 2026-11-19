@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { Component, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminDialogComponent } from '../../../shared/components/admin-dialog/admin-dialog.component';
@@ -215,7 +216,8 @@ export class CourseApprovalsComponent {
 
   setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
 
-  runSelectionAction(key: string, ids?: readonly string[]): void {
+  private writing = false;
+  async runSelectionAction(key: string, ids?: readonly string[]): Promise<void> {
     this.selectionListOpen.set(false);
     const targetIds = ids ?? this.selectedIds();
     if (!targetIds.length) return;
@@ -224,7 +226,12 @@ export class CourseApprovalsComponent {
     const chosen = new Set(targetIds);
     const targets = this.approvals().filter(item => chosen.has(item.id) && item.slaStatus !== 'approved');
     if (!targets.length) { this.notify('Các yêu cầu đã chọn đều đã được duyệt.', 'info'); return; }
-    targets.forEach(item => this.store.approveApproval(item.id));
+    if (this.writing) return;
+    this.writing = true;
+    try {
+      for (const item of targets) { await this.store.approveApproval(item.id); this.toggleSelect(item.id, false); }
+    } catch (error) { this.notify(apiErrorMessage(error), 'error'); return; }
+    finally { this.writing = false; }
     this.clearSelection();
     this.notify(`Đã phê duyệt và phát hành ${targets.length} khóa học.`, 'success');
   }
@@ -238,13 +245,22 @@ export class CourseApprovalsComponent {
 
   closeBulkReject(): void { this.bulkRejectIds.set(null); }
 
-  confirmBulkReject(): void {
+  async confirmBulkReject(): Promise<void> {
     const ids = this.bulkRejectIds();
     this.bulkRejectTouched.set(true);
     if (!ids?.length || !this.canBulkReject()) return;
     const reason = this.bulkRejectReason();
     const detail = this.bulkRejectDetail().trim();
-    ids.forEach(id => this.store.rejectApproval(id, reason, detail));
+    if (this.writing) return;
+    this.writing = true;
+    try {
+      for (const id of ids) {
+        await this.store.rejectApproval(id, reason, detail);
+        this.bulkRejectIds.update(list => list?.filter(item => item !== id) ?? null);
+        this.toggleSelect(id, false);
+      }
+    } catch (error) { this.notify(apiErrorMessage(error), 'error'); return; }
+    finally { this.writing = false; }
     this.bulkRejectIds.set(null);
     this.clearSelection();
     this.notify(`Đã từ chối ${ids.length} yêu cầu duyệt và gửi lý do tới giảng viên.`, 'success');

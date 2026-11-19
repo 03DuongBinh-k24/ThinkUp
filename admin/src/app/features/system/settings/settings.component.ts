@@ -16,7 +16,8 @@ import { PLATFORM_SETTING_FIELDS, PLATFORM_SETTING_GROUPS, PlatformSettingKey, P
   styleUrls: ['../system-page.css', './settings.component.css']
 })
 export class SettingsComponent implements OnDestroy {
-  private readonly store = inject(SYSTEM_STORE);
+  protected readonly store = inject(SYSTEM_STORE);
+  ngOnInit(): void { this.store.open('settings'); }
   private readonly toast = inject(SystemToastService);
   readonly groups = PLATFORM_SETTING_GROUPS.map(group => {
     const entries = group.blocks.map((block, index) => ({ block, index }));
@@ -84,10 +85,15 @@ export class SettingsComponent implements OnDestroy {
 
   closeOtp(): void { this.otpOpen.set(false); this.pendingParameters = null; }
 
-  onOtpSubmitted(otp: string): void {
+  readonly submitting = signal(false);
+
+  async onOtpSubmitted(otp: string): Promise<void> {
+    if (this.submitting()) return;
     if (!this.pendingParameters) return;
     const current = this.store.settings();
-    const result = this.store.updateSettings({ ...current, parameters: { ...current.parameters, ...this.pendingParameters } }, otp);
+    this.submitting.set(true);
+    const result = await this.store.updateSettings({ ...current, parameters: { ...current.parameters, ...this.pendingParameters } }, otp);
+    this.submitting.set(false);
     if (!result.ok) {
       if (result.serverError) {
         this.closeOtp();

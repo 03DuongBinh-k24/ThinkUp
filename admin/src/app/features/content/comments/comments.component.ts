@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { AdminDialogComponent } from '../../../shared/components/admin-dialog/admin-dialog.component';
 import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
 import { ColumnFilterComponent, ColumnFilterValue, DATE_SORT_OPTIONS, NUMBER_SORT_OPTIONS, TEXT_SORT_OPTIONS, compareSortValues } from '../../../shared/components/column-filter/column-filter.component';
@@ -38,7 +39,16 @@ const COMMENT_SOURCE_VALUES: ColumnFilterValue[] = [
   styleUrls: ['../content-page.css', '../content-moderation.css', './comments.component.css']
 })
 export class ContentCommentsComponent {
+  private writing = false;
+  private async write(action: () => void | Promise<void>): Promise<boolean> {
+    if (this.writing) return false;
+    this.writing = true;
+    try { await action(); return true; }
+    catch (error) { this.notify(apiErrorMessage(error), 'error'); return false; }
+    finally { this.writing = false; }
+  }
   private readonly store = inject(ContentStore);
+  ngOnInit(): void { void this.store.open('comments'); }
   readonly loadError = this.store.loadError;
 
   readonly rowMenu = signal<{ item: ContentComment; top: number; left: number } | null>(null);
@@ -343,14 +353,14 @@ export class ContentCommentsComponent {
   openDetail(item: ContentComment): void { this.detailId.set(item.id); }
   closeDetail(): void { this.detailId.set(null); }
 
-  changeStatus(item: ContentComment, status: CommentStatus): void {
-    this.store.updateComment(item.id, { status }, `Chuyển trạng thái sang ${COMMENT_STATUS_LABELS[status]}.`);
+  async changeStatus(item: ContentComment, status: CommentStatus): Promise<void> {
+    if (!await this.write(() => this.store.updateComment(item.id, { status }, `Chuyển trạng thái sang ${COMMENT_STATUS_LABELS[status]}.`))) return;
     this.notify(`Đã chuyển bình luận ${item.id} sang ${COMMENT_STATUS_LABELS[status]}.`, 'success');
   }
 
-  bulkStatus(status: CommentStatus, ids: readonly string[] = this.selectedList()): void {
+  async bulkStatus(status: CommentStatus, ids: readonly string[] = this.selectedList()): Promise<void> {
     if (!ids.length) return;
-    ids.forEach(id => this.store.updateComment(id, { status }, `Cập nhật hàng loạt sang ${COMMENT_STATUS_LABELS[status]}.`));
+    for (const id of ids) { if (!await this.write(() => this.store.updateComment(id, { status }, `Cập nhật hàng loạt sang ${COMMENT_STATUS_LABELS[status]}.`))) return; }
     this.selected.set(new Set());
     this.notify(`Đã cập nhật ${ids.length} bình luận.`, 'success');
   }
@@ -362,10 +372,10 @@ export class ContentCommentsComponent {
     this.bulkDeleteIds.set(ids);
   }
 
-  confirmBulkDelete(): void {
+  async confirmBulkDelete(): Promise<void> {
     const ids = this.bulkDeleteIds();
     if (!ids?.length || !this.canConfirmDelete()) return;
-    this.store.removeComments([...ids], this.deleteReason().trim());
+    if (!await this.write(() => this.store.removeComments([...ids], this.deleteReason().trim()))) return;
     this.selected.set(new Set());
     this.bulkDeleteIds.set(null);
     this.notify(`Đã xóa ${ids.length} bình luận. Lý do đã lưu vào nhật ký kiểm duyệt.`, 'success');
@@ -387,10 +397,10 @@ export class ContentCommentsComponent {
     this.deleteTarget.set(item);
   }
 
-  confirmDelete(): void {
+  async confirmDelete(): Promise<void> {
     const item = this.deleteTarget();
     if (!item || !this.canConfirmDelete()) return;
-    this.store.removeComments([item.id], this.deleteReason().trim());
+    if (!await this.write(() => this.store.removeComments([item.id], this.deleteReason().trim()))) return;
     this.deleteTarget.set(null);
     this.detailId.set(null);
     this.notify(`Đã xóa bình luận ${item.id}. Lý do đã lưu vào nhật ký kiểm duyệt.`, 'success');
@@ -402,11 +412,11 @@ export class ContentCommentsComponent {
     this.replyTouched.set(false);
   }
 
-  sendReply(): void {
+  async sendReply(): Promise<void> {
     this.replyTouched.set(true);
     const target = this.replyTarget();
     if (!target || this.replyText().trim().length < 10) return;
-    this.store.replyComment(target.id, this.replyText().trim(), 'Quản trị viên');
+    if (!await this.write(() => this.store.replyComment(target.id, this.replyText().trim(), 'Quản trị viên'))) return;
     this.replyId.set(null);
     this.notify(`Đã gửi phản hồi cho ${target.author}.`, 'success');
   }
@@ -425,12 +435,12 @@ export class ContentCommentsComponent {
     this.spamDuration.set('24h');
   }
 
-  sendSpam(): void {
+  async sendSpam(): Promise<void> {
     const target = this.spamTarget();
     if (!target) return;
     const duration = this.spamDuration();
     const label = duration === '24h' ? '24 giờ' : duration === '7d' ? '7 ngày' : 'vĩnh viễn';
-    this.store.updateComment(target.id, { status: 'spam', moderationNote: `Đánh dấu spam — hạn chế bình luận ${label}.` }, `Đánh dấu spam và hạn chế bình luận ${label}.`);
+    if (!await this.write(() => this.store.updateComment(target.id, { status: 'spam', moderationNote: `Đánh dấu spam — hạn chế bình luận ${label}.` }, `Đánh dấu spam và hạn chế bình luận ${label}.`, duration))) return;
     this.spamTarget.set(null);
     this.notify(`Đã đánh dấu spam và hạn chế bình luận ${label}.`, 'success');
   }
@@ -442,12 +452,21 @@ export class ContentCommentsComponent {
     this.transferTouched.set(false);
   }
 
-  sendTransfer(): void {
+  readonly transferring = signal(false);
+  async sendTransfer(): Promise<void> {
+    if (this.transferring()) return;
     this.transferTouched.set(true);
     const target = this.transferTarget();
     const severity = this.transferSeverity();
     if (!target || !severity || !this.canTransfer()) return;
-    const report = this.store.transferComment(target.id, severity, this.transferReason());
+    this.transferring.set(true);
+    let report;
+    try {
+      report = await this.store.transferComment(target.id, severity, this.transferReason());
+    } catch {
+      this.notify('Không thể chuyển hồ sơ. Vui lòng thử lại.', 'error');
+      return;
+    } finally { this.transferring.set(false); }
     if (!report) { this.notify('Không thể chuyển hồ sơ. Vui lòng thử lại.', 'error'); return; }
     this.selected.update(ids => new Set([...ids].filter(id => id !== target.id)));
     this.page.set(Math.min(this.page(), this.pages()));

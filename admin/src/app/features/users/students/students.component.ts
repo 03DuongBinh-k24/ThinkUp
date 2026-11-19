@@ -150,7 +150,7 @@ export class StudentsComponent {
   readonly unlockReason = signal('');
   readonly saving = signal(false);
   readonly loadError = this.data.error;
-  readonly loading = this.data.loading;
+  readonly loading = this.data.loadingStudents;
   readonly showAllCourses = signal(false);
   readonly showAllViolations = signal(false);
 

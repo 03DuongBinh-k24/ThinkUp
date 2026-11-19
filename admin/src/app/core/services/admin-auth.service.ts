@@ -383,6 +383,7 @@ export class AdminAuthService {
       email: response.admin.email || challenge.email,
       fullName: response.admin.full_name || 'Quản trị viên',
       role: 'admin' as AdminRole,
+      accessRole: response.admin.role,
       avatar: null,
       passwordExpiresAt,
       mustChangePassword: false,

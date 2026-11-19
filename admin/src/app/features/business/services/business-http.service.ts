@@ -2,7 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { MOCK_PAYOUTS, MOCK_PAYOUT_ADMIN_ROLE } from '../../../core/data/mock/business.mock';
+import { AdminAuthService } from '../../../core/services/admin-auth.service';
+import { PayoutDecision } from '../models/business.models';
 import { downloadServerExport } from '../../../shared/utils/api-export';
 import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { API_FETCH_PAGE_SIZE, collectAllPages } from '../../../shared/utils/api-paging';
@@ -120,9 +121,9 @@ export class BusinessHttpService implements BusinessStore {
   private readonly orderState = signal<readonly BusinessOrder[]>([]);
   private readonly orderTotalsState = signal<OrderTotals>({ total: 0, success: 0, pending: 0, cancelled: 0 });
   private readonly voucherState = signal<readonly BusinessVoucher[]>([]);
-  private readonly payoutState = signal<readonly PayoutRequest[]>(
-    structuredClone(MOCK_PAYOUTS).map(item => ({ ...item, isDemo: true }))
-  );
+  private readonly payoutApi = `${environment.apiUrl}/admin/business/payouts`;
+  private readonly auth = inject(AdminAuthService);
+  private readonly payoutState = signal<readonly PayoutRequest[]>([]);
   private readonly loadingState = signal(false);
   private readonly errorState = signal<string | null>(null);
 
@@ -130,15 +131,12 @@ export class BusinessHttpService implements BusinessStore {
   readonly orderTotals = this.orderTotalsState.asReadonly();
   readonly vouchers = this.voucherState.asReadonly();
   readonly payouts = this.payoutState.asReadonly();
-  readonly payoutRole = signal<'finance' | 'super'>(MOCK_PAYOUT_ADMIN_ROLE).asReadonly();
+  readonly payoutRole = computed(() => ['SA', 'SUPER_ADMIN', 'ADMIN'].includes(this.auth.currentUser()?.accessRole?.toUpperCase() ?? '') ? 'super' as const : 'finance' as const);
   readonly loading = this.loadingState.asReadonly();
   readonly error = this.errorState.asReadonly();
-  readonly payoutsAreDemo = computed(() => true);
+  readonly payoutsAreDemo = computed(() => false);
 
-  constructor() {
-    void this.reloadOrders();
-    void this.reloadVouchers();
-  }
+
 
   /* -------------------------------- Orders -------------------------------- */
 
@@ -439,8 +437,44 @@ export class BusinessHttpService implements BusinessStore {
     this.orderState.update(items => items.map(item => item.id === id ? { ...item, ...changes } : item));
   }
 
-  updatePayout(id: string, changes: Partial<PayoutRequest>): void {
-    this.payoutState.update(items => items.map(item => item.id === id ? { ...item, ...changes, isDemo: true } : item));
+  async reloadPayouts(): Promise<void> {
+    const { items } = await collectAllPages<PayoutRequest>(async (page, pageSize) => {
+      const result = await firstValueFrom(this.http.get<{ items: PayoutRequest[]; total: number; pageSize: number }>(
+        this.payoutApi, { params: { page, pageSize } }
+      ));
+      if (!Array.isArray(result.items)) throw new Error('Danh sách chi trả không hợp lệ.');
+      return { ...result, page, pages: Math.ceil(result.total / result.pageSize) };
+    });
+    this.payoutState.set(items);
+  }
+
+  async payoutDetail(id: string): Promise<PayoutRequest> {
+    const result = await firstValueFrom(this.http.get<{ payout: PayoutRequest }>(
+      `${this.payoutApi}/${encodeURIComponent(id)}`
+    ));
+    return result.payout;
+  }
+
+  async updatePayout(id: string, decision: PayoutDecision): Promise<void> {
+    const url = `${this.payoutApi}/${encodeURIComponent(id)}`;
+    let body: Record<string, unknown>;
+    if (decision.status === 'approved') {
+      body = { note: decision.note ?? '' };
+    } else {
+      let evidence: string | undefined;
+      if (decision.file) {
+        const upload = await firstValueFrom(this.http.post<{ evidence: { id: string } }>(
+          `${url}/evidence`, decision.file, { headers: {
+            'Content-Type': decision.file.type, 'X-File-Name': encodeURIComponent(decision.file.name)
+          } }
+        ));
+        evidence = upload.evidence.id;
+      }
+      body = { reason: decision.reason, details: decision.details, evidence };
+    }
+    const action = decision.status === 'approved' ? 'approve' : 'reject';
+    const { payout } = await firstValueFrom(this.http.post<{ payout: PayoutRequest }>(`${url}/${action}`, body));
+    this.payoutState.update(items => items.map(row => row.id === id ? payout : row));
   }
 }
 

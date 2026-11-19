@@ -1,3 +1,4 @@
+import { environment } from '../../../../environments/environment';
 import { afterNextRender, Component, computed, ElementRef, HostListener, inject, Injector, signal, viewChild } from '@angular/core';
 import { LucideArrowRight, LucideCircleDollarSign, LucideGraduationCap, LucideMonitorUp, LucideTrendingUp, LucideUsersRound } from '@lucide/angular';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
@@ -29,6 +30,7 @@ export class DashboardComponent {
   readonly paletteId = signal('denim-amber');
   readonly palette = computed(() => this.paletteOptions.find(option => option.id === this.paletteId()) ?? this.paletteOptions[0]);
   readonly hoveredBar = signal<number | null>(null);
+  readonly previewDashboard = environment.adminDataSource === 'http';
   readonly metrics = DASHBOARD_METRICS;
   readonly actions = DASHBOARD_ACTIONS;
   readonly courses = TOP_COURSES;

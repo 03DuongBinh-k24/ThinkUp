@@ -1,3 +1,4 @@
+import { PayoutDecision } from '../models/business.models';
 import { Injectable, computed, signal } from '@angular/core';
 import { MOCK_ORDERS, MOCK_ORDER_SUMMARY, MOCK_PAYOUT_ADMIN_ROLE, MOCK_PAYOUTS, MOCK_VOUCHERS } from '../../../core/data/mock/business.mock';
 import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
@@ -99,8 +100,16 @@ export class BusinessDemoService implements BusinessStore {
     this.orderState.update(items => items.map(item => item.id === id ? { ...item, ...changes } : item));
   }
 
-  updatePayout(id: string, changes: Partial<PayoutRequest>): void {
-    this.payoutState.update(items => items.map(item => item.id === id ? { ...item, ...changes, isDemo: true } : item));
+  async reloadPayouts(): Promise<void> {}
+  async payoutDetail(id: string): Promise<PayoutRequest> {
+    const item = this.payouts().find(row => row.id === id);
+    if (!item) throw new Error('Không tìm thấy yêu cầu.');
+    return item;
+  }
+  async updatePayout(id: string, decision: PayoutDecision): Promise<void> {
+    const rejectionReason = decision.status === 'rejected' ? `${decision.reason}: ${decision.details}` : undefined;
+    this.payoutState.update(items => items.map(item => item.id === id
+      ? { ...item, status: decision.status, rejectionReason, isDemo: true } : item));
   }
 
   private auditEntry(action: VoucherAuditAction, note?: string): VoucherAuditEntry {

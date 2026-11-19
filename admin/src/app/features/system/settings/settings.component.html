@@ -1,3 +1,5 @@
+@if (store.loading()) { <p role="status">Đang tải dữ liệu…</p> }
+@if (store.loadError()) { <p role="alert">{{ store.loadError() }} <button type="button" (click)="store.open('settings')">Thử lại</button></p> }
 <section class="system-page configuration-page">
   <header class="page-heading">
     <div class="heading-copy">
@@ -6,7 +8,8 @@
   </header>
 
   <!-- TODO(pre-deploy): Nhớ thay nguồn lưu cấu hình demo và xác thực OTP demo bằng API quản trị đã xác minh. -->
-  <form id="platform-settings-form" class="configuration-form" novalidate (submit)="openSave($event)">
+  @if (!store.loadError() && !store.loading()) {
+<form id="platform-settings-form" class="configuration-form" novalidate (submit)="openSave($event)">
     @for (group of groups; track group.id; let index = $index) {
       <section class="configuration-group" [attr.aria-labelledby]="'settings-group-' + group.id">
         <header class="configuration-group-heading">
@@ -46,6 +49,7 @@
       </section>
     }
   </form>
+  }
 
   <footer class="configuration-actions">
     <div class="configuration-actions-inner">

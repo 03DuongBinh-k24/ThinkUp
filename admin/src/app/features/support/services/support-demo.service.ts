@@ -5,6 +5,10 @@ import { INSTRUCTOR_REFUND_PERCENT, Attachment, ComplaintCase, ComplaintStatus, 
 // TODO(pre-deploy): Nhớ xóa adapter demo và thay bằng HttpClient adapter sau khi có endpoint, schema, quyền và error contract chính thức.
 @Injectable({ providedIn: 'root' })
 export class SupportDemoService {
+  readonly loadError = signal('');
+  readonly loading = signal(false);
+  open(_page: 'faqs' | 'tickets' | 'complaints', _id?: string): void {}
+
   readonly tickets = signal<SupportTicket[]>(structuredClone(MOCK_TICKETS));
   readonly complaints = signal<ComplaintCase[]>(structuredClone(MOCK_COMPLAINTS));
   readonly faqs = signal<FaqItem[]>(structuredClone(MOCK_FAQS));

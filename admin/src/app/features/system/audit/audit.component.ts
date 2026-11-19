@@ -59,6 +59,7 @@ const OUTCOME_FILTER_VALUES: ColumnFilterValue[] = [
 export class AuditComponent {
   private readonly route = inject(ActivatedRoute);
   protected readonly store = inject(SYSTEM_STORE);
+  ngOnInit(): void { this.store.open('audit'); }
   private readonly toast = inject(SystemToastService);
 
   private readonly queryParams = toSignal(this.route.queryParamMap);

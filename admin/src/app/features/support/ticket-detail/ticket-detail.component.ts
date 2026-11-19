@@ -1,3 +1,4 @@
+import { linkedSignal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, ElementRef, HostListener, Injector, ViewChild, afterNextRender, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -20,7 +21,9 @@ type ReplyChannel = 'internal' | 'email';
 export class TicketDetailComponent {
   @ViewChild('replyEditor') private replyEditor?: ElementRef<HTMLElement>;
 
-  private readonly data = inject(SupportDemoService);
+  readonly data = inject(SupportDemoService);
+  ngOnInit(): void { this.data.open('tickets', this.ticketId); }
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
@@ -32,8 +35,8 @@ export class TicketDetailComponent {
   readonly activeModal = signal<TicketModal>(null);
   readonly reply = signal('');
   readonly replyChannel = signal<ReplyChannel>('email');
-  readonly emailTo = signal(this.ticket()?.email ?? '');
-  readonly emailSubject = signal(this.ticket() ? `Re: ${this.ticket()!.id} - ${this.ticket()!.summary}` : '');
+  readonly emailTo = linkedSignal(() => this.ticket()?.email ?? '');
+  readonly emailSubject = linkedSignal(() => this.ticket() ? `Re: ${this.ticket()!.id} - ${this.ticket()!.summary}` : '');
   readonly showCc = signal(false);
   readonly showBcc = signal(false);
   readonly emailCc = signal('');
@@ -123,7 +126,7 @@ export class TicketDetailComponent {
   readonly canCloseTicket = computed(() => Boolean(this.resolutionCategory()) && this.wordCount(this.internalResolutionNote()) >= 15);
 
   slaMs(): number { const ticket = this.ticket(); if (!ticket) return 0; const end = ticket.status === 'closed' && ticket.resolvedAt ? new Date(ticket.resolvedAt).getTime() : this.now(); return new Date(ticket.dueAt).getTime() - end; }
-  sla(): string { const ticket = this.ticket(); const ms = this.slaMs(); const hours = Math.ceil(Math.abs(ms) / 3_600_000); if (ticket?.status === 'closed') return ms < 0 ? `Đóng trễ ${hours} giờ` : `Đúng hạn ${hours} giờ`; return ms < 0 ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`; }
+  sla(): string { const ticket = this.ticket(); const ms = this.slaMs(); const hours = Math.ceil(Math.abs(ms) / 3_600_000); if (!Number.isFinite(ms)) return 'Chưa có hạn xử lý'; if (ticket?.status === 'closed') return ms < 0 ? `Đóng trễ ${hours} giờ` : `Đúng hạn ${hours} giờ`; return ms < 0 ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`; }
   toggleSort(): void { this.newestFirst.update(value => !value); }
   constructor() { const clock = setInterval(() => this.now.set(Date.now()), 60_000); this.destroyRef.onDestroy(() => { clearInterval(clock); this.objectUrls.forEach(url => URL.revokeObjectURL(url)); }); }
 
