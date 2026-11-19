@@ -69,36 +69,63 @@ export class CourseHttpService extends CourseDemoService {
       .then(async ({ roadmap }) => {
         const phasesRaw = Array.isArray(roadmap['stages']) ? roadmap['stages'] as Array<Record<string, unknown>> : [];
         const draftId = text(roadmap, 'versionId', 'id') || id;
-        const phases = phasesRaw.map((phase, phaseIndex) => ({
-          id: text(phase, 'stage_id', 'id') || `phase-${phaseIndex + 1}`,
-          no: text(phase, 'no', 'order') || String(phaseIndex + 1).padStart(2, '0'),
-          name: text(phase, 'name', 'title') || `Giai đoạn ${phaseIndex + 1}`,
-          nodes: (Array.isArray(phase['nodes']) ? phase['nodes'] as Array<Record<string, unknown>> : []).map((node, nodeIndex) => ({
-            id: text(node, 'node_id', 'id') || `node-${phaseIndex + 1}-${nodeIndex + 1}`,
-            name: text(node, 'title', 'name'), type: toNodeType(text(node, 'type')),
-            level: toLevel(text(node, 'level')), industry: text(node, 'industry'), description: text(node, 'description'),
-            outcomes: Array.isArray(node['outcomes']) ? (node['outcomes'] as unknown[]).join('\n') : text(node, 'outcomes'),
-            tags: Array.isArray(node['tags']) ? (node['tags'] as unknown[]).map(String) : [],
-            courses: (Array.isArray(node['courses']) ? node['courses'] as Array<Record<string, unknown>> : []).map(course => ({
-              id: text(course, 'course_id', 'id'), title: text(course, 'title'), match: num(course, 's_match', 'match'), level: toLevel(text(course, 'level'))
+        const parsePhaseTest = (rawPhaseTest: Record<string, unknown> | null | undefined, stageName: string): RoadmapTest | null => {
+          if (!rawPhaseTest) return null;
+          const questionsRaw = Array.isArray(rawPhaseTest['questions']) ? rawPhaseTest['questions'] as Array<Record<string, unknown>> : [];
+          return {
+            name: text(rawPhaseTest, 'name', 'title') || `Bài kiểm tra ${stageName}`,
+            duration: num(rawPhaseTest, 'duration_minutes', 'duration') || 30,
+            passScore: num(rawPhaseTest, 'pass_score', 'passScore') || 70,
+            stage: stageName,
+            questions: questionsRaw.map((question, index) => ({
+              id: text(question, 'question_id', 'id') || `question-${index + 1}`,
+              nodeId: text(question, 'node_id', 'nodeId'),
+              skillTag: text(question, 'skill_tag', 'skillTag'),
+              index: index + 1,
+              title: text(question, 'title', 'question_text', 'prompt') || `Câu hỏi ${index + 1}`,
+              meta: text(question, 'meta') || '4 phương án · 1 đáp án đúng',
+              prompt: text(question, 'prompt', 'question_text', 'question'),
+              language: text(question, 'language'),
+              code: text(question, 'code'),
+              hint: text(question, 'hint'),
+              hintSaved: !!text(question, 'hint'),
+              answers: (Array.isArray(question['answers']) ? question['answers'] as Array<Record<string, unknown>> : Array.isArray(question['options']) ? question['options'] as Array<Record<string, unknown>> : []).map((answer, answerIndex) => ({
+                letter: text(answer, 'letter', 'key') || String.fromCharCode(65 + answerIndex),
+                text: text(answer, 'text'),
+                correct: answer['correct'] === true || text(question, 'correct_option', 'correctOption') === text(answer, 'key', 'letter')
+              }))
             }))
-          }))
-        }));
-        const testPhaseIndex = phasesRaw.findIndex(phase => phase['test']);
-        const testPhase = testPhaseIndex >= 0 ? phasesRaw[testPhaseIndex] : null;
-        const rawTest = (testPhase?.['test'] ?? {}) as Record<string, unknown>;
-        const rawQuestions = Array.isArray(rawTest['questions']) ? rawTest['questions'] as Array<Record<string, unknown>> : [];
-        const test = {
-          name: text(rawTest, 'name', 'title'), duration: num(rawTest, 'duration_minutes', 'duration'), passScore: num(rawTest, 'pass_score', 'passScore'),
-          stage: testPhase ? `${phases[testPhaseIndex]?.no} · ${phases[testPhaseIndex]?.name}` : '',
-          questions: rawQuestions.map((question, index) => ({
-            id: text(question, 'question_id', 'id') || `question-${index + 1}`, nodeId: text(question, 'node_id', 'nodeId'), skillTag: text(question, 'skill_tag', 'skillTag'), index: index + 1,
-            title: text(question, 'title', 'question_text', 'prompt') || `Câu hỏi ${index + 1}`, meta: text(question, 'meta') || '4 phương án · 1 đáp án đúng', prompt: text(question, 'prompt', 'question_text', 'question'),
-            language: text(question, 'language'), code: text(question, 'code'), hint: text(question, 'hint'), hintSaved: !!text(question, 'hint'),
-            answers: (Array.isArray(question['answers']) ? question['answers'] as Array<Record<string, unknown>> : Array.isArray(question['options']) ? question['options'] as Array<Record<string, unknown>> : []).map((answer, answerIndex) => ({
-              letter: text(answer, 'letter', 'key') || String.fromCharCode(65 + answerIndex), text: text(answer, 'text'), correct: answer['correct'] === true || text(question, 'correct_option', 'correctOption') === text(answer, 'key', 'letter')
+          };
+        };
+
+        const phases = phasesRaw.map((phase, phaseIndex) => {
+          const stageName = text(phase, 'name', 'title') || `Giai đoạn ${phaseIndex + 1}`;
+          const stageNo = text(phase, 'no', 'order') || String(phaseIndex + 1).padStart(2, '0');
+          const stageFull = `${stageNo} · ${stageName}`;
+          return {
+            id: text(phase, 'stage_id', 'id') || `phase-${phaseIndex + 1}`,
+            no: stageNo,
+            name: stageName,
+            test: parsePhaseTest(phase['test'] as Record<string, unknown> | null | undefined, stageFull),
+            nodes: (Array.isArray(phase['nodes']) ? phase['nodes'] as Array<Record<string, unknown>> : []).map((node, nodeIndex) => ({
+              id: text(node, 'node_id', 'id') || `node-${phaseIndex + 1}-${nodeIndex + 1}`,
+              name: text(node, 'title', 'name'), type: toNodeType(text(node, 'type')),
+              level: toLevel(text(node, 'level')), industry: text(node, 'industry'), description: text(node, 'description'),
+              outcomes: Array.isArray(node['outcomes']) ? (node['outcomes'] as unknown[]).join('\n') : text(node, 'outcomes'),
+              tags: Array.isArray(node['tags']) ? (node['tags'] as unknown[]).map(String) : [],
+              courses: (Array.isArray(node['courses']) ? node['courses'] as Array<Record<string, unknown>> : []).map(course => ({
+                id: text(course, 'course_id', 'id'), title: text(course, 'title'), match: num(course, 's_match', 'match'), level: toLevel(text(course, 'level'))
+              }))
             }))
-          }))
+          };
+        });
+        const firstPhaseWithTest = phases.find(p => p.test && p.test.questions.length > 0) || phases[0];
+        const test: RoadmapTest = firstPhaseWithTest?.test ?? {
+          name: 'Bài kiểm tra đánh giá năng lực',
+          duration: 30,
+          passScore: 70,
+          stage: firstPhaseWithTest ? `${firstPhaseWithTest.no} · ${firstPhaseWithTest.name}` : '',
+          questions: []
         };
         const firstNodeId = phases.flatMap(phase => phase.nodes)[0]?.id;
         const suggestions = firstNodeId ? ((await firstValueFrom(this.http.get<{ courses?: Array<Record<string, unknown>> }>(`${this.base}/admin/roadmaps/${encodeURIComponent(draftId)}/nodes/${encodeURIComponent(firstNodeId)}/suggestions`)).catch(() => ({ courses: [] }))).courses ?? []) : [];
@@ -258,8 +285,9 @@ export class CourseHttpService extends CourseDemoService {
   }
   override toggleRoadmapVisibility(id: string): void {
     const item = this.roadmaps().find(roadmap => roadmap.id === id);
-    if (!item || item.hidden) return;
-    void this.post(`/admin/roadmaps/${encodeURIComponent(id)}/hide`, {});
+    if (!item) return;
+    const action = item.hidden ? 'unhide' : 'hide';
+    void this.post(`/admin/roadmaps/${encodeURIComponent(id)}/${action}`, {});
   }
   override updateRoadmapNode(_roadmapId: string, _node: RoadmapNode): void { /* Studio saves the complete draft atomically. */ }
   override saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): Promise<void> { return this.saveStudio(roadmapId, studio); }
@@ -271,8 +299,16 @@ export class CourseHttpService extends CourseDemoService {
   private async saveStudio(roadmapId: string, currentStudio?: RoadmapStudio): Promise<void> {
     const studio = currentStudio ?? this.studios().find(item => item.roadmapId === roadmapId); if (!studio) throw new Error('Không có dữ liệu lộ trình để lưu.');
     const phases = studio.phases;
-    const savedTests = this.persistedStageTests.get(roadmapId);
-    const stages = phases.map(phase => ({ id: phase.id, name: phase.name, nodes: phase.nodes.map(node => this.serializeNode(node)), test: this.testForStage(studio, phase) ?? savedTests?.get(phase.id) ?? null }));
+    const stages = phases.map(phase => {
+      const activeTest = studio.test && studio.test.stage.endsWith(phase.name) ? this.serializeTest(studio.test) : null;
+      const phaseTest = phase.test ? this.serializeTest(phase.test) : null;
+      return {
+        id: phase.id,
+        name: phase.name,
+        nodes: phase.nodes.map(node => this.serializeNode(node)),
+        test: activeTest ?? phaseTest ?? null
+      };
+    });
     await this.patch(`/admin/roadmaps/${encodeURIComponent(roadmapId)}`, { name: this.roadmaps().find(item => item.id === roadmapId)?.name, threshold: studio.threshold, stages });
   }
   private serializeNode(node: RoadmapNode): Record<string, unknown> { return { id: node.id, name: node.name, type: node.type, level: node.level, industry: node.industry, description: node.description, outcomes: node.outcomes, tags: node.tags, courses: (node.courses ?? []).map(course => ({ course_id: course.id })) }; }
@@ -377,7 +413,9 @@ function toRoadmap(row: Record<string, unknown>): Roadmap {
     // API's testTotal is the number of learner attempts. Keep zero distinct
     // from absent values; stage test availability is represented by missingTests.
     testTotal: row['testTotal'] != null || row['testsTotal'] != null ? num(row, 'testTotal', 'testsTotal') : 0,
-    missingTests: row['missingTests'] != null ? num(row, 'missingTests') : (stages.length ? stages.filter(stage => !stage['test']).length : 0),
+    // The list API supplies this derived count. If an older API omits it, do
+    // not infer missing tests from stage details that are not included here.
+    missingTests: row['missingTests'] != null ? num(row, 'missingTests') : 0,
     hidden: row['hidden'] === true || row['status'] === 'hidden' || row['status'] === 'draft' || row['status'] === 'superseded'
   };
 }

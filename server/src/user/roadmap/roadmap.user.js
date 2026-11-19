@@ -962,7 +962,7 @@ export function inspectStageBank(stage, careerName, records) {
     if (!tags.length) missing.push({ node_id: node.node_id, tag: null, available: 0 });
     for (const tag of tags) {
       const available = counts.get(JSON.stringify([node.node_id, tag])) || 0;
-      if (available < 5) missing.push({ node_id: node.node_id, tag, available });
+      if (available < 1) missing.push({ node_id: node.node_id, tag, available });
     }
   }
   return { available: nodes.size > 0 && missing.length === 0, questions, missing,

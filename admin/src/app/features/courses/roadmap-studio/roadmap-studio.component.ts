@@ -147,11 +147,43 @@ export class RoadmapStudioComponent {
   }
 
   addPhase(): void {
-    this.notify('Mẫu thêm giai đoạn mới sẽ mở khi backend cung cấp API.', 'info');
+    const studio = this.studio();
+    if (!studio) return;
+    const nextIndex = studio.phases.length + 1;
+    const phaseNo = String(nextIndex).padStart(2, '0');
+    const newPhase: RoadmapPhase = {
+      id: `stage-${Date.now().toString(36)}`,
+      no: phaseNo,
+      name: `Giai đoạn ${phaseNo}`,
+      nodes: [],
+      test: null
+    };
+    const updatedPhases = [...studio.phases, newPhase];
+    this.localStudio.set({ ...studio, phases: updatedPhases });
+    this.notify(`Đã thêm ${newPhase.name}.`, 'success');
   }
 
   addNode(phase: RoadmapPhase): void {
-    this.notify(`Mẫu thêm node cho giai đoạn ${phase.no} sẽ mở khi backend cung cấp API.`, 'info');
+    const studio = this.studio();
+    if (!studio) return;
+    const nodeIndex = phase.nodes.length + 1;
+    const newNode: RoadmapNode = {
+      id: `node-${Date.now().toString(36)}-${nodeIndex}`,
+      name: `Kỹ năng mới ${nodeIndex}`,
+      type: 'Kỹ năng',
+      level: 'Cơ bản',
+      industry: this.roadmap()?.industry || '',
+      description: 'Mô tả chi tiết kỹ năng cần đạt.',
+      outcomes: 'Kết quả học tập đạt được.',
+      tags: ['Kỹ năng'],
+      courses: []
+    };
+    const updatedPhases = studio.phases.map(p =>
+      p.id === phase.id ? { ...p, nodes: [...p.nodes, newNode] } : p
+    );
+    this.localStudio.set({ ...studio, phases: updatedPhases });
+    this.selectNode(newNode);
+    this.notify(`Đã thêm node vào ${phase.name}.`, 'success');
   }
 
   setThreshold(value: string): void {
@@ -195,7 +227,40 @@ export class RoadmapStudioComponent {
   }
 
   setStage(value: string): void {
-    this.patchTest({ stage: value });
+    const currentTest = this.testDraft();
+    const studio = this.studio();
+    if (studio && currentTest) {
+      // Lưu lại bài test hiện tại vào đúng phase tương ứng
+      const updatedPhases = studio.phases.map(phase => {
+        const fullStageName = `${phase.no} · ${phase.name}`;
+        if (currentTest.stage.endsWith(phase.name) || currentTest.stage === fullStageName) {
+          return { ...phase, test: clone(currentTest) };
+        }
+        return phase;
+      });
+      this.localStudio.set({ ...studio, phases: updatedPhases });
+
+      // Tìm phase mục tiêu được chọn
+      const targetPhase = updatedPhases.find(phase => {
+        const fullStageName = `${phase.no} · ${phase.name}`;
+        return value.endsWith(phase.name) || value === fullStageName;
+      });
+
+      if (targetPhase?.test) {
+        // Nếu phase mục tiêu đã có bài test và bộ câu hỏi, tải lên
+        this.testDraft.set(clone(targetPhase.test));
+        this.selectedQuestionId.set(targetPhase.test.questions[0]?.id ?? '');
+        return;
+      }
+    }
+
+    // Nếu phase mục tiêu chưa có bài test hoặc không tìm thấy, đổi stage và reset về rỗng
+    this.patchTest({
+      stage: value,
+      name: `Bài kiểm tra ${value}`,
+      questions: []
+    });
+    this.selectedQuestionId.set('');
   }
 
   patchQuestion(patch: Partial<RoadmapQuestion>): void {

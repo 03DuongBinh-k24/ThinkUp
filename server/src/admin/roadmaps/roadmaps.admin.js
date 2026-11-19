@@ -195,8 +195,8 @@ export async function listAdminRoadmaps(query = {}, options = {}) {
       const canonical = canonicalStages.get(String(stage.stage_id).split('__')[0]);
       const bankStage = canonical?.stage || stage;
       const careerName = canonical?.careerName || row.career_name || row.name || '';
-    const records = questionsByStage.get(String(bankStage.stage_id).split('__')[0]) || [];
-      const normalizedStage = bankStage === stage ? bankStage : {
+      const records = questionsByStage.get(String(bankStage.stage_id).split('__')[0]) || [];
+      const normalizedStage = {
         ...bankStage,
         stage_id: String(bankStage.stage_id).split('__')[0],
         nodes: (bankStage.nodes || []).map(node => ({ ...node, node_id: String(node.node_id).split('__')[0] })),
@@ -228,9 +228,20 @@ export async function getAdminRoadmapSummary(options = {}) {
   return { success: true, total: rows.length, active: rows.filter(row => row.status === 'published' || row.status === 'legacy').length, learners: learnerIds.length, coverage: nodes ? Number((covered / nodes * 100).toFixed(1)) : 0, missingNodes: rows.reduce((sum, row) => sum + row.missingCourses, 0) };
 }
 export async function getAdminRoadmap(id, options = {}) {
-  const db = options.db || await getMongoDb(), row = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne(versionQuery(id));
+  const db = options.db || await getMongoDb();
+  const row = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne(versionQuery(id));
   if (row) return { success: true, roadmap: snapshot(row) };
-  const categoryId = Number(id), legacy = Number.isSafeInteger(categoryId) ? await db.collection('roadmap_templates').findOne({ category_id: categoryId }) : null;
+  const categoryId = Number(id);
+  const legacyClauses = [];
+  if (Number.isSafeInteger(categoryId)) {
+    legacyClauses.push({ category_id: categoryId }, { category_id: String(categoryId) });
+  }
+  if (ObjectId.isValid(txt(id))) {
+    legacyClauses.push({ _id: new ObjectId(txt(id)) });
+  }
+  const legacy = legacyClauses.length
+    ? await db.collection('roadmap_templates').findOne({ $or: legacyClauses })
+    : null;
   if (!legacy) throw FAIL('Không tìm thấy lộ trình.', 404, 'ROADMAP_NOT_FOUND');
   return { success: true, roadmap: { versionId: null, categoryId: legacy.category_id, code: legacy.short_code || String(legacy.category_id), name: legacy.career_name, industry: '', description: legacy.description || '', status: 'legacy', version: 0, threshold: 70, stages: (legacy.stages || []).map(s => ({ ...s, nodes: (s.nodes || []).map(n => ({ ...n, description: n.description || '', outcomes: (n.outcomes || n.topics || []).join?.('\n') || '', courses: [] })) })) } };
 }
@@ -241,9 +252,13 @@ export async function ensureAdminRoadmapDraft(id, options = {}) {
   if (current.roadmap.status === 'draft') return current;
   return roadmapTransaction(db, async session => {
     const categoryId = Number(current.roadmap.categoryId);
-    const category = await db.collection('course_categories').findOne({ category_id: categoryId }, { session });
+    const category = await db.collection('course_categories').findOne({
+      $or: [{ category_id: categoryId }, { category_id: String(categoryId) }]
+    }, { session });
     if (!category) throw FAIL('Không tìm thấy nhóm ngành.', 404, 'CATEGORY_NOT_FOUND');
-    const previous = await db.collection(ADMIN_ROADMAP_VERSIONS).find({ category_id: categoryId }, { session }).sort({ version: -1 }).limit(1).toArray();
+    const previous = await db.collection(ADMIN_ROADMAP_VERSIONS).find({
+      $or: [{ category_id: categoryId }, { category_id: String(categoryId) }]
+    }, { session }).sort({ version: -1 }).limit(1).toArray();
     const now = options.now || new Date();
     const threshold = Number(current.roadmap.threshold || 70);
     const sourceStages = current.roadmap.stages || [];
@@ -279,15 +294,25 @@ export async function createAdminRoadmap(body = {}, options = {}) {
   const db = options.db || await getMongoDb(), categoryId = Number(body.categoryId);
   if (!Number.isSafeInteger(categoryId) || categoryId < 1) throw FAIL('Mã ngành/lộ trình không hợp lệ.');
   return roadmapTransaction(db, async session => {
-  const category = await db.collection('course_categories').findOne({ category_id: categoryId }, { session });
+  const category = await db.collection('course_categories').findOne({
+    $or: [{ category_id: categoryId }, { category_id: String(categoryId) }]
+  }, { session });
   if (!category) throw FAIL('Không tìm thấy nhóm ngành.', 404, 'CATEGORY_NOT_FOUND');
-  const existing = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne({ category_id: categoryId, status: 'draft' }, { session });
+  const existing = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne({
+    $or: [{ category_id: categoryId }, { category_id: String(categoryId) }],
+    status: 'draft'
+  }, { session });
   if (existing) return { success: true, roadmap: snapshot(existing) };
-  const legacy = await db.collection('roadmap_templates').findOne({ category_id: categoryId }, { session });
-  const prior = await db.collection(ADMIN_ROADMAP_VERSIONS).find({ category_id: categoryId }, { session }).sort({ version: -1 }).limit(1).toArray();
+  const legacy = await db.collection('roadmap_templates').findOne({
+    $or: [{ category_id: categoryId }, { category_id: String(categoryId) }]
+  }, { session });
+  const prior = await db.collection(ADMIN_ROADMAP_VERSIONS).find({
+    $or: [{ category_id: categoryId }, { category_id: String(categoryId) }]
+  }, { session }).sort({ version: -1 }).limit(1).toArray();
   const now = options.now || new Date(), threshold = toNum(body.threshold ?? 70, 70, 100, 'Ngưỡng S-match');
-  const initialStages = body.stages || (legacy?.stages || []).map(stage => ({ ...stage, nodes: (stage.nodes || []).map(node => ({ ...node, outcomes: (node.outcomes || node.topics || []).join?.('\n') || node.outcomes || '', description: node.description || '', tags: node.tags || [] })) }));
-  const row = { category_id: categoryId, code: txt(body.code) || category.roadmap_short_code || `RM-${categoryId}`, name: txt(body.name) || legacy?.career_name || category.name, career_name: txt(body.name) || legacy?.career_name || category.name, industry: txt(body.industry) || category.name, description: txt(body.description) || legacy?.description || '', status: 'draft', version: Number(prior[0]?.version || 0) + 1, threshold, stages: normalizeStages(initialStages, threshold, true), created_by: String(options.adminId), created_at: now, updated_at: now, version_id: randomUUID() };
+  // Lộ trình mới tạo sẽ bắt đầu trống (không kế thừa các stage/node có sẵn trừ khi truyền rõ trong body.stages)
+  const initialStages = Array.isArray(body.stages) ? body.stages : [];
+  const row = { category_id: categoryId, code: txt(body.code) || category.roadmap_short_code || `RM-${categoryId}`, name: txt(body.name) || category.name, career_name: txt(body.name) || category.name, industry: txt(body.industry) || category.name, description: txt(body.description) || '', status: 'draft', version: Number(prior[0]?.version || 0) + 1, threshold, stages: normalizeStages(initialStages, threshold, true), created_by: String(options.adminId), created_at: now, updated_at: now, version_id: randomUUID() };
   const result = await db.collection(ADMIN_ROADMAP_VERSIONS).insertOne(row, { session }); row._id = result.insertedId;
   await audit(db, options.req, 'ROADMAP_DRAFT_CREATED', row, null, { status: 'draft', version: row.version }, {}, session);
   return { success: true, roadmap: snapshot(row) };
@@ -341,14 +366,33 @@ export async function publishAdminRoadmap(id, options = {}) {
 export async function hideAdminRoadmap(id, options = {}) {
   const db = options.db || await getMongoDb();
   return roadmapTransaction(db, async session => {
-  const row = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne(versionQuery(id), { session });
-  if (!row) throw FAIL('Không tìm thấy lộ trình.', 404, 'ROADMAP_NOT_FOUND');
-  if (row.status !== 'published') throw FAIL('Chỉ lộ trình đang hoạt động mới có thể tạm ẩn.', 409, 'ROADMAP_STATE_CONFLICT');
-  const now = options.now || new Date(), result = await db.collection(ADMIN_ROADMAP_VERSIONS).updateOne({ _id: row._id, status: 'published', updated_at: row.updated_at }, { $set: { status: 'hidden', hidden_at: now, hidden_by: String(options.adminId), updated_at: now }, $inc: { revision: 1 } }, { session });
-  if (!result.modifiedCount) throw FAIL('Lộ trình vừa được thay đổi. Tải lại trước khi thử tiếp.', 409, 'ROADMAP_UPDATE_CONFLICT');
-  const changed = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne({ _id: row._id }, { session });
-  await audit(db, options.req, 'ROADMAP_HIDDEN', row, { status: row.status }, { status: changed.status }, {}, session);
-  return { success: true, roadmap: snapshot(changed) };
+    const row = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne(versionQuery(id), { session });
+    if (!row) throw FAIL('Không tìm thấy lộ trình.', 404, 'ROADMAP_NOT_FOUND');
+    if (row.status !== 'published') throw FAIL('Chỉ lộ trình đang hoạt động mới có thể tạm ẩn.', 409, 'ROADMAP_STATE_CONFLICT');
+    const now = options.now || new Date(), result = await db.collection(ADMIN_ROADMAP_VERSIONS).updateOne({ _id: row._id, status: 'published', updated_at: row.updated_at }, { $set: { status: 'hidden', hidden_at: now, hidden_by: String(options.adminId), updated_at: now }, $inc: { revision: 1 } }, { session });
+    if (!result.modifiedCount) throw FAIL('Lộ trình vừa được thay đổi. Tải lại trước khi thử tiếp.', 409, 'ROADMAP_UPDATE_CONFLICT');
+    const changed = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne({ _id: row._id }, { session });
+    await audit(db, options.req, 'ROADMAP_HIDDEN', row, { status: row.status }, { status: changed.status }, {}, session);
+    return { success: true, roadmap: snapshot(changed) };
+  });
+}
+
+export async function unhideAdminRoadmap(id, options = {}) {
+  const db = options.db || await getMongoDb();
+  return roadmapTransaction(db, async session => {
+    const row = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne(versionQuery(id), { session });
+    if (!row) throw FAIL('Không tìm thấy lộ trình.', 404, 'ROADMAP_NOT_FOUND');
+    if (row.status !== 'hidden') throw FAIL('Chỉ lộ trình đang tạm ẩn mới có thể hiển thị lại.', 409, 'ROADMAP_STATE_CONFLICT');
+    const now = options.now || new Date();
+    const result = await db.collection(ADMIN_ROADMAP_VERSIONS).updateOne(
+      { _id: row._id, status: 'hidden', updated_at: row.updated_at },
+      { $set: { status: 'published', unhidden_at: now, unhidden_by: String(options.adminId), updated_at: now }, $inc: { revision: 1 } },
+      { session }
+    );
+    if (!result.modifiedCount) throw FAIL('Lộ trình vừa được thay đổi. Tải lại trước khi thử tiếp.', 409, 'ROADMAP_UPDATE_CONFLICT');
+    const changed = await db.collection(ADMIN_ROADMAP_VERSIONS).findOne({ _id: row._id }, { session });
+    await audit(db, options.req, 'ROADMAP_UNHIDDEN', row, { status: row.status }, { status: changed.status }, {}, session);
+    return { success: true, roadmap: snapshot(changed) };
   });
 }
 
@@ -388,5 +432,6 @@ export function createAdminRoadmapsRouter(express, requireAdmin) {
   router.delete('/:id', roles, async (req,res,next)=>{ try { res.json(await deleteAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   router.post('/:id/publish', roles, async (req,res,next)=>{ try { res.json(await publishAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   router.post('/:id/hide', sa, async (req,res,next)=>{ try { res.json(await hideAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
+  router.post('/:id/unhide', sa, async (req,res,next)=>{ try { res.json(await unhideAdminRoadmap(req.params.id, { adminId: req.adminId, req })); } catch(e) { next(e); } });
   return router;
 }
