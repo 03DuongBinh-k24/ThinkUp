@@ -22,7 +22,7 @@ export const COLLECTION_USERS = 'users';
 const digest = value => createHash('sha256').update(value).digest('hex');
 
 function executionMode(options) {
-  const mode = options.paymentMode ?? process.env.PAYMENT_MODE ?? 'simulation';
+  const mode = options.paymentMode ?? process.env.PAYMENT_MODE ?? 'live';
   if (!['live','simulation'].includes(mode)) throw paymentError('Chế độ thanh toán chưa được cấu hình hợp lệ.',503,'PAYMENT_MODE_INVALID');
   return mode;
 }
@@ -33,7 +33,8 @@ function simulatesMethod(method, options) {
   if (selected.some(value => !['sepay','momo','zalopay','paypal','apple-pay','swift'].includes(value))) {
     throw paymentError('Danh sách phương thức mô phỏng không hợp lệ.',503,'PAYMENT_MODE_INVALID');
   }
-  return mode === 'simulation' || selected.includes(method);
+  // ATM and VNPay QR always require a verified gateway callback; never auto-settle them.
+  return method !== 'vnpay' && (mode === 'simulation' || selected.includes(method));
 }
 function simulationEmailEnabled(options) {
   return String(options.simulationEmail ?? process.env.PAYMENT_SIMULATION_EMAIL) === 'true';
@@ -248,9 +249,10 @@ export async function createPaymentSession(params = {}, options = {}) {
 }
 
 export async function retryPaymentSession({userId,orderId,idempotencyKey,paymentMethod:method},options={}){
-  if(executionMode(options)==='simulation')throw paymentError('Luồng mô phỏng tự hoàn tất đơn hợp lệ, không tạo lại phiên cổng thanh toán.',409,'ORDER_NOT_PAYABLE');
+  const gateway=paymentMethod(method);
+  if(executionMode(options)==='simulation'&&gateway!=='vnpay')throw paymentError('Luồng mô phỏng tự hoàn tất đơn hợp lệ, không tạo lại phiên cổng thanh toán.',409,'ORDER_NOT_PAYABLE');
   if(typeof idempotencyKey!=='string'||!/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey))throw paymentError('Cần Idempotency-Key hợp lệ.',400,'IDEMPOTENCY_REQUIRED');
-  const gateway=paymentMethod(method), db=options.db || await getMongoDb();
+  const db=options.db || await getMongoDb();
   const simulation=simulatesMethod(gateway,options);
   if(!simulation)requireGatewayConfiguration(gateway);
   const _id=`checkout:${digest(`${userId}:${idempotencyKey}`)}`,requestHash=digest(JSON.stringify({orderId,gateway,...(simulation?{executionMode:'simulation'}:{})}));
