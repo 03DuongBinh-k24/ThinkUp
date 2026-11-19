@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { MOCK_APPROVALS, MOCK_COURSES, MOCK_WORKSPACES } from '../../../core/data/mock/course.mock';
 import { MOCK_ROADMAPS, MOCK_STUDIOS } from '../../../core/data/mock/roadmap.mock';
 import {
-  ApprovalItem, ApprovalWorkspace, Course, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest
+  ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest
 } from '../models/course.models';
 import { CourseStore } from './course.store';
 
@@ -25,6 +25,11 @@ export class CourseDemoService extends CourseStore {
 
   retry(): void {
     this.errorState.set(false);
+  }
+
+  getCourseFinance(id: string): Promise<CourseFinance | null> {
+    const finance = this.courseState().find(item => item.id === id)?.finance;
+    return Promise.resolve(finance ? { ...finance } : null);
   }
 
   archiveCourse(id: string, reason: string, explanation: string): void {

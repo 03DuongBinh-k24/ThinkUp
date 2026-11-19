@@ -2,10 +2,26 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApprovalItem, ApprovalWorkspace, Course, CourseLevel, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest } from '../models/course.models';
+import { ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseLevel, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest } from '../models/course.models';
 import { CourseDemoService } from './course-demo.service';
+import { formatCurrency } from '../course-utils';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 
 interface Page { items?: Array<Record<string, unknown>>; pagination?: { pages?: number; totalPages?: number }; }
+
+/** Shape của GET /admin/courses/:id/finance (xem courses.admin.js phía server). */
+interface AdminFinanceTotals {
+  listedPrice?: number | null;
+  grossRevenue?: number | null;
+  voucherDiscount?: number | null;
+  actualPaid?: number | null;
+  instructorShare?: number | null;
+  platformShare?: number | null;
+  orderCount?: number | null;
+  refundTotal?: number | null;
+  netAfterRefund?: number | null;
+}
+interface AdminFinanceResponse { totals?: AdminFinanceTotals; }
 
 /** Base adapter for the verified courses and roadmaps routes. UI-only fields retain safe empty values. */
 @Injectable()
@@ -24,6 +40,40 @@ export class CourseHttpService extends CourseDemoService {
 
   constructor() { super(); void this.load(); }
   override retry(): void { void this.load(); }
+
+  /**
+   * GET /admin/courses/:id/finance (SA/FA). Backend chỉ trả báo cáo cho khóa đã duyệt,
+   * đang bán hoặc tạm ẩn — còn lại trả 409 COURSE_FINANCE_UNAVAILABLE, CA/CS trả 403.
+   * Lỗi được ném ra với thông điệp tiếng Việt đã chuẩn hoá để dialog hiển thị.
+   */
+  override async getCourseFinance(id: string): Promise<CourseFinance | null> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<AdminFinanceResponse>(`${this.base}/admin/courses/${encodeURIComponent(id)}/finance`));
+      const totals = res?.totals;
+      if (!totals) return null;
+      const asNumber = (value: unknown) => { const n = Number(value ?? 0); return Number.isFinite(n) ? n : 0; };
+      const discount = asNumber(totals.voucherDiscount);
+      const paid = asNumber(totals.actualPaid);
+      const refund = asNumber(totals.refundTotal);
+      const net = asNumber(totals.netAfterRefund);
+      const price = this.courses().find(item => item.id === id)?.price ?? 0;
+      return {
+        listPrice: formatCurrency(price),
+        // Backend đã tính 40% cho giảng viên / 60% sàn trên phần thực thu (100% gross nếu GV tài trợ voucher).
+        instructorShare: formatCurrency(asNumber(totals.instructorShare)),
+        platformShare: formatCurrency(asNumber(totals.platformShare)),
+        revenue: formatCurrency(paid),
+        voucher: discount > 0 ? `-${formatCurrency(discount)} tổng giảm` : 'Chưa áp dụng',
+        voucherActive: discount > 0,
+        orderCount: asNumber(totals.orderCount),
+        refundTotal: formatCurrency(refund),
+        netAfterRefund: formatCurrency(net)
+      };
+    } catch (error) {
+      throw new Error(apiErrorMessage(error, 'Không tải được báo cáo tài chính. Vui lòng thử lại.'));
+    }
+  }
   async load(): Promise<void> {
     this.loadErrorState.set(false);
     try {

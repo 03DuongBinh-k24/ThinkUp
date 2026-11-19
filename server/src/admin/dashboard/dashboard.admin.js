@@ -33,6 +33,13 @@ function range(query = {}, now = new Date()) {
 }
 
 function pct(current, previous) { return previous ? Number((((current - previous) / previous) * 100).toFixed(1)) : null; }
+const ts = (value) => {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(d.getTime()) ? d : null;
+};
+const sameTs = (d, range) => { const t = ts(d); return !!t && t >= range.start && t <= range.end; };
+const moneyOf = (tx) => Number(tx.actual_paid_amount ?? tx.amount ?? 0);
 function validRole(role) {
   if (role === undefined || role === 'all') return null;
   if (!['SA', 'CA', 'FA', 'CS'].includes(role)) throw FAIL('Bộ lọc role không hợp lệ.');
@@ -67,7 +74,7 @@ export async function getAdminDashboardOverview(query = {}, options = {}) {
   const [
     usersCurrent, usersPrevious, usersActive, usersNew,
     courseTotal, courseNew, courseStates,
-    revenue, revenuePrevious, revenuePending,
+    paidTransactions,
     payoutsPending, payoutsLargePending,
     complaintsOpen, overdueCourses, overdueTickets, overdueComplaints,
   ] = await Promise.all([
@@ -78,9 +85,7 @@ export async function getAdminDashboardOverview(query = {}, options = {}) {
     courses.countDocuments({}),
     courses.countDocuments({ $or: [{ created_at: { $gte: current.start, $lte: current.end } }, { createdAt: { $gte: current.start, $lte: current.end } }] }),
     Promise.all(['published', 'pending_review', 'hidden', 'draft'].map(async status => [status, await courses.countDocuments({ status })])),
-    transactions.aggregate([{ $match: { status: 'success', paid_at: { $gte: current.start, $lte: current.end } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
-    transactions.aggregate([{ $match: { status: 'success', paid_at: { $gte: current.previousStart, $lte: current.previousEnd } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
-    transactions.aggregate([{ $match: { status: 'pending', created_at: { $gte: current.start, $lte: current.end } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
+    transactions.find({ status: { $in: ['success', 'completed', 'pending'] } }, { projection: { status: 1, paid_at: 1, created_at: 1, actual_paid_amount: 1, amount: 1 } }).toArray(),
     payouts.countDocuments({ status: 'pending', deleted_at: { $exists: false } }),
     payouts.countDocuments({ status: 'pending', amount: { $gte: 20000000 }, deleted_at: { $exists: false } }),
     complaints.countDocuments(openComplaintFilter),
@@ -94,8 +99,14 @@ export async function getAdminDashboardOverview(query = {}, options = {}) {
   const roomDocs = await db.collection('study_rooms').find({ status: { $in: ['active', 'ongoing', 'live', 'focus', 'break'] } }, { projection: { capacity: 1, maxUsers: 1, currentUsers: 1, participants: 1 } }).toArray();
   const online = roomDocs.reduce((sum, room) => sum + Math.max(room.currentUsers || 0, new Set((room.participants || []).map(p => String(p.userId))).size), 0);
   const capacity = roomDocs.reduce((sum, room) => sum + (room.capacity || room.maxUsers || 0), 0);
-  const revenueNow = revenue[0]?.total || 0, revenueBefore = revenuePrevious[0]?.total || 0;
-  const revenuePendingNow = revenuePending[0]?.total || 0;
+  const paidNow = paidTransactions.filter(tx => tx.status !== 'pending' && sameTs(tx.paid_at || tx.created_at, { start: current.start, end: current.end }));
+  const paidBefore = paidTransactions.filter(tx => tx.status !== 'pending'
+    && (() => { const t = ts(tx.paid_at || tx.created_at); return !!t && t >= current.previousStart && t <= current.previousEnd; })());
+  const revenueNow = paidNow.reduce((sum, tx) => sum + moneyOf(tx), 0);
+  const revenueBefore = paidBefore.reduce((sum, tx) => sum + moneyOf(tx), 0);
+  const revenuePendingNow = paidTransactions
+    .filter(tx => tx.status === 'pending' && sameTs(tx.created_at, { start: current.start, end: current.end }))
+    .reduce((sum, tx) => sum + moneyOf(tx), 0);
   const loadPercent = capacity ? Number((online / capacity * 100).toFixed(1)) : 0;
   const kpis = {
     users: { total: usersCurrent, active: usersActive, newInPeriod: usersNew, changePercent: pct(usersCurrent, usersPrevious) },
@@ -128,15 +139,19 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
   const current = range(query, options.now || new Date());
   const grain = query.grain || 'month';
   if (!['day', 'week', 'month', 'quarter', 'year'].includes(grain)) throw FAIL('Độ chia biểu đồ không hợp lệ.');
-  const [transactions, enrollments, progress, courses, reviews, payouts, previousRevenue] = await Promise.all([
-    db.collection('payment_transactions').find({ status: 'success', paid_at: { $gte: current.start, $lte: current.end } }).toArray(),
+  const [transactions, enrollments, progress, courses, reviews, payouts] = await Promise.all([
+    db.collection('payment_transactions').find({ status: { $in: ['success', 'completed'] } }).toArray(),
     db.collection('user_enrollments').find({ status: { $ne: 'revoked' } }).toArray(),
     db.collection('user_course_progress').find({}).toArray(),
     db.collection('courses').find({}).toArray(),
     db.collection('course_reviews').find({}).toArray(),
-    db.collection('payout_requests').find({ status: 'paid', paid_at: { $gte: current.start, $lte: current.end } }).toArray(),
-    db.collection('payment_transactions').aggregate([{ $match: { status: 'success', paid_at: { $gte: current.previousStart, $lte: current.previousEnd } } }, { $group: { _id: null, total: { $sum: { $ifNull: ['$actual_paid_amount', '$amount'] } } } }]).toArray(),
+    db.collection('payout_requests').find({ status: 'paid' }).toArray(),
   ]);
+  // paid_at trong DB trộn Date, ISO string và "YYYY-MM-DD HH:mm:ss" → lọc cửa sổ thời gian trong JS.
+  const inPeriod = transactions.filter(tx => sameTs(tx.paid_at || tx.created_at, { start: current.start, end: current.end }));
+  const previousTotal = transactions
+    .filter(tx => (() => { const t = ts(tx.paid_at || tx.created_at); return !!t && t >= current.previousStart && t <= current.previousEnd; })())
+    .reduce((sum, tx) => sum + moneyOf(tx), 0);
   const courseById = new Map();
   for (const course of courses) for (const id of [course._id, course.course_id, course.id].filter(Boolean)) courseById.set(String(id), course);
   const keyFor = date => {
@@ -148,7 +163,7 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
     return d.toISOString().slice(0, 10);
   };
   const buckets = new Map();
-  for (const tx of transactions) {
+  for (const tx of inPeriod) {
     const key = keyFor(tx.paid_at || tx.created_at); if (!key) continue;
     const bucket = buckets.get(key) || { period: key, original: 0, marketplace: 0, payout: 0 };
     const summary = typeof tx.order_summary === 'string' ? (() => { try { return JSON.parse(tx.order_summary); } catch { return {}; } })() : tx.order_summary || {};
@@ -164,7 +179,7 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
     }
     buckets.set(key, bucket);
   }
-  for (const payout of payouts) { const key = keyFor(payout.paid_at); if (!key) continue; const bucket = buckets.get(key) || { period: key, original: 0, marketplace: 0, payout: 0 }; bucket.payout += payout.net_amount ?? payout.amount ?? payout.paid_amount ?? 0; buckets.set(key, bucket); }
+  for (const payout of payouts) { if (!sameTs(payout.paid_at, { start: current.start, end: current.end })) continue; const key = keyFor(payout.paid_at); if (!key) continue; const bucket = buckets.get(key) || { period: key, original: 0, marketplace: 0, payout: 0 }; bucket.payout += payout.net_amount ?? payout.amount ?? payout.paid_amount ?? 0; buckets.set(key, bucket); }
   const progressByEnrollment = new Map();
   for (const row of progress) progressByEnrollment.set(`${row.user_id}:${row.course_id}`, Number(row.progress_percentage ?? row.progress ?? 0));
   const distribution = { inProgress: 0, completed: 0, inactive: 0 };
@@ -172,14 +187,13 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
   const totalEnrollments = distribution.inProgress + distribution.completed + distribution.inactive;
   const reviewTotals = new Map(); for (const review of reviews) { const id = String(review.course_id); const x = reviewTotals.get(id) || { sum: 0, count: 0 }; x.sum += Number(review.rating || 0); x.count++; reviewTotals.set(id, x); }
   const purchaseTotals = new Map();
-  for (const tx of transactions) { const summary = typeof tx.order_summary === 'string' ? (() => { try { return JSON.parse(tx.order_summary); } catch { return {}; } })() : tx.order_summary || {}; for (const item of summary.courses || tx.courses || []) { const id = String(item.id || item.course_id || ''); if (id) purchaseTotals.set(id, (purchaseTotals.get(id) || 0) + 1); } }
+  for (const tx of inPeriod) { const summary = typeof tx.order_summary === 'string' ? (() => { try { return JSON.parse(tx.order_summary); } catch { return {}; } })() : tx.order_summary || {}; for (const item of summary.courses || tx.courses || []) { const id = String(item.id || item.course_id || ''); if (id) purchaseTotals.set(id, (purchaseTotals.get(id) || 0) + 1); } }
   const topCourses = [...purchaseTotals].map(([id, purchases]) => { const course = courseById.get(id); const rating = reviewTotals.get(id); return { courseId: id, title: course?.title || 'Khóa học', purchases, rating: rating?.count ? Number((rating.sum / rating.count).toFixed(1)) : null }; }).sort((a, b) => b.purchases - a.purchases).slice(0, 5);
   const revenueRows = [...buckets.values()].sort((a, b) => a.period.localeCompare(b.period));
   const originalTotal = revenueRows.reduce((sum, item) => sum + item.original, 0);
   const marketplaceTotal = revenueRows.reduce((sum, item) => sum + item.marketplace, 0);
   const totalRevenue = originalTotal + marketplaceTotal;
   const payoutTotal = revenueRows.reduce((sum, item) => sum + item.payout, 0);
-  const previousTotal = previousRevenue[0]?.total || 0;
   return {
     success: true,
     revenue: {
