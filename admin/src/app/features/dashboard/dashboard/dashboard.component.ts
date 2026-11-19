@@ -75,7 +75,7 @@ export class DashboardComponent implements OnInit {
   });
   readonly bars = computed<RevenuePoint[]>(() => this.data.analytics()?.bars ?? []);
   readonly periods: Period[] = ['Ngày', 'Tuần', 'Tháng', 'Năm', 'Quý'];
-  readonly period = signal<Period>('Tháng');
+  readonly period = signal<Period>('Năm');
   readonly rangeApplied = signal(false);
   readonly filter = signal('Tất cả');
   readonly filterOptions: ReadonlyArray<CustomSelectOption> = [
@@ -90,7 +90,7 @@ export class DashboardComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly dateTrigger = viewChild<ElementRef<HTMLButtonElement>>('dateTrigger');
   private readonly datePopover = viewChild<ElementRef<HTMLElement>>('datePopover');
-  private readonly initialRange = this.currentMonthRange();
+  private readonly initialRange = this.currentYearRange();
   readonly startDate = signal(this.initialRange.start);
   readonly endDate = signal(this.initialRange.end);
   readonly rangeLabel = computed(() => `${this.displayDate(this.startDate())} - ${this.displayDate(this.endDate())}`);
@@ -425,6 +425,14 @@ export class DashboardComponent implements OnInit {
     const pad = (value: number) => String(value).padStart(2, '0');
     const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
     const end = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}`;
+    return { start, end };
+  }
+
+  private currentYearRange(): { start: string; end: string } {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const start = `${now.getFullYear()}-01-01`;
+    const end = `${now.getFullYear()}-12-${pad(new Date(now.getFullYear(), 12, 0).getDate())}`;
     return { start, end };
   }
 }

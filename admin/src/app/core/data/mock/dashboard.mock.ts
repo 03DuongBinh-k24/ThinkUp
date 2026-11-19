@@ -58,9 +58,18 @@ export const REVENUE_DATASETS: Record<string, RevenuePoint[]> = {
   ],
   Tháng: REVENUE_BARS,
   Năm: [
-    { month: '2021', original: 142, marketplace: 38, payout: 111 }, { month: '2022', original: 168, marketplace: 44, payout: 132 },
-    { month: '2023', original: 194, marketplace: 51, payout: 157 }, { month: '2024', original: 218, marketplace: 58, payout: 178 },
-    { month: '2025', original: 246, marketplace: 64, payout: 201 }, { month: '2026', original: 267, marketplace: 71, payout: 220 }
+    { month: '01/26', original: 145, marketplace: 48, payout: 120 },
+    { month: '02/26', original: 168, marketplace: 52, payout: 135 },
+    { month: '03/26', original: 194, marketplace: 55, payout: 150 },
+    { month: '04/26', original: 178, marketplace: 50, payout: 142 },
+    { month: '05/26', original: 205, marketplace: 60, payout: 165 },
+    { month: '06/26', original: 218, marketplace: 62, payout: 170 },
+    { month: '07/26', original: 190, marketplace: 58, payout: 155 },
+    { month: '08/26', original: 225, marketplace: 65, payout: 180 },
+    { month: '09/26', original: 240, marketplace: 68, payout: 192 },
+    { month: '10/26', original: 232, marketplace: 64, payout: 185 },
+    { month: '11/26', original: 250, marketplace: 70, payout: 200 },
+    { month: '12/26', original: 267, marketplace: 75, payout: 215 }
   ],
   Quý: [
     { month: 'Q1/25', original: 178, marketplace: 44, payout: 142 }, { month: 'Q2/25', original: 192, marketplace: 48, payout: 154 },
