@@ -1,0 +1,60 @@
+@if (open()) {
+<div
+  #dialogElement
+  class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="auth-required-title"
+  tabindex="-1"
+  (keydown)="handleKeydown($event)"
+>
+  <button
+    type="button"
+    class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+    (click)="onClose()"
+    aria-label="Đóng popup"
+  ></button>
+  <div
+    class="relative flex w-full max-w-[420px] flex-col overflow-hidden rounded-[16px] bg-white p-6 shadow-2xl"
+    style="max-height: calc(100vh - 2rem);"
+  >
+    <button
+      #firstFocusable
+      type="button"
+      (click)="onClose()"
+      class="absolute right-4 top-4 rounded-full p-1.5 text-[#647188] hover:bg-[#f1f5ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f66f2]"
+      aria-label="Đóng"
+    >
+      <app-icon name="x" class="h-5 w-5" />
+    </button>
+    <div class="flex flex-1 flex-col items-center overflow-y-auto text-center">
+      <div class="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#eaf2ff] text-[#1f66f2]">
+        <app-icon name="lock" class="h-6 w-6" />
+      </div>
+      <h2 id="auth-required-title" class="text-[20px] font-extrabold text-[#172554]">
+        Bạn cần đăng nhập
+      </h2>
+      <p class="mt-2 text-[14px] font-semibold leading-6 text-[#647188]">
+        {{ contextMessage() || 'Vui lòng đăng nhập hoặc tạo tài khoản mới để tiếp tục sử dụng tính năng này.' }}
+      </p>
+    </div>
+    <div class="mt-8 flex shrink-0 flex-col gap-3 sm:flex-row">
+      <a
+        routerLink="/auth/sign_up"
+        [queryParams]="authQueryParams()"
+        class="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-[#d5e2f8] bg-white px-4 text-[14px] font-extrabold text-[#53637d] hover:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f66f2]"
+      >
+        Đăng ký
+      </a>
+      <a
+        #lastFocusable
+        routerLink="/auth/login"
+        [queryParams]="authQueryParams()"
+        class="flex h-11 flex-1 items-center justify-center rounded-[8px] bg-[#1f66f2] px-4 text-[14px] font-extrabold text-white hover:bg-[#1855ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f66f2]"
+      >
+        Đăng nhập
+      </a>
+    </div>
+  </div>
+</div>
+}

@@ -308,8 +308,8 @@ export async function getCartDetails({
     const inst = instructorMap.get(String(doc.instructor_id)) || null;
 
     // Giá bán thực tế & Giá niêm yết ban đầu
-    const originalPrice = parseFloat(doc.original_price ?? doc.price ?? 0) || 0;
-    const salePrice = parseFloat(doc.price ?? doc.original_price ?? 0) || 0;
+    const originalPrice = Math.max(0, Number(doc.original_price ?? doc.price ?? doc.sale_price ?? 0) || 0);
+    const salePrice = Math.max(0, Number(doc.sale_price ?? doc.price ?? doc.original_price ?? 0) || 0);
     const discountAmount = Math.max(0, originalPrice - salePrice);
 
     const isInWishlist = wishlistSet.has(cId) || wishlistSet.has(String(doc._id)) || wishlistSet.has(rawId);
@@ -334,6 +334,7 @@ export async function getCartDetails({
       actionButtonLabel = 'Không khả dụng';
     }
 
+    const totalReviews = parseInt(doc.total_reviews, 10) || 0;
     enrichedCourses.push({
       id: String(doc._id || rawId),
       course_id: cId,
@@ -345,8 +346,8 @@ export async function getCartDetails({
         name: inst?.full_name || 'Giảng viên ThinkUp',
         avatar_url: inst?.avatar_url || '',
       },
-      rating: parseFloat(doc.rating) || 5.0,
-      total_reviews: parseInt(doc.total_reviews, 10) || 0,
+      rating: totalReviews > 0 ? (parseFloat(doc.rating) || 0) : 0,
+      total_reviews: totalReviews,
       total_students: parseInt(doc.total_students, 10) || 0,
       tags: courseTagsMap.get(cId) || (Array.isArray(doc.tags) ? doc.tags : []),
       price: {

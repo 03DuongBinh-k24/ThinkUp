@@ -8,6 +8,12 @@ import { createNotificationForEvent, getNotificationDeliveryPolicy } from '../no
 import { findBusinessVoucher, quoteBusinessVoucher, reserveBusinessVoucher } from '../voucher/voucher.service.js';
 
 export const PAYMENT_EXPIRY_MS = 15 * 60 * 1000;
+
+async function configuredPaymentExpiryMs(db) {
+  const doc = await db.collection('system_settings').findOne({ _id: 'global_config' }, { projection: { 'parameters.payment_timeout_minutes': 1 } });
+  const minutes = Number(doc?.parameters?.payment_timeout_minutes);
+  return Number.isSafeInteger(minutes) && minutes > 0 && minutes <= 10080 ? minutes * 60 * 1000 : PAYMENT_EXPIRY_MS;
+}
 export const COLLECTION_TRANSACTIONS = 'payment_transactions';
 export const COLLECTION_ORDERS = 'orders';
 export const COLLECTION_USER_COURSES = 'user_courses';
@@ -16,7 +22,7 @@ export const COLLECTION_USERS = 'users';
 const digest = value => createHash('sha256').update(value).digest('hex');
 
 function executionMode(options) {
-  const mode = options.paymentMode ?? process.env.PAYMENT_MODE ?? 'live';
+  const mode = options.paymentMode ?? process.env.PAYMENT_MODE ?? 'simulation';
   if (!['live','simulation'].includes(mode)) throw paymentError('Chế độ thanh toán chưa được cấu hình hợp lệ.',503,'PAYMENT_MODE_INVALID');
   return mode;
 }
@@ -209,16 +215,16 @@ export async function createPaymentSession(params = {}, options = {}) {
         const allIds=[canonical,String(course._id)];
         const filter={$or:[{user_id:userId,course_id:{$in:allIds}},{userId,courseId:{$in:allIds}}]};
         for(const name of ['user_courses','user_enrollments'])if(await db.collection(name).findOne(filter,{session}))throw paymentError('Bạn đã sở hữu khóa học này.',409,'COURSE_ALREADY_OWNED');
-        const price=paymentMoney(course.price ?? course.original_price);
+        const price=paymentMoney(course.sale_price ?? course.price ?? course.original_price);
         courses.push({id:canonical,aliases:allIds,instructor_id:course.instructor_id || null,rating:course.rating ?? course.average_rating ?? null,title:String(course.title || 'Khóa học ThinkUp'),price,
-          original_price:paymentMoney(course.original_price ?? price),thumbnail:course.thumbnail_url || ''});
+          original_price:paymentMoney(course.original_price ?? course.price ?? course.sale_price),thumbnail:course.thumbnail_url || ''});
       }
       const saleSubtotal=paymentMoney(courses.reduce((sum,c)=>sum+c.price,0));
       const voucher=await quoteVoucher(db,voucherCode.trim().toUpperCase(),saleSubtotal,userId,session,courses);
       const amount=paymentMoney(saleSubtotal-voucher.discount);
       const method=simulation?'simulation':amount===0?'free':gateway;
       if(!simulation)requireGatewayConfiguration(method);
-      const now=new Date(), expires=new Date(now.getTime()+PAYMENT_EXPIRY_MS);
+      const now=new Date(), expires=new Date(now.getTime()+await configuredPaymentExpiryMs(db));
       const summary={courses,subtotal:courses.reduce((sum,c)=>sum+c.original_price,0),sale_subtotal:saleSubtotal,voucher_code:voucherCode.trim().toUpperCase(),voucher_discount:voucher.discount,voucher_sponsor:voucher.sponsor||null,voucher_instructor_id:voucher.instructorId||null,voucher_eligible_course_ids:voucher.eligibleCourseIds||[],voucher_allocations:voucher.allocations||[],total:amount};
       const transaction={_id,transaction_id:transactionId,order_id:orderId,user_id:userId,payment_method:method,amount,currency:'VND',
         status:simulation||amount===0?'paid':'pending',fulfillment_status:'pending',request_hash:requestHash,

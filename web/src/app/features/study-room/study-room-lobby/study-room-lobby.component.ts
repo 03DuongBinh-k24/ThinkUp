@@ -13,17 +13,20 @@ import {
 import { HttpErrorResponse } from "@angular/common/http";
 import { FormsModule } from "@angular/forms";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { Subject, Subscription, debounceTime, finalize } from "rxjs";
+import { Subject, Subscription, debounceTime, finalize, interval } from "rxjs";
 import { ActivatedRoute, Router } from "@angular/router";
 import { RoomEntryRequest, RoomEntryRequestKind, StudyRoomExtras, StudyRoomIdentity } from "../services/study-room-extras";
 import { StudyRoomItem } from "../models/study-room.model";
 import { StudyRoomService } from "../services/study-room.service";
 import { PIXEL_DREAMLAND_MEDIA } from "../data/study-room-media";
+import { RoomMatchLoadingComponent } from "../components/room-match-loading/room-match-loading.component";
 import {
   LucideArrowRight,
   LucideChevronLeft,
   LucideChevronRight,
+  LucideCopy,
   LucideEye,
+  LucideEyeOff,
   LucideLogIn,
   LucidePlus,
   LucideRotateCcw,
@@ -37,6 +40,7 @@ import {
   StudyRoomCardComponent,
   StudyRoomCardViewModel,
 } from "../components/study-room-card/study-room-card.component";
+import { AuthRequiredModalComponent } from "../../../shared/components/auth-required-modal/auth-required-modal.component";
 
 interface ThemePreview {
   id: string;
@@ -51,10 +55,13 @@ interface ThemePreview {
   imports: [
     FormsModule,
     StudyRoomCardComponent,
+    RoomMatchLoadingComponent,
     LucideArrowRight,
     LucideChevronLeft,
     LucideChevronRight,
+    LucideCopy,
     LucideEye,
+    LucideEyeOff,
     LucideLogIn,
     LucidePlus,
     LucideRotateCcw,
@@ -63,6 +70,7 @@ interface ThemePreview {
     LucideTag,
     LucideX,
     LucidePlay,
+    AuthRequiredModalComponent,
   ],
   templateUrl: "./study-room-lobby.component.html",
   styleUrl: "./study-room-lobby.component.css",
@@ -153,13 +161,19 @@ export class StudyRoomLobbyComponent implements OnInit {
     { id: "night", name: "Night Owl" },
     { id: "nature", name: "Zen Garden" },
     { id: "space", name: "Space Lab" },
-    ...this.previews,
-    {
-      id: "pixel-dreamland",
-      name: "Pixel Dreamland",
-      src: PIXEL_DREAMLAND_MEDIA,
-    },
+    { id: "lofi-night", name: "Lofi Night" },
+    { id: "sky-room", name: "Sky Room" },
+    { id: "cloud-window", name: "Cloud Window" },
+    { id: "cozy-window", name: "Cozy Window" },
+    { id: "pragmata-horizon", name: "Pragmata Horizon" },
+    { id: "cherry-blossom-tree", name: "Cherry Blossom Tree" },
     { id: "genshin-impact", name: "Genshin Impact" },
+    { id: "pixel-dreamland", name: "Pixel Dreamland" },
+    { id: "pixel-skyline", name: "Pixel Skyline" },
+    { id: "pixel-quiet-night", name: "Pixel Quiet Night" },
+    { id: "thinkup-clean", name: "ThinkUp Clean" },
+    { id: "anime-room", name: "Anime Room" },
+    { id: "cozy-rainy-window", name: "Cửa sổ mưa lofi" },
   ];
   readonly failedThemeImages = signal<ReadonlySet<string>>(new Set<string>());
   readonly previewPage = signal(0);
@@ -173,7 +187,7 @@ export class StudyRoomLobbyComponent implements OnInit {
   readonly selectedTab = signal("trending");
   readonly search = signal("");
   readonly modal = signal<
-    "create" | "password" | "full" | "waitlist" | "approval" | "created" | null
+    "create" | "password" | "full" | "waitlist" | "approval" | "created" | "matching" | null
   >(null);
   private readonly requestStates = signal<Record<string, RoomEntryRequest>>({});
   readonly entryRequestState = computed(() => {
@@ -186,6 +200,15 @@ export class StudyRoomLobbyComponent implements OnInit {
   readonly activeRoom = signal<StudyRoomItem | null>(null);
   readonly rooms = this.roomsService.rooms;
   readonly submitting = signal(false);
+  readonly findingRoom = signal(false);
+  private readonly matchQuotes = [
+    "Một mục tiêu nhỏ giúp bạn bắt đầu dễ hơn.",
+    "Chọn một việc bạn muốn hoàn thành trong phiên học này.",
+    "Thử để điện thoại sang một bên trong phiên tập trung đầu tiên.",
+    "Học cùng nhau, mỗi người vẫn có thể theo nhịp của mình.",
+    "Nếu thấy bí, hãy ghi lại câu hỏi để quay lại sau.",
+  ];
+  readonly matchQuote = signal("");
   readonly loading = signal(true);
   readonly loadError = signal("");
   readonly visibleTopics = computed(() => {
@@ -253,11 +276,47 @@ export class StudyRoomLobbyComponent implements OnInit {
   newRoomName = "";
   newRoomDescription = "";
   newRoomTags = "";
-  newRoomTopic = "Lập trình";
+  newRoomTopic: string | null = "Lập trình";
+  newCustomTopic = "";
   newRoomTheme = "white";
   newRoomPassword = "";
+  readonly showNewRoomPassword = signal(false);
+  readonly passwordCopyStatus = signal("");
+  readonly authModalOpen = signal(false);
+  readonly authReturnUrl = signal("/learning/study-room");
+
+  async copyNewRoomPassword(): Promise<void> {
+    const password = this.newRoomPassword;
+    if (!password) return;
+    try {
+      await navigator.clipboard.writeText(password);
+      if (password === this.newRoomPassword) this.passwordCopyStatus.set("Đã sao chép mật khẩu.");
+    } catch {
+      if (password === this.newRoomPassword) this.passwordCopyStatus.set("Không thể sao chép mật khẩu.");
+    }
+  }
+
+  generateRoomPassword(): void {
+    this.passwordCopyStatus.set("");
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    this.newRoomPassword = Array.from(crypto.getRandomValues(new Uint8Array(8)),
+      value => alphabet[value % alphabet.length]).join("");
+    this.showNewRoomPassword.set(true);
+  }
   newRoomMode: "open" | "password" = "open";
   newRoomLimit = 20;
+  readonly roomCapacities: readonly number[] = [5, 10, 20, 30];
+  readonly createRoomPreviews = new Set([
+    "lofi-night", "sky-room", "cloud-window", "cozy-window", "pragmata-horizon",
+    "cherry-blossom-tree", "genshin-impact", "pixel-skyline", "pixel-quiet-night",
+    "thinkup-clean", "anime-room", "cozy-rainy-window",
+  ]);
+
+  addRoomTagSeparator(event: Event): void {
+    event.preventDefault();
+    const tags = this.newRoomTags.trim();
+    if (tags && !tags.endsWith(",")) this.newRoomTags = tags + ", ";
+  }
 
   constructor() {
     afterRenderEffect(() => {
@@ -288,6 +347,12 @@ export class StudyRoomLobbyComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const authRequired = this.route.snapshot.queryParamMap.get("authRequired");
+    const returnUrlParam = this.route.snapshot.queryParamMap.get("returnUrl");
+    if (authRequired === "true" && !this.auth.isAuthenticated()) {
+      this.authReturnUrl.set(returnUrlParam || "/learning/study-room");
+      this.authModalOpen.set(true);
+    }
     this.feedback = this.route.snapshot.queryParamMap.get("entryError") || "";
     this.roomCode = this.route.snapshot.queryParamMap.get("roomCode") || "";
     this.searchChanges.pipe(
@@ -302,6 +367,7 @@ export class StudyRoomLobbyComponent implements OnInit {
       error: () => { /* Keep the built-in topic choices available. */ },
     });
     this.loadRooms();
+    interval(15000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadRooms(true));
   }
 
   onSearchChange(value: string): void {
@@ -375,10 +441,12 @@ export class StudyRoomLobbyComponent implements OnInit {
     this.loadRooms();
   }
 
-  loadRooms(): void {
+  loadRooms(silent = false): void {
     this.roomsRequest?.unsubscribe();
-    this.loading.set(true);
-    this.loadError.set("");
+    if (!silent) {
+      this.loading.set(true);
+      this.loadError.set("");
+    }
     const selectedTopics = this.selectedTopics();
     const status = this.selectedTab() === "new" || this.selectedTab() === "active" || this.selectedTab() === "available"
       ? this.selectedTab() as "new" | "active" | "available"
@@ -391,10 +459,12 @@ export class StudyRoomLobbyComponent implements OnInit {
           ? this.roomsService.filterRooms(selectedTopics[0] || "", status, false)
           : this.roomsService.loadRooms({ tab: this.selectedTab() as "trending" | "new" | "active" | "available" });
     this.roomsRequest = request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.loading.set(false),
+      next: () => { if (!silent) this.loading.set(false); },
       error: () => {
-        this.loading.set(false);
-        this.loadError.set("Không thể tải danh sách phòng học.");
+        if (!silent) {
+          this.loading.set(false);
+          this.loadError.set("Không thể tải danh sách phòng học.");
+        }
       },
     });
   }
@@ -406,33 +476,46 @@ export class StudyRoomLobbyComponent implements OnInit {
     this.newRoomTheme = theme.id;
     this.openCreate();
   }
+  selectRoomTheme(themeId: string): void {
+    this.newRoomTheme = themeId;
+  }
   openCreate(): void {
     if (this.submitting()) return;
     if (!this.auth.isAuthenticated()) {
-      this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room" },
-      });
+      this.authReturnUrl.set("/learning/study-room");
+      this.authModalOpen.set(true);
       return;
     }
     this.feedback = "";
+    this.newRoomMode = "open";
+    this.newRoomPassword = "";
+    this.passwordCopyStatus.set("");
+    this.showNewRoomPassword.set(false);
     this.modal.set("create");
   }
   quickJoin(): void {
     if (this.submitting()) return;
     if (!this.auth.isAuthenticated()) {
-      void this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room" },
-      });
+      this.authReturnUrl.set("/learning/study-room");
+      this.authModalOpen.set(true);
       return;
     }
     this.feedback = "";
     this.submitting.set(true);
-    this.roomsService.randomSpawn().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.findingRoom.set(true);
+    this.matchQuote.set(this.matchQuotes[Math.floor(Math.random() * this.matchQuotes.length)]);
+    this.modal.set("matching");
+    this.roomsService.randomSpawn().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.findingRoom.set(false)),
+    ).subscribe({
       next: room => {
+        this.modal.set(null);
         this.submitting.set(false);
         this.joinRoom(room);
       },
       error: (error: HttpErrorResponse) => {
+        this.modal.set(null);
         this.submitting.set(false);
         const body = error.error as { message?: string } | null;
         this.feedback = body?.message || "Hiện chưa có phòng phù hợp và còn chỗ.";
@@ -442,9 +525,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   joinRoom(room: StudyRoomItem): void {
     if (this.submitting()) return;
     if (!this.auth.isAuthenticated()) {
-      this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room/" + room.roomId },
-      });
+      this.authReturnUrl.set("/learning/study-room/" + room.roomId);
+      this.authModalOpen.set(true);
       return;
     }
     this.feedback = "";
@@ -471,9 +553,8 @@ export class StudyRoomLobbyComponent implements OnInit {
   }
   joinByCode(): void {
     if (!this.auth.isAuthenticated()) {
-      this.router.navigate(["/auth/login"], {
-        queryParams: { returnUrl: "/learning/study-room" },
-      });
+      this.authReturnUrl.set("/learning/study-room");
+      this.authModalOpen.set(true);
       return;
     }
     if (!this.roomCode.trim()) {
@@ -526,7 +607,9 @@ export class StudyRoomLobbyComponent implements OnInit {
       },
     });
   }
-  createRoom(): void {
+  createRoom(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
     if (this.submitting()) return;
     if (this.newRoomName.trim().length < 5) {
       this.feedback = "Tên phòng cần ít nhất 5 ký tự.";
@@ -536,12 +619,13 @@ export class StudyRoomLobbyComponent implements OnInit {
       this.feedback = "Mật khẩu cần ít nhất 4 ký tự.";
       return;
     }
-    if (
-      !Number.isInteger(Number(this.newRoomLimit)) ||
-      Number(this.newRoomLimit) < 2 ||
-      Number(this.newRoomLimit) > 100
-    ) {
-      this.feedback = "Sức chứa phải từ 2 đến 100 người.";
+    if (!this.roomCapacities.includes(this.newRoomLimit)) {
+      this.feedback = "Chọn sức chứa 5, 10, 20 hoặc 30 người.";
+      return;
+    }
+    const topic = (this.newRoomTopic ?? this.newCustomTopic).trim();
+    if (!topic) {
+      this.feedback = "Vui lòng nhập tên chủ đề.";
       return;
     }
     this.feedback = "";
@@ -551,17 +635,16 @@ export class StudyRoomLobbyComponent implements OnInit {
         name: this.newRoomName.trim(),
         goal: this.newRoomDescription.trim(),
         type: this.newRoomMode === "open" ? "public" : "private",
-        capacity: Number(this.newRoomLimit),
+        capacity: this.newRoomLimit,
         tags: [
-          this.newRoomTopic,
+          topic,
           ...this.newRoomTags
             .split(",")
             .map((tag) => tag.trim())
             .filter(Boolean),
         ],
-        topic: this.newRoomTopic,
+        topic,
         roomTheme: this.newRoomTheme,
-        creatorName: this.auth.currentUser()?.full_name || "Tôi",
         password:
           this.newRoomMode === "password" ? this.newRoomPassword : undefined,
       })
@@ -573,9 +656,12 @@ export class StudyRoomLobbyComponent implements OnInit {
           this.modal.set("created");
         },
         error: (error: HttpErrorResponse) => {
-          this.feedback =
-            (error.error as { message?: string } | null)?.message ||
-            "Không thể tạo phòng. Vui lòng thử lại.";
+          const body = error.error as { message?: string; code?: string } | null;
+          this.feedback = body?.message || (error.status === 0
+            ? "Không kết nối được máy chủ. Kiểm tra server và cấu hình API rồi thử lại."
+            : error.status === 401
+              ? "Phiên đăng nhập hết hạn. Hãy đăng nhập lại rồi thử tạo phòng."
+              : `Không tạo được phòng (HTTP ${error.status}${body?.code ? `, ${body.code}` : ""}). Vui lòng thử lại.`);
         },
       });
   }

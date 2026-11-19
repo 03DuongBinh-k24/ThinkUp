@@ -1,18 +1,21 @@
-import { Injectable, signal } from '@angular/core';
+import { PayoutDecision } from '../models/business.models';
+import { Injectable, computed, signal } from '@angular/core';
 import { MOCK_ORDERS, MOCK_ORDER_SUMMARY, MOCK_PAYOUT_ADMIN_ROLE, MOCK_PAYOUTS, MOCK_VOUCHERS } from '../../../core/data/mock/business.mock';
-import { BusinessOrder, BusinessVoucher, PayoutRequest, VoucherAuditAction, VoucherAuditEntry } from '../models/business.models';
+import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
+import { BusinessOrder, BusinessVoucher, OrderStatus, PayoutRequest, VoucherAuditAction, VoucherAuditEntry } from '../models/business.models';
 import { voucherFundedAmount } from '../business-utils';
+import { BusinessStore, OrderListFilters, OrderTotals, VoucherListFilters } from './business.store';
 
 // TODO(pre-deploy): Nhớ xóa adapter demo này và thay bằng HttpClient service theo API contract đã xác minh.
+/** Adapter dữ liệu minh họa — chỉ dùng khi `environment.adminDataSource = 'mock'`. */
 @Injectable({ providedIn: 'root' })
-export class BusinessDemoService {
+export class BusinessDemoService implements BusinessStore {
   /** Tài khoản quản trị ghi vào lịch sử thao tác voucher. */
   // TODO(pre-deploy): Thay bằng tài khoản đang đăng nhập khi backend bàn giao API phiên quản trị.
   private readonly auditActor = 'admin@thinkup.vn';
 
-  readonly orderSummary = MOCK_ORDER_SUMMARY;
-  readonly orders = signal<BusinessOrder[]>(structuredClone(MOCK_ORDERS));
-  readonly vouchers = signal<BusinessVoucher[]>(structuredClone(MOCK_VOUCHERS).map(item => ({
+  private readonly orderState = signal<readonly BusinessOrder[]>(structuredClone(MOCK_ORDERS));
+  private readonly voucherState = signal<readonly BusinessVoucher[]>(structuredClone(MOCK_VOUCHERS).map(item => ({
     ...item,
     auditLog: item.auditLog.length ? item.auditLog : [{
       at: item.startsAt,
@@ -21,41 +24,92 @@ export class BusinessDemoService {
       note: `Tạo voucher ${item.code}.`
     }]
   })));
-  readonly payouts = signal<PayoutRequest[]>(structuredClone(MOCK_PAYOUTS));
-  readonly payoutRole = signal<'finance' | 'super'>(MOCK_PAYOUT_ADMIN_ROLE);
+  private readonly payoutState = signal<readonly PayoutRequest[]>(structuredClone(MOCK_PAYOUTS).map(item => ({ ...item, isDemo: true })));
 
-  saveVoucher(value: BusinessVoucher, editing: boolean): void {
+  readonly orders = this.orderState.asReadonly();
+  readonly orderTotals = computed<OrderTotals>(() => {
+    const rows = this.orderState();
+    const count = (status: OrderStatus): number => rows.filter(order => order.status === status).length;
+    return {
+      total: MOCK_ORDER_SUMMARY.total,
+      success: count('success'),
+      pending: count('pending'),
+      cancelled: count('cancelled')
+    };
+  });
+  readonly vouchers = this.voucherState.asReadonly();
+  readonly payouts = this.payoutState.asReadonly();
+  readonly payoutRole = signal<'finance' | 'super'>(MOCK_PAYOUT_ADMIN_ROLE).asReadonly();
+  readonly loading = signal(false).asReadonly();
+  readonly error = signal<string | null>(null).asReadonly();
+  readonly payoutsAreDemo = computed(() => true);
+
+  async reloadOrders(_filters?: OrderListFilters): Promise<void> {
+    // Dữ liệu demo đã nằm trong bộ nhớ; không có gì để tải lại.
+  }
+
+  async reloadVouchers(_filters?: VoucherListFilters): Promise<void> {
+    // Dữ liệu demo đã nằm trong bộ nhớ; không có gì để tải lại.
+  }
+
+  async exportOrders(format: ExportFormat, filters: OrderListFilters): Promise<void> {
+    const rows = this.orderState()
+      .filter(order => (!filters.status || order.status === filters.status))
+      .map(order => [order.id, order.transactionId ?? '', order.learner, order.email, order.courses.join('; '), order.originalAmount - order.discount, order.method, order.status, order.createdAt]);
+    await downloadTable(format, 'thinkup-don-hang', [['Mã đơn', 'Mã giao dịch', 'Học viên', 'Email', 'Khóa học', 'Thực thu', 'Phương thức', 'Trạng thái', 'Ngày tạo'], ...rows]);
+  }
+
+  async exportVouchers(format: ExportFormat, _filters: VoucherListFilters): Promise<void> {
+    const rows = this.voucherState()
+      .filter(item => !item.deleted)
+      .map(item => [item.code, item.sponsor, item.discountValue, item.minOrder, item.used, item.limit, item.startsAt, item.endsAt]);
+    await downloadTable(format, 'thinkup-voucher', [['Mã', 'Nguồn tài trợ', 'Mức giảm', 'Đơn tối thiểu', 'Đã dùng', 'Giới hạn', 'Bắt đầu', 'Kết thúc'], ...rows]);
+  }
+
+  async saveVoucher(value: BusinessVoucher, editing: boolean): Promise<void> {
     const normalized: BusinessVoucher = { ...value, fundedAmount: voucherFundedAmount(value) };
     if (!editing) {
       normalized.auditLog = [this.auditEntry('created'), ...normalized.auditLog];
-      this.vouchers.update(items => [normalized, ...items]);
+      this.voucherState.update(items => [normalized, ...items]);
       return;
     }
-    const previous = this.vouchers().find(item => item.code === normalized.code);
+    const previous = this.voucherState().find(item => item.code === normalized.code);
     const changes = previous ? this.describeVoucherChanges(previous, normalized) : [];
     normalized.auditLog = [{
       ...this.auditEntry('updated'),
       note: changes.length ? `Đã thay đổi: ${changes.join(', ')}.` : `Đã lưu lại voucher ${normalized.code} nhưng không thay đổi dữ liệu.`
     }, ...normalized.auditLog];
-    this.vouchers.update(items => items.map(item => item.code === normalized.code ? normalized : item));
+    this.voucherState.update(items => items.map(item => item.code === normalized.code ? normalized : item));
   }
 
   /** Xoá mềm voucher: giữ bản ghi để đối soát các đơn hàng đã dùng mã này. */
-  deleteVoucher(code: string): void {
-    this.vouchers.update(items => items.map(item => item.code === code
+  async deleteVoucher(code: string): Promise<void> {
+    this.voucherState.update(items => items.map(item => item.code === code
       ? { ...item, deleted: true, locked: true, auditLog: [{ ...this.auditEntry('deleted'), note: 'Voucher đã bị xoá khỏi danh sách phát hành.' }, ...item.auditLog] }
       : item));
   }
 
-  setVoucherLock(codes: string[], locked: boolean): void {
+  async setVoucherLock(codes: readonly string[], locked: boolean): Promise<void> {
     const entry = this.auditEntry(locked ? 'locked' : 'unlocked');
-    this.vouchers.update(items => items.map(item => codes.includes(item.code)
+    this.voucherState.update(items => items.map(item => codes.includes(item.code)
       ? { ...item, locked, auditLog: [{ ...entry }, ...item.auditLog] }
       : item));
   }
 
-  updatePayout(id: string, changes: Partial<PayoutRequest>): void {
-    this.payouts.update(items => items.map(item => item.id === id ? { ...item, ...changes } : item));
+  updateOrder(id: string, changes: Partial<BusinessOrder>): void {
+    this.orderState.update(items => items.map(item => item.id === id ? { ...item, ...changes } : item));
+  }
+
+  async reloadPayouts(): Promise<void> {}
+  async payoutDetail(id: string): Promise<PayoutRequest> {
+    const item = this.payouts().find(row => row.id === id);
+    if (!item) throw new Error('Không tìm thấy yêu cầu.');
+    return item;
+  }
+  async updatePayout(id: string, decision: PayoutDecision): Promise<void> {
+    const rejectionReason = decision.status === 'rejected' ? `${decision.reason}: ${decision.details}` : undefined;
+    this.payoutState.update(items => items.map(item => item.id === id
+      ? { ...item, status: decision.status, rejectionReason, isDemo: true } : item));
   }
 
   private auditEntry(action: VoucherAuditAction, note?: string): VoucherAuditEntry {

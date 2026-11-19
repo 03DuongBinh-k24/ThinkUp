@@ -39,10 +39,9 @@
 }
 .tu-landing-header__nav-link {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   height: 26px;
-  align-items: flex-start;
   border-bottom: 2px solid transparent;
   padding: 0 0 4px;
   line-height: 20px;
@@ -96,22 +95,24 @@
 .tu-landing-header button:focus-visible { outline: 3px solid #ffca42; outline-offset: 3px; }
 .tu-landing-header__mobile-controls { display: none; }
 .tu-landing-header__mobile-nav { display: none; }
-@media (max-width: 1399px) and (min-width: 1024px) {
+@media (max-width: 1399px) and (min-width: 1200px) {
   .tu-landing-header { gap: 14px; }
-  .tu-landing-header__nav { gap: clamp(10px, 1.05vw, 24px); }
+  /* Nav spacing matches the shared header (gap-6 = 24px) on laptop widths. */
+  .tu-landing-header__nav { gap: 24px; }
   .tu-landing-header__actions { gap: 12px; }
   .tu-landing-header__brand { font-size: 28.8px; }
   .tu-landing-header__login { width: 120px; padding-inline: 12px; }
   .tu-landing-header__register { min-width: 0; padding-inline: 24px; }
 }
-@media (max-width: 1150px) and (min-width: 1024px) {
+/* Below 1200px the full 24px gap no longer fits the viewport, so compress evenly. */
+@media (max-width: 1199px) and (min-width: 1024px) {
   .tu-landing-header { gap: 10px; padding-inline: 24px; }
-  .tu-landing-header__nav { gap: 9px; }
+  .tu-landing-header__nav { gap: 14px; }
   .tu-landing-header__nav-link { font-size: 16px; }
   .tu-landing-header__brand { font-size: 28.8px; }
   .tu-landing-header__actions { gap: 8px; }
-  .tu-landing-header__login { width: 120px; }
-  .tu-landing-header__register { min-width: 0; }
+  .tu-landing-header__login { width: 108px; padding-inline: 10px; }
+  .tu-landing-header__register { min-width: 0; padding-inline: 18px; }
 }
 @media(max-width: 1023px) {
   .tu-landing-header { height: 82px; min-height: 82px; padding: 0 24px; }

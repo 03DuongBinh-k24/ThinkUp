@@ -15,6 +15,7 @@ import { RoadmapService } from '../services/roadmap.service';
 import { RoadmapProgressComponent } from '../components/roadmap-progress/roadmap-progress.component';
 import { RoadmapStageIconComponent } from '../components/roadmap-stage-icon/roadmap-stage-icon.component';
 import { RoadmapStatusChipComponent } from '../components/roadmap-status-chip/roadmap-status-chip.component';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 type StageFilter = 'all' | 'completed' | 'in-progress' | 'not-started';
 
@@ -38,7 +39,8 @@ const FILTERS: Array<{ id: StageFilter; label: string }> = [
     LucideSearch,
     RoadmapProgressComponent,
     RoadmapStageIconComponent,
-    RoadmapStatusChipComponent
+    RoadmapStatusChipComponent,
+    AuthRequiredModalComponent
   ],
   templateUrl: './roadmap-detail.component.html',
   styleUrls: ['../styles/roadmap-ui.css', './roadmap-detail.component.css']
@@ -48,6 +50,8 @@ export class RoadmapDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+
+  readonly authModalOpen = signal(false);
 
   readonly roadmapId = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
   readonly filters = FILTERS;
@@ -178,9 +182,7 @@ export class RoadmapDetailComponent implements OnInit {
 
   toggleEnroll(): void {
     if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/auth/login'], {
-        queryParams: { returnUrl: `/learning/roadmap/${this.roadmapId}` }
-      });
+      this.authModalOpen.set(true);
       return;
     }
 

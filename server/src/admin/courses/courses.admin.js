@@ -28,16 +28,20 @@ function validatePage(query) {
   if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) throw FAIL('Phân trang không hợp lệ.');
   return { page, pageSize };
 }
+function reviewRevision(row) {
+  return [String(row._id), row.admin_version ?? 0, iso(row.updated_at || row.updatedAt) ?? '', statusOf(row).reviewStatus ?? ''].join('|');
+}
+
 function viewCourse(row, instructor = null) {
   const status = statusOf(row);
   const submittedAt = date(row.review_submitted_at || row.submitted_at || (row.status === 'pending_review' ? row.created_at || row.createdAt : null));
   const elapsedHours = submittedAt ? Math.max(0, (Date.now() - Number(submittedAt)) / 3600000) : null;
   return {
-    id: String(row._id), courseId: String(row.course_id ?? row.id ?? row._id),
+    id: String(row._id), courseId: String(row.course_id ?? row.id ?? row._id), courseCode: row.course_code || null,
     title: row.title || '', slug: row.slug || '', categoryId: row.category_id ?? null,
     category: row.category_name || row.category || '', level: row.level || row.difficulty || '',
     instructorId: String(row.instructor_id ?? row.instructorId ?? ''), instructorName: instructor?.full_name || instructor?.name || row.instructor_name || row.instructor?.name || '',
-    status: status.businessStatus, reviewStatus: status.reviewStatus,
+    status: status.businessStatus, reviewStatus: status.reviewStatus, reviewRevision: reviewRevision(row),
     price: Number(row.price ?? 0), originalPrice: Number(row.original_price ?? row.price ?? 0),
     rating: Number(row.rating ?? row.average_rating ?? 0), ratingCount: Number(row.total_reviews ?? row.rating_count ?? 0),
     learnerCount: Number(row.total_students ?? row.student_count ?? 0), createdAt: iso(row.created_at || row.createdAt), updatedAt: iso(row.updated_at || row.updatedAt),
@@ -78,7 +82,7 @@ function filterCourse(row, query) {
 function searchMatch(row, instructor, term) {
   if (!term) return true;
   const needle = term.toLocaleLowerCase();
-  return [row.course_id, row.id, row.title, instructor?.full_name, instructor?.name, row.instructor_name, row.instructor?.name]
+  return [row.course_code, row.course_id, row.id, row.title, instructor?.full_name, instructor?.name, row.instructor_name, row.instructor?.name]
     .some(value => String(value || '').toLocaleLowerCase().includes(needle));
 }
 
@@ -252,8 +256,15 @@ export async function decideCourseReview(id, body, req, options = {}) {
   if (decision !== 'approve' && (reason.length < 2 || reason.length > 120 || details.length < 10 || details.length > 2000)) throw FAIL('Cần ghi lý do và nội dung xử lý chi tiết.');
   const db = options.db || await getMongoDb();
   return courseTransaction(db, async session => {
-  const coll = db.collection('courses'), current = await coll.findOne(courseQuery(id), { session });
+  const coll = db.collection('courses');
+  const selected = body.expectedRevision !== undefined
+    ? { _id: ObjectId.isValid(id) ? new ObjectId(id) : id }
+    : courseQuery(id);
+  const current = await coll.findOne(selected, { session });
   if (!current) throw FAIL('Không tìm thấy khóa học.', 404, 'COURSE_NOT_FOUND');
+  if (body.expectedRevision !== undefined && body.expectedRevision !== reviewRevision(current)) {
+    throw FAIL('Phiên bản khóa học đã thay đổi. Tải lại hồ sơ trước khi xử lý.', 409, 'COURSE_REVIEW_CONFLICT');
+  }
   const { reviewStatus } = statusOf(current);
   if (!['pending_review', 'in_review', 'changes_requested'].includes(reviewStatus)) throw FAIL('Khóa học không ở trạng thái có thể thẩm định.', 409, 'COURSE_REVIEW_STATE_CONFLICT');
   const now = options.now || new Date(), nextReview = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'changes_requested';
@@ -290,7 +301,7 @@ export function createAdminCoursesRouter(express, requireAdmin) {
   router.get('/approvals/:id', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await getAdminCourse(req.params.id)); } catch (error) { next(error); } });
   router.post('/approvals/:id/claim', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await claimCourseReview(req.params.id, req)); } catch (error) { next(error); } });
   router.post('/approvals/:id/decision', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await decideCourseReview(req.params.id, req.body || {}, req)); } catch (error) { next(error); } });
-  router.get('/export', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { const pageSize = 100; const first = await listAdminCourses({ ...req.query, page: 1, pageSize }); const all = [...first.items]; for (let page = 2; page <= Math.ceil(first.pagination.total / pageSize); page++) all.push(...(await listAdminCourses({ ...req.query, page, pageSize })).items); const columns = ['Mã khóa học','Tên khóa học','Danh mục','Giảng viên','Học viên','Giá','Đánh giá','Trạng thái','Ngày tạo']; const values = all.map(x => [x.courseId,x.title,x.category,x.instructorName,x.learnerCount,x.price,x.rating,x.status,x.createdAt]); const safe = value => String(value ?? '').replace(/^[=+\-@\t\r]/, "'$&"); if (req.query.format === 'excel') { const xml = value => safe(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); const body = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Courses"><Table>${[columns,...values].map(row => `<Row>${row.map(value => `<Cell><Data ss:Type="String">${xml(value)}</Data></Cell>`).join('')}</Row>`).join('')}</Table></Worksheet></Workbook>`; res.type('application/vnd.ms-excel; charset=utf-8').attachment('thinkup-courses.xls').send(body); return; } const csv = '\uFEFF' + [columns,...values].map(row => row.map(x => `"${safe(x).replaceAll('"','""')}"`).join(',')).join('\r\n'); res.type('text/csv; charset=utf-8').attachment('thinkup-courses.csv').send(csv); } catch (error) { next(error); } });
+  router.get('/export', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { const pageSize = 100; const first = await listAdminCourses({ ...req.query, page: 1, pageSize }); const all = [...first.items]; for (let page = 2; page <= Math.ceil(first.pagination.total / pageSize); page++) all.push(...(await listAdminCourses({ ...req.query, page, pageSize })).items); const columns = ['Mã khóa học','Tên khóa học','Danh mục','Giảng viên','Học viên','Giá','Đánh giá','Trạng thái','Ngày tạo']; const values = all.map(x => [x.courseCode || x.courseId,x.title,x.category,x.instructorName,x.learnerCount,x.price,x.rating,x.status,x.createdAt]); const safe = value => String(value ?? '').replace(/^[=+\-@\t\r]/, "'$&"); if (req.query.format === 'excel') { const xml = value => safe(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); const body = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Courses"><Table>${[columns,...values].map(row => `<Row>${row.map(value => `<Cell><Data ss:Type="String">${xml(value)}</Data></Cell>`).join('')}</Row>`).join('')}</Table></Worksheet></Workbook>`; res.type('application/vnd.ms-excel; charset=utf-8').attachment('thinkup-courses.xls').send(body); return; } const csv = '\uFEFF' + [columns,...values].map(row => row.map(x => `"${safe(x).replaceAll('"','""')}"`).join(',')).join('\r\n'); res.type('text/csv; charset=utf-8').attachment('thinkup-courses.csv').send(csv); } catch (error) { next(error); } });
   router.get('/', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await listAdminCourses(req.query)); } catch (error) { next(error); } });
   router.get('/:id', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await getAdminCourse(req.params.id)); } catch (error) { next(error); } });
   router.get('/:id/learners', createAdminRoleMiddleware(['SA', 'CA']), async (req, res, next) => { try { res.json(await listAdminCourseLearners(req.params.id, req.query)); } catch (error) { next(error); } });

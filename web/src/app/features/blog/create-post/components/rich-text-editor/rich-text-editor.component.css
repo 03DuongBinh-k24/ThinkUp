@@ -102,6 +102,7 @@ button {
 .rich-content a {
   color: #1e64ef;
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .rich-content img {

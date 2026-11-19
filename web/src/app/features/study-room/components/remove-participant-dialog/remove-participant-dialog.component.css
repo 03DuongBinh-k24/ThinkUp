@@ -1,0 +1,35 @@
+.remove-participant-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--rim);
+  border-radius: var(--room-frame-radius, 16px);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 16px 48px #101c3845;
+  overflow-wrap: anywhere;
+}
+.remove-participant-dialog::backdrop { background: #10183050; }
+.remove-participant-dialog h2 { margin: 0; font-size: 1.125rem; font-weight: 650; }
+.remove-participant-dialog p { margin: 8px 0 16px; color: var(--muted); }
+.remove-participant-dialog footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.remove-participant-dialog button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--room-control-radius, 8px);
+  color: var(--ink);
+  cursor: pointer;
+}
+.remove-participant-dialog .confirm-removal {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  font-weight: 650;
+}
+.remove-participant-dialog button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

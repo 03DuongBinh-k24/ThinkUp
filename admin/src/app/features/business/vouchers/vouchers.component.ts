@@ -1,24 +1,33 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AdminPageSizeService } from '../../../core/services/admin-page-size.service';
 import { BusinessVoucher, VoucherAdvancedFilter, VoucherAudience, VoucherStatus, VoucherWeeklyDay, countVoucherFilter, emptyVoucherFilter } from '../models/business.models';
-import { BusinessDemoService } from '../services/business-demo.service';
+import { BUSINESS_STORE } from '../services/business.store';
 import { copyText, money, paginationItems, voucherFundedAmount, voucherMaxDiscountPerUse, voucherSpentAmount } from '../business-utils';
-import { ExportFormat, downloadTable } from '../../../shared/utils/export-formats';
+import { ExportFormat } from '../../../shared/utils/export-formats';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { DateTimePickerComponent } from '../../../shared/components/date-time-picker/date-time-picker.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
+import { ColumnFilterComponent, ColumnFilterValue, DATE_SORT_OPTIONS, NUMBER_SORT_OPTIONS, TEXT_SORT_OPTIONS, compareSortValues } from '../../../shared/components/column-filter/column-filter.component';
+import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
+import { SelectionAction } from '../../../shared/components/selection-bar/selection-bar.component';
 
 type VoucherSort = 'created-desc' | 'created-asc' | 'starts-desc' | 'starts-asc' | 'ends-asc' | 'ends-desc';
 
-@Component({ selector: 'app-vouchers', standalone: true, imports: [FormsModule, DateTimePickerComponent, CustomSelectComponent, ExportMenuComponent, SearchFieldComponent], templateUrl: './vouchers.component.html', styleUrl: './vouchers.component.css' })
+type VoucherColumn = 'sponsor' | 'discount' | 'audience' | 'validity' | 'status';
+
+@Component({ selector: 'app-vouchers', standalone: true, imports: [FormsModule, DateTimePickerComponent, CustomSelectComponent, ExportMenuComponent, SearchFieldComponent, ColumnFilterComponent, BulkSelectionDialogComponent], templateUrl: './vouchers.component.html', styleUrl: './vouchers.component.css' })
 export class VouchersComponent {
-  private readonly data = inject(BusinessDemoService);
+  private readonly data = inject(BUSINESS_STORE);
   private backdropPointerStarted = false;
   readonly money = money;
   readonly voucherMaxDiscountPerUse = voucherMaxDiscountPerUse;
   readonly voucherSpentAmount = voucherSpentAmount;
   readonly vouchers = this.data.vouchers;
+  readonly loading = this.data.loading;
+  readonly loadError = this.data.error;
   readonly search = signal('');
   readonly sponsor = signal('');
   readonly status = signal<VoucherStatus | 'hidden' | ''>('');
@@ -96,6 +105,40 @@ export class VouchersComponent {
     { value: 'expired', label: 'Đã hết hạn' }
   ];
   readonly selectedCodes = signal<string[]>([]);
+  /** Bộ lọc nhiều lựa chọn trên tiêu đề cột; rỗng nghĩa là không lọc cột đó. */
+  readonly sponsorColumnFilters = signal<string[]>([]);
+  readonly discountColumnFilters = signal<string[]>([]);
+  readonly audienceColumnFilters = signal<string[]>([]);
+  readonly validityColumnFilters = signal<string[]>([]);
+  readonly statusColumnFilters = signal<string[]>([]);
+  /** Mức giảm tối đa mỗi lượt, dùng để chia voucher thành các khoảng lọc. */
+  private readonly discountBuckets: ReadonlyArray<{ key: string; label: string; min: number; max: number }> = [
+    { key: 'under-50k', label: 'Dưới 50.000 ₫', min: 0, max: 50_000 },
+    { key: '50k-100k', label: 'Từ 50.000 ₫ đến 100.000 ₫', min: 50_000, max: 100_000 },
+    { key: '100k-200k', label: 'Từ 100.000 ₫ đến 200.000 ₫', min: 100_000, max: 200_000 },
+    { key: 'from-200k', label: 'Từ 200.000 ₫ trở lên', min: 200_000, max: Number.POSITIVE_INFINITY }
+  ];
+  readonly sponsorColumnValues: ColumnFilterValue[] = [
+    { value: 'thinkup', label: 'ThinkUp' },
+    { value: 'instructor', label: 'Giảng viên' }
+  ];
+  readonly discountColumnValues: ColumnFilterValue[] = this.discountBuckets.map(bucket => ({ value: bucket.key, label: bucket.label }));
+  readonly audienceColumnValues: ColumnFilterValue[] = [
+    { value: 'all', label: 'Tất cả học viên' },
+    { value: 'new_learner', label: 'Học viên mới' }
+  ];
+  readonly validityColumnValues = computed<ColumnFilterValue[]>(() =>
+    this.distinctValues(this.vouchers().filter(item => !item.deleted).map(item => this.validityLabel(item))));
+  readonly statusColumnValues: ColumnFilterValue[] = [
+    { value: 'active', label: 'Đang phát hành' },
+    { value: 'scheduled', label: 'Chưa bắt đầu' },
+    { value: 'locked', label: 'Tạm khóa' },
+    { value: 'expired', label: 'Đã hết hạn' }
+  ];
+  readonly textSorts = TEXT_SORT_OPTIONS;
+  readonly numberSorts = NUMBER_SORT_OPTIONS;
+  readonly dateSorts = DATE_SORT_OPTIONS;
+  readonly columnSort = signal<{ column: VoucherColumn; direction: 'asc' | 'desc' } | null>(null);
   /** Số voucher đang được chọn. */
   readonly selectedCount = computed(() => this.selectedCodes().length);
   /** Các voucher đang được chọn. */
@@ -111,9 +154,21 @@ export class VouchersComponent {
   readonly canLockSelected = computed(() => this.selectedItems().some(item => ['active', 'scheduled'].includes(this.statusOf(item))));
   /** Voucher đã chọn có thể mở khóa không. */
   readonly canUnlockSelected = computed(() => this.selectedItems().some(item => item.locked && this.statusOf(item) !== 'expired'));
+  readonly selectionListOpen = signal(false);
+  readonly selectionDialogItems = computed<BulkSelectionItem[]>(() => this.selectedItems()
+    .map(item => ({ id: item.code, label: item.code, detail: `${this.sponsorLabel(item)} · ${this.discount(item)}` })));
+  readonly selectionCandidates = computed<BulkSelectionItem[]>(() => this.filtered()
+    .filter(item => !this.selectedCodes().includes(item.code))
+    .map(item => ({ id: item.code, label: item.code, detail: `${this.sponsorLabel(item)} · ${this.discount(item)}` })));
+  readonly selectionDialogActions = computed<readonly SelectionAction[]>(() => [
+    { key: 'lock', label: 'Tạm khóa voucher' },
+    { key: 'unlock', label: 'Mở khóa voucher' }
+  ]);
   readonly page = signal(1);
 
-  readonly pageSize = 8;
+  /** Số dòng mỗi trang đọc từ tham số hệ thống `orders_per_page` (mặc định 8). */
+  private readonly pageSizeService = inject(AdminPageSizeService);
+  get pageSize(): number { return this.pageSizeService.pageSize(); }
   readonly pages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
   readonly pagination = computed(() => paginationItems(this.page(), this.pages()));
   readonly visible = computed(() => this.filtered().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize));
@@ -132,8 +187,14 @@ export class VouchersComponent {
       return (!query || item.code.toLocaleUpperCase('vi-VN').includes(query))
         && (!this.sponsor() || item.sponsor === this.sponsor())
         && this.matchesStatus(item, this.status())
-        && this.matchesAdvanced(item);
+        && this.matchesAdvanced(item)
+        && this.matchesColumnFilters(item);
     });
+    const columnSort = this.columnSort();
+    if (columnSort) {
+      const factor = columnSort.direction === 'asc' ? 1 : -1;
+      return [...items].sort((a, b) => compareSortValues(this.sortValue(a, columnSort.column), this.sortValue(b, columnSort.column)) * factor);
+    }
     return [...items].sort((left, right) => this.compareVouchers(left, right, this.sort()));
   });
   readonly active = computed(() => this.vouchers().filter(item => !item.deleted && this.statusOf(item) === 'active').length);
@@ -188,8 +249,13 @@ export class VouchersComponent {
     return item ? voucherMaxDiscountPerUse(item) : 0;
   });
 
+  constructor() {
+    void this.data.reloadVouchers();
+  }
+
   statusOf(item: BusinessVoucher): VoucherStatus {
-    if (item.endsAt <= this.localNow() || item.used >= item.limit) return 'expired';
+    // `limit = 0` là voucher không giới hạn lượt (API trả `usage_limit: null`).
+    if ((item.limit > 0 && item.used >= item.limit) || (item.endsAt && item.endsAt <= this.localNow())) return 'expired';
     if (item.locked) return 'locked';
     if (item.startsAt > this.localNow()) return 'scheduled';
     return 'active';
@@ -226,8 +292,69 @@ export class VouchersComponent {
     if (!this.inDateRange(item.endsAt, filter.endsFrom, filter.endsTo)) return false;
     return this.matchesStatus(item, filter.status);
   }
-  openAdvancedFilter(): void {
-    this.filterDraft.set({ ...this.advancedFilter() });
+  /** Bộ lọc cột áp dụng song song (AND) với thanh lọc và bộ lọc chi tiết. */
+  private matchesColumnFilters(item: BusinessVoucher): boolean {
+    const sponsor = this.sponsorColumnFilters();
+    if (sponsor.length && !sponsor.includes(item.sponsor)) return false;
+    const discount = this.discountColumnFilters();
+    if (discount.length) {
+      const value = voucherMaxDiscountPerUse(item);
+      const inBucket = this.discountBuckets.some(bucket => discount.includes(bucket.key) && value >= bucket.min && value < bucket.max);
+      if (!inBucket) return false;
+    }
+    const audience = this.audienceColumnFilters();
+    if (audience.length && !audience.includes(item.audience)) return false;
+    const validity = this.validityColumnFilters();
+    if (validity.length && !validity.includes(this.validityLabel(item))) return false;
+    const status = this.statusColumnFilters();
+    if (status.length && !status.includes(this.statusOf(item))) return false;
+    return true;
+  }
+  /** Áp dụng lựa chọn từ bộ lọc tiêu đề cột, bỏ chọn hàng loạt và về trang đầu. */
+  setColumnFilter(kind: 'sponsor' | 'discount' | 'audience' | 'validity' | 'status', values: string[]): void {
+    if (kind === 'sponsor') this.sponsorColumnFilters.set(values);
+    else if (kind === 'discount') this.discountColumnFilters.set(values);
+    else if (kind === 'audience') this.audienceColumnFilters.set(values);
+    else if (kind === 'validity') this.validityColumnFilters.set(values);
+    else this.statusColumnFilters.set(values);
+    this.selectedCodes.set([]);
+    this.page.set(1);
+  }
+  sortFor(key: VoucherColumn): string {
+    const current = this.columnSort();
+    return current?.column === key ? current.direction : '';
+  }
+  updateColumnSort(key: VoucherColumn, direction: string): void {
+    const current = this.columnSort();
+    this.columnSort.set(!direction || (current?.column === key && current.direction === direction)
+      ? null
+      : { column: key, direction: direction as 'asc' | 'desc' });
+    this.page.set(1);
+  }
+  private sortValue(item: BusinessVoucher, column: VoucherColumn): string | number {
+    switch (column) {
+      case 'sponsor': return item.sponsor === 'thinkup' ? 'ThinkUp' : 'Giảng viên';
+      case 'discount': return voucherMaxDiscountPerUse(item);
+      case 'audience': return this.audienceLabel(item.audience);
+      case 'validity': return Date.parse(item.startsAt);
+      case 'status': return this.statusLabel(this.statusOf(item));
+    }
+  }
+  private clearColumnFilters(): void {
+    this.sponsorColumnFilters.set([]);
+    this.discountColumnFilters.set([]);
+    this.audienceColumnFilters.set([]);
+    this.validityColumnFilters.set([]);
+    this.statusColumnFilters.set([]);
+  }
+  private distinctValues(values: string[]): ColumnFilterValue[] {
+    return [...new Set(values)].map(value => ({ value, label: value }));
+  }
+  /** Thời hạn voucher dạng "Từ ngày - Đến ngày" theo đúng hiển thị trong cột. */
+  validityLabel(item: BusinessVoucher): string {
+    return `${this.date(item.startsAt)} - ${this.date(item.endsAt)}`;
+  }
+  openAdvancedFilter(): void {    this.filterDraft.set({ ...this.advancedFilter() });
     this.advancedOpen.set(true);
   }
   closeAdvancedFilter(): void { this.advancedOpen.set(false); }
@@ -242,6 +369,8 @@ export class VouchersComponent {
     this.advancedFilter.set(emptyVoucherFilter());
     this.advancedOpen.set(false);
     this.selectedCodes.set([]);
+    this.clearColumnFilters();
+    this.columnSort.set(null);
     this.page.set(1);
   }
   patchFilter<K extends keyof VoucherAdvancedFilter>(key: K, value: VoucherAdvancedFilter[K]): void {
@@ -294,6 +423,7 @@ export class VouchersComponent {
   setSort(value: string): void {
     if (!this.sortOptions.some(option => option.value === value)) return;
     this.sort.set(value as VoucherSort);
+    this.columnSort.set(null);
     this.page.set(1);
   }
 
@@ -320,6 +450,12 @@ export class VouchersComponent {
     else this.toast.set('Không thể sao chép mã. Vui lòng thử lại.');
   }
   toggle(code: string, checked: boolean): void { this.selectedCodes.update(items => checked ? [...items, code] : items.filter(value => value !== code)); }
+  setSelectionCodes(ids: string[]): void { this.selectedCodes.set(ids); }
+  runSelectionAction(key: string, ids?: readonly string[]): void {
+    this.selectionListOpen.set(false);
+    if (ids) this.selectedCodes.set([...ids]);
+    this.requestBulkLock(key === 'lock');
+  }
   /**
    * Nút −/✓ của thanh thao tác: tick hết toàn bộ voucher, bấm lần nữa thì bỏ tick hết.
    * Ô tick ở tiêu đề bảng dùng chung hàm này nên hai nơi luôn nhất quán.
@@ -455,11 +591,11 @@ export class VouchersComponent {
     const duplicate = this.vouchers().some(item => item.code === normalized.code && (!this.editing() || item.code !== value.code));
     if (!/^[A-Z0-9-]+$/.test(normalized.code) || duplicate) { this.error.set('Mã voucher phải viết hoa, không dấu, không khoảng trắng và không trùng mã đã có.'); return; }
     if (normalized.discountValue <= 0 || (normalized.discountType === 'percent' && (normalized.discountValue > 100 || !normalized.maxDiscount || normalized.maxDiscount <= 0)) || normalized.minOrder <= 0 || normalized.minCourseCount < 1 || normalized.limit < 1 || normalized.perAccount < 1) { this.error.set('Điền mức giảm và các giới hạn hợp lệ. Giá trị tiền phải lớn hơn 0.'); return; }
-    if (normalized.sponsor === 'instructor' && !normalized.instructor?.trim()) { this.error.set('Chọn giảng viên tài trợ trước khi thiết lập phạm vi áp dụng.'); return; }
+    if (normalized.sponsor === 'instructor' && !(normalized.instructorId || normalized.instructor)?.trim()) { this.error.set('Chọn giảng viên tài trợ trước khi thiết lập phạm vi áp dụng.'); return; }
     if (normalized.sponsor === 'instructor' && !['instructor', 'courses'].includes(normalized.scope)) { this.error.set('Phạm vi phải thuộc các khóa học của giảng viên tài trợ.'); return; }
-    if (normalized.sponsor === 'instructor' && normalized.scope === 'courses' && !normalized.scopeTarget?.trim()) { this.error.set('Chỉ định ít nhất một khóa học thuộc giảng viên tài trợ.'); return; }
+    if (normalized.sponsor === 'instructor' && normalized.scope === 'courses' && !normalized.scopeTarget?.trim() && !normalized.scopeTargetIds?.length) { this.error.set('Chỉ định ít nhất một khóa học thuộc giảng viên tài trợ.'); return; }
     if (normalized.scope === 'rating' && (!normalized.scopeTarget || Number(normalized.scopeTarget) < 1 || Number(normalized.scopeTarget) > 5)) { this.error.set('Nhập số sao từ 1 đến 5.'); return; }
-    if (normalized.sponsor === 'thinkup' && ['instructor', 'courses'].includes(normalized.scope) && !normalized.scopeTarget?.trim()) { this.error.set('Chỉ định đối tượng áp dụng.'); return; }
+    if (normalized.sponsor === 'thinkup' && ['instructor', 'courses'].includes(normalized.scope) && !normalized.scopeTarget?.trim() && !normalized.scopeTargetIds?.length) { this.error.set('Chỉ định đối tượng áp dụng.'); return; }
     if (!normalized.startsAt || !normalized.endsAt || normalized.endsAt <= normalized.startsAt) { this.error.set('Thời gian kết thúc phải sau thời gian bắt đầu.'); return; }
     if (normalized.weeklyLimitEnabled) {
       const selectedDays = (normalized.weeklySchedule ?? []).filter(day => day.enabled);
@@ -469,8 +605,20 @@ export class VouchersComponent {
     }
     if (this.editing() && normalized.limit < normalized.used) { this.error.set('Tổng lượt phát hành không được thấp hơn số lượt đã dùng.'); return; }
     const isEditing = this.editing();
-    this.data.saveVoucher(normalized, isEditing); this.form.set(null); this.editOriginal.set(null);
-    this.toast.set(isEditing ? 'Đã cập nhật voucher.' : `Đã tạo voucher ${normalized.code}.`);
+    this.error.set('');
+    void this.persistVoucher(normalized, isEditing);
+  }
+
+  private async persistVoucher(value: BusinessVoucher, isEditing: boolean): Promise<void> {
+    try {
+      await this.data.saveVoucher(value, isEditing);
+      this.form.set(null);
+      this.editOriginal.set(null);
+      this.toast.set(isEditing ? 'Đã cập nhật voucher.' : `Đã tạo voucher ${value.code}.`);
+    } catch (error) {
+      // Lỗi nằm trong hộp thoại để người dùng sửa và gửi lại mà không mất dữ liệu đã nhập.
+      this.error.set(apiErrorMessage(error, 'Không lưu được voucher. Vui lòng kiểm tra dữ liệu và thử lại.'));
+    }
   }
   requestLock(code: string, locked: boolean): void {
     const item = this.vouchers().find(entry => entry.code === code);
@@ -491,9 +639,17 @@ export class VouchersComponent {
   }
   confirmDelete(): void {
     const item = this.deleting(); if (!item) return;
-    this.data.deleteVoucher(item.code);
-    this.closeDelete();
-    this.toast.set(`Đã xoá voucher ${item.code} khỏi danh sách phát hành.`);
+    void this.persistDelete(item);
+  }
+
+  private async persistDelete(item: BusinessVoucher): Promise<void> {
+    try {
+      await this.data.deleteVoucher(item.code);
+      this.closeDelete();
+      this.toast.set(`Đã xoá voucher ${item.code} khỏi danh sách phát hành.`);
+    } catch (error) {
+      this.error.set(apiErrorMessage(error, 'Không xoá được voucher. Voucher đã dùng cho đơn hàng thì không thể xoá.'));
+    }
   }
   /** Voucher đã dùng cho đơn hàng thì không được xoá vì cần đối soát. */
   canDelete(item: BusinessVoucher): boolean {
@@ -516,12 +672,25 @@ export class VouchersComponent {
     const { items, locked } = action;
     const eligible = items.filter(item => locked
       ? this.statusOf(item) !== 'expired'
-      : (item.locked && item.endsAt > this.localNow() && item.used < item.limit));
-    this.data.setVoucherLock(eligible.map(item => item.code), locked);
-    this.toast.set(eligible.length
-      ? `Đã ${locked ? 'tạm khóa' : 'mở khóa'} ${eligible.length} voucher${eligible.length > 1 ? '' : ' ' + eligible[0].code}.`
-      : `Voucher đã hết hạn hoặc hết lượt nên không thể mở khóa.`);
-    this.selectedCodes.set([]); this.confirm.set(null);
+      : (item.locked && item.endsAt > this.localNow() && (item.limit === 0 || item.used < item.limit)));
+    if (!eligible.length) {
+      this.toast.set('Voucher đã hết hạn hoặc hết lượt nên không thể mở khóa.');
+      this.confirm.set(null);
+      return;
+    }
+    void this.persistLock(eligible.map(item => item.code), locked);
+  }
+
+  private async persistLock(codes: string[], locked: boolean): Promise<void> {
+    try {
+      await this.data.setVoucherLock(codes, locked);
+      this.toast.set(`Đã ${locked ? 'tạm khóa' : 'mở khóa'} ${codes.length} voucher.`);
+      this.selectedCodes.set([]);
+      this.confirm.set(null);
+    } catch (error) {
+      this.error.set(apiErrorMessage(error, 'Không đổi được trạng thái voucher. Vui lòng tải lại và thử lại.'));
+      this.confirm.set(null);
+    }
   }
   confirmLead(action: { items: BusinessVoucher[]; locked: boolean }): string {
     const count = action.items.length;
@@ -548,5 +717,30 @@ export class VouchersComponent {
     if (locked) return 'Tạm khóa';
     return item.startsAt > this.localNow() ? 'Chưa bắt đầu' : 'Đang phát hành';
   }
-  export(format: ExportFormat): void { downloadTable(format, 'thinkup-voucher', [['Mã', 'Nguồn tài trợ', 'Mức giảm', 'Đơn tối thiểu', 'Đã dùng', 'Giới hạn', 'Bắt đầu', 'Kết thúc', 'Trạng thái'], ...this.filtered().map(item => [item.code, item.sponsor === 'thinkup' ? 'ThinkUp' : item.instructor ?? 'Giảng viên', this.discount(item), item.minOrder, item.used, item.limit, item.startsAt, item.endsAt, this.statusLabel(this.statusOf(item))])]); }
+  async export(format: ExportFormat): Promise<void> {
+    const filter = this.advancedFilter();
+    try {
+      await this.data.exportVouchers(format, {
+        q: this.search().trim() || undefined,
+        sponsor: this.sponsor() || undefined,
+        status: this.status() || undefined,
+        scope: filter.scope || undefined,
+        discountType: filter.discountType || undefined,
+        discountMin: filter.discountMin,
+        discountMax: filter.discountMax,
+        minOrderMin: filter.minOrderMin,
+        minOrderMax: filter.minOrderMax,
+        usedMin: filter.usedMin,
+        usedMax: filter.usedMax,
+        remainingMin: filter.remainingMin,
+        remainingMax: filter.remainingMax,
+        startsFrom: filter.startsFrom || undefined,
+        startsTo: filter.startsTo || undefined,
+        endsFrom: filter.endsFrom || undefined,
+        endsTo: filter.endsTo || undefined
+      });
+    } catch (error) {
+      this.error.set(apiErrorMessage(error, 'Không xuất được danh sách voucher. Vui lòng thử lại.'));
+    }
+  }
 }

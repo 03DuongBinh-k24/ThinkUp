@@ -26,6 +26,13 @@ export interface AdminNotificationTransport {
 }
 
 const DEMO_STORAGE_PREFIX = 'thinkup_admin_notifications_demo:';
+const DEMO_NOTIFICATION_ITEMS: AdminNotificationItem[] = [
+  { id: 'demo-notification-1', type: 'order', severity: 'info', title: 'Đơn hàng mới cần kiểm tra', message: 'Có đơn hàng ThinkUp Original mới vừa được ghi nhận.', href: '/business/orders', eventKey: 'demo-order-1', createdAt: '2026-11-18T08:15:00.000Z', createdAtLocal: '18/11/2026 15:15', readAt: null },
+  { id: 'demo-notification-2', type: 'ticket', severity: 'warning', title: 'Ticket hỗ trợ sắp quá hạn SLA', message: 'Ticket TK-2026-1039 cần được xử lý trong hôm nay.', href: '/support/tickets/TK-2026-1039', eventKey: 'demo-ticket-1', createdAt: '2026-11-18T07:40:00.000Z', createdAtLocal: '18/11/2026 14:40', readAt: null },
+  { id: 'demo-notification-3', type: 'payout', severity: 'info', title: 'Có yêu cầu chi trả mới', message: 'Một yêu cầu chi trả giảng viên đang chờ duyệt.', href: '/business/payouts', eventKey: 'demo-payout-1', createdAt: '2026-11-18T06:30:00.000Z', createdAtLocal: '18/11/2026 13:30', readAt: null },
+  { id: 'demo-notification-4', type: 'course', severity: 'info', title: 'Khóa học chờ phê duyệt', message: 'Có khóa học mới cần kiểm tra nội dung trước khi xuất bản.', href: '/courses', eventKey: 'demo-course-1', createdAt: '2026-11-17T09:20:00.000Z', createdAtLocal: '17/11/2026 16:20', readAt: null },
+  { id: 'demo-notification-5', type: 'security', severity: 'critical', title: 'Cảnh báo đăng nhập bất thường', message: 'Phát hiện một phiên đăng nhập mới cần xác minh.', href: '/system/security', eventKey: 'demo-security-1', createdAt: '2026-11-17T04:10:00.000Z', createdAtLocal: '17/11/2026 11:10', readAt: null }
+];
 
 export function createHttpNotificationTransport(http: HttpClient): AdminNotificationTransport {
   const baseUrl = `${environment.apiUrl}/admin/notifications`;
@@ -140,7 +147,10 @@ function readDemoItems(adminId: string): AdminNotificationItem[] {
   try {
     const raw = localStorage.getItem(demoKey(adminId));
     const parsed = raw ? JSON.parse(raw) : null;
-    return Array.isArray(parsed?.items) ? parsed.items : [];
+    if (Array.isArray(parsed?.items) && parsed.items.length > 0) return parsed.items;
+    const seeded = DEMO_NOTIFICATION_ITEMS.map((item) => ({ ...item }));
+    writeDemoItems(adminId, seeded);
+    return seeded;
   } catch {
     return [];
   }

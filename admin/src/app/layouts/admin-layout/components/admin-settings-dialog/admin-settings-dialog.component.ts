@@ -143,6 +143,7 @@ export class AdminSettingsDialogComponent implements OnDestroy {
     { value: 'weekly', label: 'Hàng tuần (07:00 sáng Thứ Hai)' },
     { value: 'monthly', label: 'Hàng tháng (07:00 sáng ngày 1)' }
   ];
+  readonly reportFrequencyLabel = computed(() => this.reportFrequencyOptions.find(option => option.value === this.notifications().emailReportFrequency)?.label ?? 'Chưa chọn');
   readonly reportFormatOptions: { value: AdminReportFormat; label: string }[] = [
     { value: 'xlsx', label: 'Tệp Excel (.xlsx)' },
     { value: 'pdf', label: 'Tệp PDF (.pdf)' }

@@ -43,7 +43,7 @@ const COPY: Record<AccountDialogKind, KindCopy> = {
     toastTitle: 'Đã mở khóa tài khoản thành công'
   },
   reset: {
-    title: 'Đặt lại xác thực 2 lớp (Reset 2FA)',
+    title: 'Đặt lại xác thực 2 lớp',
     subtitle: 'Xóa cấu hình xác thực cũ theo yêu cầu của nhân sự.',
     noticeKind: 'warning',
     noticeTitle: 'Bắt buộc thiết lập lại 2FA',
@@ -100,7 +100,10 @@ export class AccountDialogComponent {
     this.serverError.set(false);
   }
 
-  submit(): void {
+  readonly submitting = signal(false);
+
+  async submit(): Promise<void> {
+    if (this.submitting()) return;
     this.reasonError.set('');
     this.otpError.set('');
     if (this.reasonCount() < 10) {
@@ -111,18 +114,15 @@ export class AccountDialogComponent {
       this.otpError.set('Vui lòng nhập đủ mã xác thực 6 số.');
       return;
     }
-    // TODO(pre-deploy): Nhớ xóa mô phỏng lỗi máy chủ bằng OTP 000000 khi nối API thật.
-    if (this.otp() === SERVER_FAILURE_OTP) {
-      this.serverError.set(true);
-      return;
-    }
 
     const person = this.person();
     const reason = this.reason().trim();
     const otp = this.otp();
+    this.submitting.set(true);
     const result = this.kind() === 'reset'
-      ? this.store.resetTwoFactor(person.id, reason, otp)
-      : this.store.setAccountLocked(person.id, this.kind() === 'lock', reason, otp);
+      ? await this.store.resetTwoFactor(person.id, reason, otp)
+      : await this.store.setAccountLocked(person.id, this.kind() === 'lock', reason, otp);
+    this.submitting.set(false);
     if (!result.ok) {
       if (result.message.startsWith('Mã xác thực')) this.otpError.set(result.message);
       else if (result.message.startsWith('Lý do')) this.reasonError.set(result.message);

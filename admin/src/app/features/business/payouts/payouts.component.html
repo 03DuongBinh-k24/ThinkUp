@@ -6,7 +6,14 @@
     </div>
   </header>
 
+  <!-- TODO(pre-deploy): Nhớ thay số liệu và quyền demo bằng API rút tiền cùng RBAC thật; backend xử lý duyệt, từ chối, hoàn ví, email và giải ngân. -->
   @if (error() && !dialog()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (payoutsAreDemo()) {
+    <p class="notice" role="status">Chế độ minh họa. Các thao tác duyệt và từ chối chỉ áp dụng trong phiên này.</p>
+  }
+  @if (loadingPayouts()) { <p role="status">Đang tải yêu cầu chi trả…</p> }
+  @if (loadFailure()) { <p role="alert">{{ loadFailure() }} <button type="button" (click)="reload()">Thử lại</button></p> }
+  @if (!payoutsAreDemo()) { <p class="notice">Thống kê chỉ tính các yêu cầu thực. Các yêu cầu minh họa được đánh dấu trong bảng.</p> }
   <section class="kpi-grid" aria-label="Tổng quan rút tiền">
     <button class="kpi" type="button" [class.selected]="status() === 'pending'" (click)="filterFromKpi('pending')">
       <span class="kpi-icon pending" aria-hidden="true">
@@ -50,7 +57,7 @@
   </section>
 
   <section class="filters-toolbar" aria-label="Tìm kiếm và lọc yêu cầu rút tiền">
-    <app-search-field label="Tìm theo mã yêu cầu, tên giảng viên, email hoặc số tài khoản" placeholder="Mã yêu cầu, giảng viên, email, số tài khoản..." [value]="search()" (valueChange)="search.set($event)"></app-search-field>
+    <app-search-field label="Tìm theo mã yêu cầu, tên giảng viên hoặc email" placeholder="Tìm theo mã yêu cầu, tên giảng viên, email..." [value]="search()" (valueChange)="search.set($event)"></app-search-field>
     <div class="filter-select business-dropdown-field">
       <span id="payout-status-label">Trạng thái</span>
       <app-custom-select controlId="payout-status" labelId="payout-status-label" [value]="status()" [options]="statusOptions" (valueChange)="setStatus($any($event))"></app-custom-select>
@@ -125,32 +132,46 @@
   </section>
 
   <section class="panel requests-panel" aria-label="Danh sách yêu cầu rút tiền">
+    @if (selectedIds().length) {
+      <div class="selection-slot">
+        <app-selection-bar
+          [count]="selectedIds().length"
+          noun="yêu cầu rút tiền"
+          [actions]="selectionActions()"
+          (action)="runSelectionAction($event)"
+          (inspect)="selectionListOpen.set(true)"
+          (clear)="clearSelection()"
+        />
+      </div>
+    }
     <div class="table-wrap">
       <table>
         <thead><tr>
+          <th scope="col" class="select-cell"><input type="checkbox" [checked]="allVisibleSelected()" [indeterminate]="someVisibleSelected()" aria-label="Chọn tất cả yêu cầu rút tiền trên trang" (change)="toggleSelectAll()"></th>
           <th scope="col">Mã yêu cầu</th>
-          <th scope="col">Giảng viên</th>
-          <th scope="col" class="number">Số tiền yêu cầu</th>
+          <th scope="col"><app-column-filter label="Giảng viên" [values]="instructorValues()" [selected]="instructorColumnFilters()" (changed)="setColumnFilter('instructor', $event)" [sorts]="textSorts" [sort]="sortFor('instructor')" (sortChange)="updateColumnSort('instructor', $event)" /></th>
+          <th scope="col" class="number"><app-column-filter label="Số tiền yêu cầu" [values]="amountValues" [selected]="amountColumnFilters()" (changed)="setColumnFilter('amount', $event)" [sorts]="numberSorts" [sort]="sortFor('amount')" (sortChange)="updateColumnSort('amount', $event)" /></th>
           <th scope="col" class="number">Thuế TNCN</th>
           <th scope="col" class="number">Thực chi</th>
-          <th scope="col">Thông tin ngân hàng</th>
-          <th scope="col" [attr.aria-sort]="sort() === 'newest' ? 'descending' : 'ascending'"><img class="sort-icon" src="/assets/business/orders/arrow-down.svg" alt="" [class.oldest-first]="sort() === 'oldest'"> Ngày gửi</th>
-          <th scope="col">Trạng thái</th>
+          <th scope="col"><app-column-filter label="Thông tin ngân hàng" [values]="bankValues()" [selected]="bankColumnFilters()" (changed)="setColumnFilter('bank', $event)" [sorts]="textSorts" [sort]="sortFor('bank')" (sortChange)="updateColumnSort('bank', $event)" /></th>
+          <th scope="col" [attr.aria-sort]="sort() === 'newest' ? 'descending' : 'ascending'"><img class="sort-icon" src="/assets/business/orders/arrow-down.svg" alt="" [class.oldest-first]="sort() === 'oldest'"> <app-column-filter label="Ngày gửi" [values]="dateValues()" [selected]="dateColumnFilters()" (changed)="setColumnFilter('date', $event)" [sorts]="dateSorts" [sort]="sortFor('date')" (sortChange)="updateColumnSort('date', $event)" /></th>
+          <th scope="col"><app-column-filter label="Trạng thái" [values]="statusColumnValues" [selected]="statusColumnFilters()" (changed)="setColumnFilter('status', $event)" [sorts]="textSorts" [sort]="sortFor('status')" (sortChange)="updateColumnSort('status', $event)" /></th>
         </tr></thead>
         <tbody>
           @for (item of visible(); track item.id) {
-            <tr [class.row-menu-open]="openActionMenuId() === item.id">
-              <td class="request-id request-code-cell" [class.menu-open]="openActionMenuId() === item.id"><div class="request-code-main"><span>{{ item.id }}</span><div class="row-actions request-id-actions" (click)="$event.stopPropagation()"><button class="row-actions-trigger" type="button" [attr.aria-label]="'Mở menu thao tác cho yêu cầu ' + item.id" aria-haspopup="menu" [attr.aria-expanded]="openActionMenuId() === item.id" data-tooltip="Xem các thao tác với yêu cầu rút tiền" (click)="toggleRowActions(item.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg></button>@if (openActionMenuId() === item.id) {<div class="row-actions-menu" role="menu">@if (item.status === 'pending') {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'review')"><img src="/assets/business/orders/circle-check.svg" alt=""><span>Duyệt yêu cầu</span></button><button class="danger" type="button" role="menuitem" (click)="closeRowActions(); open(item, 'reject')"><img src="/assets/business/orders/circle-x.svg" alt=""><span>Từ chối yêu cầu</span></button>} @else {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'details')"><img src="/assets/dashboard/4-icon-eye-outlined.svg" alt=""><span>Xem chi tiết</span></button>}</div>}</div></div></td>
+            <tr [class.row-menu-open]="openActionMenuId() === item.id" [class.row-selected]="selection().has(item.id)">
+              <td class="select-cell"><input type="checkbox" [checked]="selection().has(item.id)" [attr.aria-label]="'Chọn yêu cầu rút tiền ' + item.id" (change)="toggleSelect(item.id, $any($event.target).checked)"></td>
+              <td class="request-id request-code-cell" [class.menu-open]="openActionMenuId() === item.id"><div class="request-code-main"><span>{{ item.id }} @if (item.isDemo || payoutsAreDemo()) { <small>Minh họa</small> }</span><div class="row-actions request-id-actions" (click)="$event.stopPropagation()"><button class="row-actions-trigger" type="button" [attr.aria-label]="'Mở menu thao tác cho yêu cầu ' + item.id" aria-haspopup="menu" [attr.aria-expanded]="openActionMenuId() === item.id" data-tooltip="Xem các thao tác với yêu cầu rút tiền" (click)="toggleRowActions(item.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg></button>@if (openActionMenuId() === item.id) {<div class="row-actions-menu" role="menu">@if (item.status === 'pending') {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'review')"><img src="/assets/business/orders/circle-check.svg" alt=""><span>Duyệt yêu cầu</span></button><button class="danger" type="button" role="menuitem" (click)="closeRowActions(); open(item, 'reject')"><img src="/assets/business/orders/circle-x.svg" alt=""><span>Từ chối yêu cầu</span></button>} @else {<button type="button" role="menuitem" (click)="closeRowActions(); open(item, 'details')"><img src="/assets/dashboard/4-icon-eye-outlined.svg" alt=""><span>Xem chi tiết</span></button>}</div>}</div></div></td>
               <td><div class="stack"><strong>{{ item.instructor }}</strong><span class="muted email" [title]="item.email">{{ item.email }}</span></div></td>
               <td class="number amount" [class.high-value]="item.amount >= 20000000">{{ money(item.amount) }}</td>
-              <td class="number">{{ money(item.taxAmount) }}</td>
-              <td class="number net-amount">{{ money(item.amount - item.taxAmount) }}</td>
+              <td class="number">{{ item.taxAmount === null ? '—' : money(item.taxAmount) }}</td>
+              <td class="number net-amount">{{ net(item) === null ? '—' : money(net(item)!) }}</td>
               <td><div class="stack bank"><span>{{ item.bank }}</span><span class="muted">{{ item.accountNumber }}</span></div></td>
               <td><div class="stack date"><span>{{ datePart(item.submittedAt) }}</span><span class="muted">{{ timePart(item.submittedAt) }}</span></div></td>
               <td><span [class]="'status ' + item.status">{{ statusLabel(item.status) }}</span></td>
             </tr>
           }
-          @if (!filtered().length) { <tr><td colspan="8" class="empty">Không có yêu cầu rút tiền phù hợp.</td></tr> }
+          @if (!filtered().length) { <tr><td colspan="9" class="empty">Không có yêu cầu rút tiền phù hợp.</td></tr> }
         </tbody>
       </table>
     </div>
@@ -178,7 +199,7 @@
       <div class="dialog-body">
         <div class="request-summary">
           <div class="request-identity">
-            <span class="request-code">{{ item.id }}</span>
+            <span class="request-code">{{ item.id }} @if (item.isDemo || payoutsAreDemo()) { <small>Minh họa</small> }</span>
             <button class="copy-id" type="button" [attr.aria-label]="'Sao chép mã yêu cầu ' + item.id" [title]="copiedId() ? 'Đã sao chép' : 'Sao chép mã yêu cầu'" (click)="copyRequestId(item.id)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
             </button>
@@ -225,18 +246,17 @@
           </section>
           <section class="payout-info-card" aria-labelledby="reconciliation-title">
             <h3 id="reconciliation-title">Đối soát khoản rút</h3>
-            <dl><div><dt>Số tiền yêu cầu</dt><dd>{{ money(item.amount) }}</dd></div><div><dt>Thuế TNCN dự kiến</dt><dd>{{ money(item.taxAmount) }}</dd></div><div class="net-row"><dt>Thực nhận dự kiến</dt><dd>{{ money(item.amount - item.taxAmount) }}</dd></div></dl>
+            <dl><div><dt>Số tiền yêu cầu</dt><dd>{{ money(item.amount) }}</dd></div><div><dt>Thuế TNCN dự kiến</dt><dd>{{ item.taxAmount === null ? '—' : money(item.taxAmount) }}</dd></div><div class="net-row"><dt>Thực nhận dự kiến</dt><dd>{{ net(item) === null ? '—' : money(net(item)!) }}</dd></div></dl>
           </section>
           <section class="payout-info-card" aria-labelledby="bank-details-title">
             <h3 id="bank-details-title">Tài khoản nhận tiền</h3>
             <dl><div><dt>Ngân hàng</dt><dd>{{ item.bank }}</dd></div><div><dt>Số tài khoản</dt><dd>{{ item.accountNumber }}</dd></div><div><dt>Chủ tài khoản</dt><dd>{{ item.accountName }}</dd></div></dl>
           </section>
         </div>
-        @if (item.bankReference || item.rejectionReason || item.evidenceId) {
+        @if (item.bankReference || item.rejectionReason) {
           <div class="payout-history">
             @if (item.bankReference) { <p><strong>Mã đối soát ngân hàng:</strong> {{ item.bankReference }}</p> }
             @if (item.rejectionReason) { <p><strong>Lý do từ chối:</strong> {{ item.rejectionReason }}</p> }
-            @if (item.evidenceId) { <button class="button" type="button" (click)="downloadEvidence(item.evidenceId)">Tải minh chứng</button> }
           </div>
         }
         @if (dialog() === 'review') {
@@ -298,5 +318,50 @@
     </div>
   }
 }
+@if (selectionListOpen()) {
+  <app-bulk-selection-dialog
+    noun="yêu cầu rút tiền"
+    [items]="selectionItems()"
+    [candidates]="selectionCandidates()"
+    [actions]="selectionActions()"
+    note="Duyệt và từ chối hàng loạt chỉ áp dụng cho yêu cầu đang chờ duyệt; yêu cầu chưa đủ điều kiện sẽ được bỏ qua."
+    (closed)="selectionListOpen.set(false)"
+    (selectionChange)="setSelectionIds($event)"
+    (action)="runSelectionAction($event.key, $event.ids)"
+  />
+}
+
+@if (bulkRejectIds(); as ids) {
+  <div class="reject-backdrop" (click)="cancelBulkReject()">
+    <section class="reject-dialog" role="dialog" aria-modal="true" aria-labelledby="bulk-reject-dialog-title" (click)="$event.stopPropagation()">
+      <div class="reject-head">
+        <h2 id="bulk-reject-dialog-title">Từ chối {{ ids.length }} yêu cầu đã chọn</h2>
+        <button class="dialog-close" type="button" aria-label="Đóng popup từ chối hàng loạt" (click)="cancelBulkReject()"><svg lucideX aria-hidden="true"></svg></button>
+      </div>
+      <div class="reject-body">
+        <div class="reject-summary">
+          <div><span>Yêu cầu chờ duyệt</span><strong>{{ bulkRejectTargets().length }} / {{ ids.length }}</strong></div>
+          <div><span>Tổng tiền tạm giữ</span><strong>{{ money(bulkRejectAmount()) }}</strong></div>
+          <div><span>Hình thức</span><strong>Từ chối hàng loạt</strong></div>
+        </div>
+        <div class="reject-field business-float-field">
+          <label id="bulk-reject-reason-label">Lý do từ chối <span aria-hidden="true">*</span></label>
+          <app-custom-select controlId="bulk-reject-reason" labelId="bulk-reject-reason-label" placeholder="Chọn lý do từ chối" [value]="bulkRejectReason()" [options]="rejectReasonOptions" (valueChange)="bulkRejectReason.set($any($event))"></app-custom-select>
+        </div>
+        <div class="reject-field">
+          <label for="bulk-reject-details">Giải thích chi tiết <span aria-hidden="true">*</span></label>
+          <textarea id="bulk-reject-details" required [ngModel]="bulkRejectDetails()" (ngModelChange)="bulkRejectDetails.set($event)" placeholder="Mô tả rõ lý do để các giảng viên có thể khắc phục"></textarea>
+        </div>
+        <p class="refund-note"><span class="refund-note-icon" aria-hidden="true"><svg lucideInfo></svg></span> Số tiền đang tạm giữ của từng yêu cầu sẽ được hoàn về ví khả dụng sau khi từ chối. Yêu cầu không ở trạng thái chờ duyệt sẽ được bỏ qua.</p>
+        @if (bulkRejectError()) { <p class="error" role="alert">{{ bulkRejectError() }}</p> }
+      </div>
+      <div class="reject-footer">
+        <button class="button" type="button" (click)="cancelBulkReject()">Hủy</button>
+        <button class="button danger" type="button" [disabled]="!bulkRejectTargets().length" (click)="confirmBulkReject()">Xác nhận từ chối {{ bulkRejectTargets().length }} yêu cầu</button>
+      </div>
+    </section>
+  </div>
+}
+
 @if (toast()) { <div class="toast" role="status" (click)="toast.set('')">{{ toast() }}</div> }
 @if (copiedId()) { <div class="copy-toast" role="status">Đã sao chép mã yêu cầu</div> }

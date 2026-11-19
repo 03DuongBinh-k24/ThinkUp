@@ -48,11 +48,7 @@ export class AppComponent {
       // or cancel its pending requests when cart state changes.
       untracked(() => {
         commerce.clearAccountCart();
-        if (!id) {
-          const guestCart = commerce.refreshCart().subscribe({ error: () => undefined });
-          onCleanup(() => guestCart.unsubscribe());
-          return;
-        }
+        if (!id) return;
         const cartSync = commerce.mergeGuestCart().subscribe({
           error: () => toast.showToast({ type: 'warning', message: 'Chưa đồng bộ được giỏ hàng. Dữ liệu khách vẫn được giữ để thử lại.' }),
         });

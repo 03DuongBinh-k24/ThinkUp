@@ -18,6 +18,7 @@ import {
 import {
   getSystemSettings,
   updateSystemSettings,
+  resetSystemSettings,
 } from './settings.admin.js';
 
 export function createAdminSystemRouter(express, adminApiAuth) {
@@ -224,6 +225,18 @@ export function createAdminSystemRouter(express, adminApiAuth) {
       res.json(result);
     } catch (err) {
       res.status(err.status || 500).json({ message: err.message, code: err.code || 'UPDATE_SETTINGS_ERROR' });
+    }
+  });
+
+  router.post('/settings/reset', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      const result = await resetSystemSettings(db, {
+        saActor: getActor(req), saOtp: req.body.saOtp, client_context: extractContext(req),
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(err.status || 500).json({ message: err.message, code: err.code || 'RESET_SETTINGS_ERROR' });
     }
   });
 

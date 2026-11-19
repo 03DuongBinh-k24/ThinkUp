@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CommonModule } from '@angular/common';
@@ -7,6 +7,8 @@ import { Course } from '../../../../core/models/course.model';
 import { FavoritesService } from '../../../../core/services/favorites.service';
 import { CommerceService } from '../../../../core/services/commerce.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
+import { AuthService } from '../../../../core/services/auth.service';
+import { AuthRequiredModalComponent } from '../../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 /**
  * Thẻ khóa học dùng riêng trong trang hồ sơ giảng viên (Figma 5095-16772):
@@ -15,7 +17,7 @@ import { InstructorTriggerDirective } from '../../../../shared/directives/instru
 @Component({
   selector: 'app-instructor-course-card',
   standalone: true,
-  imports: [CommonModule, InstructorTriggerDirective],
+  imports: [CommonModule, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './instructor-course-card.component.html',
   styleUrl: './instructor-course-card.component.css',
 })
@@ -24,10 +26,13 @@ export class InstructorCourseCardComponent {
 
   private router = inject(Router);
   private readonly toast = inject(ToastService);
-  private savingWishlist = false;
-  private savingCart = false;
+  savingWishlist = false;
+  savingCart = false;
   private favoritesService = inject(FavoritesService);
   private commerceService = inject(CommerceService);
+  private readonly auth = inject(AuthService);
+  readonly isLoggedIn = computed(() => this.auth.isAuthenticated());
+  readonly authModalOpen = signal(false);
 
   private readonly coverColors: Record<string, string> = {
     'vuejs-3': '#0D3D2E',
@@ -92,6 +97,10 @@ export class InstructorCourseCardComponent {
   }
 
   toggleWishlist(): void {
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (this.savingWishlist) return;
     this.savingWishlist = true;
     this.favoritesService.toggleFavorite(this.course).pipe(finalize(() => this.savingWishlist = false)).subscribe({
@@ -100,6 +109,10 @@ export class InstructorCourseCardComponent {
   }
 
   addToCart(): void {
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (this.isInCart()) {
       this.router.navigate(['/main/cart']);
       return;

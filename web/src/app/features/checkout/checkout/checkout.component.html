@@ -937,4 +937,10 @@
       </div>
     </div>
   }
+
+  <app-auth-required-modal
+    [open]="authModalOpen()"
+    returnUrl="/main/checkout"
+    (closed)="authModalOpen.set(false)"
+  />
 </main>

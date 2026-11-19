@@ -349,8 +349,8 @@ export async function resolveRefund(actor, complaintId, payload = {}, options = 
   }
 
   const isFullRefund = payload.refundType !== 'partial';
-  const refundAmount = isFullRefund ? doc.amount : Number(payload.refundAmount || doc.amount);
-  if (!refundAmount || refundAmount <= 0) throw bad('Số tiền hoàn trả không hợp lệ.', 400, 'AMOUNT_INVALID');
+  const refundAmount = isFullRefund ? doc.amount : Number(payload.refundAmount);
+  if (!Number.isSafeInteger(refundAmount) || refundAmount <= 0 || refundAmount > doc.amount) throw bad('Số tiền hoàn trả không hợp lệ.', 400, 'AMOUNT_INVALID');
 
   // Tính toán thu hồi dòng tiền: 70% ví GV, 30% sàn (AC-29)
   const instructorDeduction = Math.round(refundAmount * 0.7);

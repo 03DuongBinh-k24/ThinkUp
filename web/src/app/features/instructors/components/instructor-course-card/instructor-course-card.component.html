@@ -17,6 +17,8 @@
     <button
       type="button"
       class="icard__fav"
+      [disabled]="savingWishlist"
+      [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
       [class.icard__fav--active]="isWishlisted()"
       [attr.aria-label]="isWishlisted() ? 'Bỏ khỏi khóa học yêu thích' : 'Thêm vào khóa học yêu thích'"
       (click)="$event.stopPropagation(); toggleWishlist()"
@@ -51,10 +53,14 @@
     <h3 class="icard__title" [title]="course.title">{{ course.title }}</h3>
     <div class="icard__row icard__instructor-row">
       <span class="icard__instructor">
-        <svg class="icard__icon icard__icon--muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
+        @if (course.instructorProfile?.avatar) {
+          <img class="icard__instructor-avatar" [src]="course.instructorProfile?.avatar" [alt]="course.instructor" loading="lazy" />
+        } @else {
+          <svg class="icard__icon icard__icon--muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        }
         <span class="icard__instructor-name" [appInstructorTrigger]="instructorRef">{{ course.instructor }}</span>
       </span>
       @if (course.level) {
@@ -105,6 +111,10 @@
       <button
         type="button"
         class="icard__action"
+        [disabled]="savingCart || (isLoggedIn() && isInCart())"
+        [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng giỏ hàng'"
+        [class.opacity-50]="savingCart || (isLoggedIn() && isInCart())"
+        [class.cursor-not-allowed]="savingCart || (isLoggedIn() && isInCart())"
         [class.icard__action--active]="isInCart()"
         [attr.aria-label]="isInCart() ? 'Đã có trong giỏ hàng' : 'Thêm vào giỏ hàng'"
         (click)="$event.stopPropagation(); addToCart()"
@@ -129,3 +139,14 @@
     </div>
   </div>
 </article>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="'/main/courses/' + course.id"
+  (closed)="authModalOpen.set(false)"
+/>
+
+
+
+
+

@@ -71,6 +71,12 @@
   fill: currentColor;
 }
 
+.course-cover__fav:disabled,
+.course-card__cart:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .course-cover__glyph {
   font-size: 24px;
   line-height: 1;
@@ -132,6 +138,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.course-card__instructor-avatar {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .course-card__level {

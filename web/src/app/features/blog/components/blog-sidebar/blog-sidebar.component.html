@@ -26,7 +26,7 @@
         @for (post of related(); track post.id) {
           <a [routerLink]="['/main/blog/article', post.id]" class="flex gap-3 group min-w-0">
             <div class="relative w-[80px] h-[64px] shrink-0 rounded-md overflow-hidden bg-[#F8FAFD]">
-              <img loading="lazy" [src]="post.coverImage" [attr.srcset]="post.coverImage | blogImageSrcset:false:true" sizes="80px" [alt]="post.title" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <img loading="lazy" [src]="post.coverImage" [attr.srcset]="post.coverImage | blogImageSrcset:false:true" sizes="80px" [alt]="post.title" (error)="$any($event.target).src='/assets/blog/no-image.png'; $any($event.target).removeAttribute('srcset')" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
             </div>
             <div class="flex flex-col flex-1 min-w-0 gap-1.5 justify-center">
               <h4 class="text-[14px] font-medium text-[#0F1B2D] leading-[19.25px] line-clamp-2 group-hover:text-[#1E64EF]">{{ post.title }}</h4>
@@ -49,7 +49,7 @@
             <a [routerLink]="['/main/blog/article', post.id]" class="flex gap-3 group min-w-0">
               <div class="relative w-14 h-14 shrink-0">
                 <div class="w-full h-full rounded-xl overflow-hidden">
-                  <img loading="lazy" [src]="post.coverImage" [attr.srcset]="post.coverImage | blogImageSrcset" sizes="56px" [alt]="post.title" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <img loading="lazy" [src]="post.coverImage" [attr.srcset]="post.coverImage | blogImageSrcset" sizes="56px" [alt]="post.title" (error)="$any($event.target).src='/assets/blog/no-image.png'; $any($event.target).removeAttribute('srcset')" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <span class="absolute -top-1 -left-1 w-5 h-5 bg-[#1E64EF] rounded-full flex items-center justify-center border border-white shadow-sm text-[10px] font-bold text-white">{{ index + 1 }}</span>
               </div>

@@ -207,6 +207,14 @@
   gap: 6px;
 }
 
+.icard__instructor-avatar {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .icard__instructor-name {
   min-width: 0;
   overflow: hidden;

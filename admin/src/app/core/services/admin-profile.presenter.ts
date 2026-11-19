@@ -6,7 +6,11 @@ import type { AdminProfileResponse, AdminUser } from '../models/admin-user.model
  */
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: 'Quản trị viên'
+  admin: 'Super Admin',
+  super_admin: 'Super Admin',
+  finance: 'Finance Admin',
+  academic: 'Academic Admin',
+  support: 'Support Admin'
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -19,7 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function roleLabel(role: string | null | undefined): string {
   const key = (role || '').trim().toLowerCase();
-  return ROLE_LABELS[key] ?? 'Quản trị viên';
+  return ROLE_LABELS[key] ?? 'Super Admin';
 }
 
 export function statusLabel(status: string | null | undefined): string | null {
@@ -137,19 +141,19 @@ export function buildProfileSections(
 ): AdminProfileSection[] {
   const timezone = options.timezone || 'Asia/Ho_Chi_Minh';
   const id = (user.id || '').trim();
-  const status = statusLabel(user.status);
+  const status = statusLabel(user.status) || (options.isDemo ? 'Đang hoạt động' : null);
   const twoFactor = user.is2faEnabled === true
     ? 'Đã bật'
     : user.is2faEnabled === false ? 'Chưa bật' : NO_DATA;
-  const createdAt = formatDateTime(user.createdAt, timezone);
-  const lastLoginAt = formatDateTime(user.lastLogin?.at, timezone);
+  const createdAt = formatDateTime(user.createdAt, timezone) || (options.isDemo ? '15/01/2024 09:30' : '');
+  const lastLoginAt = formatDateTime(user.lastLogin?.at, timezone) || (options.isDemo ? '12/10/2026 14:30' : '');
   const lastLoginMeta = [
     user.lastLogin?.ipMasked,
     describeDevice(user.lastLogin?.userAgent)
   ].filter(Boolean).join(' · ');
   const sessionDevice = describeDevice(user.currentSession?.userAgent);
-  const sessionIp = user.currentSession?.ipMasked || '';
-  const password = passwordValidityLabel(user.passwordExpiresAt);
+  const sessionIp = user.currentSession?.ipMasked || (options.isDemo ? '14.233.***.17' : '');
+  const password = passwordValidityLabel(user.passwordExpiresAt) || (options.isDemo ? 'Còn 62 ngày' : '');
 
   return [
     {
@@ -159,14 +163,14 @@ export function buildProfileSections(
         {
           key: 'organization',
           label: 'Mã tổ chức (Organization ID)',
-          value: NOT_PROVIDED,
-          unavailable: true
+          value: options.isDemo ? 'THINKUP-VN-001' : NOT_PROVIDED,
+          unavailable: !options.isDemo
         },
         {
           key: 'sso',
           label: 'SSO / Directory ID',
-          value: 'Chưa liên kết / Chưa được hỗ trợ',
-          unavailable: true
+          value: options.isDemo ? 'AAD-THINKUP-ADMIN-001' : 'Chưa liên kết / Chưa được hỗ trợ',
+          unavailable: !options.isDemo
         },
         {
           key: 'system-id',
@@ -175,7 +179,7 @@ export function buildProfileSections(
           mono: true,
           copyable: !!id,
           unavailable: !id,
-          note: options.isDemo && id ? 'Mã định danh của phiên demo cục bộ.' : undefined
+          note: undefined
         },
         {
           key: 'status',
@@ -197,9 +201,9 @@ export function buildProfileSections(
         {
           key: 'permissions',
           label: 'Phạm vi thẩm quyền',
-          value: NOT_PROVIDED,
-          unavailable: true,
-          note: 'Hệ thống chưa cung cấp danh sách quyền chi tiết.'
+          value: options.isDemo ? 'Toàn hệ thống · Tất cả tổ chức' : NOT_PROVIDED,
+          unavailable: !options.isDemo,
+          note: options.isDemo ? 'Quản lý người dùng, nội dung, khóa học, tài chính và cấu hình hệ thống.' : 'Hệ thống chưa cung cấp danh sách quyền chi tiết.'
         }
       ],
       note: 'Thông tin vai trò và quyền hạn được quản lý bởi hệ thống. Bạn không thể chỉnh sửa tại đây.'
@@ -223,8 +227,8 @@ export function buildProfileSections(
         {
           key: 'granted',
           label: 'Ngày cấp quyền quản trị',
-          value: NOT_PROVIDED,
-          unavailable: true
+          value: options.isDemo ? '15/01/2024 09:30' : NOT_PROVIDED,
+          unavailable: !options.isDemo
         },
         {
           key: 'last-login',
@@ -273,6 +277,7 @@ export function mapAdminProfile(response: AdminProfileResponse, current: AdminUs
 
   return {
     ...current,
+    accessRole: response.admin.role,
     id: admin.id || current.id,
     email: admin.email?.trim() || current.email,
     fullName: admin.full_name?.trim() || current.fullName,

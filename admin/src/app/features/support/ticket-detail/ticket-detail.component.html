@@ -1,3 +1,5 @@
+@if (data.loadError()) { <p role="alert">{{ data.loadError() }} <button type="button" (click)="data.open('tickets', ticketId)">Thử lại</button></p> }
+@if (data.loading()) { <p role="status">Đang tải dữ liệu…</p> }
 <main [attr.inert]="activeModal() ? '' : null" class="support-page ticket-detail-page">
   <nav class="breadcrumb" aria-label="Đường dẫn trang">
     <a class="breadcrumb-parent" routerLink="/support/tickets">Quản lý hỗ trợ</a><span class="breadcrumb-separator">/</span>

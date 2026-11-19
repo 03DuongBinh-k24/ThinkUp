@@ -5,11 +5,12 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { RoadmapMetaItem } from '../models/roadmap.model';
 import { RoadmapService } from '../services/roadmap.service';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 @Component({
   selector: 'app-roadmap-list',
   standalone: true,
-  imports: [RouterLink, LucideArrowRight, LucideBookmark, LucideCircleCheck],
+  imports: [RouterLink, LucideArrowRight, LucideBookmark, LucideCircleCheck, AuthRequiredModalComponent],
   templateUrl: './roadmap-list.component.html',
   styleUrls: ['../styles/roadmap-ui.css', './roadmap-list.component.css']
 })
@@ -23,6 +24,7 @@ export class RoadmapListComponent implements OnInit {
   readonly enrolledRoadmaps = this.roadmapService.enrolledRoadmaps;
   readonly loading = this.roadmapService.loading;
   readonly error = signal<string | null>(null);
+  readonly authModalOpen = signal(false);
   private readonly enrollingId = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -46,7 +48,7 @@ export class RoadmapListComponent implements OnInit {
 
   toggleEnroll(roadmap: RoadmapMetaItem): void {
     if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/learning/roadmap' } });
+      this.authModalOpen.set(true);
       return;
     }
 

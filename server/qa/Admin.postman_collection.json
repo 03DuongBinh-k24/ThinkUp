@@ -1,0 +1,366 @@
+{
+  "info": {
+    "name": "ThinkUp Admin • nghiệm thu local",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Dùng phiên Super Admin QA qua biến accessToken. Chạy tuần tự từng thư mục. Nếu gián đoạn, dùng yêu cầu xóa cùng postId hoặc faqId của lượt chạy trước khi chạy lại."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "type": "string",
+        "value": "{{accessToken}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Dashboard • API đọc (giao diện dùng mock)",
+      "item": [
+        {
+          "name": "Tổng quan",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/dashboard/overview"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nội dung • bài nháp của lượt chạy",
+      "item": [
+        {
+          "name": "Tạo bản nháp",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/content/posts",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{runTag}}\",\n  \"slug\": \"{{runTag}}\",\n  \"category\": \"Backend\",\n  \"status\": \"draft\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('postId');",
+                  "pm.collectionVariables.set('runTag', 'QA-' + pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('postId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa tóm tắt",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/content/posts/{{postId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"excerpt\": \"QA updated\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('postId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xóa bản nháp",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/content/posts/{{postId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('postId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) pm.collectionVariables.unset('postId');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Khóa học • chỉ đọc danh sách chờ duyệt; kiểm tra ghi bằng fixture MongoDB",
+      "item": [
+        {
+          "name": "Danh sách hồ sơ",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/courses/approvals?page=1&pageSize=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Hỗ trợ • FAQ của lượt chạy",
+      "item": [
+        {
+          "name": "Kiểm tra câu hỏi trống",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/support/faqs",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"\",\n  \"answer\": \"QA\",\n  \"categoryCode\": \"other\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo FAQ ẩn ở cuối danh sách",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/support/faqs",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"{{runTag}}\",\n  \"answer\": \"QA original\",\n  \"categoryCode\": \"other\",\n  \"status\": \"hidden\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('faqId');",
+                  "pm.collectionVariables.set('runTag', 'QA-' + pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('faqId', pm.response.json().data.item._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật FAQ",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/support/faqs/{{faqId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"QA updated\",\n  \"status\": \"published\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('faqId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đọc sau khi sửa",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/support/faqs?q={{runTag}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('faqId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trạng thái đã lưu', () => { const item = pm.response.json().data.items.find(x => x.id === pm.collectionVariables.get('faqId')); pm.expect(item.answer).to.eql('QA updated'); pm.expect(item.status).to.eql('published'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xóa FAQ vừa tạo",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/support/faqs/{{faqId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('faqId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Kiểm tra đã xóa",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/support/faqs?q={{runTag}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('faqId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('FAQ đã xóa', () => pm.expect(pm.response.json().data.items.some(x => x.id === pm.collectionVariables.get('faqId'))).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

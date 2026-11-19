@@ -22,6 +22,8 @@ export class InstructorService {
           experience: dto.experiences, expertise: dto.specializations, socials: { github: dto.github, linkedin: dto.linkedin, website: dto.website },
         };
         return { instructor, courses: response.data.courses.map(course => {
+          const ratingCount = Number(course.total_reviews) || 0;
+          const rating = ratingCount > 0 ? Number(course.rating) || 0 : 0;
           const rawTags = course.tags || course.tag_names || [];
           const normalizedTags = Array.isArray(rawTags)
             ? rawTags.map((t: any) => (typeof t === 'string' ? t : t?.name || t?.title || '')).filter(Boolean)
@@ -29,7 +31,17 @@ export class InstructorService {
           return {
             id: course.course_id || course.id, courseId: course.course_id, slug: course.slug, title: course.title,
             instructor: course.instructor?.name ?? dto.full_name, instructorId: course.instructor?.id ?? dto.id,
-            rating: course.rating, ratingCount: course.total_reviews, studentsCount: course.total_students,
+            instructorProfile: {
+              id: course.instructor?.id ?? dto.id,
+              name: course.instructor?.name ?? dto.full_name,
+              title: course.instructor?.title ?? '',
+              bio: '',
+              rating: 0,
+              studentsCount: 0,
+              coursesCount: 0,
+              avatar: course.instructor?.avatar_url ?? dto.avatar_url ?? '',
+            },
+            rating, ratingCount, studentsCount: course.total_students,
             originalPrice: course.price?.original ?? 0, salePrice: course.price?.sale ?? 0, thumbnailUrl: course.thumbnail_url,
             duration: course.duration_formatted, durationMinutes: course.duration_minutes, badge: course.badge,
             level: formatCourseLevel(course.level),
@@ -51,7 +63,7 @@ interface InstructorDto {
   github?: string; linkedin?: string; website?: string;
 }
 interface CourseDto {
-  id: string; course_id: string; slug?: string; title: string; instructor?: { id: string; name: string };
+  id: string; course_id: string; slug?: string; title: string; instructor?: { id: string; name: string; avatar_url?: string; title?: string };
   rating: number; total_reviews: number; total_students: number; price: { original: number; sale: number };
   thumbnail_url?: string; duration_formatted?: string; duration_minutes?: number; badge?: string; level?: string;
   tags?: any[]; tag_names?: string[];

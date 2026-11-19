@@ -8,9 +8,9 @@ import { BlogService } from '../services/blog.service';
 import { BlogCategory, BlogPost } from '../models/blog.model';
 import { BlogIconComponent } from '../components/blog-icon/blog-icon.component';
 import { BlogSidebarComponent } from '../components/blog-sidebar/blog-sidebar.component';
-import { BlogAuthModalComponent } from '../components/blog-auth-modal/blog-auth-modal.component';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 import { AuthService } from '../../../core/services/auth.service';
-@Component({ selector: 'app-blog-list', standalone: true, imports: [BlogImageSrcsetPipe, RouterLink, FormsModule, BlogIconComponent, BlogSidebarComponent, BlogAuthModalComponent], templateUrl: './blog-list.component.html', styleUrl: './blog-list.component.css' })
+@Component({ selector: 'app-blog-list', standalone: true, imports: [BlogImageSrcsetPipe, RouterLink, FormsModule, BlogIconComponent, BlogSidebarComponent, AuthRequiredModalComponent], templateUrl: './blog-list.component.html', styleUrl: './blog-list.component.css' })
 export class BlogListComponent {
   private readonly blog = inject(BlogService);
   private readonly route = inject(ActivatedRoute);

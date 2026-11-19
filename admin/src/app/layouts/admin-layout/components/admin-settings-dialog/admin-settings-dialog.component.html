@@ -349,6 +349,8 @@
                     </span>
                     <select
                       class="field-select"
+                      name="admin-report-frequency"
+                      aria-label="Tần suất gửi báo cáo"
                       [value]="notifications().emailReportFrequency"
                       [disabled]="!notifications().emailReportEnabled"
                       (change)="onReportFrequencyChange($event)"
@@ -358,6 +360,7 @@
                       }
                     </select>
                   </span>
+                  <small class="field-hint">Đang chọn: {{ reportFrequencyLabel() }}</small>
                 </label>
 
                 <fieldset class="field report-format">

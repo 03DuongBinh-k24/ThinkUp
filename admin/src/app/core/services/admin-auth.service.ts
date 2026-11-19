@@ -33,6 +33,11 @@ const PASSWORD_WARNING_DAYS = 7;
 const CHALLENGE_TTL_SECONDS = 5 * 60;
 
 /**
+ * Role do backend Admin API trả về (SA|CA|FA|CS) — cộng với `ADMIN` của dữ liệu mock cũ.
+ * Trước đây chỉ `ADMIN` được chấp nhận nên tài khoản thật luôn bị chặn ở bước 2FA (`FORBIDDEN_ROLE`).
+ */
+const ADMIN_PORTAL_ROLES = new Set(['ADMIN', 'SA', 'CA', 'FA', 'CS']);
+/**
  * Quản lý phiên đăng nhập của phân hệ quản trị.
  *
  * Luồng đăng nhập dùng API riêng của Admin: thông tin đăng nhập tạo một token tạm,
@@ -365,7 +370,7 @@ export class AdminAuthService {
       throw this.buildError('Phản hồi xác thực không hợp lệ. Vui lòng thử lại.', 500, 'INVALID_RESPONSE');
     }
 
-    if (response.admin.role.toUpperCase() !== 'ADMIN') {
+    if (!ADMIN_PORTAL_ROLES.has(String(response.admin.role || '').toUpperCase())) {
       throw this.buildError('Tài khoản này không được phép truy cập trang quản trị.', 403, 'FORBIDDEN_ROLE');
     }
 
@@ -378,6 +383,7 @@ export class AdminAuthService {
       email: response.admin.email || challenge.email,
       fullName: response.admin.full_name || 'Quản trị viên',
       role: 'admin' as AdminRole,
+      accessRole: response.admin.role,
       avatar: null,
       passwordExpiresAt,
       mustChangePassword: false,
@@ -593,10 +599,10 @@ export class AdminAuthService {
   }
 }
 
-/** Chuẩn hoá mã dự phòng về định dạng backend `XXXX-XXXX`. */
+/** Chuẩn hoá mã dự phòng về định dạng backend `XXXX-XXXX-XXXX-XXXX` (16 ký tự). */
 function formatBackupCode(code: string): string {
   const normalized = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}`;
+  return normalized.replace(/(.{4})(?=.)/g, '$1-');
 }
 
 function decodeBase32(value: string): ArrayBuffer {

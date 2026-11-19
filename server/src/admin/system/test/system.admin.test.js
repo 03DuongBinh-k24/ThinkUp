@@ -5,11 +5,7 @@ import {
   verifyAuditChecksum,
   determineRiskLevel,
 } from '../audit.admin.js';
-import {
-  encryptSecret,
-  decryptSecret,
-  maskSecret,
-} from '../settings.admin.js';
+import { DEFAULT_SYSTEM_SETTINGS, getSystemSettings } from '../settings.admin.js';
 
 test('Audit Log Checksum: Tính toán và kiểm tra sai lệch toàn vẹn', () => {
   const logCode = 'LOG-2026-123456';
@@ -56,17 +52,16 @@ test('Risk Matrix: Phân loại rủi ro chuẩn quy tắc BA', () => {
   assert.equal(determineRiskLevel({ module: 'report', action: 'view' }), 'normal', 'Xem thông thường là normal');
 });
 
-test('Security & Cryptography: Mã hóa AES-256 và Masked secrets', () => {
-  const secret = 'super-sensitive-secret-token-12345';
-  const encrypted = encryptSecret(secret);
-
-  assert.notEqual(encrypted, secret);
-  assert.ok(encrypted.includes(':'), 'Dữ liệu mã hóa phải có cấu trúc IV:Ciphertext');
-
-  const decrypted = decryptSecret(encrypted);
-  assert.equal(decrypted, secret, 'Giải mã phải trả về đúng chuỗi ban đầu');
-
-  const masked = maskSecret(secret);
-  assert.equal(masked, '••••••••2345', 'Mask secret chỉ hiển thị 4 ký tự cuối');
+test('System settings: trả giá trị đã lưu kèm mặc định cho trường còn thiếu', async () => {
+  const doc = { general: { site_name: 'Integration Test' }, parameters: { test_pass_score: 90 } };
+  const db = { collection(name) {
+    assert.equal(name, 'system_settings');
+    return { findOne: async query => query._id === 'global_config' ? doc : null };
+  } };
+  const result = await getSystemSettings(db);
+  assert.equal(result.general.site_name, 'Integration Test');
+  assert.equal(result.general.timezone, DEFAULT_SYSTEM_SETTINGS.general.timezone);
+  assert.equal(result.parameters.test_pass_score, 90);
+  assert.equal(result.parameters.tax_rate, DEFAULT_SYSTEM_SETTINGS.parameters.tax_rate);
 });
 

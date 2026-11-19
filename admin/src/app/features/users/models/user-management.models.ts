@@ -44,6 +44,12 @@ export interface LecturerDocument {
   label: string;
   /** Trạng thái của từng giấy tờ trong popup "Yêu cầu bổ sung". */
   state: 'missing' | 'invalid' | 'pending' | 'not-started';
+  /** ID tài liệu trên server (dùng cho endpoint tải tệp). */
+  id?: string;
+  filename?: string;
+  mimeType?: string;
+  /** Chỉ có khi vai trò SA/CA được tải tệp. */
+  downloadUrl?: string;
 }
 
 /** Yêu cầu bổ sung hồ sơ đã gửi cho giảng viên. */
@@ -84,8 +90,8 @@ export interface Lecturer {
   /** ISO 8601. */
   joinedAt: string;
   links: LecturerLinks;
-  /** `uploadedAt` là ISO 8601. */
-  cv: { fileName: string; size: string; uploadedAt: string };
+  /** `uploadedAt` là ISO 8601. Bỏ trống khi hồ sơ chưa có tệp CV (API chỉ trả metadata tài liệu). */
+  cv?: { fileName: string; size: string; uploadedAt: string };
   kyc: { cccd: string; taxCode: string; address: string; verified: boolean };
   violations: DisciplineRecord[];
   /** Mức kỷ luật đang áp dụng — hiển thị trong popup "Mở khóa tài khoản". */

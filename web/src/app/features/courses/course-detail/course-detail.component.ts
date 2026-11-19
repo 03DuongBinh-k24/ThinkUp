@@ -15,11 +15,14 @@ import {
   ReviewBreakdownRow,
 } from '../../../core/models/course.model';
 import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
+import { Meta, Title } from '@angular/platform-browser';
+import { AuthService } from '../../../core/services/auth.service';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 @Component({
   selector: 'app-course-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, InstructorTriggerDirective],
+  imports: [CommonModule, RouterLink, FormsModule, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './course-detail.component.html',
   styleUrl: './course-detail.component.css'
 })
@@ -29,9 +32,13 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   private courseService = inject(CourseService);
   private commerceService = inject(CommerceService);
   private favoritesService = inject(FavoritesService);
+  private authService = inject(AuthService);
+  private pageTitle = inject(Title);
+  private meta = inject(Meta);
   private loadVersion = 0;
   private changingWishlist = false;
   addingCart = false;
+  readonly authModalOpen = signal(false);
 
   courseId = signal<string>('');
   course = signal<Course | null>(null);
@@ -74,6 +81,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   });
 
   isPurchased = computed(() => this.course()?.isPurchased === true);
+  readonly isLoggedIn = computed(() => this.authService.isAuthenticated());
 
   readonly trialLesson = computed(() => {
     const curriculum = this.course()?.curriculum;
@@ -120,6 +128,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.countdownTimer) clearInterval(this.countdownTimer);
+    this.clearCourseSeo();
   }
 
   private loadCourse(id: string): void {
@@ -151,6 +160,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
         if (version !== this.loadVersion) return;
         this.loading.set(false);
         this.course.set(detail);
+        this.applyCourseSeo(detail);
         this.cartVerified.set(cart !== null);
         this.openChapters.set([0]);
         this.reviewSummary.set({ average: detail.rating, total: Number(detail.ratingCount) || 0 });
@@ -168,6 +178,59 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
         this.error.set('Không thể tải khóa học. Vui lòng thử lại sau.');
       }
     });
+  }
+
+  private applyCourseSeo(course: Course): void {
+    const seo = course.seo;
+    this.pageTitle.setTitle(seo?.title || `${course.title} | ThinkUp`);
+    this.meta.updateTag({ name: 'description', content: seo?.description || course.shortDescription || course.description || '' });
+    this.meta.updateTag({ name: 'robots', content: seo?.robots || 'index, follow' });
+    if (seo?.keywords?.length) this.meta.updateTag({ name: 'keywords', content: seo.keywords.join(', ') });
+    this.meta.updateTag({ property: 'og:title', content: seo?.openGraph?.title || seo?.title || course.title });
+    this.meta.updateTag({ property: 'og:description', content: seo?.openGraph?.description || seo?.description || course.shortDescription || '' });
+    this.meta.updateTag({ property: 'og:image', content: seo?.openGraph?.image || seo?.image || course.thumbnailUrl || '' });
+    this.meta.updateTag({ property: 'og:url', content: seo?.openGraph?.url || seo?.canonicalUrl || window.location.href });
+    this.meta.updateTag({ property: 'og:type', content: seo?.openGraph?.type || 'product' });
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({ name: 'twitter:title', content: seo?.title || course.title });
+    this.meta.updateTag({ name: 'twitter:description', content: seo?.description || course.shortDescription || '' });
+    this.meta.updateTag({ name: 'twitter:image', content: seo?.image || course.thumbnailUrl || '' });
+    this.setCanonical(seo?.canonicalUrl || window.location.href);
+    this.setCourseSchema(seo?.schemaMarkup);
+  }
+
+  private setCanonical(url: string): void {
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'canonical';
+      document.head.appendChild(link);
+    }
+    link.href = url;
+  }
+
+  private setCourseSchema(schema?: Record<string, unknown>): void {
+    this.clearCourseSchema();
+    if (!schema) return;
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'course-seo-jsonld';
+    script.text = JSON.stringify(schema);
+    document.head.appendChild(script);
+  }
+
+  private clearCourseSchema(): void {
+    document.head.querySelector('#course-seo-jsonld')?.remove();
+  }
+
+  private clearCourseSeo(): void {
+    this.pageTitle.setTitle('ThinkUp - Nền tảng học tập trực tuyến');
+    ['description', 'robots', 'keywords', 'og:title', 'og:description', 'og:image', 'og:url', 'og:type', 'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image'].forEach(name => {
+      const attribute = name.startsWith('og:') ? 'property' : 'name';
+      this.meta.removeTag(`${attribute}="${name}"`);
+    });
+    document.head.querySelector('link[rel="canonical"]')?.remove();
+    this.clearCourseSchema();
   }
 
   private startCountdown(): void {
@@ -304,18 +367,32 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   handleAddToCart(): void {
     const c = this.course();
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (!c || this.addingCart || !this.cartVerified() || this.isInCart()) return;
     this.addingCart = true;
 
     this.commerceService.addToCart(c.id).pipe(finalize(() => this.addingCart = false)).subscribe({
       next: () => {
         this.showToast('Khóa học đã được thêm vào giỏ hàng!');
-      }, error: () => this.showToast('Không thêm được khóa học vào giỏ hàng.')
+      }, error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.showToast('Không thêm được khóa học vào giỏ hàng.');
+        }
+      }
     });
   }
 
   handleBuyNow(): void {
     const c = this.course();
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (!c || this.addingCart || !this.cartVerified()) return;
     if (this.isInCart()) {
       void this.router.navigate(['/main/checkout']);
@@ -326,12 +403,22 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     this.commerceService.addToCart(c.id).pipe(finalize(() => this.addingCart = false)).subscribe({
       next: () => {
         this.router.navigate(['/main/checkout']);
-      }, error: () => this.showToast('Không thêm được khóa học vào giỏ hàng.')
+      }, error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.showToast('Không thêm được khóa học vào giỏ hàng.');
+        }
+      }
     });
   }
 
   handleToggleWishlist(): void {
     const c = this.course();
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (!c || this.changingWishlist) return;
     this.changingWishlist = true;
 
@@ -342,7 +429,13 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
           ? 'Đã lưu khóa học vào danh sách yêu thích!'
           : 'Đã xóa khỏi danh sách yêu thích!';
         this.showToast(msg);
-      }, error: () => this.showToast('Không cập nhật được yêu thích.')
+      }, error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.showToast('Không cập nhật được yêu thích.');
+        }
+      }
     });
   }
 

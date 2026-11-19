@@ -30,6 +30,8 @@ import {
   getRoomSessionMessages,
   cleanupExpiredEmptyRooms,
   getRoomParticipants,
+  getRoomCourseRecommendation,
+  kickRoomParticipant,
   updateParticipantCanvasPosition,
   createStudyRoomRouter
 } from '../studyroom.user.js';
@@ -78,6 +80,171 @@ function inviteNotificationFixture() {
   tables.set('study_rooms',[{ _id:'room',roomId:'abcd12',roomCode:'ABCD12',name:'Room Test',creatorId:'owner',isActive:true,participants:[],roomLink:'/room/abcd12' }]);
   return { db,invite: (target = 'member@example.test',actor = 'owner') => inviteUserToRoom('abcd12',target,actor,'Forged Name',{ db }) };
 }
+
+function roomCourseRecommendationFixture({ participants, sessions, courses, messages, room } = {}) {
+  const currentRoom = room || { roomId: 'focus1', roomCode: 'FOCUS1', isActive: true, participants };
+  const data = {
+    study_rooms: [currentRoom],
+    learning_activity_sessions: sessions || [],
+    courses: courses || [],
+    study_room_messages: messages || [],
+  };
+  return { collection(name) {
+    const rows = data[name] || [];
+    return {
+      async findOne(query) {
+        if (name === 'courses') return rows.find(row => row.course_id === query.course_id
+          && row.status === query.status && row.admin_hidden !== true) || null;
+        if (name !== 'study_rooms') return null;
+        if (query._id) return rows.find(row => String(row._id) === String(query._id)) || null;
+        const found = rows.find(row => row.isActive !== false && query.$or.some(condition =>
+          (condition.roomId && row.roomId === condition.roomId) || (condition.roomCode && row.roomCode === condition.roomCode)));
+        return found ? { ...found } : null;
+      },
+      async updateOne(query, update) {
+        if (name !== 'study_rooms') return { matchedCount: 0 };
+        const roomRow = rows.find(row => String(row._id) === String(query.$and?.[0]?._id));
+        const targetId = update[0]?.$set?.participants?.$filter?.cond?.$ne?.[1];
+        if (!roomRow || !roomRow.participants.some(participant => String(participant.userId) === targetId)) return { matchedCount: 0 };
+        roomRow.participants = roomRow.participants.filter(participant => String(participant.userId) !== targetId);
+        roomRow.currentUsers = roomRow.participants.length;
+        roomRow.emptySince = roomRow.participants.length ? null : update[1]?.$set?.emptySince?.$cond?.[1];
+        roomRow.updatedAt = update[1]?.$set?.updatedAt;
+        return { matchedCount: 1 };
+      },
+      find(query) {
+        return { sort() { return this; }, async toArray() {
+          if (name === 'learning_activity_sessions') {
+            return rows.filter(row => query.user_id.$in.includes(String(row.user_id))
+              && row.kind === query.kind && row.state === query.state
+              && row.last_seen_at >= query.last_seen_at.$gte && row.expires_at > query.expires_at.$gt);
+          }
+          if (name === 'courses') {
+            return rows.filter(row => (query.$and[0].$or.some(condition =>
+              (condition.course_id && condition.course_id.$in.includes(String(row.course_id)))
+              || (condition._id && condition._id.$in.some(id => String(id) === String(row._id)))))
+              && row.status === 'published' && row.admin_hidden !== true);
+          }
+          if (name === 'study_room_messages') {
+            return rows.filter(row => row.roomId === query.roomId && row.createdAt >= query.createdAt.$gte)
+              .sort((left, right) => left.createdAt - right.createdAt);
+          }
+          return [];
+        } };
+      },
+    };
+  } };
+}
+
+test('ThinkUp Corner course recommendation chooses an active peer course and excludes the viewer course', async () => {
+  const now = new Date('2026-11-19T10:00:00.000Z');
+  const db = roomCourseRecommendationFixture({
+    participants: [{ userId: 'viewer' }, { userId: 'peer' }, { userId: 'other' }],
+    sessions: [
+      { user_id: 'viewer', kind: 'lesson', state: 'tracking', target: { course_id: 'course-own' }, last_seen_at: new Date(+now - 10_000), expires_at: new Date(+now + 60_000) },
+      { user_id: 'peer', kind: 'lesson', state: 'tracking', target: { course_id: 'course-own' }, last_seen_at: new Date(+now - 8_000), expires_at: new Date(+now + 60_000) },
+      { user_id: 'other', kind: 'lesson', state: 'tracking', target: { course_id: 'course-peer' }, last_seen_at: new Date(+now - 5_000), expires_at: new Date(+now + 60_000) },
+      { user_id: 'other', kind: 'lesson', state: 'tracking', target: { course_id: 'course-stale' }, last_seen_at: new Date(+now - 90_000), expires_at: new Date(+now + 60_000) },
+    ],
+    courses: [
+      { course_id: 'course-own', title: 'Khóa của người xem', status: 'published' },
+      { course_id: 'course-peer', title: 'Khóa thành viên khác đang học', thumbnail_url: '/peer.png', instructor_id: 'instructor-7', status: 'published' },
+      { course_id: 'course-stale', title: 'Khóa đã hết hoạt động', status: 'published' },
+    ],
+  });
+  const result = await getRoomCourseRecommendation('FOCUS1', 'viewer', { db, now, random: () => 0 });
+  assert.equal(result.course.courseId, 'course-peer');
+  assert.equal(result.course.title, 'Khóa thành viên khác đang học');
+  assert.equal(result.course.instructor.id, 'instructor-7');
+  assert.equal(result.course.instructor.url, '/instructors/instructor-7');
+});
+
+test('ThinkUp Corner course recommendation returns no course when no eligible peer course exists', async () => {
+  const now = new Date('2026-11-19T10:00:00.000Z');
+  const db = roomCourseRecommendationFixture({
+    participants: [{ userId: 'viewer' }, { userId: 'peer' }],
+    sessions: [{ user_id: 'viewer', kind: 'lesson', state: 'tracking', target: { course_id: 'course-own' }, last_seen_at: now, expires_at: new Date(+now + 60_000) }],
+    courses: [
+      { course_id: 'course-own', title: 'Khóa của người xem', status: 'published' },
+      { course_id: '73', title: 'Khóa mặc định', status: 'published' },
+    ],
+  });
+  assert.equal((await getRoomCourseRecommendation('focus1', 'viewer', { db, now })).course.courseId, '73');
+  await assert.rejects(getRoomCourseRecommendation('focus1', 'outsider', { db, now }), error => error.status === 403);
+  await assert.rejects(getRoomCourseRecommendation('', 'viewer', { db, now }), error => error.status === 400);
+  await assert.rejects(getRoomCourseRecommendation('missing', 'viewer', { db, now }), error => error.status === 404);
+});
+
+test('ThinkUp Corner course recommendation does not fall back to a course the viewer is actively studying', async () => {
+  const now = new Date('2026-11-19T10:00:00.000Z');
+  const db = roomCourseRecommendationFixture({
+    participants: [{ userId: 'viewer' }, { userId: 'peer' }],
+    sessions: [{ user_id: 'viewer', kind: 'lesson', state: 'tracking', target: { course_id: '73' }, last_seen_at: now, expires_at: new Date(+now + 60_000) }],
+    courses: [{ course_id: '73', title: 'Khóa mặc định', status: 'published' }],
+  });
+  assert.deepEqual(await getRoomCourseRecommendation('focus1', 'viewer', { db, now }), { course: null });
+});
+
+test('ThinkUp Corner course recommendation assigns distinct peer courses to room members', async () => {
+  const now = new Date('2026-11-19T10:00:00.000Z');
+  const db = roomCourseRecommendationFixture({
+    participants: [{ userId: 'viewer' }, { userId: 'peer' }],
+    sessions: [
+      { user_id: 'viewer', kind: 'lesson', state: 'tracking', target: { course_id: 'course-a' }, last_seen_at: now, expires_at: new Date(+now + 60_000) },
+      { user_id: 'peer', kind: 'lesson', state: 'tracking', target: { course_id: 'course-b' }, last_seen_at: now, expires_at: new Date(+now + 60_000) },
+    ],
+    courses: [
+      { course_id: 'course-a', title: 'Khóa A', status: 'published' },
+      { course_id: 'course-b', title: 'Khóa B', status: 'published' },
+    ],
+  });
+  const viewerRecommendation = await getRoomCourseRecommendation('focus1', 'viewer', { db, now });
+  const peerRecommendation = await getRoomCourseRecommendation('focus1', 'peer', { db, now });
+  assert.equal(viewerRecommendation.course.courseId, 'course-b');
+  assert.equal(peerRecommendation.course.courseId, 'course-a');
+  assert.notEqual(viewerRecommendation.course.courseId, peerRecommendation.course.courseId);
+});
+
+test('Study Room kick persists removal and stops removed member from reading room messages', async () => {
+  const joinedAt = new Date('2026-11-19T10:00:00.000Z');
+  const db = roomCourseRecommendationFixture({
+    room: {
+      _id: 'room', roomId: 'focus1', roomCode: 'FOCUS1', creatorId: 'owner', isActive: true,
+      participants: [
+        { userId: 'owner', role: 'owner', joinedAt: new Date(+joinedAt - 60_000) },
+        { userId: 'member', role: 'member', joinedAt },
+      ],
+    },
+    messages: [
+      { _id: 'old', roomId: 'focus1', senderId: 'owner', content: 'Tin cũ', createdAt: new Date(+joinedAt - 1_000) },
+      { _id: 'new', roomId: 'focus1', senderId: 'owner', content: 'Tin mới', createdAt: new Date(+joinedAt + 1_000) },
+    ],
+  });
+  const visibleMessages = await getRoomSessionMessages('focus1', 'member', { db });
+  assert.deepEqual(visibleMessages.map(message => message.id), ['new']);
+
+  const kickResult = await kickRoomParticipant('focus1', 'owner', 'member', { db, now: joinedAt });
+  assert.equal(kickResult.removedUserId, 'member');
+  assert.equal(kickResult.currentUsers, 1);
+  assert.deepEqual(await getRoomSessionMessages('focus1', 'member', { db }), []);
+});
+
+test('Study Room kick rejects members without authority and protects owner', async () => {
+  const db = roomCourseRecommendationFixture({
+    room: {
+      _id: 'room', roomId: 'focus1', roomCode: 'FOCUS1', creatorId: 'owner', isActive: true,
+      participants: [
+        { userId: 'owner', role: 'owner' },
+        { userId: 'moderator', role: 'moderator' },
+        { userId: 'member', role: 'member' },
+        { userId: 'other-mod', role: 'moderator' },
+      ],
+    },
+  });
+  await assert.rejects(kickRoomParticipant('focus1', 'member', 'other-mod', { db }), error => error.status === 403);
+  await assert.rejects(kickRoomParticipant('focus1', 'moderator', 'other-mod', { db }), error => error.status === 403);
+  await assert.rejects(kickRoomParticipant('focus1', 'moderator', 'owner', { db }), error => error.status === 403);
+});
 
 test('Notification integration: Studyroom resolves verified recipient, ignores spoofed name and deduplicates invitations', async () => {
   const f = inviteNotificationFixture();
@@ -260,6 +427,7 @@ test('Study Room Backend Service Test Suite', async (t) => {
     assert.ok(found);
     assert.equal(found.type, 'public');
     assert.equal(found.password, undefined);
+    assert.equal(found.currentUsers, new Set((found.participants || []).map(p => String(p.userId ?? p.user_id ?? '')).filter(Boolean)).size);
   });
 
   await t.test('6. Tìm kiếm phòng bằng mã phòng hoặc link và xác thực mật khẩu', async () => {
@@ -601,6 +769,53 @@ test('Study Room Backend Service Test Suite', async (t) => {
     assert.equal((await leaveStudyRoom(createdPublicRoom.roomId, 'user_alice')).currentUsers, 3);
     await leaveStudyRoom(createdPublicRoom.roomId, 'user_bob');
     await leaveStudyRoom(createdPublicRoom.roomId, 'user_charlie');
+  });
+
+  await t.test('18b. Chuyển quyền chủ phòng khi owner rời và chỉ bắt đầu hạn xóa khi phòng trống', async () => {
+    const ownerId = `owner_transfer_${testRunId}`;
+    const moderatorId = `moderator_transfer_${testRunId}`;
+    const memberId = `member_transfer_${testRunId}`;
+    const transferRoom = await createStudyRoom(ownerId, {
+      name: 'Phòng kiểm tra chuyển chủ phòng',
+      type: 'public'
+    });
+    await markRoomForTest(transferRoom);
+
+    await generateLiveKitToken({ roomId: transferRoom.roomId, userId: moderatorId, userName: 'Moderator kế nhiệm' });
+    await roomsColl.updateOne(
+      { _id: transferRoom._id, 'participants.userId': moderatorId },
+      { $set: { 'participants.$.role': 'moderator', 'participants.$.roleLabel': 'Moderator' } }
+    );
+    await generateLiveKitToken({ roomId: transferRoom.roomId, userId: memberId, userName: 'Thành viên kế nhiệm' });
+
+    const ownerLeave = await leaveStudyRoom(transferRoom.roomId, ownerId);
+    let room = await roomsColl.findOne({ _id: transferRoom._id });
+    assert.equal(ownerLeave.ownershipTransferred, true);
+    assert.equal(ownerLeave.newOwnerId, moderatorId);
+    assert.equal(room.creatorId, moderatorId);
+    assert.equal(room.currentUsers, 2);
+    assert.equal(room.emptySince, null);
+    assert.equal(room.participants.find(participant => participant.userId === moderatorId).role, 'owner');
+    assert.equal(room.participants.find(participant => participant.userId === moderatorId).roleLabel, 'Chủ phòng');
+    assert.equal(room.participants.find(participant => participant.userId === memberId).role, 'member');
+    assert.equal((await getMemberEffectivePermissions(transferRoom.roomId, moderatorId)).role, 'owner');
+    await updateRoomPermissions(transferRoom.roomId, moderatorId, { chatEnabled: false });
+
+    await leaveStudyRoom(transferRoom.roomId, moderatorId);
+    room = await roomsColl.findOne({ _id: transferRoom._id });
+    assert.equal(room.creatorId, memberId);
+    assert.equal(room.currentUsers, 1);
+    assert.equal(room.emptySince, null);
+    assert.equal(room.participants[0].role, 'owner');
+
+    const finalLeave = await leaveStudyRoom(transferRoom.roomId, memberId);
+    room = await roomsColl.findOne({ _id: transferRoom._id });
+    assert.equal(finalLeave.ownershipTransferred, false);
+    assert.equal(finalLeave.isRoomEmpty, true);
+    assert.equal(room.currentUsers, 0);
+    assert.ok(room.emptySince instanceof Date);
+    assert.ok(room.creatorId === null);
+    assert.ok(room);
   });
 
   await t.test('19. Bảo mật phiên Chat: Người mới vào chỉ thấy tin nhắn KỂ TỪ KHI VÀO PHÒNG', async () => {

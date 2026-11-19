@@ -291,7 +291,7 @@
 .format-card {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   min-height: 84px;
   padding: 14px 16px;
@@ -350,6 +350,12 @@
   margin-top: 2px;
   font: var(--admin-text-caption);
   color: var(--admin-text-muted, #66758f);
+}
+
+.report-grid .field-hint {
+  margin-top: 4px;
+  color: var(--admin-text-muted, #66758f);
+  font: var(--admin-text-caption);
 }
 
 /* ===== Hàng công tắc ===== */

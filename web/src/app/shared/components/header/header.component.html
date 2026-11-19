@@ -50,6 +50,7 @@
           -->
 
           <!-- Giỏ hàng (Cart Button with cyan badge) -->
+          @if (isLoggedIn()) {
           <a
             routerLink="/main/cart"
             class="relative flex h-11 w-11 items-center justify-center rounded-full text-[#131927] hover:bg-slate-100 transition-all duration-200"
@@ -65,6 +66,19 @@
               </span>
             }
           </a>
+          } @else {
+          <button
+            type="button"
+            (click)="onCartClick($event)"
+            class="relative flex h-11 w-11 items-center justify-center rounded-full text-[#131927] hover:bg-slate-100 transition-all duration-200"
+            aria-label="Giỏ hàng"
+          >
+            <svg class="h-[26px] w-[26px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+            </svg>
+          </button>
+          }
 
           <!-- Chuông chỉ thuộc header của thành viên. -->
           @if (isLoggedIn()) {
@@ -97,6 +111,7 @@
 
         <!-- 4. Mobile Action Controls -->
         <div class="flex lg:hidden items-center gap-3">
+          @if (isLoggedIn()) {
           <a routerLink="/main/cart" class="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 transition-colors">
             <svg class="w-[20px] h-[20px] text-[#4B5563]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
@@ -107,6 +122,13 @@
               </span>
             }
           </a>
+          } @else {
+          <button type="button" (click)="onCartClick($event)" class="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 transition-colors" aria-label="Giỏ hàng">
+            <svg class="w-[20px] h-[20px] text-[#4B5563]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+            </svg>
+          </button>
+          }
 
           <button (click)="isMobileMenuOpen.update(v => !v)" class="p-1 focus:outline-none text-[#4B5563] hover:text-black">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -173,3 +195,9 @@
         </div>
       }
     </header>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  returnUrl="/main"
+  (closed)="authModalOpen.set(false)"
+/>

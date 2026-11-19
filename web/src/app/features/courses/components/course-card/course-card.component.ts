@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Input, inject, signal } from '@angular/core';
+import { Component, DestroyRef, Input, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -7,12 +7,14 @@ import { FavoritesService } from '../../../../core/services/favorites.service';
 import { CommerceService } from '../../../../core/services/commerce.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { AuthRequiredModalComponent } from '../../../../shared/components/auth-required-modal/auth-required-modal.component';
 import { finalize, map, switchMap, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-course-card',
   standalone: true,
-  imports: [CommonModule, InstructorTriggerDirective],
+  imports: [CommonModule, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './course-card.component.html',
   styleUrl: './course-card.component.css'
 })
@@ -23,9 +25,12 @@ export class CourseCardComponent {
   private router = inject(Router);
   private favoritesService = inject(FavoritesService);
   private commerceService = inject(CommerceService);
+  private readonly authService = inject(AuthService);
+  readonly isLoggedIn = computed(() => this.authService.isAuthenticated());
   private readonly toast = inject(ToastService);
   private changingFavorite = false;
   readonly addingCart = signal(false);
+  readonly authModalOpen = signal(false);
   private readonly destroyRef = inject(DestroyRef);
   failedThumbnail = '';
 
@@ -51,15 +56,29 @@ export class CourseCardComponent {
   }
 
   toggleWishlist(): void {
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (this.changingFavorite) return;
     this.changingFavorite = true;
     const request = this.isWishlisted() ? this.favoritesService.removeFavorite(this.course.id) : this.favoritesService.addFavorite(this.course);
     request.pipe(finalize(() => this.changingFavorite = false)).subscribe({
-      error: () => this.toast.showToast({ type: 'warning', message: 'Không cập nhật được yêu thích. Vui lòng đăng nhập hoặc thử lại.' }),
+      error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.toast.showToast({ type: 'warning', message: 'Không cập nhật được yêu thích. Vui lòng đăng nhập hoặc thử lại.' });
+        }
+      },
     });
   }
 
   addToCart(): void {
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (this.isPurchased() || this.addingCart()) return;
     this.addingCart.set(true);
     const id = this.course.id;
@@ -79,10 +98,18 @@ export class CourseCardComponent {
       finalize(() => this.addingCart.set(false)),
     ).subscribe({
       next: removing => this.toast.showToast({ type: 'success', message: removing ? 'Đã xóa khóa học khỏi giỏ hàng.' : 'Đã thêm khóa học vào giỏ hàng.' }),
-      error: error => this.toast.showToast({ type: 'warning', message: error.name === 'TimeoutError'
-        ? 'Máy chủ phản hồi quá lâu. Vui lòng thử lại để kiểm tra giỏ hàng trước khi thêm hoặc xóa.'
-        : error.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
-        : 'Không cập nhật được giỏ hàng. Vui lòng thử lại.' }),
+      error: error => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.toast.showToast({
+            type: 'warning',
+            message: error.name === 'TimeoutError'
+              ? 'Máy chủ phản hồi quá lâu. Vui lòng thử lại để kiểm tra giỏ hàng trước khi thêm hoặc xóa.'
+              : 'Không cập nhật được giỏ hàng. Vui lòng thử lại.'
+          });
+        }
+      },
     });
   }
 
@@ -218,3 +245,5 @@ export class CourseCardComponent {
     return String(num);
   }
 }
+
+

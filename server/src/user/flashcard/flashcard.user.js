@@ -1019,7 +1019,9 @@ export async function checkAndUpdateRoadmapFromFlashcard(userId, nodeId, listId 
       return {
         ...node,
         status: restoredStatus,
+        status_source: 'flashcard',
         is_review: false,
+        flashcard_review_completed: true,
         updated_at: new Date(),
       };
     }

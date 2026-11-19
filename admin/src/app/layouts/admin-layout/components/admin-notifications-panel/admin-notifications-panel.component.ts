@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, output } from '@angular/core';
+import { Component, OnInit, inject, output } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   AdminNotificationItem,
@@ -34,11 +34,6 @@ export class AdminNotificationsPanelComponent implements OnInit {
   readonly hasMore = this.notifications.hasMore;
   readonly unread = this.notifications.unread;
   readonly summary = this.notifications.summary;
-  readonly countLabel = computed(() => {
-    const unread = this.unread();
-    return unread > 0 ? `${unread} chưa đọc` : 'Không có thông báo mới';
-  });
-
   ngOnInit(): void {
     this.notifications.openPanel();
   }

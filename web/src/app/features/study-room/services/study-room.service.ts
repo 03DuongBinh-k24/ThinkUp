@@ -6,7 +6,7 @@ import { StudyRoomItem } from '../models/study-room.model';
 
 interface RoomPayload extends Partial<StudyRoomItem> {
   roomId: string;
-  name: string;
+  name?: string;
   roomName?: string;
   roomStatus?: StudyRoomItem['status'];
   rawId?: string;
@@ -16,6 +16,7 @@ interface RoomPayload extends Partial<StudyRoomItem> {
   goal?: string;
   roomTheme?: string;
   hasPassword?: boolean;
+  permissions?: Partial<RoomPermissions>;
 }
 export interface StudyRoomListOptions {
   search?: string;
@@ -38,7 +39,6 @@ interface RoomCreateRequest {
   capacity: number;
   roomTheme: string;
   password?: string;
-  creatorName: string;
 }
 export interface RoomParticipant {
   userId: string; name: string; displayName: string; initials: string;
@@ -48,6 +48,14 @@ export interface RoomParticipant {
 }
 export interface RoomMessage {
   id: string; senderId: string; senderName: string; content: string; createdAt: string;
+}
+export interface RoomRecommendationCourse {
+  id: string;
+  courseId: string;
+  slug: string;
+  title: string;
+  thumbnailUrl: string;
+  instructor: { id: string; url: string } | null;
 }
 export interface RoomConnection {
   theme?: string;
@@ -90,7 +98,7 @@ function mapRoom(room: RoomPayload): StudyRoomItem {
     waitlistCount: room.waitlistCount,
     requiresPassword: room.requiresPassword ?? room.hasPassword,
     inviteMode: room.inviteMode,
-    approvalRequired: room.approvalRequired,
+    approvalRequired: room.approvalRequired ?? room.permissions?.approvalRequired,
     joinRequests: (room.joinRequests ?? []).filter(request => request.status === 'pending'),
   };
 }
@@ -118,6 +126,8 @@ export class StudyRoomService {
   }
 
   randomSpawn(): Observable<StudyRoomItem> {
+    // TODO(API handoff): Xác nhận endpoint hiện tại chỉ trả phòng công khai còn chỗ
+    // và có chủ phòng hiện diện. Khi không có kết quả, trả lỗi có message cho sảnh.
     return this.http.get<{ success: boolean; data: RoomPayload }>(`${this.base}/random-spawn`).pipe(
       map(response => mapRoom(response.data))
     );
@@ -199,6 +209,8 @@ export class StudyRoomService {
   }
 
   createRoom(request: RoomCreateRequest): Observable<StudyRoomItem> {
+    // TODO(API handoff): Xác nhận API chấp nhận topic tự nhập, capacity 5/10/20/30
+    // và mật khẩu phòng riêng từ 4 ký tự. Backend cần kiểm tra các giá trị này.
     return this.http.post<{ success: boolean; data: RoomPayload }>(`${this.base}/create`, request).pipe(
       map(response => mapRoom(response.data)),
       tap(room => this.rememberJoinedRoom(room))
@@ -206,6 +218,8 @@ export class StudyRoomService {
   }
 
   joinRoom(codeOrLink: string, password = ''): Observable<StudyRoomItem> {
+    // TODO(API handoff): Kiểm tra lại sĩ số và sự hiện diện của chủ phòng khi xác nhận
+    // lượt vào. Chốt hợp đồng lỗi chủ phòng vắng mặt cho cả join và connection.
     return this.http.post<{ success: boolean; room: RoomPayload }>(`${this.base}/join`, { codeOrLink, password }).pipe(
       map(response => mapRoom(response.room)),
       tap(room => this.rememberJoinedRoom(room))
@@ -258,6 +272,22 @@ export class StudyRoomService {
     return this.http.get<{ data: { participants: RoomParticipant[] } }>(`${this.base}/${encodeURIComponent(roomId)}/participants`).pipe(
       map(response => response.data.participants)
     );
+  }
+
+  heartbeat(roomId: string): Observable<unknown> {
+    return this.http.post(`${this.base}/${encodeURIComponent(roomId)}/presence/heartbeat`, {});
+  }
+
+  kickParticipant(roomId: string, targetUserId: string): Observable<{ roomId: string; removedUserId: string; currentUsers: number }> {
+    return this.http.post<{ success: boolean; data: { roomId: string; removedUserId: string; currentUsers: number } }>(
+      `${this.base}/${encodeURIComponent(roomId)}/participants/${encodeURIComponent(targetUserId)}/kick`, {}
+    ).pipe(map(response => response.data));
+  }
+
+  courseRecommendation(roomId: string): Observable<{ course: RoomRecommendationCourse | null }> {
+    return this.http.get<{ success: boolean; data: { course: RoomRecommendationCourse | null } }>(
+      `${this.base}/${encodeURIComponent(roomId)}/recommendation`
+    ).pipe(map(response => response.data));
   }
 
   updatePosition(roomId: string, _userId: string, position: { x: number; y: number }): Observable<{ x: number; y: number }> {

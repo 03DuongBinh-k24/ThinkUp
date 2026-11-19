@@ -58,18 +58,24 @@
         <aside class="detail-side">
           <section class="section-card">
             <h3>Thông tin &amp; tài chính</h3>
-            <dl class="meta-grid" style="grid-template-columns: minmax(0, 1fr)">
-              <div class="meta"><dt>Giá niêm yết</dt><dd>{{ course().finance.listPrice }}</dd></div>
-              <div class="meta"><dt>Giảng viên nhận</dt><dd>{{ course().finance.instructorShare }}</dd></div>
-              <div class="meta"><dt>Sàn giữ lại</dt><dd>{{ course().finance.platformShare }}</dd></div>
-              <div class="meta"><dt>Doanh thu tích lũy</dt><dd>{{ course().finance.revenue }}</dd></div>
-              <div class="meta"><dt>Voucher</dt><dd>{{ course().finance.voucher }}</dd></div>
-            </dl>
-            <div style="margin-top: 10px">
-              <span class="badge" [class.success]="course().finance.voucherActive" [class.neutral]="!course().finance.voucherActive">
-                {{ course().finance.voucherActive ? 'Đang hoạt động' : 'Chưa áp dụng' }}
-              </span>
-            </div>
+            @if (financeState() === 'loading') {
+              <p class="detail-hero-meta" role="status">Đang tải báo cáo tài chính…</p>
+            } @else if (finance(); as f) {
+              <dl class="meta-grid" style="grid-template-columns: minmax(0, 1fr)">
+                <div class="meta"><dt>Giá niêm yết</dt><dd>{{ f.listPrice }}</dd></div>
+                <div class="meta"><dt>Giảng viên nhận</dt><dd>{{ f.instructorShare }}</dd></div>
+                <div class="meta"><dt>Sàn giữ lại</dt><dd>{{ f.platformShare }}</dd></div>
+                <div class="meta"><dt>Doanh thu tích lũy</dt><dd>{{ f.revenue }}</dd></div>
+                <div class="meta"><dt>Voucher</dt><dd>{{ f.voucher }}</dd></div>
+              </dl>
+              <div style="margin-top: 10px">
+                <span class="badge" [class.success]="f.voucherActive" [class.neutral]="!f.voucherActive">
+                  {{ f.voucherActive ? 'Đang hoạt động' : 'Chưa áp dụng' }}
+                </span>
+              </div>
+            } @else {
+              <p class="detail-hero-meta" role="alert">{{ financeError() }}</p>
+            }
           </section>
           <section class="section-card">
             <h3>Danh mục</h3>
@@ -133,7 +139,7 @@
                       <span class="cell-sub">Hoàn thành bài học</span>
                     </td>
                     <td>
-                      <span class="badge" [class.success]="learner.status === 'Hoàn thành'"
+                      <span class="badge learner-status-badge" [class.success]="learner.status === 'Hoàn thành'"
                         [class.pending]="learner.status === 'Tạm dừng'" [class.info]="learner.status === 'Đang học'">
                         {{ learner.status }}
                       </span>
@@ -155,19 +161,32 @@
     @case ('finance') {
       <section class="section-card" style="margin-top: 16px">
         <h3>Đối soát tài chính</h3>
-        <dl class="meta-grid">
-          <div class="meta"><dt>Giá niêm yết</dt><dd>{{ course().finance.listPrice }}</dd></div>
-          <div class="meta"><dt>Giá hiển thị</dt><dd>{{ money(course().price) }}</dd></div>
-          <div class="meta"><dt>Giảng viên nhận</dt><dd>{{ course().finance.instructorShare }}</dd></div>
-          <div class="meta"><dt>Sàn giữ lại</dt><dd>{{ course().finance.platformShare }}</dd></div>
-          <div class="meta full"><dt>Doanh thu tích lũy</dt><dd>{{ course().finance.revenue }}</dd></div>
-          <div class="meta full"><dt>Voucher</dt><dd>{{ course().finance.voucher }}</dd></div>
-        </dl>
-        <p style="margin-top: 12px">
-          <span class="badge" [class.success]="course().finance.voucherActive" [class.neutral]="!course().finance.voucherActive">
-            {{ course().finance.voucherActive ? 'Đang hoạt động' : 'Chưa áp dụng' }}
-          </span>
-        </p>
+        @if (financeState() === 'loading') {
+          <p class="detail-hero-meta" role="status">Đang tải báo cáo tài chính…</p>
+        } @else if (finance(); as f) {
+          <dl class="meta-grid">
+            <div class="meta"><dt>Giá niêm yết</dt><dd>{{ f.listPrice }}</dd></div>
+            <div class="meta"><dt>Giá hiển thị</dt><dd>{{ money(course().price) }}</dd></div>
+            <div class="meta"><dt>Giảng viên nhận</dt><dd>{{ f.instructorShare }}</dd></div>
+            <div class="meta"><dt>Sàn giữ lại</dt><dd>{{ f.platformShare }}</dd></div>
+            <div class="meta"><dt>Doanh thu tích lũy</dt><dd>{{ f.revenue }}</dd></div>
+            @if (f.orderCount != null) {
+              <div class="meta"><dt>Số đơn đã bán</dt><dd>{{ number(f.orderCount) }}</dd></div>
+            }
+            @if (f.netAfterRefund) {
+              <div class="meta"><dt>Hoàn tiền tích lũy</dt><dd>{{ f.refundTotal }}</dd></div>
+              <div class="meta"><dt>Doanh thu sau hoàn</dt><dd>{{ f.netAfterRefund }}</dd></div>
+            }
+            <div class="meta full"><dt>Voucher</dt><dd>{{ f.voucher }}</dd></div>
+          </dl>
+          <p style="margin-top: 12px">
+            <span class="badge" [class.success]="f.voucherActive" [class.neutral]="!f.voucherActive">
+              {{ f.voucherActive ? 'Đang hoạt động' : 'Chưa áp dụng' }}
+            </span>
+          </p>
+        } @else {
+          <p class="detail-hero-meta" role="alert">{{ financeError() }}</p>
+        }
       </section>
     }
   }

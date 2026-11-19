@@ -32,7 +32,7 @@
               [src]="data.post.coverImage"
               [attr.srcset]="data.post.coverImage | blogImageSrcset:true"
               sizes="(max-width: 1023px) 100vw, 505px"
-              [alt]="data.post.title"
+              [alt]="data.post.title" (error)="$any($event.target).src='/assets/blog/no-image.png'; $any($event.target).removeAttribute('srcset')"
               class="h-full w-full object-cover"
             />
           </div>

@@ -4,16 +4,19 @@ import {
   DocumentRequestCommand,
   LockStudentsCommand,
   RejectLecturerCommand,
-  USER_DATA_SOURCE
+  USER_DATA_SOURCE,
+  UserListFilters
 } from '../data/user-management.data-source';
+import { ExportFormat } from '../../../shared/utils/export-formats';
 import { Lecturer, LecturerCourseRow, Student } from '../models/user-management.models';
 import { addDaysIso, todayIso } from '../user-management.utils';
 
 /**
- * Adapter dữ liệu của module quản lý người dùng.
+ * Facade dữ liệu của module quản lý người dùng.
  *
- * Mọi thao tác đi qua `USER_DATA_SOURCE` (xem `data/user-management.providers.ts`), nên khi nối
- * backend chỉ cần thay provider — component và service giữ nguyên chữ ký.
+ * Mọi thao tác đi qua `USER_DATA_SOURCE` (xem `data/user-management.providers.ts`), nên component
+ * không biết dữ liệu đến từ Admin API hay bộ mock demo. Các lệnh ghi trả `Promise` để trang hiển
+ * thị trạng thái đang xử lý và lỗi thật từ server.
  */
 @Injectable({ providedIn: 'root' })
 export class UserManagementService {
@@ -22,6 +25,13 @@ export class UserManagementService {
   readonly lecturers = this.source.lecturers;
   readonly students = this.source.students;
   readonly quickStats = this.source.quickStats;
+  readonly lecturerDetails = this.source.lecturerDetails;
+  readonly studentDetails = this.source.studentDetails;
+  readonly coursesByLecturer = this.source.coursesByLecturer;
+  readonly loading = this.source.loading;
+  readonly loadingLecturers = this.source.loadingLecturers;
+  readonly loadingStudents = this.source.loadingStudents;
+  readonly error = this.source.error;
 
   readonly lecturerKpis = computed(() => {
     const items = this.lecturers();
@@ -29,7 +39,7 @@ export class UserManagementService {
       total: items.length,
       pending: items.filter((item) => ['pending-review', 'pending-docs', 'pending-contract'].includes(item.status)).length,
       active: items.filter((item) => item.status === 'active').length,
-      withViolations: items.filter((item) => item.violations.length > 0).length,
+      withViolations: items.filter((item) => item.status === 'warning' || item.status === 'violation' || item.status === 'frozen').length,
       needAction: items.filter((item) => ['warning', 'violation', 'frozen'].includes(item.status)).length
     };
   });
@@ -53,35 +63,63 @@ export class UserManagementService {
     return this.students().find((item) => item.id === id);
   }
 
-  coursesForLecturer(lecturer: Lecturer): LecturerCourseRow[] {
-    return this.source.coursesForLecturer(lecturer);
+  lecturerDetail(id: string): Lecturer | undefined {
+    return this.lecturerDetails().get(id) ?? this.findLecturer(id);
   }
 
-  disciplineLecturer(id: string, command: DisciplineCommand): void {
-    this.source.disciplineLecturer(id, command);
+  studentDetail(id: string): Student | undefined {
+    return this.studentDetails().get(id) ?? this.findStudent(id);
   }
 
-  unlockLecturer(id: string): void {
-    this.source.unlockLecturer(id);
+  reload(): Promise<void> {
+    return this.source.reload();
   }
 
-  approveLecturer(id: string): void {
-    this.source.approveLecturer(id);
+  loadLecturerDetail(id: string): Promise<Lecturer | undefined> {
+    return this.source.loadLecturerDetail(id);
   }
 
-  rejectLecturer(id: string, command: RejectLecturerCommand): void {
-    this.source.rejectLecturer(id, command);
+  loadStudentDetail(id: string): Promise<Student | undefined> {
+    return this.source.loadStudentDetail(id);
   }
 
-  requestDocuments(id: string, command: DocumentRequestCommand): void {
-    this.source.requestDocuments(id, command);
+  loadCoursesFor(id: string): Promise<readonly LecturerCourseRow[]> {
+    return this.source.loadCoursesFor(id);
   }
 
-  lockStudents(command: LockStudentsCommand): void {
-    this.source.lockStudents(command);
+  coursesFor(id: string): readonly LecturerCourseRow[] {
+    return this.coursesByLecturer().get(id) ?? [];
   }
 
-  unlockStudent(id: string): void {
-    this.source.unlockStudent(id);
+  exportList(kind: 'students' | 'lecturers', format: ExportFormat, filters: UserListFilters): Promise<void> {
+    return this.source.exportList(kind, format, filters);
+  }
+
+  disciplineLecturer(id: string, command: DisciplineCommand): Promise<void> {
+    return this.source.disciplineLecturer(id, command);
+  }
+
+  unlockLecturer(id: string, reason: string): Promise<void> {
+    return this.source.unlockLecturer(id, reason);
+  }
+
+  approveLecturer(id: string): Promise<void> {
+    return this.source.approveLecturer(id);
+  }
+
+  rejectLecturer(id: string, command: RejectLecturerCommand): Promise<void> {
+    return this.source.rejectLecturer(id, command);
+  }
+
+  requestDocuments(id: string, command: DocumentRequestCommand): Promise<void> {
+    return this.source.requestDocuments(id, command);
+  }
+
+  lockStudents(command: LockStudentsCommand): Promise<number> {
+    return this.source.lockStudents(command);
+  }
+
+  unlockStudent(id: string, reason: string): Promise<void> {
+    return this.source.unlockStudent(id, reason);
   }
 }

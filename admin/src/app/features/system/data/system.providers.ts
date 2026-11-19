@@ -1,6 +1,8 @@
 import { Provider } from '@angular/core';
 import { SYSTEM_STORE } from './system.store';
 import { SystemDemoService } from './system-demo.service';
+import { SystemHttpService } from './system-http.service';
+import { environment } from '../../../../environments/environment';
 
 /**
  * TODO(pre-deploy): Nhớ thay `SystemDemoService` bằng implementation `HttpClient` khi backend
@@ -12,6 +14,7 @@ import { SystemDemoService } from './system-demo.service';
  *   GET   /admin/system/settings
  *   PUT   /admin/system/settings        (yêu cầu OTP phê duyệt)
  */
-export const SYSTEM_PROVIDERS: Provider[] = [
-  { provide: SYSTEM_STORE, useExisting: SystemDemoService }
-];
+export const SYSTEM_PROVIDERS: Provider[] = [{
+  provide: SYSTEM_STORE,
+  useFactory: () => environment.adminDataSource === 'http' ? new SystemHttpService() : new SystemDemoService()
+}];

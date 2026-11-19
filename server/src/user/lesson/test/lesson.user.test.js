@@ -891,6 +891,7 @@ test('Lab activity maps runs, ranked submitted users and private history', () =>
   assert.equal(data.submissions[0].testsPassed, 2);
   assert.equal(data.submissions[0].status, 'pass');
   assert.equal(labActivityRows([run('trial', 'learner', 'in_progress', false)], [], 'learner').submissions.length, 1);
+  assert.deepEqual(labActivityRows([], [], 'learner').leaderboard, []);
 });
 
 

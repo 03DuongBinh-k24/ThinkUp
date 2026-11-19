@@ -130,7 +130,7 @@
                       <svg class="cart-rating__star" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.28 3.94a1 1 0 0 0 .95.69h4.15c.97 0 1.37 1.24.59 1.81l-3.36 2.44a1 1 0 0 0-.36 1.12l1.28 3.94c.3.92-.75 1.69-1.54 1.12l-3.35-2.44a1 1 0 0 0-1.18 0l-3.35 2.44c-.79.57-1.84-.2-1.54-1.12l1.28-3.94a1 1 0 0 0-.36-1.12L2.08 9.37c-.78-.57-.38-1.81.59-1.81H6.8a1 1 0 0 0 .95-.69l1.28-3.94Z" />
                       </svg>
-                      <strong>{{ item.rating }}</strong>
+                      <strong>{{ item.rating | number:'1.1-1' }}</strong>
                       <span class="cart-rating__muted">({{ compactRating(item.ratingCount) }})</span>
                       <span class="cart-rating__dot" aria-hidden="true">•</span>
                       <span class="cart-rating__muted">{{ studentsLabel(item) }}</span>
@@ -165,9 +165,10 @@
                     <button
                       type="button"
                       class="cart-action"
+                      [disabled]="!auth.isAuthenticated() || removingIds().includes(item.id)"
+                      [attr.title]="auth.isAuthenticated() ? (isFavorite(item.courseId || item.id) ? 'Bỏ khỏi yêu thích' : 'Lưu vào yêu thích') : 'Đăng nhập để sử dụng danh sách yêu thích'"
                       [class.is-active]="isFavorite(item.courseId || item.id)"
                       [attr.aria-label]="(isFavorite(item.courseId || item.id) ? 'Bỏ ' : 'Lưu ') + (item.displayTitle || item.title) + (isFavorite(item.courseId || item.id) ? ' khỏi' : ' vào') + ' yêu thích'"
-                      [title]="isFavorite(item.courseId || item.id) ? 'Bỏ khỏi yêu thích' : 'Lưu vào yêu thích'"
                       (click)="toggleCartFavorite(item)"
                     >
                       <svg viewBox="0 0 24 24" [attr.fill]="isFavorite(item.courseId || item.id) ? 'currentColor' : 'none'" aria-hidden="true">
@@ -179,8 +180,8 @@
                       class="cart-action"
                       [class.is-loading]="removingIds().includes(item.id)"
                       [attr.aria-label]="'Xóa ' + (item.displayTitle || item.title) + ' khỏi giỏ hàng'"
-                      title="Xóa khỏi giỏ hàng"
-                      [disabled]="removingIds().includes(item.id)"
+                      [attr.title]="auth.isAuthenticated() ? 'Xóa khỏi giỏ hàng' : 'Đăng nhập để cập nhật giỏ hàng'"
+                      [disabled]="!auth.isAuthenticated() || removingIds().includes(item.id)"
                       (click)="removeItem(item)"
                     >
                       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -337,6 +338,8 @@
                 <button
                   type="button"
                   class="suggest-fav"
+                  [disabled]="!auth.isAuthenticated()"
+                  [attr.title]="auth.isAuthenticated() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
                   [class.is-active]="isFavorite(course.id)"
                   [attr.aria-label]="isFavorite(course.id) ? 'Bỏ khóa học khỏi yêu thích' : 'Lưu khóa học vào yêu thích'"
                   (click)="toggleSuggestionFavorite(course)"
@@ -368,7 +371,7 @@
                   <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.28 3.94a1 1 0 0 0 .95.69h4.15c.97 0 1.37 1.24.59 1.81l-3.36 2.44a1 1 0 0 0-.36 1.12l1.28 3.94c.3.92-.75 1.69-1.54 1.12l-3.35-2.44a1 1 0 0 0-1.18 0l-3.35 2.44c-.79.57-1.84-.2-1.54-1.12l1.28-3.94a1 1 0 0 0-.36-1.12L2.08 9.37c-.78-.57-.38-1.81.59-1.81H6.8a1 1 0 0 0 .95-.69l1.28-3.94Z" />
                   </svg>
-                  <strong>{{ course.rating }}</strong>
+                  <strong>{{ course.rating | number:'1.1-1' }}</strong>
                   <span>({{ compactRating(course.ratingCount) }})</span>
                   <span class="suggest-dot" aria-hidden="true">•</span>
                   <span>{{ course.students || ((course.studentsCount || 0).toLocaleString('vi-VN') + ' học viên') }}</span>
@@ -391,6 +394,8 @@
                     <button
                       type="button"
                       class="suggest-action"
+                      [disabled]="!auth.isAuthenticated()"
+                      [attr.title]="auth.isAuthenticated() ? null : 'Đăng nhập để sử dụng giỏ hàng'"
                       aria-label="Thêm khóa học vào giỏ hàng"
                       title="Thêm vào giỏ hàng"
                       (click)="addSuggestionToCart(course)"
@@ -471,4 +476,12 @@
       </div>
     </section>
   </div>
+
+  <app-auth-required-modal
+    [open]="authModalOpen()"
+    returnUrl="/main/checkout"
+    (closed)="authModalOpen.set(false)"
+  />
 </main>
+
+

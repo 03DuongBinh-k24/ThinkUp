@@ -152,7 +152,7 @@ export function formatCertificateDto(doc) {
 }
 
 async function enrichCertificateInstructor(db, doc) {
-  if (doc.instructor_name) return doc;
+  if (doc.instructor_name && (doc.signature_url || doc.signatureUrl)) return doc;
   const rawCourseId = doc.course_id;
   const courseId = String(rawCourseId || '');
   const course = await db.collection(COLLECTION_COURSES).findOne({ $or: [
@@ -167,8 +167,8 @@ async function enrichCertificateInstructor(db, doc) {
   const instructor = instructorId ? await db.collection(COLLECTION_USERS).findOne({ $or: [
     { id: instructorId }, { user_id: instructorId }, ...(objectId ? [{ _id: objectId }] : []),
   ] }) : null;
-  const values = { instructor_id: instructorId || null,
-    instructor_name: profile?.full_name || profile?.name || instructor?.full_name || instructor?.name || 'Giảng viên ThinkUp',
+  const values = { instructor_id: instructorId || doc.instructor_id || null,
+    instructor_name: doc.instructor_name || profile?.full_name || profile?.name || instructor?.full_name || instructor?.name || 'Giảng viên ThinkUp',
     signature_url: profile?.signature_url || profile?.signatureUrl || null };
   if (doc._id) await db.collection(COLLECTION_CERTIFICATES).updateOne({ _id: doc._id }, { $set: values });
   return { ...doc, ...values };
@@ -272,6 +272,24 @@ export async function getCertificateDownload(code, res = null) {
       doc.image(bgPath, 0, 0, { width: 1375, height: 1024 });
     }
 
+    if (certificate.signatureUrl) {
+      // Keep the downloadable PDF consistent with the signature block shown in the web certificate artwork.
+      doc.save().fillColor('#FFFFFF').rect(674, 757, 316, 195).fill().restore();
+      const signatureLoad = fetch(certificate.signatureUrl).then(async response => {
+        if (!response.ok) throw new Error(`Signature image returned ${response.status}`);
+        const image = Buffer.from(await response.arrayBuffer());
+        doc.image(image, 744, 757, { fit: [174, 113], align: 'center', valign: 'center' });
+        doc.font(fs.existsSync(boldFont) ? 'NotoSansBold' : 'Helvetica-Bold')
+          .fontSize(18).fillColor('#081433')
+          .text(certificate.instructorName || 'Giảng viên ThinkUp', 674, 911, { width: 316, lineBreak: false, align: 'center' });
+        doc.font(fs.existsSync(regularFont) ? 'NotoSans' : 'Helvetica')
+          .fontSize(12).fillColor('#64748b')
+          .text('Giảng viên', 674, 934, { width: 316, lineBreak: false, align: 'center' });
+      }).catch(() => {});
+      // The signature image is awaited before the PDF stream is finalized below.
+      doc._signatureLoad = signatureLoad;
+    }
+
     if (fs.existsSync(regularFont) && fs.existsSync(boldFont)) {
       doc.registerFont('NotoSans', regularFont).registerFont('NotoSansBold', boldFont);
     }
@@ -302,7 +320,7 @@ export async function getCertificateDownload(code, res = null) {
     // QR Code
     doc.image(qrBuffer, 446, 791, { width: 160, height: 148 });
 
-    doc.end();
+    Promise.resolve(doc._signatureLoad).then(() => doc.end(), reject);
   });
 
   if (res) {

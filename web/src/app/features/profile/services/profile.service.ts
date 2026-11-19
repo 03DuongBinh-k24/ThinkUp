@@ -55,7 +55,7 @@ export class ProfileService {
         const metadata = new Map([...(res.data.currentCourses ?? []), ...(res.data.completedCourses ?? [])].map(course => [course.id, course]));
         const cards = enrolled.data.map(course => ({
           id: course.id, title: course.title, instructor: course.instructor,
-          instructorAvatar: metadata.get(course.id)?.instructorAvatar,
+          instructorAvatar: course.instructorAvatar || metadata.get(course.id)?.instructorAvatar,
           category: metadata.get(course.id)?.category ?? '', progress: course.progress!,
           nextLesson: course.resumeLesson?.title ?? '', image: course.thumbnailUrl ?? course.image ?? '',
           href: '/main/my-courses/' + encodeURIComponent(course.id),

@@ -9,6 +9,7 @@ import { OwnerDeparture, RoomConnection, RoomDetailsUpdate, RoomMessage, RoomPar
 
 // TODO(pre-deploy): Nhớ xóa các phòng và tài khoản demo sau khi hợp đồng danh sách chờ và upload đã được nghiệm thu.
 const user: User = { id: 'demo-learner', full_name: 'Nguyễn Khánh Linh', avatar: '/assets/study-room/demo-avatars/khanh-linh.jpg', email: 'demo@example.invalid', role: 'student' };
+const demoPeerId = 'demo-peer';
 
 const demoChat: RoomMessage[] = [
   { id: 'demo-chat-1', senderId: 'demo-peer', senderName: 'Trần Đức Minh', content: 'Mọi người đọc đến chương 3 chưa? Mình muốn trao đổi đoạn nói về thói quen nhỏ.', createdAt: '2026-01-01T02:00:00Z' },
@@ -21,17 +22,21 @@ const demoChat: RoomMessage[] = [
 function fixture(roomId: string, name: string, details: Partial<StudyRoomItem> = {}): StudyRoomItem {
   return {
     roomId, name, type: 'public', maxUsers: 4, currentUsers: 1, status: 'focus',
+    creator: demoPeerId,
+    creatorName: 'Trần Đức Minh',
     tags: ['Lập trình'], category: 'Lập trình', theme: 'white', description: 'Phòng dùng để kiểm tra giao diện.',
     ...details,
   };
 }
 
 const rooms = [
-  fixture('demo-open', 'Phòng demo · Thành viên', { description: 'Vào phòng với quyền thành viên thông thường.' }),
+  fixture('demo-open', 'Code cùng nhau sau giờ học', { theme: 'lofi-night', description: 'Cùng luyện JavaScript và trao đổi những chỗ đang vướng.' }),
+  fixture('demo-owner-offline', 'Góc luyện nghe tiếng Anh', { creator: 'demo-offline-owner', creatorName: 'Phạm Minh Anh', theme: 'cloud-window', category: 'Ngoại ngữ', tags: ['Ngoại ngữ'], description: 'Nghe podcast ngắn và ghi lại những cụm từ dùng được ngay.' }),
+  fixture('demo-design', 'Xưởng thiết kế cuối tuần', { theme: 'pixel-dreamland', category: 'Thiết kế', tags: ['Thiết kế'], description: 'Cùng hoàn thiện thiết kế và góp ý cho nhau cuối buổi.' }),
   fixture('demo-password', 'Phòng có mật khẩu', { type: 'private', requiresPassword: true }),
-  fixture('demo-full', 'Phòng hết chỗ', { currentUsers: 4 }),
-  fixture('demo-waitlist', 'Phòng có danh sách chờ', { currentUsers: 4, waitlistEnabled: true }),
-  fixture('demo-retry', 'Danh sách chờ · thử lại', { currentUsers: 4, waitlistEnabled: true, category: 'Tự học', tags: ['Tự học'] }),
+  fixture('demo-full', 'Ôn xác suất trước kỳ thi', { currentUsers: 4, theme: 'pragmata-horizon', category: 'Toán học', tags: ['Toán học'], description: 'Giải đề xác suất và so sánh cách làm sau mỗi lượt.' }),
+  fixture('demo-waitlist', 'Câu lạc bộ sách tối thứ Sáu', { currentUsers: 4, waitlistEnabled: true, theme: 'cozy-window', category: 'Đọc sách', tags: ['Đọc sách'], description: 'Đọc yên lặng 25 phút rồi chia sẻ một ý mình tâm đắc.' }),
+  fixture('demo-retry', 'Pomodoro buổi sáng', { currentUsers: 4, waitlistEnabled: true, theme: 'sky-room', category: 'Tự học', tags: ['Tự học'], description: 'Bắt đầu ngày mới bằng hai phiên tập trung 25 phút.' }),
   fixture('demo-approval', 'Phòng cần phê duyệt', { type: 'private', inviteMode: 'approval' }),
   fixture('demo-rejected', 'Yêu cầu bị từ chối', { type: 'private', inviteMode: 'approval' }),
   fixture('demo-owner', 'Góc đọc sách buổi tối', {
@@ -39,7 +44,7 @@ const rooms = [
     category: 'Đọc sách',
     tags: ['Đọc sách', 'Thói quen nguyên tử'],
     description: 'Đọc chương 3 của Thói quen nguyên tử trong 25 phút, rồi chia sẻ một ý hay với cả nhóm.',
-    approvalRequired: true, currentUsers: 3, creator: user.id,
+    approvalRequired: true, currentUsers: 3, creator: user.id, creatorName: user.full_name,
     joinRequests: [
       { userId: 'demo-applicant', userName: 'Phạm Minh Anh', avatar: '/assets/study-room/demo-avatars/minh-anh.jpg', status: 'pending', requestedAt: '2026-01-01T08:00:00Z' },
       { userId: 'demo-applicant-2', userName: 'Vũ Hoàng Nam', avatar: '/assets/study-room/demo-avatars/hoang-nam.jpg', status: 'pending', requestedAt: '2026-01-01T08:01:00Z' },
@@ -145,10 +150,22 @@ class DemoStudyRoomService extends StudyRoomService {
   }
 
   override popularTags() {
-    return of({ topTags: [{ name: 'Lập trình', count: 7 }, { name: 'Tự học', count: 1 }] });
+    const counts = new Map<string, number>();
+    for (const room of this.records().filter(room => room.type === 'public')) {
+      for (const tag of room.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    return of({ topTags: [...counts].map(([name, count]) => ({ name, count })) });
   }
 
-  override randomSpawn() { return of(this.records()[0]); }
+  override randomSpawn() {
+    const matches = this.records().filter(room =>
+      room.type === 'public' && room.currentUsers < room.maxUsers &&
+      !room.requiresPassword && !room.approvalRequired && room.inviteMode !== 'approval' &&
+      !this.extras.roomSettings(room.roomId).locked && this.hasPresentOwner(room.roomId));
+    if (!matches.length) return failure('NO_MATCH', 'Hiện chưa có phòng phù hợp và còn chỗ.');
+    // TODO(pre-deploy): Nhớ xóa độ trễ demo khi bỏ mock. Bản thật chờ phản hồi API tìm phòng.
+    return of(matches[Math.floor(Math.random() * matches.length)]).pipe(delay(900));
+  }
   override getRoomById(roomId: string) { return this.records().find(room => room.roomId === roomId) ?? null; }
   override getJoinedRoom(roomId: string) { return this.joined()[roomId] ?? null; }
   override clearJoinedRoom(roomId: string) {
@@ -159,6 +176,7 @@ class DemoStudyRoomService extends StudyRoomService {
     const roomId = codeOrLink.trim().split(/[?#]/)[0].split('/').filter(Boolean).at(-1) ?? '';
     const room = this.getRoomById(roomId);
     if (!room) return failure('ROOM_MISSING', 'Không tìm thấy phòng demo.');
+    if (!this.hasPresentOwner(roomId)) return failure('OWNER_ABSENT', 'Chủ phòng chưa có mặt. Bạn có thể tham gia khi chủ phòng vào.', roomId);
     if (this.extras.roomSettings(roomId).locked && this.role(roomId) !== 'owner') {
       return failure('ROOM_LOCKED', 'Chủ phòng đã khóa lượt tham gia mới.', roomId);
     }
@@ -178,6 +196,7 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override createRoom(request: Parameters<StudyRoomService['createRoom']>[0]) {
     const room = fixture(crypto.randomUUID(), request.name, {
+      creator: user.id, creatorName: user.full_name,
       type: request.type, maxUsers: request.capacity, currentUsers: 1, description: request.goal,
       tags: request.tags, category: request.topic, theme: request.roomTheme, requiresPassword: !!request.password,
     });
@@ -188,20 +207,30 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override prepareConnection(roomId: string, userId: string, name: string) { return this.connection(roomId, userId, name); }
   override connection(roomId: string, _userId: string, _name: string): Observable<RoomConnection> {
+    if (!this.getRoomById(roomId)) return failure('ROOM_MISSING', 'Không tìm thấy phòng demo.', roomId);
+    if (!this.hasPresentOwner(roomId)) return failure('OWNER_ABSENT', 'Chủ phòng chưa có mặt. Bạn có thể tham gia khi chủ phòng vào.', roomId);
     return of({ roomId, token: '', livekitUrl: '', role: this.role(roomId), position: this.positions.get(roomId) ?? { x: 280, y: 180 } });
   }
 
   override participants(roomId: string): Observable<RoomParticipant[]> {
+    return of(this.roomParticipants(roomId));
+  }
+
+  private hasPresentOwner(roomId: string): boolean {
+    return this.roomParticipants(roomId).some(participant => participant.role === 'owner');
+  }
+
+  private roomParticipants(roomId: string): RoomParticipant[] {
     const selfRole = this.role(roomId);
     const members: RoomParticipant[] = [
       { userId: user.id, name: user.full_name, displayName: user.full_name, initials: 'KL', avatar: user.avatar ?? '', role: selfRole, roleLabel: selfRole === 'owner' ? 'Chủ phòng' : 'Thành viên', isSelf: true, position: this.positions.get(roomId) ?? { x: 280, y: 180 } },
-      { userId: 'demo-peer', name: 'Trần Đức Minh', displayName: 'Trần Đức Minh', initials: 'ĐM', avatar: '/assets/study-room/demo-avatars/duc-minh.jpg', role: 'member', roleLabel: 'Thành viên', isSelf: false, position: { x: 475, y: 200 } },
+      { userId: demoPeerId, name: 'Trần Đức Minh', displayName: 'Trần Đức Minh', initials: 'ĐM', avatar: '/assets/study-room/demo-avatars/duc-minh.jpg', role: 'member', roleLabel: 'Thành viên', isSelf: false, position: { x: 475, y: 200 } },
     ];
     if (roomId === 'demo-owner') {
       members.push({ userId: 'demo-peer-2', name: 'Lê Gia Huy', displayName: 'Lê Gia Huy', initials: 'GH', avatar: '/assets/study-room/demo-avatars/gia-huy.jpg', role: 'member', roleLabel: 'Thành viên', isSelf: false, position: { x: 650, y: 225 } });
     }
-    const ownerId = this.ownerByRoom.get(roomId);
-    return of(members.map<RoomParticipant>(member => member.userId === ownerId ? { ...member, role: 'owner', roleLabel: 'Chủ phòng' } : member));
+    const ownerId = this.ownerByRoom.get(roomId) ?? this.getRoomById(roomId)?.creator;
+    return members.map(member => member.userId === ownerId ? { ...member, role: 'owner', roleLabel: 'Chủ phòng' } : member);
   }
 
   private roomPermissions(roomId: string): RoomPermissions {
@@ -214,7 +243,8 @@ class DemoStudyRoomService extends StudyRoomService {
 
   override permissions(roomId: string, _userId: string): ReturnType<StudyRoomService['permissions']> {
     const owner = this.role(roomId) === 'owner';
-    return of({ role: this.role(roomId), roomPermissions: this.roomPermissions(roomId), effectivePermissions: { canManagePermissions: owner, canChangeTheme: owner }, permissionMatrix: [] });
+    // TODO(API handoff): Xác nhận quyền đổi theme của thành viên trong permissions và endpoint đổi theme.
+    return of({ role: this.role(roomId), roomPermissions: this.roomPermissions(roomId), effectivePermissions: { canManagePermissions: owner, canChangeTheme: true }, permissionMatrix: [] });
   }
 
   override updatePermissions(roomId: string, patch: Partial<RoomPermissions>) {
@@ -274,12 +304,13 @@ class DemoStudyRoomService extends StudyRoomService {
       return of(null);
     }
     return this.participants(roomId).pipe(switchMap(members => {
-      if (!members.some(member => !member.isSelf && member.userId === decision.successorId)) {
+      const successor = members.find(member => !member.isSelf && member.userId === decision.successorId);
+      if (!successor) {
         return failure('MEMBER_MISSING', 'Thành viên được chọn không còn trong phòng.');
       }
       this.ownerByRoom.set(roomId, decision.successorId);
       this.records.update(rooms => rooms.map(room => room.roomId === roomId
-        ? { ...room, creator: decision.successorId, currentUsers: Math.max(1, room.currentUsers - 1) }
+        ? { ...room, creator: decision.successorId, creatorName: successor.displayName || successor.name, currentUsers: Math.max(1, room.currentUsers - 1) }
         : room));
       return of(null);
     }));
@@ -335,8 +366,11 @@ class DemoStudyRoomService extends StudyRoomService {
   }
 
   override changeTheme(roomId: string, theme: string) {
-    const room = this.getJoinedRoom(roomId);
-    if (room) this.joined.update(current => ({ ...current, [roomId]: { ...room, theme } }));
+    if (!this.getRoomById(roomId)) return failure('ROOM_MISSING', 'Không tìm thấy phòng demo.', roomId);
+    this.records.update(rooms => rooms.map(room => room.roomId === roomId ? { ...room, theme } : room));
+    this.joined.update(current => current[roomId]
+      ? { ...current, [roomId]: { ...current[roomId], theme } }
+      : current);
     return of(null);
   }
   override invite() { return failure('DEMO_ONLY', 'Chế độ demo không gửi lời mời.'); }
