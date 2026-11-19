@@ -22,6 +22,10 @@ export interface CourseFinance {
   revenue: string;
   voucher: string;
   voucherActive: boolean;
+  /** Chỉ có khi nối API tài chính (GET /admin/courses/:id/finance). */
+  orderCount?: number | null;
+  refundTotal?: string;
+  netAfterRefund?: string;
 }
 
 export interface Course {
