@@ -38,7 +38,8 @@ function niceCeil(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 1;
   const power = 10 ** Math.floor(Math.log10(value));
   const scaled = value / power;
-  const step = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
+  // Làm tròn mượt mà và bám sát giá trị đỉnh hơn để trục tung không bị dư khoảng trắng quá lớn
+  const step = scaled <= 1 ? 1 : scaled <= 1.25 ? 1.25 : scaled <= 1.5 ? 1.5 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 3 ? 3 : scaled <= 4 ? 4 : scaled <= 5 ? 5 : scaled <= 6 ? 6 : scaled <= 8 ? 8 : 10;
   return step * power;
 }
 
@@ -73,7 +74,34 @@ export class DashboardComponent implements OnInit {
   readonly totals = computed(() => this.data.analytics()?.totals ?? {
     total: 0, original: 0, marketplace: 0, payout: 0, changePercent: null
   });
-  readonly bars = computed<RevenuePoint[]>(() => this.data.analytics()?.bars ?? []);
+  readonly chartBars = computed<RevenuePoint[]>(() => {
+    const rawBars = this.data.analytics()?.bars ?? [];
+    if (!rawBars.length) return [];
+    // Nếu toàn bộ đều bằng 0 thì giữ nguyên
+    const hasAnyRevenue = rawBars.some(b => b.original > 0 || b.marketplace > 0 || b.payout > 0);
+    if (!hasAnyRevenue) return rawBars;
+
+    // Tìm tháng đầu tiên và tháng cuối cùng có phát sinh dữ liệu doanh thu hoặc payout
+    let firstActiveIndex = 0;
+    while (firstActiveIndex < rawBars.length) {
+      const b = rawBars[firstActiveIndex];
+      if (b.original > 0 || b.marketplace > 0 || b.payout > 0) break;
+      firstActiveIndex++;
+    }
+
+    let lastActiveIndex = rawBars.length - 1;
+    while (lastActiveIndex >= 0) {
+      const b = rawBars[lastActiveIndex];
+      if (b.original > 0 || b.marketplace > 0 || b.payout > 0) break;
+      lastActiveIndex--;
+    }
+
+    // Hiển thị từ tháng bắt đầu có dữ liệu (có thể lùi 1 tháng trước đó làm baseline nếu có) đến hết năm hoặc tháng cuối
+    const start = Math.max(0, firstActiveIndex - 1);
+    const end = Math.min(rawBars.length - 1, Math.max(lastActiveIndex, firstActiveIndex + 3));
+    return rawBars.slice(start, end + 1);
+  });
+  readonly bars = computed<RevenuePoint[]>(() => this.chartBars());
   readonly periods: Period[] = ['Ngày', 'Tuần', 'Tháng', 'Năm', 'Quý'];
   readonly period = signal<Period>('Năm');
   readonly rangeApplied = signal(false);
@@ -134,7 +162,8 @@ export class DashboardComponent implements OnInit {
   readonly chartMax = computed(() => {
     const bars = this.bars();
     const peak = bars.reduce((max, bar) => Math.max(max, bar.original + bar.marketplace, bar.payout), 0);
-    return niceCeil(peak * 1.05);
+    // Bám sát đỉnh thực tế hơn thay vì phóng trục tung lên quá cao
+    return niceCeil(peak * 1.02);
   });
   readonly chartTicks = computed(() => {
     const max = this.chartMax();
