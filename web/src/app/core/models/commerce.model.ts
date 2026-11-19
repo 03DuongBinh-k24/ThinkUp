@@ -40,6 +40,7 @@ export interface TransactionDetail {
   id: string;
   transactionCode: string;
   paymentMethod: string;
+  is_simulated?: boolean;
   createdAt: string;
   paidAt: string;
   completedAt: string;

@@ -1,5 +1,5 @@
 import { getMongoDb } from '../db.js';
-import { createPaymentSession, retryPaymentSession, checkPaymentStatus, paymentError } from './payment.service.js';
+import { createPaymentSession, retryPaymentSession, checkPaymentStatus, paymentError, paymentOrderSummary } from './payment.service.js';
 import { handleSepayWebhook } from './gateways/sepay.service.js';
 import { createVnpayPaymentUrl, verifyVnpayCallback } from './gateways/vnpay.service.js';
 import { createStripeCheckoutSession, handleStripeWebhookEvent } from './gateways/stripe.service.js';
@@ -42,6 +42,10 @@ export function createPaymentRouter(express,requireAuth,options={}){
       res.set('Cache-Control','no-store');
       res.json({success:true,transactionId:tx.transaction_id,orderId:tx.order_id,status:tx.status,fulfillmentStatus:tx.fulfillment_status,
         amount:tx.amount,currency:tx.currency,paidAt:tx.paid_at,expiresAt:tx.expires_at,
+        paymentMethod:tx.payment_method==='simulation' ? tx.requested_payment_method || 'simulation' : tx.payment_method,
+        isSimulated:Boolean(tx.is_simulated || tx.execution_mode==='simulation'),
+        requestedPaymentMethod:tx.requested_payment_method || undefined,
+        orderSummary:paymentOrderSummary(tx),
         remainingSeconds:Math.max(0,Math.floor((new Date(tx.expires_at)-Date.now())/1000))});
     }catch(error){next(error);}
   });

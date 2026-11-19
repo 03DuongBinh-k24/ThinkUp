@@ -317,7 +317,8 @@ export class CommerceService {
           || res.data.amount < 0 || res.data.currency !== 'VND') throw new Error('Phản hồi thanh toán không hợp lệ.');
         const data = res.data;
         if (data.paymentMethod === 'simulation' || data.isSimulated || data.executionMode === 'simulation') {
-          if (data.paymentMethod !== 'simulation' || data.isSimulated !== true || data.executionMode !== 'simulation'
+          if (data.paymentMethod !== (payload as { paymentMethod?: string }).paymentMethod
+            || data.isSimulated !== true || data.executionMode !== 'simulation'
             || !data.paymentContent || !data.transferContent || data.requestedPaymentMethod !== (payload as { paymentMethod?: string }).paymentMethod
             || (data.status === 'success' && (data.fulfillmentStatus !== 'completed' || !data.invoiceCode))) {
             throw new Error('Không xác minh được kết quả thanh toán mô phỏng.');
@@ -348,7 +349,7 @@ export class CommerceService {
         }
         return { transactionId: detail.transactionCode, orderId: detail.id, invoiceCode: detail.invoice.code,
           paymentContent: detail.paymentContent, transferContent: detail.payment.transferContent,
-          paymentMethod: detail.paymentMethod, isSimulated: detail.paymentMethod === 'simulation' };
+          paymentMethod: detail.paymentMethod, isSimulated: detail.is_simulated === true };
       }),
     );
   }

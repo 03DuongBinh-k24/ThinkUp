@@ -465,7 +465,8 @@ test('Simulation completes selected simulated methods without gateway configurat
       await f.db.collection('user_cart_items').insertOne({user_id:'another-user',course_id:f.courseId});
       const s=await f.create({paymentMethod:method,courses:[{id:f.courseId,price:1}],voucherDiscount:499999});
       assert.equal(s.status,'success');assert.equal(s.fulfillmentStatus,'completed');assert.equal(s.amount,500000);
-      assert.equal(s.paymentMethod,'simulation');assert.equal(s.executionMode,'simulation');assert.equal(s.isSimulated,true);
+      assert.equal(s.paymentMethod,method);assert.equal(txOf(f,s.transactionId).payment_method,method);
+      assert.equal(s.executionMode,'simulation');assert.equal(s.isSimulated,true);
       assert.equal(s.requestedPaymentMethod,method);assert.equal(s.paymentUrl,'');assert.equal(s.qrCodeUrl,undefined);
       assert.match(s.orderId,/^DH\d{16}$/);assert.match(s.transactionId,/^GD\d{16}$/);
       assert.match(s.invoiceCode,/^HD-\d{8}-[A-F0-9]{16}$/);
@@ -622,7 +623,10 @@ test('Existing HTTP routes return a completed simulation with stored codes, auth
     init.headers['X-Test-User']=f.userId;
     const response=await fetch(`${base}/create-session`,init);assert.equal(response.status,201);
     const {data}=await response.json();assert.equal(data.status,'success');assert.equal(data.fulfillmentStatus,'completed');assert.ok(data.invoiceCode);assert.equal(data.paymentUrl,'');
-    const status=await fetch(`${base}/status/${data.transactionId}`,{headers:{'X-Test-User':f.userId}});assert.equal(status.status,200);assert.equal((await status.json()).status,'success');
+    assert.equal(data.paymentMethod,'stripe');assert.deepEqual(data.orderSummary.courses.map(course=>course.id),[f.courseId]);
+    const status=await fetch(`${base}/status/${data.transactionId}`,{headers:{'X-Test-User':f.userId}});assert.equal(status.status,200);
+    const statusData=await status.json();assert.equal(statusData.status,'success');assert.equal(statusData.paymentMethod,'stripe');
+    assert.deepEqual(statusData.orderSummary.courses.map(course=>course.id),[f.courseId]);
     assert.equal((await fetch(`${base}/status/${data.transactionId}`,{headers:{'X-Test-User':'someone-else'}})).status,404);
     const repeated=await fetch(`${base}/create-session`,init);assert.equal((await repeated.json()).data.invoiceCode,data.invoiceCode);
     assert.equal((await fetch(`${base}/simulate-success`,{method:'POST'})).status,404);
