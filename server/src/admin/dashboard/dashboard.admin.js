@@ -189,6 +189,27 @@ export async function getAdminDashboardAnalytics(query = {}, options = {}) {
   const purchaseTotals = new Map();
   for (const tx of inPeriod) { const summary = typeof tx.order_summary === 'string' ? (() => { try { return JSON.parse(tx.order_summary); } catch { return {}; } })() : tx.order_summary || {}; for (const item of summary.courses || tx.courses || []) { const id = String(item.id || item.course_id || ''); if (id) purchaseTotals.set(id, (purchaseTotals.get(id) || 0) + 1); } }
   const topCourses = [...purchaseTotals].map(([id, purchases]) => { const course = courseById.get(id); const rating = reviewTotals.get(id); return { courseId: id, title: course?.title || 'Khóa học', purchases, rating: rating?.count ? Number((rating.sum / rating.count).toFixed(1)) : null }; }).sort((a, b) => b.purchases - a.purchases).slice(0, 5);
+  // Đảm bảo nếu chọn grain theo tháng (hoặc period là year) thì lấp đủ các tháng trong khoảng thời gian (VD: đủ 12 tháng của năm)
+  if (grain === 'month') {
+    const sYear = current.start.getFullYear();
+    const sMonth = current.start.getMonth();
+    const eYear = current.end.getFullYear();
+    const eMonth = current.end.getMonth();
+    let y = sYear;
+    let m = sMonth;
+    while (y < eYear || (y === eYear && m <= eMonth)) {
+      const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+      if (!buckets.has(key)) {
+        buckets.set(key, { period: key, original: 0, marketplace: 0, payout: 0 });
+      }
+      m++;
+      if (m > 11) {
+        m = 0;
+        y++;
+      }
+    }
+  }
+
   const revenueRows = [...buckets.values()].sort((a, b) => a.period.localeCompare(b.period));
   const originalTotal = revenueRows.reduce((sum, item) => sum + item.original, 0);
   const marketplaceTotal = revenueRows.reduce((sum, item) => sum + item.marketplace, 0);

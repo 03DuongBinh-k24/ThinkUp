@@ -216,7 +216,7 @@ export interface RoadmapPhase {
   name: string;
   description?: string;
   nodes: RoadmapNode[];
-  test?: RoadmapTest;
+  test?: RoadmapTest | null;
 }
 
 export interface CourseSuggestion {

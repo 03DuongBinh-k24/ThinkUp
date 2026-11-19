@@ -200,36 +200,72 @@ export class RoadmapStudioComponent {
     if (this.editingTag() === tag) this.editingTag.set(null);
   }
 
+  renamePhase(phase: RoadmapPhase, value: string): void {
+    const name = value.trim();
+    const studio = this.studio();
+    if (!studio || !name || name === phase.name) return;
+    const stage = `${phase.no} · ${name}`;
+    const oldLabel = `${phase.no} · ${phase.name}`;
+    this.localStudio.set({
+      ...studio,
+      phases: studio.phases.map(item =>
+        item.id === phase.id ? { ...item, name, test: item.test && { ...item.test, stage } } : item
+      )
+    });
+    if (this.testDraft()?.stage === oldLabel) this.patchTest({ stage });
+  }
+
+  commitTest(): void {
+    const studio = this.studio();
+    const test = this.testDraft();
+    if (!studio || !test?.stage) return;
+    const hasTest = !!test.name.trim() || test.questions.length > 0;
+    const phases = studio.phases.map(phase =>
+      `${phase.no} · ${phase.name}` === test.stage || test.stage.endsWith(phase.name)
+        ? { ...phase, test: hasTest ? clone(test) : undefined }
+        : phase
+    );
+    this.localStudio.set({ ...studio, phases, test: clone(test) });
+  }
+
   addPhase(): void {
     const studio = this.studio();
-    if (!studio || studio.phases.length >= 50) return;
-    const count = studio.phases.length + 1;
-    const phase: RoadmapPhase = { id: crypto.randomUUID(), no: String(count).padStart(2, '0'), name: `Giai đoạn ${count}`, nodes: [] };
-    this.localStudio.set({ ...studio, phases: [...studio.phases, phase] });
-    if (!this.testDraft()?.stage) this.setStage(`${phase.no} · ${phase.name}`);
+    if (!studio) return;
+    const nextIndex = studio.phases.length + 1;
+    const phaseNo = String(nextIndex).padStart(2, '0');
+    const newPhase: RoadmapPhase = {
+      id: `stage-${Date.now().toString(36)}`,
+      no: phaseNo,
+      name: `Giai đoạn ${phaseNo}`,
+      nodes: [],
+      test: null
+    };
+    const updatedPhases = [...studio.phases, newPhase];
+    this.localStudio.set({ ...studio, phases: updatedPhases });
+    this.notify(`Đã thêm ${newPhase.name}.`, 'success');
   }
 
   addNode(phase: RoadmapPhase): void {
     const studio = this.studio();
-    if (!studio || phase.nodes.length >= 100) return;
-    const node: RoadmapNode = {
-      id: crypto.randomUUID(), name: '', type: 'Kỹ năng', level: 'Cơ bản',
-      industry: this.roadmap()?.industry ?? '', description: '', outcomes: '', tags: []
-    };
-    this.localStudio.set({ ...studio, phases: studio.phases.map(item =>
-      item.id === phase.id ? { ...item, nodes: [...item.nodes, node] } : item) });
-    this.selectNode(node);
-  }
-
-  renamePhase(phase: RoadmapPhase, name: string): void {
-    this.commitTest();
-    const studio = this.studio();
     if (!studio) return;
-    const oldLabel = `${phase.no} · ${phase.name}`;
-    const stage = `${phase.no} · ${name}`;
-    this.localStudio.set({ ...studio, phases: studio.phases.map(item =>
-      item.id === phase.id ? { ...item, name, test: item.test && { ...item.test, stage } } : item) });
-    if (this.testDraft()?.stage === oldLabel) this.patchTest({ stage });
+    const nodeIndex = phase.nodes.length + 1;
+    const newNode: RoadmapNode = {
+      id: `node-${Date.now().toString(36)}-${nodeIndex}`,
+      name: `Kỹ năng mới ${nodeIndex}`,
+      type: 'Kỹ năng',
+      level: 'Cơ bản',
+      industry: this.roadmap()?.industry || '',
+      description: 'Mô tả chi tiết kỹ năng cần đạt.',
+      outcomes: 'Kết quả học tập đạt được.',
+      tags: ['Kỹ năng'],
+      courses: []
+    };
+    const updatedPhases = studio.phases.map(p =>
+      p.id === phase.id ? { ...p, nodes: [...p.nodes, newNode] } : p
+    );
+    this.localStudio.set({ ...studio, phases: updatedPhases });
+    this.selectNode(newNode);
+    this.notify(`Đã thêm node vào ${phase.name}.`, 'success');
   }
 
   setThreshold(value: string): void {
@@ -273,21 +309,40 @@ export class RoadmapStudioComponent {
   }
 
   setStage(value: string): void {
-    this.commitTest();
-    const phase = this.studio()?.phases.find(item => `${item.no} · ${item.name}` === value);
-    const test = phase?.test ?? { stage: value, name: '', duration: 30, passScore: 70, questions: [] };
-    this.testDraft.set(clone(test));
-    this.selectedQuestionId.set(test.questions[0]?.id ?? '');
-  }
-
-  private commitTest(): void {
+    const currentTest = this.testDraft();
     const studio = this.studio();
-    const test = this.testDraft();
-    if (!studio || !test?.stage) return;
-    const hasTest = !!test.name.trim() || test.questions.length > 0;
-    const phases = studio.phases.map(phase => `${phase.no} · ${phase.name}` === test.stage
-      ? { ...phase, test: hasTest ? clone(test) : undefined } : phase);
-    this.localStudio.set({ ...studio, phases, test: clone(test) });
+    if (studio && currentTest) {
+      // Lưu lại bài test hiện tại vào đúng phase tương ứng
+      const updatedPhases = studio.phases.map(phase => {
+        const fullStageName = `${phase.no} · ${phase.name}`;
+        if (currentTest.stage.endsWith(phase.name) || currentTest.stage === fullStageName) {
+          return { ...phase, test: clone(currentTest) };
+        }
+        return phase;
+      });
+      this.localStudio.set({ ...studio, phases: updatedPhases });
+
+      // Tìm phase mục tiêu được chọn
+      const targetPhase = updatedPhases.find(phase => {
+        const fullStageName = `${phase.no} · ${phase.name}`;
+        return value.endsWith(phase.name) || value === fullStageName;
+      });
+
+      if (targetPhase?.test) {
+        // Nếu phase mục tiêu đã có bài test và bộ câu hỏi, tải lên
+        this.testDraft.set(clone(targetPhase.test));
+        this.selectedQuestionId.set(targetPhase.test.questions[0]?.id ?? '');
+        return;
+      }
+    }
+
+    // Nếu phase mục tiêu chưa có bài test hoặc không tìm thấy, đổi stage và reset về rỗng
+    this.patchTest({
+      stage: value,
+      name: `Bài kiểm tra ${value}`,
+      questions: []
+    });
+    this.selectedQuestionId.set('');
   }
 
   patchQuestion(patch: Partial<RoadmapQuestion>): void {

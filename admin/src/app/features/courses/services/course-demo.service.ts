@@ -28,11 +28,56 @@ export class CourseDemoService extends CourseStore {
     this.errorState.set(false);
   }
 
-  override async ensureRoadmapStudio(id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
-    const roadmap = this.roadmaps().find(item => item.id === id);
-    const studio = this.studios().find(item => item.roadmapId === id);
-    if (!roadmap || !studio) throw new Error('Không tìm thấy cấu hình lộ trình demo.');
-    return { id, roadmap, studio: clone(studio) };
+  override ensureRoadmapStudio(id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
+    const roadmap = this.roadmapState().find(item => item.id === id);
+    const studio = this.studioState().find(item => item.roadmapId === id);
+    if (roadmap && studio) {
+      return Promise.resolve({ id, roadmap: clone(roadmap), studio: clone(studio) });
+    }
+    // Nếu tìm theo category_id hoặc không khớp chính xác ID
+    const fallbackStudio = this.studioState()[0];
+    const fallbackRoadmap = this.roadmapState().find(item => item.id === fallbackStudio?.roadmapId) ?? this.roadmapState()[0];
+    if (fallbackStudio && fallbackRoadmap) {
+      return Promise.resolve({ id, roadmap: clone(fallbackRoadmap), studio: { ...clone(fallbackStudio), roadmapId: id } });
+    }
+    return Promise.reject(new Error('Không tìm thấy cấu hình lộ trình cho mục này.'));
+  }
+
+  override createRoadmap(input: { categoryId: number; name: string; code?: string; description?: string }): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
+    const id = `roadmap-${Date.now()}`;
+    const newRoadmap: Roadmap = {
+      id,
+      code: input.code || `RM-${input.categoryId}`,
+      name: input.name,
+      industry: 'Công nghệ thông tin',
+      stages: 1,
+      nodes: 1,
+      learners: 0,
+      completion: 0,
+      coverage: 0,
+      coverageAvg: 0,
+      testPassed: 0,
+      testTotal: 0,
+      missingTests: 1,
+      hidden: false
+    };
+    const newStudio: RoadmapStudio = {
+      roadmapId: id,
+      phases: [],
+      selectedNodeId: '',
+      suggestions: [],
+      threshold: 70,
+      test: {
+        name: `Bài kiểm tra ${input.name}`,
+        duration: 30,
+        passScore: 70,
+        stage: '',
+        questions: []
+      }
+    };
+    this.roadmapState.update(list => [newRoadmap, ...list]);
+    this.studioState.update(list => [newStudio, ...list]);
+    return Promise.resolve({ id, roadmap: newRoadmap, studio: newStudio });
   }
 
   async getCourseContent(course: Course): Promise<Course> { return course; }
@@ -89,12 +134,12 @@ export class CourseDemoService extends CourseStore {
   updateRoadmapNode(roadmapId: string, node: RoadmapNode): void {
     this.studioState.update(studios => studios.map(studio => studio.roadmapId === roadmapId
       ? {
-          ...studio,
-          phases: studio.phases.map(phase => ({
-            ...phase,
-            nodes: phase.nodes.map(item => item.id === node.id ? { ...node } : item)
-          }))
-        }
+        ...studio,
+        phases: studio.phases.map(phase => ({
+          ...phase,
+          nodes: phase.nodes.map(item => item.id === node.id ? { ...node } : item)
+        }))
+      }
       : studio));
   }
 
@@ -137,9 +182,9 @@ export class CourseDemoService extends CourseStore {
   private log(approvalId: string, action: string, note: string): void {
     this.workspaceState.update(items => items.map(item => item.approvalId === approvalId
       ? {
-          ...item,
-          history: [{ at: new Date().toISOString(), actor: 'Quản trị viên', action, note }, ...item.history]
-        }
+        ...item,
+        history: [{ at: new Date().toISOString(), actor: 'Quản trị viên', action, note }, ...item.history]
+      }
       : item));
   }
 }
