@@ -204,6 +204,69 @@ function reviewStatus(value: unknown): ContentReview['status'] {
     default: return 'approved';
   }
 }
+
+function postStatus(value: unknown): ContentPost['status'] {
+  switch (value) {
+    case 'pending_review': return 'pending';
+    case 'draft':
+    case 'pending':
+    case 'revision':
+    case 'rejected':
+    case 'scheduled':
+    case 'hidden':
+    case 'archived': return value;
+    default: return 'published';
+  }
+}
+
+function toPost(row: Record<string, unknown>): ContentPost {
+  const htmlContent = text(row, 'content');
+  return {
+    id: text(row, 'id'),
+    title: text(row, 'title'),
+    slug: text(row, 'slug'),
+    category: text(row, 'category') as ContentPost['category'],
+    author: text(row, 'author'),
+    authorRole: 'Tác giả',
+    tags: Array.isArray(row['tags']) ? row['tags'].map(String) : [],
+    status: postStatus(row['status']),
+    excerpt: text(row, 'excerpt'),
+    body: htmlContent.split('\n'),
+    htmlContent,
+    thumbnail: text(row, 'coverImage'),
+    views: num(row, 'views'),
+    commentCount: 0,
+    createdAt: text(row, 'createdAt'),
+    updatedAt: text(row, 'updatedAt'),
+    featured: false,
+    pinned: Boolean(row['pinned']),
+    allowComments: row['allowComments'] !== false,
+    loginRequired: Boolean(row['loginRequired'])
+  };
+}
+
+function toReport(row: Record<string, unknown>): ContentReport {
+  return {
+    id: text(row, 'id'),
+    code: text(row, 'code'),
+    type: text(row, 'type') as ContentReport['type'],
+    targetId: text(row, 'targetId'),
+    targetTitle: text(row, 'targetTitle'),
+    targetAuthor: text(row, 'targetAuthor'),
+    priorOffenses: 0,
+    reportedBy: text(row, 'reportedBy'),
+    reason: text(row, 'reason'),
+    description: text(row, 'description'),
+    evidenceSnippet: text(row, 'evidenceSnippet'),
+    severity: text(row, 'severity') as ContentReport['severity'] || 'medium',
+    status: row['status'] === 'pending' ? 'new' : row['status'] === 'in_review' ? 'processing' : text(row, 'status') as ContentReport['status'] || 'new',
+    createdAt: text(row, 'createdAt'),
+    slaDueAt: text(row, 'slaDueAt'),
+    assignee: text(row, 'assignee'),
+    evidence: []
+  };
+}
+
 function defaultNpsForRating(r: number): number {
   const n = Math.round(Number(r) || 0);
   if (n >= 5) return 10;
