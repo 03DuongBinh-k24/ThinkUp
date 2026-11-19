@@ -53,6 +53,7 @@ function allowedRoles(area, method, path) {
     if (path === '/lecturers/:id/decision' || path === '/lecturers/:id/activate' || path === '/lecturers/:id/discipline' || path === '/:id/claim' || path === '/:id/heartbeat' || path === '/:id/claim') return ['SA', 'CA'];
     return ALL_ROLES;
   }
+  if (area === 'tickets' && path.startsWith('/canned-responses') && method !== 'GET') return ['SA', 'CS'];
   if (area === 'content') {
     if (/^\/(comments|reports)(\/|$)/.test(path)) return ['SA', 'CS'];
     return ['SA', 'CA'];

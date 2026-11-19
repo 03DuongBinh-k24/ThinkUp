@@ -312,6 +312,9 @@ export function createAdminUsersRouter(express, requireAdmin) {
   const assess = createAdminRoleMiddleware(['SA','CA']);
   const support = createAdminRoleMiddleware(['SA','CS']);
   const sa = createAdminRoleMiddleware(['SA']);
+  const exportFormats = req => {
+    if (req.query.format && !['csv', 'json'].includes(req.query.format)) throw bad('Định dạng xuất không hợp lệ.',400,'EXPORT_FORMAT_INVALID');
+  };
   const instructorDiscipline = createAdminRoleMiddleware(['SA','CA']);
   const evidenceRead = createAdminRoleMiddleware(['SA','CA']);
   router.get('/students', read, async (req,res,next) => { try { res.json(await listAdminUsers('students', req.query, { role:req.adminRole })); } catch(e) { next(e); } });
@@ -486,24 +489,26 @@ export function createAdminUsersRouter(express, requireAdmin) {
     }catch(e){next(e);}
   });
   router.get('/students/export', read, async (req,res,next) => {
-    try { const db=await getMongoDb(),first=await listAdminUsers('students',{...req.query,page:1,pageSize:100},{role:req.adminRole}),items=[...first.items];
+    try { exportFormats(req); const db=await getMongoDb(),first=await listAdminUsers('students',{...req.query,page:1,pageSize:100},{role:req.adminRole}),items=[...first.items];
       for(let p=2;p<=first.pagination.pages;p++) items.push(...(await listAdminUsers('students',{...req.query,page:p,pageSize:100},{role:req.adminRole})).items);
       const rows=items.slice(0,10000),headers=['Mã học viên','Họ tên','Email','Số điện thoại','Số khóa học','Ngày đăng ký','Trạng thái'];
       const cell=value=>`"${String(value??'').replace(/[\r\n]+/g,' ').replace(/"/g,'""').replace(/^([=+@-])/,' $1')}"`;
       const lines=[headers,...rows.map(r=>[r.studentId||r.id,r.name,r.email,r.phone,r.courseCount,r.registeredAt,r.status])].map(row=>row.map(cell).join(','));
       await writeAudit(db,req,'USER_STUDENTS_EXPORT','filtered-set',{metadata:{records:rows.length,filters:{q:req.query.q||null,status:req.query.status||null,courseCount:req.query.courseCount||null,from:req.query.from||null,to:req.query.to||null}}});
-      res.type('text/csv; charset=utf-8').attachment('thinkup-students.csv').send(`\uFEFF${lines.join('\r\n')}`);
+      if (req.query.format === 'json') res.type('application/json; charset=utf-8').attachment('thinkup-students.json').send(JSON.stringify(rows.map(r=>({ id:r.studentId||r.id, name:r.name, email:r.email, phone:r.phone, courseCount:r.courseCount, registeredAt:r.registeredAt, status:r.status }))));
+      else if (!req.query.format || req.query.format === 'csv') res.type('text/csv; charset=utf-8').attachment('thinkup-students.csv').send(`\uFEFF${lines.join('\r\n')}`);
     }catch(e){next(e);}
   });
   router.get('/lecturers/export', read, async (req,res,next) => {
-    try { const result=await listAdminUsers('lecturers',{...req.query,page:1,pageSize:100}, {role:req.adminRole}),items=[...result.items];
+    try { exportFormats(req); const result=await listAdminUsers('lecturers',{...req.query,page:1,pageSize:100}, {role:req.adminRole}),items=[...result.items];
       for(let p=2;p<=result.pagination.pages;p++) items.push(...(await listAdminUsers('lecturers',{...req.query,page:p,pageSize:100},{role:req.adminRole})).items);
       const headers=['Mã giảng viên','Họ tên','Email','Điện thoại','Lĩnh vực','Số khóa học','Học viên','Doanh thu','Pháp lý','Mã số thuế','Trạng thái'];
       const cell=value=>`"${String(value??'').replace(/[\r\n]+/g,' ').replace(/"/g,'""').replace(/^([=+@-])/,' $1')}"`;
       const rows=items.slice(0,10000).map(x=>[x.id,x.name,x.email,x.phone,x.field,x.courses,x.learners,x.revenue,x.legalStatus,x.taxCode,x.status]);
       const csv=[headers,...rows].map(r=>r.map(cell).join(',')).join('\r\n');
       const db=await getMongoDb(); await writeAudit(db,req,'USER_LECTURERS_EXPORT','filtered-set',{metadata:{records:rows.length,filters:{q:req.query.q||null,status:req.query.status||null,legalStatus:req.query.legalStatus||null,from:req.query.from||null,to:req.query.to||null}}});
-      res.type('text/csv; charset=utf-8').attachment('thinkup-lecturers.csv').send(`\uFEFF${csv}`);
+      if (req.query.format === 'json') res.type('application/json; charset=utf-8').attachment('thinkup-lecturers.json').send(JSON.stringify(items.slice(0,10000).map(x=>({ id:x.id, name:x.name, email:x.email, phone:x.phone, field:x.field, courses:x.courses, learners:x.learners, revenue:x.revenue, legalStatus:x.legalStatus, taxCode:x.taxCode, status:x.status }))));
+      else if (!req.query.format || req.query.format === 'csv') res.type('text/csv; charset=utf-8').attachment('thinkup-lecturers.csv').send(`\uFEFF${csv}`);
     }catch(e){next(e);}
   });
   router.put('/:id', sa, async (req,res,next) => {

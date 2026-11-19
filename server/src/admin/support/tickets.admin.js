@@ -34,6 +34,12 @@ async function recordTicketAudit(db, actor, action, ticketCode, details) {
     // Không chặn luồng chính
   }
 }
+async function recordRequiredTicketAudit(db, actor, action, ticketCode, details) {
+  await db.collection(COLLECTION_AUDIT_LOGS).insertOne({
+    admin_id: String(actor.id || actor._id || actor.adminId), admin_name: actor.fullName || actor.name || 'Quản trị viên',
+    role: actor.role, action, entity_type: 'ticket', entity_code: ticketCode, details, created_at: new Date(),
+  });
+}
 
 export const DEFAULT_CANNED_RESPONSES = Object.freeze([
   {
@@ -169,9 +175,6 @@ export async function getTicketSummary(options = {}) {
   };
 }
 
-/**
- * 2. Khối 2 & 3: Danh sách ticket hỗ trợ có bộ lọc đa diện
- */
 function ticketSla(doc, now) {
   const closed = doc.status === 'closed';
   const end = closed && doc.resolved_at ? new Date(doc.resolved_at) : now;
@@ -185,6 +188,9 @@ function ticketSla(doc, now) {
   return { dueAt, remainingHours: hours, isOverdue: !closed && delta < 0, isWarning: !closed && delta >= 0 && delta < 14400000, text };
 }
 
+/**
+ * 2. Khối 2 & 3: Danh sách ticket hỗ trợ có bộ lọc đa diện
+ */
 export async function listAdminTickets(actor, query = {}, options = {}) {
   const db = await database(options);
   const tickets = db.collection(COLLECTION_TICKETS);
@@ -713,6 +719,56 @@ export async function listCannedResponses(query = {}, options = {}) {
     tags: item.tags || [],
   }));
 }
+function validateCannedResponse(payload = {}) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw bad('Nội dung câu trả lời mẫu không hợp lệ.');
+  const code = String(payload.code || '').trim().toLowerCase(), title = String(payload.title || '').trim();
+  const topicCode = String(payload.topicCode || '').trim(), content = String(payload.content || '').trim(), category = String(payload.category || '').trim();
+  const tags = payload.tags === undefined ? [] : payload.tags;
+  if (!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(code) || title.length < 2 || title.length > 160 || content.length < 2 || content.length > 5000
+    || !SUPPORT_TOPICS.some(topic => topic.code === topicCode) || category.length > 120 || !Array.isArray(tags) || tags.length > 20
+    || tags.some(tag => typeof tag !== 'string' || tag.trim().length > 40)) throw bad('Mã, tiêu đề, chủ đề, nội dung hoặc thẻ câu trả lời mẫu không hợp lệ.');
+  return { code, title, topic_code: topicCode, category, content, tags: [...new Set(tags.map(tag => tag.trim()).filter(Boolean))] };
+}
+export async function createCannedResponse(payload, options = {}) {
+  const db = await database(options), collection = db.collection(COLLECTION_CANNED_RESPONSES), value = validateCannedResponse(payload), now = new Date(options.now ?? Date.now());
+  if (await collection.findOne({ code: value.code })) throw bad('Mã câu trả lời mẫu đã tồn tại.', 409, 'CANNED_RESPONSE_DUPLICATE');
+  const document = { ...value, created_at: now, updated_at: now, created_by: String(options.actor?.id || options.actor?._id || options.actor?.adminId || '') };
+  await collection.insertOne(document);
+  await recordRequiredTicketAudit(db, options.actor, 'CANNED_RESPONSE_CREATED', value.code, { topic_code: value.topic_code });
+  return { success: true, item: { id: document._id, code: value.code, title: value.title, topicCode: value.topic_code, category: value.category, content: value.content, tags: value.tags } };
+}
+export async function updateCannedResponse(code, payload, options = {}) {
+  const db = await database(options), collection = db.collection(COLLECTION_CANNED_RESPONSES), value = validateCannedResponse({ ...payload, code }), now = new Date(options.now ?? Date.now());
+  const current = await collection.findOne({ code: value.code });
+  if (!current) throw bad('Không tìm thấy câu trả lời mẫu.', 404, 'CANNED_RESPONSE_NOT_FOUND');
+  const filter = { _id: current._id };
+  filter.updated_at = current.updated_at === undefined ? { $exists: false } : current.updated_at;
+  const result = await collection.updateOne(filter, { $set: { ...value, updated_at: now, updated_by: String(options.actor?.id || options.actor?._id || options.actor?.adminId || '') } });
+  if (!result.matchedCount) throw bad('Câu trả lời mẫu vừa được cập nhật.', 409, 'CANNED_RESPONSE_CHANGED');
+  await recordRequiredTicketAudit(db, options.actor, 'CANNED_RESPONSE_UPDATED', value.code, { topic_code: value.topic_code });
+  return { success: true, item: { id: current._id, code: value.code, title: value.title, topicCode: value.topic_code, category: value.category, content: value.content, tags: value.tags } };
+}
+export async function deleteCannedResponse(code, options = {}) {
+  const db = await database(options), collection = db.collection(COLLECTION_CANNED_RESPONSES), normalized = String(code || '').trim().toLowerCase();
+  const result = await collection.deleteOne({ code: normalized });
+  if (!result.deletedCount) throw bad('Không tìm thấy câu trả lời mẫu.', 404, 'CANNED_RESPONSE_NOT_FOUND');
+  await recordRequiredTicketAudit(db, options.actor, 'CANNED_RESPONSE_DELETED', normalized, {});
+  return { success: true, deleted: true, code: normalized };
+}
+export async function reopenAdminTicket(actor, ticketId, payload = {}, options = {}) {
+  const db = await database(options), tickets = db.collection(COLLECTION_TICKETS), now = new Date(options.now ?? Date.now());
+  const reason = String(payload.reason || '').trim();
+  if (reason.length < 10 || reason.length > 1000) throw bad('Lý do mở lại ticket phải từ 10 đến 1000 ký tự.', 400, 'REOPEN_REASON_INVALID', 'reason');
+  const doc = await tickets.findOne({ $or: [{ _id: ticketId }, { ticket_code: ticketId }] });
+  if (!doc) throw bad('Không tìm thấy ticket.', 404, 'TICKET_NOT_FOUND');
+  if (doc.status !== 'closed') throw bad('Chỉ mở lại ticket đã đóng.', 409, 'TICKET_STATE_CONFLICT');
+  const adminName = actor.fullName || actor.name || 'Quản trị viên';
+  const note = { id: `note_${randomUUID()}`, sender_name: adminName, role: 'system', body: `Ticket được mở lại bởi ${adminName}. Lý do: ${reason}`, internal_only: true, attachments: [], created_at: now, source: 'internal' };
+  const changed = await tickets.updateOne({ _id: doc._id, status: 'closed' }, { $set: { status: 'reopened', updated_at: now, resolved_at: null }, $push: { thread: note } });
+  if (!changed.modifiedCount) throw bad('Ticket vừa được thay đổi.', 409, 'TICKET_STATE_CONFLICT');
+  await recordTicketAudit(db, actor, 'REOPEN_TICKET', doc.ticket_code, { reason });
+  return { success: true, ticketCode: doc.ticket_code, status: 'reopened', message: note };
+}
 
 /**
  * 9. Khối 8: Xác nhận giải quyết và đóng Ticket (AC-80 -> AC-90)
@@ -908,6 +964,7 @@ export function createAdminTicketsRouter(express, adminAuthMiddleware) {
 
   const requireSupportRole = createAdminRoleMiddleware(['SA', 'CS', 'CA', 'FA']);
   router.use(requireSupportRole);
+  const requireCannedWriteRole = createAdminRoleMiddleware(['SA', 'CS']);
 
   const handle = (fn, statusCode = 200) => async (req, res, next) => {
     try {
@@ -923,6 +980,9 @@ export function createAdminTicketsRouter(express, adminAuthMiddleware) {
 
   // Khối 7: Danh mục câu trả lời mẫu
   router.get('/canned-responses', handle((req) => listCannedResponses(req.query)));
+  router.post('/canned-responses', requireCannedWriteRole, handle((req) => createCannedResponse(req.body, { actor: req.adminUser || req.user || { role: req.adminRole, id: req.adminId } }), 201));
+  router.put('/canned-responses/:code', requireCannedWriteRole, handle((req) => updateCannedResponse(req.params.code, req.body, { actor: req.adminUser || req.user || { role: req.adminRole, id: req.adminId } })));
+  router.delete('/canned-responses/:code', requireCannedWriteRole, handle((req) => deleteCannedResponse(req.params.code, { actor: req.adminUser || req.user || { role: req.adminRole, id: req.adminId } })));
 
   // Khối 2 & 3: Danh sách ticket
   router.get('/', handle((req) => listAdminTickets(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.query)));
@@ -945,6 +1005,7 @@ export function createAdminTicketsRouter(express, adminAuthMiddleware) {
 
   // Khối 8: Xác nhận giải quyết và đóng ticket
   router.post('/:id/resolve', handle((req) => resolveAndCloseTicket(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id, req.body)));
+  router.post('/:id/reopen', handle((req) => reopenAdminTicket(req.adminUser || req.user || { role: req.adminRole, id: req.adminId }, req.params.id, req.body)));
 
   // Webhook bóc tách email phản hồi
   router.post('/inbound-email', handle((req) => processInboundEmailReply(req.body)));

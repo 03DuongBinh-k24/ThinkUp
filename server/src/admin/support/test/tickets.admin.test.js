@@ -4,6 +4,8 @@ import { BSON } from 'mongodb';
 import {
   COLLECTION_CANNED_RESPONSES,
   COLLECTION_COMPLAINTS,
+  createCannedResponse,
+  deleteCannedResponse,
   getTicketSummary,
   listAdminTickets,
   getAdminTicketDetail,
@@ -12,6 +14,8 @@ import {
   transferTicket,
   escalateToComplaint,
   listCannedResponses,
+  reopenAdminTicket,
+  updateCannedResponse,
   resolveAndCloseTicket,
   processInboundEmailReply,
   deleteAdminTicket,
@@ -380,6 +384,27 @@ test('Support Tickets Admin: Khối 7 & 8 - Canned Responses & Giải quyết Đ
   assert.equal(updatedDoc.status, 'closed');
   assert.ok(updatedDoc.resolved_at);
   assert.ok(updatedDoc.thread.length >= 2);
+});
+
+test('Admin can manage canned responses and manually reopen only closed tickets', async () => {
+  const db = createMockDb(), actor = { id: 'admin_cs', fullName: 'CS Agent', role: 'CS' };
+  const created = await createCannedResponse({ code: 'custom_followup', title: 'Follow up', topicCode: 'technical_lab', category: 'Kỹ thuật', content: 'Vui lòng gửi thêm thông tin lỗi.', tags: ['lab'] }, { db, actor });
+  assert.equal(created.item.code, 'custom_followup');
+  await assert.rejects(createCannedResponse({ code: 'custom_followup', title: 'Duplicate', topicCode: 'technical_lab', content: 'Nội dung khác' }, { db, actor }), { code: 'CANNED_RESPONSE_DUPLICATE' });
+  const updated = await updateCannedResponse('custom_followup', { title: 'Updated', topicCode: 'technical_lab', content: 'Nội dung đã cập nhật.' }, { db, actor });
+  assert.equal(updated.item.title, 'Updated');
+  assert.equal((await listCannedResponses({ q: 'đã cập nhật' }, { db })).some(item => item.code === 'custom_followup'), true);
+  await deleteCannedResponse('custom_followup', { db, actor });
+
+  const tickets = db.collection(COLLECTION_TICKETS);
+  await tickets.insertOne({ _id: 'closed_1', ticket_code: 'TK-CLOSED-1', status: 'closed', thread: [] });
+  await tickets.insertOne({ _id: 'open_1', ticket_code: 'TK-OPEN-1', status: 'processing', thread: [] });
+  await assert.rejects(reopenAdminTicket(actor, 'open_1', { reason: 'Cần xem lại yêu cầu này.' }, { db }), { code: 'TICKET_STATE_CONFLICT' });
+  const reopened = await reopenAdminTicket(actor, 'closed_1', { reason: 'Học viên cung cấp thêm bằng chứng.' }, { db });
+  assert.equal(reopened.status, 'reopened');
+  const record = await tickets.findOne({ _id: 'closed_1' });
+  assert.equal(record.status, 'reopened');
+  assert.equal(record.thread[0].internal_only, true);
 });
 
 test('Support Tickets Admin: xóa ticket chỉ khi chưa có side effect', async () => {

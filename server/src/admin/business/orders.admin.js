@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { getMongoDb } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
+import { randomUUID } from 'node:crypto';
 
 const error = (message, status = 400, code = 'ORDER_QUERY_INVALID') => Object.assign(new Error(message), { status, code });
 const orderStatus = value => ({ completed: 'success', paid: 'success', success: 'success', pending: 'pending', failed: 'cancelled', cancelled: 'cancelled', expired: 'cancelled' })[value] || value;
@@ -82,6 +83,63 @@ export async function exportAdminOrders(query = {}, options = {}) {
   const xmlRows = [columns, ...values].map(line => `<Row>${line.map(value => `<Cell><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`).join('')}</Row>`).join('');
   return { body: `<?xml version="1.0" encoding="UTF-8"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Don hang"><Table>${xmlRows}</Table></Worksheet></Workbook>`, type: 'application/vnd.ms-excel; charset=utf-8', filename: 'thinkup-don-hang.xls' };
 }
+async function auditOrderAction(db, req, action, orderId, before, after, reason) {
+  const { recordAuditLog } = await import('../auth/auth.admin.js');
+  const result = await recordAuditLog(db, { adminId: req.adminId, ip: req.ip, userAgent: req.headers?.['user-agent'], action,
+    details: { entity: { type: 'order', id: String(orderId) }, before, after, outcome: 'success', correlation_id: randomUUID(), metadata: { reason } } });
+  if (!result) throw error('Không ghi được nhật ký kiểm toán; thao tác cần được đối soát.', 503, 'AUDIT_UNAVAILABLE');
+}
+export async function decideAdminOrder(id, action, payload = {}, req = {}, options = {}) {
+  if (!['confirm', 'cancel'].includes(action)) throw error('Thao tác đơn hàng không hợp lệ.');
+  const reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
+  if (reason.length < 10 || reason.length > 1000) throw error('Lý do phải từ 10 đến 1000 ký tự.', 400, 'ORDER_REASON_INVALID');
+  const db = options.db || await getMongoDb();
+  const tx = await db.collection('payment_transactions').findOne({ $or: [{ order_id: id }, { transaction_id: id }], record_type: { $ne: 'gateway_receipt' } });
+  if (!tx) throw error('Không tìm thấy đơn hàng.', 404, 'ORDER_NOT_FOUND');
+  const order = await db.collection('orders').findOne({ order_id: tx.order_id });
+  if (!order) throw error('Thiếu bản ghi đơn hàng để đối soát.', 503, 'ORDER_DATA_INVALID');
+  if (action === 'confirm') {
+    if (!['pending', 'paid'].includes(tx.status) || !['pending', 'paid'].includes(order.status)) throw error('Chỉ xác nhận đơn đang chờ hoặc đã có thanh toán cần hoàn tất.', 409, 'ORDER_STATE_CONFLICT');
+    if (tx.status !== 'paid' || tx.actual_paid_amount !== tx.amount || tx.currency !== 'VND') throw error('Chỉ có thể xác nhận giao dịch đã xác minh đủ số tiền VND.', 409, 'ORDER_PAYMENT_UNVERIFIED');
+    const { completePaidOrder } = await import('../../user/payment/payment.service.js');
+    let result;
+    try { result = await completePaidOrder(tx.transaction_id, options); }
+    catch (cause) {
+      await auditOrderAction(db, req, 'ADMIN_ORDER_CONFIRM_FAILED', tx.order_id, { status: tx.status, fulfillmentStatus: tx.fulfillment_status }, { outcome: 'failed' }, reason);
+      throw cause;
+    }
+    const updated = await db.collection('payment_transactions').findOne({ _id: tx._id });
+    if (updated?.status !== 'success' || updated?.fulfillment_status !== 'completed') throw error('Không thể hoàn tất cấp quyền học; giao dịch được giữ để đối soát.', 409, 'ORDER_FULFILLMENT_INCOMPLETE');
+    try { await auditOrderAction(db, req, 'ADMIN_ORDER_CONFIRMED', tx.order_id, { status: tx.status, fulfillmentStatus: tx.fulfillment_status }, { status: updated.status, fulfillmentStatus: updated.fulfillment_status }, reason); }
+    catch (cause) {
+      await auditOrderAction(db, req, 'ADMIN_ORDER_CONFIRM_AUDIT_FAILED', tx.order_id, { status: tx.status }, { status: updated.status, fulfillmentStatus: updated.fulfillment_status, auditError: true }, reason).catch(() => {});
+      throw cause;
+    }
+    return { success: true, orderId: tx.order_id, status: updated.status, fulfillmentStatus: updated.fulfillment_status, result };
+  }
+  if (!['pending', 'expired'].includes(tx.status) || !['pending', 'expired'].includes(order.status)) throw error('Chỉ được hủy đơn chưa thanh toán hoặc đã hết hạn.', 409, 'ORDER_STATE_CONFLICT');
+  const voucherCollection = tx.voucher_collection, voucherId = tx.voucher_id;
+  if (tx.voucher_reserved && !tx.voucher_released && (!voucherCollection || !voucherId)) throw error('Thiếu tham chiếu lượt voucher; cần đối soát thủ công.', 503, 'ORDER_VOUCHER_DATA_INVALID');
+  if (!db.client?.startSession) throw error('CSDL cần hỗ trợ transaction.', 503, 'ORDER_STORAGE_UNAVAILABLE');
+  const session = db.client.startSession(), now = new Date(options.now ?? Date.now());
+  try {
+    await session.withTransaction(async () => {
+      const txFilter = { _id: tx._id, status: tx.status };
+      txFilter.voucher_released = tx.voucher_released === undefined ? { $exists: false } : tx.voucher_released;
+      const changed = await db.collection('payment_transactions').updateOne(txFilter,
+        { $set: { status: 'cancelled', cancellation_reason: reason, cancelled_at: now, cancelled_by: String(req.adminId), voucher_released: Boolean(tx.voucher_reserved && !tx.voucher_released), updated_at: now } }, { session });
+      if (!changed.modifiedCount) throw error('Đơn vừa được thay đổi.', 409, 'ORDER_STATE_CONFLICT');
+      if (tx.voucher_reserved && !tx.voucher_released) {
+        const released = await db.collection(voucherCollection).updateOne({ _id: voucherId, usage_count: { $gt: 0 } }, { $inc: { usage_count: -1 } }, { session });
+        if (!released.matchedCount) throw error('Không giải phóng được lượt voucher.', 503, 'ORDER_VOUCHER_RELEASE_FAILED');
+      }
+      const orderChanged = await db.collection('orders').updateOne({ _id: order._id, status: order.status }, { $set: { status: 'cancelled', cancellation_reason: reason, cancelled_at: now, cancelled_by: String(req.adminId), updated_at: now } }, { session });
+      if (!orderChanged.modifiedCount) throw error('Đơn vừa được thay đổi.', 409, 'ORDER_STATE_CONFLICT');
+    });
+  } finally { await session.endSession(); }
+  await auditOrderAction(db, req, 'ADMIN_ORDER_CANCELLED', tx.order_id, { status: tx.status }, { status: 'cancelled' }, reason);
+  return { success: true, orderId: tx.order_id, status: 'cancelled', cancelledAt: now.toISOString() };
+}
 export function createAdminOrdersRouter(express, requireAdmin) {
   const router = express.Router();
   const role = createAdminRoleMiddleware(['SA', 'FA']);
@@ -90,5 +148,7 @@ export function createAdminOrdersRouter(express, requireAdmin) {
   router.get('/export', async (req, res, next) => { try { const file = await exportAdminOrders(req.query); res.type(file.type).attachment(file.filename).send(file.body); } catch (e) { next(e); } });
   router.get('/', async (req, res, next) => { try { res.json(await listAdminOrders(req.query)); } catch (e) { next(e); } });
   router.get('/:id', async (req, res, next) => { try { res.json(await getAdminOrder(req.params.id)); } catch (e) { next(e); } });
+  router.post('/:id/confirm', async (req, res, next) => { try { res.json(await decideAdminOrder(req.params.id, 'confirm', req.body, req)); } catch (e) { next(e); } });
+  router.post('/:id/cancel', async (req, res, next) => { try { res.json(await decideAdminOrder(req.params.id, 'cancel', req.body, req)); } catch (e) { next(e); } });
   return router;
 }

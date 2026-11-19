@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { exportAdminOrders, getAdminOrder, getAdminOrderSummary, listAdminOrders, parseOrderQuery } from '../orders.admin.js';
+import { decideAdminOrder, exportAdminOrders, getAdminOrder, getAdminOrderSummary, listAdminOrders, parseOrderQuery } from '../orders.admin.js';
 
 const transactions = [
   { _id: '1', order_id: 'DH-1', transaction_id: 'TX-1', user_id: 'missing', status: 'completed', amount: '100000.00', payment_method: 'QR Code', created_at: '2026-11-09 10:00:00', paid_at: '2026-11-09 10:00:00', order_summary: JSON.stringify({ courses: [{ id: 'course-1', title: 'Khóa học A', price: 100000 }] }) },
@@ -34,4 +34,12 @@ test('legacy values and missing learner are handled in detail and KPI', async ()
 test('rejects invalid query and unknown order', async () => {
   assert.throws(() => parseOrderQuery({ pageSize: '101' }), { status: 400 });
   await assert.rejects(getAdminOrder('missing', { db }), { status: 404, code: 'ORDER_NOT_FOUND' });
+});
+
+test('order confirmation refuses unverified payment and cancellation requires pending unpaid state', async () => {
+  const db = { collection(name) { return { findOne: async filter => name === 'payment_transactions' ? { _id: 'tx', order_id: 'DH-2', transaction_id: 'TX-2', status: 'pending', amount: 200000, currency: 'VND' } : { _id: 'order', order_id: 'DH-2', status: 'pending' } }; } };
+  const req = { adminId: 'admin', headers: {} };
+  await assert.rejects(decideAdminOrder('DH-2', 'confirm', { reason: 'Đã đối soát giao dịch.' }, req, { db }), { code: 'ORDER_PAYMENT_UNVERIFIED' });
+  await assert.rejects(decideAdminOrder('DH-2', 'cancel', { reason: 'Học viên yêu cầu hủy đơn.' }, req, { db }), { code: 'ORDER_STORAGE_UNAVAILABLE' });
+  await assert.rejects(decideAdminOrder('DH-2', 'cancel', { reason: 'Ngắn' }, req, { db }), { code: 'ORDER_REASON_INVALID' });
 });
