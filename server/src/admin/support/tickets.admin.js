@@ -172,6 +172,19 @@ export async function getTicketSummary(options = {}) {
 /**
  * 2. Khối 2 & 3: Danh sách ticket hỗ trợ có bộ lọc đa diện
  */
+function ticketSla(doc, now) {
+  const closed = doc.status === 'closed';
+  const end = closed && doc.resolved_at ? new Date(doc.resolved_at) : now;
+  const dueAt = doc.response_due_at ?? null;
+  const delta = dueAt ? new Date(dueAt).getTime() - end.getTime() : NaN;
+  if (!Number.isFinite(delta)) {
+    return { dueAt, remainingHours: null, isOverdue: false, isWarning: false, text: 'Chưa xác định hạn xử lý' };
+  }
+  const hours = Math.ceil(Math.abs(delta) / 3600000);
+  const text = delta < 0 ? `Trễ ${hours} giờ` : closed ? `Đúng hạn (${hours} giờ)` : `Còn ${hours} giờ`;
+  return { dueAt, remainingHours: hours, isOverdue: !closed && delta < 0, isWarning: !closed && delta >= 0 && delta < 14400000, text };
+}
+
 export async function listAdminTickets(actor, query = {}, options = {}) {
   const db = await database(options);
   const tickets = db.collection(COLLECTION_TICKETS);
@@ -273,19 +286,6 @@ export async function listAdminTickets(actor, query = {}, options = {}) {
   ]);
 
   const items = docs.map((doc) => {
-    const end = doc.status === 'closed' && doc.resolved_at ? new Date(doc.resolved_at).getTime() : now.getTime();
-    const dueTime = new Date(doc.response_due_at).getTime();
-    const diffMs = dueTime - end;
-    const isOverdue = diffMs < 0 && doc.status !== 'closed';
-    const hours = Math.ceil(Math.abs(diffMs) / 3600000);
-
-    let slaRemainingText;
-    if (doc.status === 'closed') {
-      slaRemainingText = diffMs >= 0 ? `Đúng hạn (${hours} giờ)` : `Trễ ${hours} giờ`;
-    } else {
-      slaRemainingText = isOverdue ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`;
-    }
-
     return {
       id: doc._id,
       ticketCode: doc.ticket_code,
@@ -304,13 +304,7 @@ export async function listAdminTickets(actor, query = {}, options = {}) {
         count: Array.isArray(doc.attachments) ? doc.attachments.length : 0,
         files: (doc.attachments || []).map((f) => ({ id: f.id, name: f.name, mimeType: f.mimeType })),
       },
-      sla: {
-        dueAt: doc.response_due_at,
-        isOverdue,
-        remainingHours: hours,
-        isWarning: !isOverdue && diffMs < 4 * 3600000 && doc.status !== 'closed',
-        text: slaRemainingText,
-      },
+      sla: ticketSla(doc, now),
       assignee: {
         id: doc.assignee_id || null,
         name: doc.assignee_name || (doc.assignee_id ? 'Đang phân công' : 'Chưa gán'),
@@ -347,8 +341,6 @@ export async function getAdminTicketDetail(actor, ticketId, options = {}) {
   }
 
   const now = new Date(options.now ?? Date.now());
-  const dueTime = new Date(doc.response_due_at).getTime();
-  const diffMs = dueTime - now.getTime();
 
   return {
     id: doc._id,
@@ -373,11 +365,7 @@ export async function getAdminTicketDetail(actor, ticketId, options = {}) {
     createdAt: doc.created_at,
     responseDueAt: doc.response_due_at,
     resolvedAt: doc.resolved_at || null,
-    sla: {
-      isOverdue: diffMs < 0 && doc.status !== 'closed',
-      remainingHours: Math.ceil(Math.abs(diffMs) / 3600000),
-      isWarning: diffMs > 0 && diffMs < 4 * 3600000 && doc.status !== 'closed',
-    },
+    sla: ticketSla(doc, now),
     thread: (doc.thread || []).map((m) => ({
       id: m.id || randomUUID(),
       senderName: m.sender_name || (m.role === 'agent' ? 'Nhân viên CSKH' : 'Học viên'),

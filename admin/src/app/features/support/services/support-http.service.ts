@@ -91,11 +91,11 @@ export class SupportHttpService extends SupportDemoService {
   override acceptTicket(id: string): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/claim`, {}); }
   override reply(id: string, body: string, status: Extract<TicketStatus, 'processing' | 'waiting'>, attachments: Attachment[] = []): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/reply`, { body, status, attachments }); }
   override assignTicket(id: string, assignee: string, note: string): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/transfer`, { assignee, note }); }
-  override resolveTicket(id: string, body: string, category: string, internalNote: string, sendCsat: boolean, attachments: Attachment[] = []): void { void this.post(`/admin/support/tickets/${encodeURIComponent(id)}/resolve`, { finalReplyBody: body, resolutionCategory: category, internalSolutionNote: internalNote, sendCsatSurvey: sendCsat, attachments }); }
-  override requestInstructorExplanation(id: string, deadlineHours: 12 | 24, freezeCommission: boolean, directive: string): Promise<unknown> { return this.post(`/admin/support/complaints/${encodeURIComponent(id)}/request-explanation`, { deadlineHours, freezeInstructorWallet: freezeCommission, adminInstructionNote: directive }); }
-  override approveComplaintRefund(id: string, amount: number, revokeAccess: boolean, revokeCertificate: boolean, conclusion: string): Promise<unknown> { return this.post(`/admin/support/complaints/${encodeURIComponent(id)}/resolve-refund`, { refundType: amount === this.complaints().find(item => item.id === id)?.amount ? 'full' : 'partial', refundAmount: amount, revokeAccess, revokeCertificate, conclusionNote: conclusion }); }
-  override dismissComplaint(id: string, basis: string, explanation: string, giftVoucher: boolean): Promise<unknown> { return this.post(`/admin/support/complaints/${encodeURIComponent(id)}/dismiss`, { rejectionBasis: basis, explanationNote: explanation, grantVoucher: giftVoucher }); }
-  override disciplineInstructor(id: string, sanctions: string[], decisionText: string): Promise<unknown> { return this.post(`/admin/support/complaints/${encodeURIComponent(id)}/discipline-instructor`, { sanctions, decisionText }); }
+  override async resolveTicket(id: string, body: string, category: string, internalNote: string, sendCsat: boolean, attachments: Attachment[] = []): Promise<void> { await this.post(`/admin/support/tickets/${encodeURIComponent(id)}/resolve`, { finalReplyBody: body, resolutionCategory: category, internalSolutionNote: internalNote, sendCsatSurvey: sendCsat, attachments }); }
+  override async requestInstructorExplanation(id: string, deadlineHours: 12 | 24, freezeCommission: boolean, directive: string): Promise<void> { await this.post(`/admin/support/complaints/${encodeURIComponent(id)}/request-explanation`, { deadlineHours, freezeInstructorWallet: freezeCommission, adminInstructionNote: directive }); }
+  override async approveComplaintRefund(id: string, amount: number, revokeAccess: boolean, revokeCertificate: boolean, conclusion: string): Promise<void> { await this.post(`/admin/support/complaints/${encodeURIComponent(id)}/resolve-refund`, { refundType: amount === this.complaints().find(item => item.id === id)?.amount ? 'full' : 'partial', refundAmount: amount, revokeAccess, revokeCertificate, conclusionNote: conclusion }); }
+  override async dismissComplaint(id: string, basis: string, explanation: string, giftVoucher: boolean): Promise<void> { await this.post(`/admin/support/complaints/${encodeURIComponent(id)}/dismiss`, { rejectionBasis: basis, explanationNote: explanation, grantVoucher: giftVoucher }); }
+  override async disciplineInstructor(id: string, sanctions: string[], decisionText: string): Promise<void> { await this.post(`/admin/support/complaints/${encodeURIComponent(id)}/discipline-instructor`, { sanctions, decisionText }); }
   override async saveFaq(value: FaqItem): Promise<void> {
     const exists = this.faqs().some(item => item.id === value.id);
     await this.request(exists ? 'PUT' : 'POST', `/admin/support/faqs${exists ? `/${encodeURIComponent(value.id)}` : ''}`, {
@@ -106,13 +106,11 @@ export class SupportHttpService extends SupportDemoService {
       orderIndex: value.order, status: value.status
     });
   }
-  // TODO(pre-deploy): Nhớ đối chiếu payload `reorder` với backend trước khi phát hành (handoff chỉ ghi nhận `orderIndex`).
   override async reorderFaq(id: string, order: number): Promise<void> { await this.request('PATCH', `/admin/support/faqs/${encodeURIComponent(id)}/reorder`, { orderIndex: order }); }
   override async setFaqStatus(id: string, status: FaqStatus): Promise<void> {
     const current = this.faqs().find(item => item.id === id);
-    // `toggle-status` chỉ đảo trạng thái hiện tại, nên chỉ gọi khi trạng thái đích khác hiện tại.
     if (current && current.status === status) { return; }
-    await this.request('PATCH', `/admin/support/faqs/${encodeURIComponent(id)}/toggle-status`, {});
+    await this.request('PUT', `/admin/support/faqs/${encodeURIComponent(id)}`, { status });
   }
   override async deleteFaq(id: string): Promise<void> { await this.request('DELETE', `/admin/support/faqs/${encodeURIComponent(id)}`); }
 

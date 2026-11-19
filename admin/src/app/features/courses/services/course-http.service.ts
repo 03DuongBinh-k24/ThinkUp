@@ -46,8 +46,8 @@ export class CourseHttpService extends CourseDemoService {
     } while (page <= pages);
     return rows;
   }
-  override archiveCourse(id: string, reason: string, explanation: string): void { void this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { status: 'archived', reason, explanation }); }
-  override setCourseStatus(id: string, status: CourseStatus): void { void this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { status }); }
+  override archiveCourse(id: string, reason: string, explanation: string): void { void this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: 'archived', reason, explanation }); }
+  override setCourseStatus(id: string, status: CourseStatus): void { void this.patch(`/admin/courses/${encodeURIComponent(id)}/business-status`, { businessStatus: status }); }
   override async approveApproval(id: string): Promise<void> { await this.decide(id, { decision: 'approve' }); }
   override async rejectApproval(id: string, reason: string, detail: string): Promise<void> {
     await this.decide(id, { decision: 'reject', reason, details: detail });
