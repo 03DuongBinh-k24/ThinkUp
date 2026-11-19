@@ -454,6 +454,8 @@
 }
 
 @media (max-width: 1023px) {
+  /* Ảnh chiếm toàn bộ khung: đổi tỉ lệ khung theo đúng tỉ lệ ảnh để không bị cắt dọc. */
+  .ln-room-carousel__stage { aspect-ratio: 16 / 10; }
   .ln-room-carousel__slide { width: 100%; }
   .ln-room-carousel__slide.is-prev,
   .ln-room-carousel__slide.is-next {
