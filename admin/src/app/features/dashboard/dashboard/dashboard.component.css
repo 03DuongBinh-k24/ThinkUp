@@ -410,3 +410,11 @@ h2 { font-size: 23px; line-height: 26px; font-weight: 700; color: #14336b; }
 .logs-panel table { min-width: 944px; }
 .logs-panel tbody tr.is-selected { background: var(--dashboard-primary-soft); }
 .logs-empty { height: 96px; text-align: center; color: var(--dashboard-muted); white-space: normal; }
+.logs-panel .select-cell,
+.logs-panel .log-filter,
+.logs-panel .logs-heading-actions app-export-menu,
+.logs-panel th:nth-child(3) app-column-filter,
+.logs-panel th:nth-child(4) app-column-filter,
+.logs-panel th:nth-child(5) app-column-filter { display: none; }
+.progress-body .donut { aspect-ratio: 1; border-radius: 50%; }
+.chart-legend .payout { width: 10px; height: 10px; border: 3px solid var(--dashboard-chart-payout, var(--dashboard-danger)); border-radius: 50%; }
