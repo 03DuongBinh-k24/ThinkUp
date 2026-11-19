@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { Component, HostListener, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AdminDialogComponent } from '../../../shared/components/admin-dialog/admin-dialog.component';
@@ -47,7 +48,16 @@ const PIN_VALUES: ColumnFilterValue[] = [
   styleUrls: ['../content-page.css', './post-list.component.css']
 })
 export class ContentPostListComponent {
+  private writing = false;
+  private async write(action: () => void | Promise<void>): Promise<boolean> {
+    if (this.writing) return false;
+    this.writing = true;
+    try { await action(); return true; }
+    catch (error) { this.notify(apiErrorMessage(error), '', 'error'); return false; }
+    finally { this.writing = false; }
+  }
   private readonly store = inject(ContentStore);
+  ngOnInit(): void { void this.store.open('posts'); }
   private readonly router = inject(Router);
 
   readonly posts = this.store.posts;
@@ -297,13 +307,13 @@ export class ContentPostListComponent {
 
   setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
 
-  bulkStatus(status: 'published' | 'hidden', ids: readonly string[] = this.selectedIds()): void {
+  async bulkStatus(status: 'published' | 'hidden', ids: readonly string[] = this.selectedIds()): Promise<void> {
     if (!ids.length) return;
-    ids.forEach(id => this.store.updatePost(
+    for (const id of ids) { if (!await this.write(() => this.store.updatePost(
       id,
       status === 'hidden' ? { status, pinned: false } : { status },
       status === 'hidden' ? 'Tạm ẩn hàng loạt và gỡ ghim Home.' : 'Xuất bản hàng loạt bài viết.'
-    ));
+    ))) return; }
     this.clearSelection();
     this.notify(
       status === 'hidden' ? `Đã tạm ẩn ${ids.length} bài viết và gỡ ghim Home.` : `Đã xuất bản ${ids.length} bài viết.`,
@@ -317,10 +327,10 @@ export class ContentPostListComponent {
     this.bulkDeleteIds.set(ids);
   }
 
-  confirmBulkDelete(): void {
+  async confirmBulkDelete(): Promise<void> {
     const ids = this.bulkDeleteIds();
     if (!ids?.length) return;
-    this.store.removePosts([...ids]);
+    if (!await this.write(() => this.store.removePosts([...ids]))) return;
     this.clearSelection();
     this.bulkDeleteIds.set(null);
     this.page.set(Math.min(this.page(), this.pages()));
@@ -399,7 +409,7 @@ export class ContentPostListComponent {
 
   /* ---------- row actions ---------- */
 
-  togglePin(post: ContentPost): void {
+  async togglePin(post: ContentPost): Promise<void> {
     if (!post.pinned && this.pinnedCount() >= PIN_LIMIT) {
       this.notify(
         'Đã đạt giới hạn tối đa 5 bài ghim trang chủ.',
@@ -408,11 +418,11 @@ export class ContentPostListComponent {
       );
       return;
     }
-    this.store.updatePost(
+    if (!await this.write(() => this.store.updatePost(
       post.id,
       { pinned: !post.pinned },
       post.pinned ? 'Bỏ ghim bài viết khỏi trang chủ.' : 'Ghim bài viết lên trang chủ.'
-    );
+    ))) return;
     this.notify(
       post.pinned ? 'Đã bỏ ghim bài viết khỏi trang chủ.' : 'Đã ghim bài viết lên trang chủ.',
       post.title,
@@ -447,13 +457,13 @@ export class ContentPostListComponent {
     this.requestReasons.set(next);
   }
 
-  submitRequestEdit(): void {
+  async submitRequestEdit(): Promise<void> {
     const post = this.requestTarget();
     if (!post || !this.canRequestEdit()) return;
     const reasons = [...this.requestReasons()];
     const note = this.requestNote().trim();
     const summary = [reasons.join('; '), note].filter(Boolean).join(' — ');
-    this.store.updatePost(post.id, { status: 'revision', moderationNote: summary }, 'Yêu cầu tác giả chỉnh sửa bài viết.');
+    if (!await this.write(() => this.store.updatePost(post.id, { status: 'revision', moderationNote: summary }, 'Yêu cầu tác giả chỉnh sửa bài viết.'))) return;
     this.requestTarget.set(null);
     this.notify(
       'Đã gửi yêu cầu chỉnh sửa cho tác giả.',
@@ -471,15 +481,15 @@ export class ContentPostListComponent {
     this.hideTarget.set(post);
   }
 
-  submitHide(): void {
+  async submitHide(): Promise<void> {
     const post = this.hideTarget();
     if (!post) return;
     const reason = this.hideReason();
-    this.store.updatePost(
+    if (!await this.write(() => this.store.updatePost(
       post.id,
       { status: 'hidden', pinned: false, moderationNote: reason },
       `Tạm ẩn bài viết: ${reason}`
-    );
+    ))) return;
     this.hideTarget.set(null);
     this.notify(
       'Đã tạm ẩn bài viết và gỡ ghim Home.',
@@ -495,10 +505,10 @@ export class ContentPostListComponent {
     this.restoreTarget.set(post);
   }
 
-  submitRestore(): void {
+  async submitRestore(): Promise<void> {
     const post = this.restoreTarget();
     if (!post) return;
-    this.store.updatePost(post.id, { status: 'published' }, 'Khôi phục xuất bản bài viết.');
+    if (!await this.write(() => this.store.updatePost(post.id, { status: 'published' }, 'Khôi phục xuất bản bài viết.'))) return;
     this.restoreTarget.set(null);
     this.notify('Đã khôi phục xuất bản bài viết.', 'Bài viết đã hiển thị công khai trở lại.', 'success');
   }
@@ -513,10 +523,10 @@ export class ContentPostListComponent {
     this.deleteTarget.set(post);
   }
 
-  submitDelete(): void {
+  async submitDelete(): Promise<void> {
     const post = this.deleteTarget();
     if (!post || !this.canDelete()) return;
-    this.store.removePosts([post.id]);
+    if (!await this.write(() => this.store.removePosts([post.id]))) return;
     this.deleteTarget.set(null);
     this.notify(
       'Đã xóa bài viết khỏi giao diện công khai.',

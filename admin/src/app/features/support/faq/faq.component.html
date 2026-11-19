@@ -1,3 +1,5 @@
+@if (data.loadError()) { <p role="alert">{{ data.loadError() }} <button type="button" (click)="data.open('faqs')">Thử lại</button></p> }
+@if (data.loading()) { <p role="status">Đang tải dữ liệu…</p> }
 <main class="support-page">
   <header class="page-heading">
     <div>

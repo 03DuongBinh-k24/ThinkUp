@@ -15,9 +15,9 @@ export abstract class CourseStore {
   abstract retry(): void;
   abstract archiveCourse(id: string, reason: string, explanation: string): void;
   abstract setCourseStatus(id: string, status: CourseStatus): void;
-  abstract approveApproval(id: string): void;
-  abstract rejectApproval(id: string, reason: string, detail: string): void;
-  abstract requestSupplement(id: string, items: string[], issueType: string, detail: string): void;
+  abstract approveApproval(id: string): Promise<void> | void;
+  abstract rejectApproval(id: string, reason: string, detail: string): Promise<void> | void;
+  abstract requestSupplement(id: string, items: string[], issueType: string, detail: string): Promise<void> | void;
   abstract toggleRoadmapVisibility(id: string): void;
   abstract updateRoadmapNode(roadmapId: string, node: RoadmapNode): void;
   abstract saveRoadmapDraft(roadmapId: string): void;

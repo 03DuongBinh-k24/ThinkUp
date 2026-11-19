@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +18,9 @@ type CaseAction = 'explanation' | 'refund' | 'dismiss' | 'discipline' | null;
   styleUrls: ['../support-page.css', './complaint-detail.component.css']
 })
 export class ComplaintDetailComponent {
-  private readonly data = inject(SupportDemoService);
+  readonly data = inject(SupportDemoService);
+  ngOnInit(): void { this.data.open('complaints', this.caseId); }
+
   private readonly route = inject(ActivatedRoute);
   readonly caseId = this.route.snapshot.paramMap.get('id') ?? '';
   readonly caseFile = computed(() => this.data.complaints().find(item => item.id === this.caseId) ?? null);
@@ -60,7 +63,7 @@ export class ComplaintDetailComponent {
   });
 
   money(value: number): string { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value); }
-  sla(item: ComplaintCase): string { const hours = Math.ceil(Math.abs(new Date(item.dueAt).getTime() - Date.now()) / 3_600_000); return new Date(item.dueAt).getTime() < Date.now() ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`; }
+  sla(item: ComplaintCase): string { if (!Number.isFinite(Date.parse(item.dueAt))) return 'Chưa có hạn xử lý'; const hours = Math.ceil(Math.abs(new Date(item.dueAt).getTime() - Date.now()) / 3_600_000); return new Date(item.dueAt).getTime() < Date.now() ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`; }
   openAction(value: Exclude<CaseAction, null>): void { this.action.set(value); this.actionText.set(''); this.option.set(''); this.confirmRisk.set(false); this.explanationDeadline.set(12); this.freezeCommission.set(true); this.refundMode.set('full'); this.partialRefundAmount.set(null); this.revokeAccess.set(true); this.revokeCertificate.set(true); this.dismissalBasis.set(''); this.giftVoucher.set(true); this.sanctions.set(['strike', 'archive']); }
   closeAction(): void { this.action.set(null); }
   selectDecision(value: string): void { this.decision.set(value); }
@@ -74,14 +77,22 @@ export class ComplaintDetailComponent {
     if (action === 'discipline') return this.sanctions().length > 0 && this.actionText().trim().length >= 30 && this.confirmRisk();
     return false;
   }
-  confirmAction(): void {
+  private saving = false;
+  async confirmAction(): Promise<void> {
     const item = this.caseFile();
-    if (!item || !this.canConfirmAction()) return;
-    if (this.action() === 'explanation') this.data.requestInstructorExplanation(item.id, this.explanationDeadline(), this.freezeCommission(), this.actionText().trim());
-    if (this.action() === 'refund') this.data.approveComplaintRefund(item.id, this.refundAmount(), this.revokeAccess(), this.revokeCertificate(), this.actionText().trim());
-    if (this.action() === 'dismiss') this.data.dismissComplaint(item.id, this.dismissalBasis(), this.actionText().trim(), this.giftVoucher());
-    if (this.action() === 'discipline') this.data.disciplineInstructor(item.id, this.sanctions(), this.actionText().trim());
-    this.action.set(null); this.decision.set(''); this.notify('Đã ghi nhận quyết định và cập nhật lịch sử xử lý.');
+    if (!item || this.saving || !this.canConfirmAction()) return;
+    this.saving = true;
+    try {
+      if (this.action() === 'explanation') await this.data.requestInstructorExplanation(item.id, this.explanationDeadline(), this.freezeCommission(), this.actionText().trim());
+      if (this.action() === 'refund') await this.data.approveComplaintRefund(item.id, this.refundAmount(), this.revokeAccess(), this.revokeCertificate(), this.actionText().trim());
+      if (this.action() === 'dismiss') await this.data.dismissComplaint(item.id, this.dismissalBasis(), this.actionText().trim(), this.giftVoucher());
+      if (this.action() === 'discipline') await this.data.disciplineInstructor(item.id, this.sanctions(), this.actionText().trim());
+      this.action.set(null); this.decision.set(''); this.notify('Đã ghi nhận quyết định và cập nhật lịch sử xử lý.');
+    } catch (error) {
+      this.notify(apiErrorMessage(error));
+    } finally {
+      this.saving = false;
+    }
   }
   canIssue(): boolean { return !!this.decision(); }
   issue(): void {

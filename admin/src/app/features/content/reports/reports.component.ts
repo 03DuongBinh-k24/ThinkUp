@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { AdminDialogComponent } from '../../../shared/components/admin-dialog/admin-dialog.component';
 import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
 import { ColumnFilterComponent, ColumnFilterValue, DATE_SORT_OPTIONS, TEXT_SORT_OPTIONS, compareSortValues } from '../../../shared/components/column-filter/column-filter.component';
@@ -40,7 +41,16 @@ const SLA_STATE_VALUES: ColumnFilterValue[] = [
   styleUrls: ['../content-page.css', '../content-moderation.css', './reports.component.css']
 })
 export class ContentReportsComponent {
+  private writing = false;
+  private async write(action: () => void | Promise<void>): Promise<boolean> {
+    if (this.writing) return false;
+    this.writing = true;
+    try { await action(); return true; }
+    catch (error) { this.notify(apiErrorMessage(error), 'error'); return false; }
+    finally { this.writing = false; }
+  }
   private readonly store = inject(ContentStore);
+  ngOnInit(): void { void this.store.open('reports'); }
   readonly loadError = this.store.loadError;
   private readonly route = inject(ActivatedRoute);
 
@@ -367,13 +377,13 @@ export class ContentReportsComponent {
 
   setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
 
-  bulkStatus(status: 'resolved' | 'escalated' | 'dismissed', ids: readonly string[] = this.selectedIds()): void {
+  async bulkStatus(status: 'resolved' | 'escalated' | 'dismissed', ids: readonly string[] = this.selectedIds()): Promise<void> {
     if (!ids.length) return;
-    ids.forEach(id => {
+    for (const id of ids) {
       const item = this.reports().find(report => report.id === id);
       const assignee = item && item.assignee !== 'Chưa phân công' ? item.assignee : 'Quản trị viên';
-      this.store.updateReport(id, { status, assignee }, `Cập nhật hàng loạt sang ${REPORT_STATUS_LABELS[status]}.`);
-    });
+      if (!await this.write(() => this.store.updateReport(id, { status, assignee }, `Cập nhật hàng loạt sang ${REPORT_STATUS_LABELS[status]}.`))) return;
+    }
     this.clearSelection();
     this.page.set(Math.min(this.page(), this.pages()));
     this.notify(`Đã chuyển ${ids.length} báo cáo sang ${REPORT_STATUS_LABELS[status]}.`, 'success');
@@ -384,7 +394,7 @@ export class ContentReportsComponent {
     if (key === 'resolved' || key === 'escalated' || key === 'dismissed') this.bulkStatus(key, ids);
   }
 
-  openDetail(item: ContentReport): void {
+  async openDetail(item: ContentReport): Promise<void> {
     this.detailId.set(item.id);
     this.resolutionDecision.set('resolved');
     this.resolutionNote.set('');
@@ -394,8 +404,8 @@ export class ContentReportsComponent {
     this.actionTouched.set(false);
     this.historyOpen.set(false);
     if (item.status === 'new') {
-      this.store.updateReport(item.id, { status: 'processing', assignee: 'Quản trị viên' },
-        'Tự động ghi nhận Đang điều tra khi mở hồ sơ.');
+      if (!await this.write(() => this.store.updateReport(item.id, { status: 'processing', assignee: 'Quản trị viên' },
+        'Tự động ghi nhận Đang điều tra khi mở hồ sơ.'))) return;
     }
   }
 
@@ -422,12 +432,12 @@ export class ContentReportsComponent {
     this.notify(`Đang mở nội dung gốc của ${item.targetId}.`, 'info');
   }
 
-  startProcessing(item: ContentReport): void {
-    this.store.updateReport(item.id, { status: 'processing', assignee: 'Quản trị viên' }, 'Tiếp nhận và bắt đầu xử lý báo cáo.');
+  async startProcessing(item: ContentReport): Promise<void> {
+    if (!await this.write(() => this.store.updateReport(item.id, { status: 'processing', assignee: 'Quản trị viên' }, 'Tiếp nhận và bắt đầu xử lý báo cáo.'))) return;
     this.notify(`Đã nhận xử lý báo cáo ${item.code}.`, 'success');
   }
 
-  resolve(item: ContentReport, status: 'resolved' | 'dismissed'): void {
+  async resolve(item: ContentReport, status: 'resolved' | 'dismissed'): Promise<void> {
     this.noteTouched.set(true);
     this.actionTouched.set(true);
     if (this.resolutionNote().trim().length < 20) {
@@ -448,7 +458,7 @@ export class ContentReportsComponent {
       ? this.enforcementOptions.find(option => option.value === this.enforcement())?.label ?? ''
       : this.dismissalOptions.find(option => option.value === this.dismissalReason())?.label ?? '';
     const note = `${action} — ${this.resolutionNote().trim()}`;
-    this.store.updateReport(item.id, { status, assignee: item.assignee === 'Chưa phân công' ? 'Quản trị viên' : item.assignee }, note);
+    if (!await this.write(() => this.store.updateReport(item.id, { status, assignee: item.assignee === 'Chưa phân công' ? 'Quản trị viên' : item.assignee }, this.resolutionNote().trim(), status === 'resolved' ? this.enforcement() : this.dismissalReason()))) return;
     this.noteTouched.set(false);
     this.actionTouched.set(false);
     this.resolutionNote.set('');

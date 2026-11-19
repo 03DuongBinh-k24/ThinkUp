@@ -49,7 +49,9 @@ function filterTickets(items: SupportTicket[], filters: TicketFilters, query: st
 
 @Component({ selector: 'app-support-tickets', standalone: true, imports: [DatePipe, SupportPaginationComponent, ColumnVisibilityComponent, ColumnFilterComponent, CustomSelectComponent, ExportMenuComponent, SearchFieldComponent, DateTimePickerComponent, SupportFilterModalComponent, TableColumnResizeDirective, SelectionBarComponent, BulkSelectionDialogComponent, AdminDialogComponent, LucideClock, LucideRefreshCw, LucideTriangleAlert, LucideCircleCheck, LucideGauge, LucidePaperclip, LucideEye, LucideFilter, LucideX], templateUrl: './tickets.component.html', styleUrls: ['../support-page.css', './tickets.component.css'] })
 export class TicketsComponent {
-  private readonly data = inject(SupportDemoService); private readonly router = inject(Router); private readonly auth = inject(AdminAuthService); private readonly destroyRef = inject(DestroyRef);
+  readonly data = inject(SupportDemoService);
+  ngOnInit(): void { this.data.open('tickets'); }
+   private readonly router = inject(Router); private readonly auth = inject(AdminAuthService); private readonly destroyRef = inject(DestroyRef);
   private readonly pageSizeService = inject(AdminPageSizeService);
   readonly tickets = this.data.tickets; readonly queryInput = signal(''); readonly query = signal(''); readonly page = signal(1);
   /** Số dòng mỗi trang đọc từ cấu hình hệ thống (`parameters.orders_per_page`). */
@@ -172,7 +174,7 @@ export class TicketsComponent {
   }
   open(ticket: SupportTicket): void { void this.router.navigate(['/support/tickets', ticket.id]); }
   slaMs(ticket: SupportTicket): number { const end = ticket.status === 'closed' && ticket.resolvedAt ? new Date(ticket.resolvedAt).getTime() : this.now(); return new Date(ticket.dueAt).getTime() - end; }
-  sla(ticket: SupportTicket): string { const ms = this.slaMs(ticket), hours = Math.ceil(Math.abs(ms) / 3_600_000); if (ticket.status === 'closed') return ms < 0 ? `Đóng trễ ${hours} giờ` : `Đúng hạn ${hours} giờ`; return ms < 0 ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`; }
+  sla(ticket: SupportTicket): string { const ms = this.slaMs(ticket), hours = Math.ceil(Math.abs(ms) / 3_600_000); if (!Number.isFinite(ms)) return 'Chưa có hạn xử lý'; if (ticket.status === 'closed') return ms < 0 ? `Đóng trễ ${hours} giờ` : `Đúng hạn ${hours} giờ`; return ms < 0 ? `Trễ ${hours} giờ` : `Còn ${hours} giờ`; }
   statusLabel(status: TicketStatus): string { return ({ unassigned: 'Chờ tiếp nhận', processing: 'Đang xử lý', waiting: 'Chờ phản hồi', reopened: 'Cần xử lý tiếp', closed: 'Đã đóng' })[status]; }
   attachmentTitle(ticket: SupportTicket): string { return ticket.attachments.length ? ticket.attachments.map(file => file.name).join('\n') : 'Không có tệp'; }
   pageTo(value: number): void { this.page.set(Math.max(1, Math.min(this.pages(), value))); }
