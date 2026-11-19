@@ -89,13 +89,25 @@ export async function createAuditRecord(db, {
   });
 
   const actorId = actor?.admin_id ? (typeof actor.admin_id === 'string' ? new ObjectId(actor.admin_id) : actor.admin_id) : null;
+  // Hash đúng payload sẽ được persist; nếu hash `diff` đầu vào trực tiếp,
+  // các trường thiếu có thể khiến checksum mới không khớp với document đã lưu.
+  const persistedDiff = {
+    before: diff?.before || {},
+    after: diff?.after || {},
+  };
+  const persistedTarget = {
+    id: target?.id || 'N/A',
+    entity_type: target?.entity_type || 'system',
+    name: target?.name || '',
+    meta: target?.meta || '',
+  };
 
   const checksum = calculateAuditChecksum({
     log_code,
     actor_id: actorId,
-    target_id: target?.id,
+    target_id: persistedTarget.id,
     timestamp: now,
-    diff,
+    diff: persistedDiff,
   });
 
   const doc = {
@@ -114,12 +126,7 @@ export async function createAuditRecord(db, {
     action_label: action_label || action || 'Thao tác',
     outcome: outcome === 'failed' ? 'failed' : 'success',
     risk_level: resolvedRisk,
-    target: {
-      id: target?.id || 'N/A',
-      entity_type: target?.entity_type || 'system',
-      name: target?.name || '',
-      meta: target?.meta || '',
-    },
+    target: persistedTarget,
     client_context: {
       ip: client_context?.ip || '127.0.0.1',
       location: client_context?.location || 'Việt Nam',
@@ -131,10 +138,7 @@ export async function createAuditRecord(db, {
       evidence_url: basis?.evidence_url || null,
       evidence_name: basis?.evidence_name || null,
     },
-    diff: {
-      before: diff?.before || {},
-      after: diff?.after || {},
-    },
+    diff: persistedDiff,
     checksum,
     created_at: now,
   };
@@ -152,11 +156,29 @@ export async function getAuditSummary(db) {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
 
-  const [totalToday, totalYesterday, highRiskCount, activeAdminsCount] = await Promise.all([
-    collection.countDocuments({ timestamp: { $gte: startOfToday } }),
-    collection.countDocuments({ timestamp: { $gte: startOfYesterday, $lt: startOfToday } }),
-    collection.countDocuments({ timestamp: { $gte: startOfToday }, risk_level: 'high' }),
-    collection.distinct('actor.admin_id', { timestamp: { $gte: startOfToday } }),
+  // Collection này còn chứa log từ các phân hệ cũ (`created_at`, `admin_id`,
+  // `details`). Tính KPI trên cả hai schema để không rơi về 0 khi log cũ mới hơn.
+  const during = (start, end) => ({ $or: [
+    { timestamp: { $gte: start, ...(end ? { $lt: end } : {}) } },
+    { created_at: { $gte: start, ...(end ? { $lt: end } : {}) } },
+  ] });
+  const today = during(startOfToday);
+  const yesterday = during(startOfYesterday, startOfToday);
+  const [totalToday, totalYesterday, highRiskCount, activeAdminsRows] = await Promise.all([
+    collection.countDocuments(today),
+    collection.countDocuments(yesterday),
+    collection.countDocuments({ $and: [today, { $or: [
+      { risk_level: 'high' },
+      // Những hành động rủi ro cao ở schema cũ chưa có risk_level riêng.
+      { action: { $regex: 'ROLE|CONFIG|SETTING|APPROVE_PAYOUT|PAYOUT.*(APPROVE|RELEASE)', $options: 'i' } },
+    ] }] }),
+    collection.aggregate([
+      { $match: today },
+      { $project: { actorId: { $ifNull: ['$actor.admin_id', '$admin_id'] } } },
+      { $match: { actorId: { $ne: null } } },
+      { $group: { _id: '$actorId' } },
+      { $count: 'count' },
+    ]).toArray(),
   ]);
 
   let deltaPct = 0;
@@ -166,16 +188,19 @@ export async function getAuditSummary(db) {
     deltaPct = 100;
   }
 
-  // Kiểm tra 20 bản ghi gần nhất để đánh giá toàn vẹn
-  const recentLogs = await collection.find({}).sort({ timestamp: -1 }).limit(20).toArray();
+  // Chỉ xác minh bản ghi thuộc schema checksum mới. Log legacy không có
+  // checksum không chứng minh bị sửa đổi và không được tính là sai lệch.
+  const recentLogs = await collection.find({ log_code: { $exists: true } })
+    .sort({ timestamp: -1 }).limit(20).toArray();
   const hasTampered = recentLogs.some(log => !verifyAuditChecksum(log));
 
   return {
     totalToday,
     totalDelta: `${deltaPct >= 0 ? '+' : ''}${deltaPct}% so với hôm qua`,
     highRisk: highRiskCount,
-    activeAdmins: activeAdminsCount.length,
-    onlineAdmins: Math.max(1, activeAdminsCount.length),
+    activeAdmins: activeAdminsRows[0]?.count || 0,
+    // Nhật ký chỉ chứng minh admin có thao tác hôm nay, không chứng minh họ online.
+    onlineAdmins: activeAdminsRows[0]?.count || 0,
     integrity: hasTampered ? 'broken' : 'verified',
   };
 }

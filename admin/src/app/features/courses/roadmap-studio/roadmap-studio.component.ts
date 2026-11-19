@@ -5,7 +5,7 @@ import { RoadmapHintDialogComponent } from '../components/roadmap-hint-dialog/ro
 import { CourseToastComponent, ToastTone } from '../components/course-toast.component';
 import { LEVEL_TONE, ROADMAP_NODE_TYPES, countChars } from '../course-utils';
 import {
-  CourseLevel, CourseSuggestion, RoadmapNode, RoadmapNodeType, RoadmapPhase, RoadmapQuestion, RoadmapTest
+  CourseLevel, CourseSuggestion, RoadmapNode, RoadmapNodeType, RoadmapPhase, RoadmapQuestion, RoadmapTest, RoadmapStudio
 } from '../models/course.models';
 import { CourseStore } from '../services/course.store';
 
@@ -27,9 +27,11 @@ export class RoadmapStudioComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  private readonly navigationData = (this.router.getCurrentNavigation()?.extras.state ?? history.state) as { roadmap?: import('../models/course.models').Roadmap; studio?: import('../models/course.models').RoadmapStudio };
   readonly roadmapId = this.route.snapshot.paramMap.get('id') ?? '';
-  readonly roadmap = computed(() => this.store.roadmaps().find(item => item.id === this.roadmapId) ?? null);
-  readonly studio = computed(() => this.store.studios().find(item => item.roadmapId === this.roadmapId) ?? null);
+  private readonly localStudio = signal<RoadmapStudio | null>(null);
+  readonly roadmap = computed(() => this.store.roadmaps().find(item => item.id === this.roadmapId) ?? this.navigationData?.roadmap ?? null);
+  readonly studio = computed(() => this.localStudio() ?? this.store.studios().find(item => item.roadmapId === this.roadmapId) ?? (this.navigationData?.studio?.roadmapId === this.roadmapId ? this.navigationData.studio : null));
 
   readonly tab = signal<StudioTab>('structure');
   readonly toast = signal<{ message: string; tone: ToastTone } | null>(null);
@@ -79,9 +81,18 @@ export class RoadmapStudioComponent {
   readonly outcomesError = computed(() => this.touched() && countChars(this.nodeDraft()?.outcomes ?? '') === 0);
 
   selectNode(node: RoadmapNode): void {
+    const current = this.nodeDraft();
+    if (current) this.commitNode(current);
     this.selectedNodeId.set(node.id);
     this.nodeDraft.set(clone(node));
     this.touched.set(false);
+  }
+
+  private commitNode(node: RoadmapNode): void {
+    const studio = this.studio();
+    if (!studio) return;
+    const phases = studio.phases.map((phase: RoadmapPhase) => ({ ...phase, nodes: phase.nodes.map((item: RoadmapNode) => item.id === node.id ? clone(node) : item) }));
+    this.localStudio.set({ ...studio, phases });
   }
 
   patchNode(patch: Partial<RoadmapNode>): void {
@@ -152,6 +163,12 @@ export class RoadmapStudioComponent {
   attach(suggestion: CourseSuggestion): void {
     if (this.attachedIds().includes(suggestion.id)) return;
     this.attachedIds.set([...this.attachedIds(), suggestion.id]);
+    const current = this.nodeDraft();
+    if (current) {
+      const attached = { ...current, courses: [...(current.courses ?? []), { id: suggestion.id, title: suggestion.title, match: suggestion.match, level: suggestion.level }] };
+      this.nodeDraft.set(attached);
+      this.commitNode(attached);
+    }
     this.notify(`Đã gắn “${suggestion.title}” vào node ${this.nodeName()}.`, 'success');
   }
 
@@ -234,20 +251,25 @@ export class RoadmapStudioComponent {
   }
 
   saveDraft(): void {
-    if (!this.persist()) {
+    const studio = this.persist();
+    if (!studio) {
       this.notify('Vui lòng nhập đủ tên node, mô tả và kết quả học được.', 'error');
       return;
     }
-    this.notify('Đã lưu bản nháp lộ trình.', 'success');
+    void Promise.resolve(this.store.saveRoadmapDraft(this.roadmapId, studio))
+      .then(() => this.notify('Đã lưu bản nháp lộ trình.', 'success'))
+      .catch(error => this.notify(error instanceof Error ? error.message : 'Không lưu được bản nháp lộ trình.', 'error'));
   }
 
   publish(): void {
-    if (!this.persist()) {
+    const studio = this.persist();
+    if (!studio) {
       this.notify('Vui lòng nhập đủ tên node, mô tả và kết quả học được.', 'error');
       return;
     }
-    this.store.publishRoadmap(this.roadmapId);
-    this.notify('Đã xuất bản lộ trình cho học viên.', 'success');
+    void Promise.resolve(this.store.publishRoadmap(this.roadmapId, studio))
+      .then(() => this.notify('Đã xuất bản lộ trình cho học viên.', 'success'))
+      .catch(error => this.notify(error instanceof Error ? error.message : 'Không xuất bản được lộ trình.', 'error'));
   }
 
   back(): void {
@@ -267,17 +289,15 @@ export class RoadmapStudioComponent {
     return LEVEL_TONE[level];
   }
 
-  private persist(): boolean {
+  private persist(): RoadmapStudio | null {
     this.touched.set(true);
     const node = this.nodeDraft();
     if (node && (countChars(node.name) === 0 || countChars(node.description) === 0 || countChars(node.outcomes) === 0)) {
-      return false;
+      return null;
     }
-    if (node) this.store.updateRoadmapNode(this.roadmapId, node);
-    const test = this.testDraft();
-    if (test) this.store.saveRoadmapTest(this.roadmapId, test);
-    this.store.saveRoadmapDraft(this.roadmapId);
-    return true;
+    if (node) this.commitNode(node);
+    if (this.testDraft()) this.localStudio.update(current => current ? { ...current, test: clone(this.testDraft()!) } : current);
+    return this.localStudio() ?? this.studio();
   }
 
   private updateQuestion(transform: (question: RoadmapQuestion) => RoadmapQuestion): void {
@@ -293,7 +313,7 @@ export class RoadmapStudioComponent {
   private findNode(id: string): RoadmapNode | null {
     const phases = this.studio()?.phases ?? [];
     for (const phase of phases) {
-      const node = phase.nodes.find(item => item.id === id);
+      const node = phase.nodes.find((item: RoadmapNode) => item.id === id);
       if (node) return clone(node);
     }
     return phases[0]?.nodes[0] ? clone(phases[0].nodes[0]) : null;

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
 import { generateTOTP } from '../auth/auth.admin.js';
 import { createAuditRecord } from './audit.admin.js';
+import { publishAdminNotificationToRoster } from '../notifications/notifications.admin.js';
 
 export const ADMINS_COLLECTION = 'admins';
 export const USERS_COLLECTION = 'users';
@@ -262,6 +263,13 @@ export async function assignAdminRole(db, {
     },
   });
 
+  await publishAdminNotificationToRoster(db, {
+    type: 'security', severity: 'warning', title: 'Tài khoản quản trị mới được cấp quyền',
+    message: `Đã cấp vai trò ${role} cho tài khoản ${cleanEmail}.`,
+    href: '/system/security', eventKey: 'admin.security.role-assigned',
+    dedupeKey: `admin.security.role-assigned:${String(insertResult.insertedId)}`,
+  });
+
   return {
     success: true,
     adminId: insertResult.insertedId.toString(),
@@ -413,6 +421,14 @@ export async function toggleAdminLock(db, {
     },
   });
 
+  await publishAdminNotificationToRoster(db, {
+    type: 'security', severity: lock ? 'critical' : 'warning',
+    title: lock ? 'Tài khoản quản trị đã bị khóa' : 'Tài khoản quản trị đã được mở khóa',
+    message: `Tài khoản ${target.email || target.admin_code || target._id} đã ${lock ? 'bị khóa' : 'được mở khóa'}.`,
+    href: '/system/security', eventKey: lock ? 'admin.security.admin-locked' : 'admin.security.admin-unlocked',
+    dedupeKey: `admin.security.admin-status:${String(target._id)}:${newStatus}:${String(target.token_version ?? 0)}`,
+  });
+
   return {
     success: true,
     status: newStatus,
@@ -474,6 +490,13 @@ export async function resetAdminTwoFactor(db, {
       before: { two_factor_enabled: target.two_factor_enabled },
       after: { two_factor_enabled: false, two_factor_reset_required: true },
     },
+  });
+
+  await publishAdminNotificationToRoster(db, {
+    type: 'security', severity: 'warning', title: 'Xác thực hai lớp đã được đặt lại',
+    message: `2FA của tài khoản ${target.email || target.admin_code || target._id} đã được đặt lại bởi Super Admin.`,
+    href: '/system/security', eventKey: 'admin.security.two-factor-reset',
+    dedupeKey: `admin.security.two-factor-reset:${String(target._id)}:${String((target.token_version || 0) + 1)}`,
   });
 
   return {

@@ -198,7 +198,7 @@
         <thead>
           <tr>
             <th scope="col" class="select-cell">
-              <input type="checkbox" [checked]="allVisibleSelected()" [indeterminate]="someVisibleSelected()" aria-label="Chọn tất cả giảng viên trên trang" (change)="toggleSelectAll()" />
+              <input type="checkbox" [checked]="allVisibleSelected()" [indeterminate]="someVisibleSelected()" [disabled]="!hasSelectableVisible()" aria-label="Chọn tất cả giảng viên trên trang" (change)="toggleSelectAll()" />
             </th>
             <th scope="col"><app-column-filter label="Giảng viên" [values]="nameValues()" [selected]="filterFor('name')" (changed)="updateColumnFilter('name', $event)" [sorts]="textSorts" [sort]="sortFor('name')" (sortChange)="updateColumnSort('name', $event)" /></th>
             <th scope="col"><app-column-filter label="Liên hệ &amp; chuyên môn" [values]="specialtyValues()" [selected]="filterFor('specialty')" (changed)="updateColumnFilter('specialty', $event)" [sorts]="textSorts" [sort]="sortFor('specialty')" (sortChange)="updateColumnSort('specialty', $event)" /></th>
@@ -214,14 +214,14 @@
           @for (item of visible(); track item.id) {
             <tr [class.is-selected]="isSelected(item.id)">
               <td class="select-cell">
-                <input type="checkbox" [checked]="isSelected(item.id)" [attr.aria-label]="'Chọn giảng viên ' + item.name" (change)="toggleSelect(item.id, $any($event.target).checked)" />
+                <input type="checkbox" [checked]="isSelected(item.id)" [disabled]="item.accountLinked === false" [attr.aria-label]="'Chọn giảng viên ' + item.name" (change)="toggleSelect(item.id, $any($event.target).checked)" />
               </td>
               <td>
                 <div class="identity">
                   <span class="avatar avatar--{{ $index % 5 }}" aria-hidden="true">{{ item.initials }}</span>
                   <div class="cell-stack">
                     <strong>{{ item.name }}</strong>
-                    <span><span class="sensitive">{{ item.email | adminPrivacy }}</span> · {{ item.id }}</span>
+                    <span><span class="sensitive">{{ item.email | adminPrivacy }}</span> · Mã GV: {{ item.lecturerCode || 'Chưa cấp mã' }}</span>
                   </div>
                 </div>
               </td>
@@ -333,7 +333,7 @@
             <div><dt>Họ và tên</dt><dd>{{ lecturer.name }}</dd></div>
             <div><dt>Số điện thoại</dt><dd>{{ lecturer.phone }}</dd></div>
             <div><dt>Email</dt><dd>{{ lecturer.email }}</dd></div>
-            <div><dt>Mã giảng viên</dt><dd>{{ lecturer.id }}</dd></div>
+            <div><dt>Mã giảng viên</dt><dd>{{ lecturer.lecturerCode || 'Chưa cấp mã' }}</dd></div>
           </dl>
         </section>
 
@@ -428,7 +428,9 @@
 
         <div modalFooter class="modal-footer-split">
           <button class="btn btn--outline" type="button" (click)="openCourses(lecturer)">Khóa học</button>
-          <button class="btn btn--danger" type="button" (click)="openDiscipline(lecturer)">Xử lý kỷ luật</button>
+          @if (lecturer.accountLinked !== false) {
+            <button class="btn btn--danger" type="button" (click)="openDiscipline(lecturer)">Xử lý kỷ luật</button>
+          }
         </div>
       </app-user-modal>
     }
@@ -437,7 +439,7 @@
   <!-- ================= Khoá học của giảng viên ================= -->
   @if (modal() === 'courses') {
     @if (selected(); as lecturer) {
-      <app-user-modal title="Khóa học của giảng viên" [subtitle]="lecturer.name + ' · ' + lecturer.id" size="md" (closed)="closeModal()">
+      <app-user-modal title="Khóa học của giảng viên" [subtitle]="lecturer.name + ' · ' + (lecturer.lecturerCode || 'Chưa cấp mã')" size="md" (closed)="closeModal()">
         <div class="table-wrap">
           <table class="user-table user-table--fluid">
             <thead>
@@ -477,7 +479,7 @@
     @if (selected(); as lecturer) {
       <app-user-modal
         title="Xử lý vi phạm và Kỷ luật giảng viên"
-        [subtitle]="lecturer.name + ' · ' + lecturer.id"
+        [subtitle]="lecturer.name + ' · ' + (lecturer.lecturerCode || 'Chưa cấp mã')"
         size="lg"
         (closed)="closeModal()"
       >
@@ -593,7 +595,7 @@
   <!-- ================= Mở khoá tài khoản ================= -->
   @if (modal() === 'unlock') {
     @if (selected(); as lecturer) {
-      <app-user-modal title="Mở khóa tài khoản giảng viên" [subtitle]="lecturer.name + ' · ' + lecturer.id" size="md" (closed)="closeModal()">
+      <app-user-modal title="Mở khóa tài khoản giảng viên" [subtitle]="lecturer.name + ' · ' + (lecturer.lecturerCode || 'Chưa cấp mã')" size="md" (closed)="closeModal()">
         <div class="info-strip info-strip--amber modal-section">
           <strong>Tài khoản đang bị áp dụng kỷ luật Mức {{ lockLevelOf(lecturer) }}</strong>
           <span>{{ lockExpiryOf(lecturer) }}</span>

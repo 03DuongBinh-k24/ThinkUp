@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideBan, LucideBookOpen, LucideCheckCircle2, LucideCircleDollarSign, LucideClock3, LucideEye, LucideFileText, LucideGift, LucideGraduationCap, LucideLockKeyhole, LucideMessageSquareText, LucideTriangleAlert, LucideUserRound, LucideX } from '@lucide/angular';
 import { ComplaintCase, INSTRUCTOR_REFUND_PERCENT } from '../models/support.models';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
-import { SupportDemoService } from '../services/support-demo.service';
+import { SUPPORT_STORE } from '../services/support-demo.service';
 
 type CaseAction = 'explanation' | 'refund' | 'dismiss' | 'discipline' | null;
 
@@ -18,7 +18,7 @@ type CaseAction = 'explanation' | 'refund' | 'dismiss' | 'discipline' | null;
   styleUrls: ['../support-page.css', './complaint-detail.component.css']
 })
 export class ComplaintDetailComponent {
-  readonly data = inject(SupportDemoService);
+  readonly data = inject(SUPPORT_STORE);
   ngOnInit(): void { this.data.open('complaints', this.caseId); }
 
   private readonly route = inject(ActivatedRoute);

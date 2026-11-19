@@ -4,6 +4,7 @@ import {
   calculateAuditChecksum,
   verifyAuditChecksum,
   determineRiskLevel,
+  createAuditRecord,
 } from '../audit.admin.js';
 import { DEFAULT_SYSTEM_SETTINGS, getSystemSettings } from '../settings.admin.js';
 
@@ -41,6 +42,17 @@ test('Audit Log Checksum: Tính toán và kiểm tra sai lệch toàn vẹn', ()
     diff: { before: { status: 'pending' }, after: { status: 'rejected' } },
   };
   assert.equal(verifyAuditChecksum(tamperedDoc), false, 'Bản ghi bị sửa dữ liệu phải bị phát hiện sai lệch checksum');
+});
+
+test('Audit Log Checksum: document thiếu diff vẫn xác thực sau khi lưu', async () => {
+  let inserted;
+  const db = { collection(name) {
+    assert.equal(name, 'admin_audit_logs');
+    return { async insertOne(doc) { inserted = doc; } };
+  } };
+  await createAuditRecord(db, { actor: {}, module: 'audit', action: 'test_without_diff' });
+  assert.deepEqual(inserted.diff, { before: {}, after: {} });
+  assert.equal(verifyAuditChecksum(inserted), true);
 });
 
 test('Risk Matrix: Phân loại rủi ro chuẩn quy tắc BA', () => {

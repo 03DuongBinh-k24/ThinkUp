@@ -42,7 +42,8 @@ export class PayoutsComponent {
   readonly dateTime = dateTime;
   readonly Math = Math;
   readonly payouts = this.data.payouts;
-  /** Backend chưa có luồng chi trả thật — giữ dữ liệu minh họa và ghi rõ trên giao diện. */
+  readonly payoutSummary = this.data.payoutSummary;
+  /** Nguồn dữ liệu chi trả hiện tại. */
   readonly payoutsAreDemo = this.data.payoutsAreDemo;
   readonly search = signal('');
   readonly status = signal<PayoutStatus | ''>('');
@@ -171,12 +172,12 @@ export class PayoutsComponent {
   net(item: PayoutRequest): number | null {
     return item.netAmount !== undefined ? item.netAmount : item.taxAmount === null ? null : item.amount - item.taxAmount;
   }
-  readonly pending = computed(() => this.kpiRows().filter(item => item.status === 'pending').length);
-  readonly largePending = computed(() => this.kpiRows().filter(item => item.status === 'pending' && item.amount >= 20000000).length);
-  readonly awaitingAmount = computed(() => this.kpiRows().filter(item => item.status === 'approved').reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
-  readonly paidAmount = computed(() => this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
-  readonly paidCount = computed(() => this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length);
-  readonly taxAmount = computed(() => this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (item.taxAmount ?? 0), 0));
+  readonly pending = computed(() => this.payoutSummary()?.pendingCount ?? this.kpiRows().filter(item => item.status === 'pending').length);
+  readonly largePending = computed(() => this.payoutSummary()?.largePendingCount ?? this.kpiRows().filter(item => item.status === 'pending' && item.amount >= 20000000).length);
+  readonly awaitingAmount = computed(() => this.payoutSummary()?.awaitingDisbursementAmount ?? this.kpiRows().filter(item => item.status === 'approved').reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
+  readonly paidAmount = computed(() => this.payoutSummary()?.paidThisMonthAmount ?? this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (this.net(item) ?? 0), 0));
+  readonly paidCount = computed(() => this.payoutSummary()?.paidThisMonthCount ?? this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).length);
+  readonly taxAmount = computed(() => this.payoutSummary()?.taxDeductedThisMonthAmount ?? this.kpiRows().filter(item => item.status === 'paid' && item.paidAt?.slice(0, 7) === new Date().toISOString().slice(0, 7)).reduce((sum, item) => sum + (item.taxAmount ?? 0), 0));
   readonly selection = signal<ReadonlySet<string>>(new Set());
   readonly selectionListOpen = signal(false);
   readonly bulkRejectIds = signal<readonly string[] | null>(null);
@@ -214,6 +215,7 @@ export class PayoutsComponent {
 
   readonly loadingPayouts = signal(false);
   readonly submitting = signal(false);
+  readonly checkingApproval = signal(false);
   readonly loadFailure = signal('');
   async reload(): Promise<void> {
     this.loadingPayouts.set(true);
@@ -537,12 +539,14 @@ export class PayoutsComponent {
     if (!item.contractValid) issues.push('Hợp đồng đối tác chưa hợp lệ hoặc cần kiểm tra lại.');
     if (item.disputed) issues.push('Yêu cầu đang có tranh chấp cần được xử lý trước.');
     if (!item.bank.trim() || !item.accountNumber.trim() || !item.accountName.trim()) issues.push('Thông tin tài khoản nhận tiền chưa đầy đủ.');
-    if (item.availableBalance < item.amount) issues.push(`Số dư khả dụng không đủ để duyệt yêu cầu ${money(item.amount)}.`);
+    if (!item.isDemo && item.taxPolicyVerified === false) issues.push('Chưa có chính sách thuế được phê duyệt trong hợp đồng.');
+    if (!item.isDemo && item.holdVerified === false) issues.push('Không xác nhận được khoản tiền đã giữ trong ví giảng viên.');
     return issues;
   }
   open(item: PayoutRequest, dialog: 'details' | 'review' | 'reject'): void { this.evidenceFile = null; this.selected.set(item);
-    void this.data.payoutDetail(item.id).then(detail => { if (this.selected()?.id === item.id) this.selected.set(detail); }).catch(error => { if (this.selected()?.id === item.id) this.error.set(apiErrorMessage(error)); });
-    this.returnFromReject.set('details'); this.dialog.set(dialog); this.error.set(''); this.clearCopyToast(); this.approvalNote.set(''); this.rejectionReason.set(''); this.rejectionDetails.set(''); this.evidence.set(''); }
+    this.error.set(''); this.checkingApproval.set(item.status === 'pending');
+    void this.data.payoutDetail(item.id).then(detail => { if (this.selected()?.id === item.id) this.selected.set(detail); }).catch(error => { if (this.selected()?.id === item.id) this.error.set(apiErrorMessage(error)); }).finally(() => { if (this.selected()?.id === item.id) this.checkingApproval.set(false); });
+    this.returnFromReject.set('details'); this.dialog.set(dialog); this.clearCopyToast(); this.approvalNote.set(''); this.rejectionReason.set(''); this.rejectionDetails.set(''); this.evidence.set(''); }
   openReject(): void { this.returnFromReject.set(this.dialog() === 'review' ? 'review' : 'details'); this.error.set(''); this.dialog.set('reject'); }
   cancelReject(): void { this.error.set(''); this.dialog.set(this.returnFromReject()); }
   @HostListener('document:keydown.escape')
@@ -572,6 +576,7 @@ export class PayoutsComponent {
   close(): void { this.clearCopyToast(); this.selected.set(null); this.dialog.set(null); this.error.set(''); }
   approve(): void {
     const item = this.selected(); if (!item) return;
+    if (this.checkingApproval()) return;
     if (!this.canApprove(item)) { this.error.set('Chưa thể duyệt. Vui lòng xử lý các cảnh báo phía trên.'); return; }
     void this.saveDecision(item, { status: 'approved', note: this.approvalNote() });
   }

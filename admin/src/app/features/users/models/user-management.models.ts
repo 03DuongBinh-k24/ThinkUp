@@ -70,7 +70,11 @@ export interface LecturerRejection {
 }
 
 export interface Lecturer {
+  /** Business code from instructor_id; separate from Mongo user id. */
+  lecturerCode?: string;
   id: string;
+  /** False for a public legacy profile without a linked login account. */
+  accountLinked?: boolean;
   name: string;
   initials: string;
   email: string;
@@ -133,6 +137,8 @@ export interface EnrolledCourse {
 }
 
 export interface Student {
+  /** Business code from student_id; separate from Mongo user id. */
+  studentCode?: string;
   id: string;
   name: string;
   initials: string;

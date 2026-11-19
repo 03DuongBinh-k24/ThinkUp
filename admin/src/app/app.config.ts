@@ -5,7 +5,7 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { provideUserManagementDataSource } from './features/users/data/user-management.providers';
 import { provideBusinessStore } from './features/business/services/business.providers';
 import { provideDashboardStore } from './features/dashboard/services/dashboard.providers';
-import { SupportDemoService } from './features/support/services/support-demo.service';
+import { SUPPORT_STORE, SupportDemoService } from './features/support/services/support-demo.service';
 import { SupportHttpService } from './features/support/services/support-http.service';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
@@ -18,6 +18,6 @@ export const appConfig: ApplicationConfig = {
     provideUserManagementDataSource(),
     provideBusinessStore(),
     provideDashboardStore(),
-    { provide: SupportDemoService, useClass: environment.adminDataSource === 'http' ? SupportHttpService : SupportDemoService }
+    { provide: SUPPORT_STORE, useClass: environment.adminDataSource === 'http' ? SupportHttpService : SupportDemoService }
   ]
 };

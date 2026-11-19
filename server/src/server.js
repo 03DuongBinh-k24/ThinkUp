@@ -33,7 +33,7 @@ import { createBlogRouter } from './user/blog/blog.user.js';
 import { createPurchaseRouter } from './user/purchase/purchase.user.js';
 import { createBillingRouter } from './user/purchase/billing.user.js';
 import { cleanupExpiredEmptyRooms, createStudyRoomRouter } from './user/studyroom/studyroom.user.js';
-import { createRoadmapRouter } from './user/roadmap/roadmap.user.js';
+import { createRoadmapRouter, ensureSeedQuestions } from './user/roadmap/roadmap.user.js';
 import { createFlashcardRouter } from './user/flashcard/flashcard.user.js';
 import { createPaymentRouter } from './user/payment/payment.router.js';
 import { recoverPayments } from './user/payment/payment.service.js';
@@ -702,6 +702,7 @@ import url from 'node:url';
 
 const isDirectRun = process.argv[1] && import.meta.url === url.pathToFileURL(process.argv[1]).href;
 if (isDirectRun || process.env.NODE_ENV === 'production') {
+  ensureSeedQuestions().catch((err) => console.error('[Roadmap tests] Không khởi tạo được ngân hàng câu hỏi:', err.message));
   getMongoDb().then(ensureBusinessVoucherIndexes).catch((err) => console.error('[Business vouchers] Không tạo được index:', err.message));
   getMongoDb().then(ensureAdminPayoutIndexes).catch((err) => console.error('[Business payouts] Không tạo được index:', err.message));
   getMongoDb().then(async (db) => {

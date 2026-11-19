@@ -100,19 +100,20 @@ export class LecturersComponent {
 
   readonly selectedIds = computed(() => [...this.selection()]);
   readonly allVisibleSelected = computed(() => {
-    const items = this.visible();
+    const items = this.visible().filter(item => item.accountLinked !== false);
     const chosen = this.selection();
     return items.length > 0 && items.every((item) => chosen.has(item.id));
   });
+  readonly hasSelectableVisible = computed(() => this.visible().some(item => item.accountLinked !== false));
   readonly someVisibleSelected = computed(() =>
-    !this.allVisibleSelected() && this.visible().some((item) => this.selection().has(item.id)));
+    !this.allVisibleSelected() && this.visible().some((item) => item.accountLinked !== false && this.selection().has(item.id)));
   private readonly selectedLecturers = computed(() =>
-    this.lecturers().filter((item) => this.selection().has(item.id)));
+    this.lecturers().filter((item) => item.accountLinked !== false && this.selection().has(item.id)));
   readonly selectionItems = computed<BulkSelectionItem[]>(() =>
     this.selectedLecturers().map((item) => ({ id: item.id, label: item.name, detail: item.email })));
   readonly selectionCandidates = computed<BulkSelectionItem[]>(() =>
     this.filtered()
-      .filter((item) => !this.selection().has(item.id))
+      .filter((item) => item.accountLinked !== false && !this.selection().has(item.id))
       .map((item) => ({ id: item.id, label: item.name, detail: item.email })));
   readonly selectionActions = computed<readonly SelectionAction[]>(() => {
     const pending = this.selectedLecturers()
@@ -207,7 +208,7 @@ export class LecturersComponent {
     const statuses = this.columnFilters.status();
 
     const items = this.lecturers().filter((item) => {
-      const haystack = [item.name, item.email, item.phone, item.id, item.specialty, item.kyc.taxCode]
+      const haystack = [item.name, item.email, item.phone, item.lecturerCode, item.specialty, item.kyc.taxCode]
         .join(' ')
         .toLocaleLowerCase('vi-VN');
       return (!query || haystack.includes(query))
@@ -279,6 +280,7 @@ export class LecturersComponent {
   }
 
   menuItemsFor(lecturer: Lecturer): readonly UserRowMenuItem[] {
+    if (lecturer.accountLinked === false) return this.baseMenuItems.slice(0, 2);
     if (lecturer.status === 'pending-review' || lecturer.status === 'pending-docs') return this.pendingMenuItems;
     if (lecturer.status === 'warning' || lecturer.status === 'violation' || lecturer.status === 'frozen') return this.unlockMenuItems;
     return this.baseMenuItems;
@@ -393,6 +395,7 @@ export class LecturersComponent {
   }
 
   toggleSelect(id: string, checked: boolean): void {
+    if (this.lecturers().some(item => item.id === id && item.accountLinked === false)) return;
     const next = new Set(this.selection());
     if (checked) next.add(id);
     else next.delete(id);
@@ -401,8 +404,9 @@ export class LecturersComponent {
 
   toggleSelectAll(): void {
     const next = new Set(this.selection());
-    if (this.allVisibleSelected()) this.visible().forEach((item) => next.delete(item.id));
-    else this.visible().forEach((item) => next.add(item.id));
+    const selectable = this.visible().filter(item => item.accountLinked !== false);
+    if (selectable.length && selectable.every(item => next.has(item.id))) selectable.forEach((item) => next.delete(item.id));
+    else selectable.forEach((item) => next.add(item.id));
     this.selection.set(next);
   }
 

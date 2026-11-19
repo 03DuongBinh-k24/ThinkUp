@@ -237,6 +237,9 @@ h2 { font-size: 23px; line-height: 26px; font-weight: 700; color: #14336b; }
 .panel { border: 1px solid var(--dashboard-border); border-radius: 12px; background: var(--dashboard-surface); box-shadow: var(--dashboard-shadow); }
 .revenue-panel { height: 650px; padding: 20px; }
 .panel-heading { gap: 16px; }
+.revenue-heading { flex-wrap: wrap; align-items: center; }
+.revenue-heading > h2 { flex: 1 1 300px; min-width: 260px; white-space: normal; }
+.revenue-controls { flex-wrap: wrap; justify-content: flex-end; }
 .panel-heading h2, .progress-panel h2 { color: var(--dashboard-ink); font: var(--admin-text-panel-title); }
 .panel-heading h2 img, .progress-panel h2 img { width: 22px; height: 22px; }
 .panel-heading > button { min-height: 34px; padding: 0 8px; color: var(--dashboard-primary); font: var(--admin-text-control-label); }
@@ -249,6 +252,9 @@ h2 { font-size: 23px; line-height: 26px; font-weight: 700; color: #14336b; }
 .date-popover label { color: var(--dashboard-label); font: var(--admin-text-control-label); }
 .calendar-footer { gap: 8px; margin-top: 2px; }
 .calendar-footer button { min-height: 34px; padding: 0 12px; border-radius: 8px; font: var(--admin-text-control-label); }
+.analytics-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 10px 12px; border: 1px solid #f2c7c7; border-radius: 8px; background: #fdf2f2; color: #b42318; font: var(--admin-text-caption); }
+.analytics-error button { flex: none; min-height: 32px; padding: 0 12px; border: 1px solid #e3a3a3; border-radius: 6px; background: #fff; color: #b42318; font: var(--admin-text-control-label); }
+.analytics-error button:disabled { opacity: .6; cursor: wait; }
 
 .revenue-summary { grid-template-columns: minmax(0,1.5fr) repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 20px; }
 .revenue-total, .summary-item { min-height: 112px; height: auto; padding: 16px; border: 1px solid var(--dashboard-border); border-radius: 10px; background: var(--dashboard-surface); }

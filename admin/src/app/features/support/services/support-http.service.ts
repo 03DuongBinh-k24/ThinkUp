@@ -13,12 +13,12 @@ import { SupportDemoService } from './support-demo.service';
 interface SupportPage<T> {
   items?: T[];
   pagination?: { total?: number; pages?: number; totalPages?: number };
-  data?: { items?: T[]; pagination?: { total?: number; pages?: number; totalPages?: number } };
+  data?: { items?: T[]; pagination?: { total?: number; pages?: number; totalPages?: number } } | T[];
 }
 
 
 /** Base support API adapter. The demo class remains the local fallback and supplies unchanged UI-only helpers. */
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class SupportHttpService extends SupportDemoService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl;
@@ -83,7 +83,7 @@ export class SupportHttpService extends SupportDemoService {
     do {
       const response = await firstValueFrom(this.http.get<SupportPage<T>>(url, { params: new HttpParams().set('page', page).set(pageParam, 100) }));
       // Backend bọc danh sách trong `data`; giữ nhánh phẳng để adapter không vỡ nếu envelope đổi.
-      const payload = response.data ?? response;
+      const payload = response.data && !Array.isArray(response.data) ? response.data : response;
       if (!Array.isArray(payload.items)) throw new Error('Danh sách hỗ trợ không hợp lệ.');
       result.push(...payload.items);
       const pagination = payload.pagination;

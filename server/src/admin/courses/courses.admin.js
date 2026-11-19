@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { getMongoDb } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
 import { syncApprovedCourseWithRoadmaps } from '../roadmaps/roadmaps.admin.js';
+import { publishAdminNotificationToRoster } from '../notifications/notifications.admin.js';
 
 const FAIL = (message, status = 400, code = 'COURSE_ADMIN_INVALID') => Object.assign(new Error(message), { status, code });
 const REVIEW = new Set(['pending_review', 'in_review', 'changes_requested', 'approved', 'rejected']);
@@ -133,19 +134,31 @@ export async function listAdminCourses(query = {}, options = {}) {
 export async function getAdminCourse(id, options = {}) {
   const db = options.db || await getMongoDb(), course = await db.collection('courses').findOne(courseQuery(id));
   if (!course) throw FAIL('Không tìm thấy khóa học.', 404, 'COURSE_NOT_FOUND');
-  const courseId = String(course.course_id ?? course._id);
-  const [instructors, sections, lessons, documents] = await Promise.all([
+  const rawCourseIds = [course.course_id, course.id, course._id].filter(value => value != null);
+  const courseIds = [...new Set([...rawCourseIds, ...rawCourseIds.map(String)])];
+  const [instructors, sections, directLessons, documents] = await Promise.all([
     enrichInstructors(db, [course]),
-    db.collection('course_sections').find({ course_id: courseId }).sort({ order_index: 1, _id: 1 }).toArray(),
-    db.collection('lessons').find({ course_id: courseId }).sort({ order_index: 1, _id: 1 }).toArray(),
-    db.collection('course_documents').find({ course_id: courseId }).toArray(),
+    db.collection('course_sections').find({ course_id: { $in: courseIds } }).sort({ order_index: 1, _id: 1 }).toArray(),
+    db.collection('lessons').find({ course_id: { $in: courseIds } }).sort({ order_index: 1, _id: 1 }).toArray(),
+    db.collection('course_documents').find({ course_id: { $in: courseIds } }).toArray(),
   ]);
+  // Some imported lessons are linked only through section_id and have no course_id.
+  const sectionAliases = [...new Set(sections.flatMap(section => [section._id, section.section_id]
+    .filter(value => value != null).flatMap(value => [value, String(value)])))];
+  const sectionOnlyLessons = sectionAliases.length
+    ? await db.collection('lessons').find({ course_id: null, section_id: { $in: sectionAliases } })
+      .sort({ section_id: 1, order_index: 1, order: 1, lesson_number: 1 }).toArray()
+    : [];
+  const lessonsById = new Map([...directLessons, ...sectionOnlyLessons]
+    .map(lesson => [String(lesson.lesson_id || lesson._id), lesson]));
+  const lessons = [...lessonsById.values()];
   const lessonIds = lessons.map(lesson => String(lesson.lesson_id || lesson._id));
   const videos = lessonIds.length ? await db.collection('lesson_videos').find({ lesson_id: { $in: lessonIds } }).toArray() : [];
   const videoByLesson = new Map(videos.map(video => [String(video.lesson_id), video]));
   const documentsByLesson = new Map();
   for (const doc of documents) { const key = String(doc.lesson_id || ''); documentsByLesson.set(key, [...(documentsByLesson.get(key) || []), { id: String(doc._id), name: doc.name || doc.file_name || '', type: doc.mime_type || doc.file_type || '', url: doc.download_url || doc.file_url || null }]); }
-  const lessonViews = lessons.map(lesson => ({ id: String(lesson.lesson_id || lesson._id), sectionId: String(lesson.section_id || ''), title: lesson.title || '', type: lesson.lesson_type || 'video', durationMinutes: Number(lesson.duration_minutes || 0), video: videoByLesson.has(String(lesson.lesson_id || lesson._id)) ? { title: videoByLesson.get(String(lesson.lesson_id || lesson._id)).title || lesson.title || '', duration: videoByLesson.get(String(lesson.lesson_id || lesson._id)).duration || null } : null, documents: documentsByLesson.get(String(lesson.lesson_id || lesson._id)) || [] }));
+  const sectionIdByAlias = new Map(sections.flatMap(section => [section.section_id, section._id].filter(value => value != null).map(value => [String(value), String(section.section_id || section._id)])));
+  const lessonViews = lessons.map(lesson => ({ id: String(lesson.lesson_id || lesson._id), sectionId: sectionIdByAlias.get(String(lesson.section_id || lesson.sectionId || '')) || String(lesson.section_id || lesson.sectionId || ''), title: lesson.title || '', type: lesson.lesson_type || lesson.type || 'video', durationMinutes: Number(lesson.duration_minutes || lesson.durationMinutes || 0), video: videoByLesson.has(String(lesson.lesson_id || lesson._id)) ? { title: videoByLesson.get(String(lesson.lesson_id || lesson._id)).title || lesson.title || '', duration: videoByLesson.get(String(lesson.lesson_id || lesson._id)).duration || null } : null, documents: documentsByLesson.get(String(lesson.lesson_id || lesson._id)) || [] }));
   const category = await db.collection('course_categories').findOne({ category_id: course.category_id });
   const types = lessons.reduce((counts, lesson) => { const type = String(lesson.lesson_type || 'video').toLowerCase(); const normalized = ['article','reading','doc','text'].includes(type) ? 'article' : ['quiz','test','exam','assessment'].includes(type) ? 'quiz' : ['lab','coding','practice'].includes(type) ? 'lab' : 'video'; counts[normalized]++; return counts; }, { video: 0, article: 0, quiz: 0, lab: 0 });
   return { success: true, course: { ...viewCourse(course, instructors.get(String(course.instructor_id ?? course.instructorId))), description: course.description || '', shortDescription: course.short_description || course.subtitle || '', language: course.language || '', tags: course.tags || [], category: category?.name || course.category_name || course.category || '', curriculumSummary: { sectionCount: sections.length, lessonCount: lessons.length, ...types }, sections: sections.map(section => ({ id: String(section.section_id || section._id), title: section.title || '', order: section.order_index ?? null })), lessons: lessonViews, instructor: { id: String(course.instructor_id ?? ''), name: instructors.get(String(course.instructor_id ?? course.instructorId))?.full_name || course.instructor_name || '', email: instructors.get(String(course.instructor_id ?? course.instructorId))?.email || null } } };
@@ -155,20 +168,25 @@ export async function listAdminCourseLearners(id, query = {}, options = {}) {
   const db = options.db || await getMongoDb(), { page, pageSize } = validatePage(query);
   const course = await db.collection('courses').findOne(courseQuery(id));
   if (!course) throw FAIL('Không tìm thấy khóa học.', 404, 'COURSE_NOT_FOUND');
-  const aliases = [...new Set([course.course_id, course.id, course._id].filter(Boolean).map(String))];
-  const relation = { $or: aliases.flatMap(courseId => [{ course_id: courseId }, { courseId }]) };
+  const rawAliases = [course.course_id, course.id, course._id].filter(value => value != null);
+  const aliases = [...new Set([...rawAliases, ...rawAliases.map(String)])];
+  const aliasStrings = [...new Set(aliases.map(String))];
+  const relation = { $or: [
+    { course_id: { $in: aliases } }, { courseId: { $in: aliases } },
+    { course_id: { $in: aliasStrings } }, { courseId: { $in: aliasStrings } },
+  ] };
   const [enrollments, owned, progresses] = await Promise.all([
     db.collection('user_enrollments').find(relation).toArray(),
     db.collection('user_courses').find(relation).toArray(),
     db.collection('user_course_progress').find(relation).toArray(),
   ]);
-  const progressByUser = new Map();
-  for (const row of progresses) for (const key of [row.user_id, row.userId]) if (key != null) progressByUser.set(String(key), row);
+  const learnerProgressByUser = new Map();
+  for (const row of progresses) for (const key of [row.user_id, row.userId]) if (key != null) learnerProgressByUser.set(String(key), row);
   const unique = new Map();
   for (const row of [...enrollments, ...owned]) {
     const userId = String(row.user_id ?? row.userId ?? ''); if (!userId) continue;
     const prior = unique.get(userId) || {};
-    unique.set(userId, { ...prior, ...row, userId, progress: progressByUser.get(userId) || prior.progress });
+    unique.set(userId, { ...prior, ...row, userId, progress: learnerProgressByUser.get(userId) || prior.progress });
   }
   const records = [...unique.values()].sort((a,b) => new Date(b.purchased_at || b.enrolled_at || b.created_at || 0) - new Date(a.purchased_at || a.enrolled_at || a.created_at || 0));
   const ids = [...new Set(records.map(row => row.userId))];
@@ -217,7 +235,8 @@ export async function getAdminCourseFinance(id, query = {}, options = {}) {
 
 async function logCourseAction(db, req, action, courseId, before, after, metadata = {}) {
   const correlationId = randomUUID(), adminId = ObjectId.isValid(String(req.adminId || '')) ? new ObjectId(String(req.adminId)) : null;
-  const result = await db.collection('admin_audit_logs').insertOne({ admin_id: adminId, action, ip: req.ip || 'unknown', user_agent: req.headers['user-agent'] || 'unknown', details: { entity: { type: 'course', id: String(courseId) }, before, after, outcome: 'success', correlation_id: correlationId, metadata }, created_at: new Date() }, { session: req.auditSession });
+  const requestHeaders = req?.headers || {};
+  const result = await db.collection('admin_audit_logs').insertOne({ admin_id: adminId, action, ip: req?.ip || 'unknown', user_agent: requestHeaders['user-agent'] || requestHeaders['User-Agent'] || 'unknown', details: { entity: { type: 'course', id: String(courseId) }, before, after, outcome: 'success', correlation_id: correlationId, metadata }, created_at: new Date() }, { session: req?.auditSession });
   if (!result.acknowledged) throw FAIL('Không thể ghi audit log; thay đổi đã bị hủy.', 503, 'COURSE_AUDIT_UNAVAILABLE');
 }
 async function courseTransaction(db, work) {
@@ -255,7 +274,7 @@ export async function decideCourseReview(id, body, req, options = {}) {
   if (!['approve', 'reject', 'request_changes'].includes(decision)) throw FAIL('Quyết định kiểm duyệt không hợp lệ.');
   if (decision !== 'approve' && (reason.length < 2 || reason.length > 120 || details.length < 10 || details.length > 2000)) throw FAIL('Cần ghi lý do và nội dung xử lý chi tiết.');
   const db = options.db || await getMongoDb();
-  return courseTransaction(db, async session => {
+  const outcome = await courseTransaction(db, async session => {
   const coll = db.collection('courses');
   const selected = body.expectedRevision !== undefined
     ? { _id: ObjectId.isValid(id) ? new ObjectId(id) : id }
@@ -274,8 +293,18 @@ export async function decideCourseReview(id, body, req, options = {}) {
   if (!result.modifiedCount) throw FAIL('Khóa học vừa được cập nhật. Tải lại rồi thử tiếp.', 409, 'COURSE_REVIEW_CONFLICT');
   const roadmaps = decision === 'approve' ? await syncApprovedCourseWithRoadmaps(db, current.course_id || current._id, { session, now }) : { changedRoadmaps: 0 };
   await logCourseAction(db, { ...req, auditSession: session }, `COURSE_REVIEW_${decision.toUpperCase()}`, current.course_id || current._id, { reviewStatus }, { reviewStatus: nextReview, businessStatus: decision === 'approve' ? 'published' : statusOf(current).businessStatus }, { reason, details, roadmapsUpdated: roadmaps.changedRoadmaps });
-  return { success: true, courseId: String(current.course_id || current._id), reviewStatus: nextReview, businessStatus: decision === 'approve' ? 'published' : statusOf(current).businessStatus };
+  return { success: true, courseId: String(current.course_id || current._id), reviewStatus: nextReview, businessStatus: decision === 'approve' ? 'published' : statusOf(current).businessStatus,
+    notification: {
+    type: 'course', severity: decision === 'approve' ? 'info' : 'warning',
+    title: decision === 'approve' ? 'Khóa học đã được duyệt' : 'Khóa học cần xử lý tiếp',
+    message: `Khóa học “${String(current.title || current.course_id || current._id).slice(0, 250)}” đã được ${decision === 'approve' ? 'duyệt' : decision === 'reject' ? 'từ chối' : 'yêu cầu chỉnh sửa'}.`,
+    href: '/courses', eventKey: `admin.course.review.${decision}`,
+    dedupeKey: `admin.course.review:${String(current._id)}:${reviewRevision(current)}:${decision}`,
+    } };
   });
+  await publishAdminNotificationToRoster(db, outcome.notification, { db });
+  delete outcome.notification;
+  return outcome;
 }
 
 export async function claimCourseReview(id, req, options = {}) {

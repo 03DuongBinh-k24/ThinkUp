@@ -19,7 +19,7 @@ import { TableColumnResizeDirective } from '../../../shared/directives/table-col
 import { SupportFilterModalComponent } from '../components/support-filter-modal/support-filter-modal.component';
 import { SupportPaginationComponent } from '../components/support-pagination/support-pagination.component';
 import { Priority, SupportTicket, TicketStatus } from '../models/support.models';
-import { SupportDemoService } from '../services/support-demo.service';
+import { SUPPORT_STORE } from '../services/support-demo.service';
 
 type FilterPeriod = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'all' | '';
 type TicketQuickFilter = 'unassigned' | 'processing' | 'overdue' | 'resolvedToday' | 'onTime' | '';
@@ -49,7 +49,7 @@ function filterTickets(items: SupportTicket[], filters: TicketFilters, query: st
 
 @Component({ selector: 'app-support-tickets', standalone: true, imports: [DatePipe, SupportPaginationComponent, ColumnVisibilityComponent, ColumnFilterComponent, CustomSelectComponent, ExportMenuComponent, SearchFieldComponent, DateTimePickerComponent, SupportFilterModalComponent, TableColumnResizeDirective, SelectionBarComponent, BulkSelectionDialogComponent, AdminDialogComponent, LucideClock, LucideRefreshCw, LucideTriangleAlert, LucideCircleCheck, LucideGauge, LucidePaperclip, LucideEye, LucideFilter, LucideX], templateUrl: './tickets.component.html', styleUrls: ['../support-page.css', './tickets.component.css'] })
 export class TicketsComponent {
-  readonly data = inject(SupportDemoService);
+  readonly data = inject(SUPPORT_STORE);
   ngOnInit(): void { this.data.open('tickets'); }
    private readonly router = inject(Router); private readonly auth = inject(AdminAuthService); private readonly destroyRef = inject(DestroyRef);
   private readonly pageSizeService = inject(AdminPageSizeService);

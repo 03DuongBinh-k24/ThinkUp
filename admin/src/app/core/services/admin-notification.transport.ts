@@ -12,11 +12,11 @@ import {
 } from '../models/admin-notification.model';
 
 /**
- * P3 — Transport abstraction.
+ * Transport abstraction for the Admin notification API.
  *
  * The service only depends on this interface so a websocket/SSE transport can be
- * added later without touching the panel or the layout. Production always uses the
- * HTTP implementation; the demo adapter is selected only for the local demo build.
+ * added later without touching the panel or the layout. Authenticated admin sessions
+ * use HTTP; only the explicit local demo session uses the demo adapter.
  */
 export interface AdminNotificationTransport {
   summary(adminId: string): Observable<AdminNotificationSummary>;
@@ -38,15 +38,19 @@ export function createHttpNotificationTransport(http: HttpClient): AdminNotifica
   const baseUrl = `${environment.apiUrl}/admin/notifications`;
 
   return {
-    summary: () => http.get<AdminNotificationSummary & { success: boolean }>(`${baseUrl}/summary`)
-      .pipe(map((response) => normalizeSummary(response))),
+    summary: () => http.get<AdminNotificationSummary & { success: boolean }>(`${baseUrl}/summary`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    }).pipe(map((response) => normalizeSummary(response))),
 
     list: (_adminId, query) => {
       let params = new HttpParams().set('limit', String(query.limit ?? NOTIFICATION_PAGE_SIZE));
       if (query.cursor) params = params.set('cursor', query.cursor);
       if (query.type && query.type !== 'all') params = params.set('type', query.type);
       if (query.unread === true) params = params.set('unread', 'true');
-      return http.get<AdminNotificationPage & { success: boolean }>(baseUrl, { params })
+      return http.get<AdminNotificationPage & { success: boolean }>(baseUrl, {
+        params,
+        headers: { 'Cache-Control': 'no-cache' }
+      })
         .pipe(map((response) => ({
           items: Array.isArray(response.items) ? response.items : [],
           pageSize: response.pageSize ?? NOTIFICATION_PAGE_SIZE,

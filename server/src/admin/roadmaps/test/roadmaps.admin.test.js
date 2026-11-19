@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { calculateNodeCourseSuggestions, createAdminRoadmap, saveAdminRoadmap, publishAdminRoadmap, listAdminRoadmaps, deleteAdminRoadmap } from '../roadmaps.admin.js';
+import { calculateNodeCourseSuggestions, createAdminRoadmap, saveAdminRoadmap, publishAdminRoadmap, listAdminRoadmaps, deleteAdminRoadmap, ensureAdminRoadmapDraft } from '../roadmaps.admin.js';
 
 function matches(row, query = {}) {
   for (const [key, condition] of Object.entries(query)) {
@@ -61,6 +61,19 @@ test('roadmap draft validates and stores stages, node settings and stage-level t
   await assert.rejects(() => saveAdminRoadmap(created.roadmap.versionId, { stages: [{ ...stage, nodes: [{ ...node, description: '' }] }] }, { db, adminId: actor, req: { adminId: actor } }), { code: 'ROADMAP_ADMIN_INVALID' });
 });
 
+test('roadmap identifiers use the version id accepted by detail and draft endpoints', async () => {
+  const db = makeDb({
+    course_categories: [{ category_id: 15, name: 'Existing Roadmap' }],
+    admin_roadmap_versions: [{ _id: new ObjectId(), version_id: 'published-version-15', category_id: 15, code: 'RM-15', name: 'Existing Roadmap', status: 'published', version: 1, threshold: 70, stages: [stage] }],
+  });
+  const listed = await listAdminRoadmaps({}, { db });
+  assert.equal(listed.items[0].id, 'published-version-15');
+  const draft = await ensureAdminRoadmapDraft(listed.items[0].id, { db, adminId: actor, req: { adminId: actor } });
+  assert.equal(draft.roadmap.status, 'draft');
+  assert.equal(draft.roadmap.id, draft.roadmap.versionId);
+  assert.notEqual(draft.roadmap.id, 'published-version-15');
+});
+
 test('publishing requires an approved matching course and namespaces stage/node ids for learner snapshots', async () => {
   const db = makeDb({
     course_categories: [{ category_id: 9, name: 'Web Engineer' }],
@@ -82,6 +95,41 @@ test('roadmap list derives node coverage and ignores fabricated UI KPI values', 
   const result = await listAdminRoadmaps({}, { db });
   assert.equal(result.items[0].coverage, 100);
   assert.equal(result.items[0].missingCourses, 0);
+});
+
+test('roadmap list checks versioned stage test availability against canonical question bank ids', async () => {
+  const canonicalStage = {
+    stage_id: 'stage-1',
+    nodes: [{ node_id: 'react-core', tags: ['react', 'hooks'] }],
+  };
+  const versionedStage = {
+    stage_id: 'stage-1__published-v1',
+    nodes: [{ node_id: 'react-core__published-v1', tags: ['react', 'hooks'] }],
+  };
+  const questions = Array.from({ length: 5 }, (_, index) => ({
+    question_id: `react-q${index + 1}`, stage_id: 'stage-1', node_id: 'react-core', skill_tag: index < 5 ? 'react' : 'hooks',
+    question_text: `React question ${index + 1}?`, options: [
+      { key: 'A', text: 'Correct' }, { key: 'B', text: 'Wrong 1' },
+      { key: 'C', text: 'Wrong 2' }, { key: 'D', text: 'Wrong 3' },
+    ], correct_option: 'A',
+  })).concat(Array.from({ length: 5 }, (_, index) => ({
+    question_id: `hooks-q${index + 1}`, stage_id: 'stage-1', node_id: 'react-core', skill_tag: 'hooks',
+    question_text: `Hooks question ${index + 1}?`, options: [
+      { key: 'A', text: 'Correct' }, { key: 'B', text: 'Wrong 1' },
+      { key: 'C', text: 'Wrong 2' }, { key: 'D', text: 'Wrong 3' },
+    ], correct_option: 'A',
+  })));
+  const canonicalTemplate = { category_id: 9, career_name: 'React', stages: [canonicalStage] };
+  const db = makeDb({
+    admin_roadmap_versions: [{ _id: new ObjectId(), version_id: 'published-v1', category_id: 9, name: 'React', status: 'published', version: 1, threshold: 70, stages: [versionedStage] }],
+    roadmap_templates: [canonicalTemplate],
+    course_categories: [{ category_id: 9, name: 'Web' }],
+    roadmap_stage_questions: questions,
+  });
+
+  const listed = await listAdminRoadmaps({}, { db });
+  assert.equal(listed.items[0].missingTests, 0);
+  assert.equal(listed.items[0].testTotal, 0);
 });
 
 test('draft roadmap delete is transactional, audited and idempotent by explicit 404', async () => {

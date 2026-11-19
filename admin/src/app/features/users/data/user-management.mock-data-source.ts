@@ -92,8 +92,8 @@ export class MockUserManagementDataSource implements UserManagementDataSource {
     const query = (filters.q ?? '').toLocaleLowerCase('vi-VN');
     if (kind === 'lecturers') {
       const rows = this.lecturerState()
-        .filter((item) => !query || [item.name, item.email, item.phone, item.id].join(' ').toLocaleLowerCase('vi-VN').includes(query))
-        .map((item) => [item.id, item.name, item.email, item.phone, item.specialty, item.courses, item.learners, item.revenue,
+        .filter((item) => !query || [item.name, item.email, item.phone, item.lecturerCode].join(' ').toLocaleLowerCase('vi-VN').includes(query))
+        .map((item) => [item.lecturerCode || '', item.name, item.email, item.phone, item.specialty, item.courses, item.learners, item.revenue,
           item.legalStatus === 'signed' ? 'Đã ký hợp đồng điện tử' : 'Chưa hoàn tất hợp đồng',
           LECTURER_STATUS_LABELS[item.status], formatDate(item.joinedAt)]);
       await downloadTable(format, 'thinkup-giang-vien', [
@@ -104,8 +104,8 @@ export class MockUserManagementDataSource implements UserManagementDataSource {
     }
 
     const rows = this.studentState()
-      .filter((item) => !query || [item.id, item.name, item.email, item.phone].join(' ').toLocaleLowerCase('vi-VN').includes(query))
-      .map((item) => [item.id, item.name, item.email, item.phone, item.courseCount, formatDate(item.registeredAt), STUDENT_STATUS_LABELS[item.status]]);
+      .filter((item) => !query || [item.studentCode, item.name, item.email, item.phone].join(' ').toLocaleLowerCase('vi-VN').includes(query))
+      .map((item) => [item.studentCode || '', item.name, item.email, item.phone, item.courseCount, formatDate(item.registeredAt), STUDENT_STATUS_LABELS[item.status]]);
     await downloadTable(format, 'thinkup-hoc-vien', [
       ['Mã học viên', 'Họ tên', 'Email', 'Số điện thoại', 'Số khóa học', 'Ngày đăng ký', 'Trạng thái'],
       ...rows

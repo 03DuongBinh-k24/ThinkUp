@@ -17,7 +17,7 @@ import { TableColumnResizeDirective } from '../../../shared/directives/table-col
 import { SupportFilterModalComponent } from '../components/support-filter-modal/support-filter-modal.component';
 import { SupportPaginationComponent } from '../components/support-pagination/support-pagination.component';
 import { ComplaintCase, ComplaintStatus } from '../models/support.models';
-import { SupportDemoService } from '../services/support-demo.service';
+import { SUPPORT_STORE } from '../services/support-demo.service';
 
 type FilterPeriod = 'today'|'week'|'month'|'quarter'|'year'|'all'|'';
 interface ComplaintFilters { type:string; status:ComplaintStatus|''; from:string; to:string; period:FilterPeriod; minAmount:number|null; maxAmount:number|null }
@@ -30,7 +30,7 @@ function filterRows(items:ComplaintCase[],f:ComplaintFilters,query:string,column
 
 @Component({selector:'app-support-complaints',standalone:true,imports:[FormsModule,DatePipe,SupportPaginationComponent,ColumnFilterComponent,CustomSelectComponent,ExportMenuComponent,SearchFieldComponent,ColumnVisibilityComponent,DateTimePickerComponent,SupportFilterModalComponent,TableColumnResizeDirective,SelectionBarComponent,BulkSelectionDialogComponent,LucideClipboardList,LucideShieldAlert,LucideCircleDollarSign,LucideTriangleAlert,LucideFileText,LucideX,LucideUserRound,LucideGraduationCap,LucideBookOpen,LucideClock3,LucideDatabase,LucideCheckCircle2,LucideMessageSquareText,LucideFilter],templateUrl:'./complaints.component.html',styleUrls:['../support-page.css','./complaints.component.css']})
 export class ComplaintsComponent{
- readonly data = inject(SupportDemoService);
+ readonly data = inject(SUPPORT_STORE);
   ngOnInit(): void { this.data.open('complaints'); }
   private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);readonly complaints=this.data.complaints;
  private readonly pageSizeService=inject(AdminPageSizeService); readonly queryInput=signal('');readonly query=signal('');private readonly columnFilters:Record<ComplaintColumn,WritableSignal<string[]>>={id:signal<string[]>([]),claimant:signal<string[]>([]),respondent:signal<string[]>([]),dispute:signal<string[]>([]),status:signal<string[]>([]),risk:signal<string[]>([])};private readonly columnFilterValues=computed<ComplaintColumnFilters>(()=>({id:this.columnFilters.id(),claimant:this.columnFilters.claimant(),respondent:this.columnFilters.respondent(),dispute:this.columnFilters.dispute(),status:this.columnFilters.status(),risk:this.columnFilters.risk()}));readonly appliedFilters=signal<ComplaintFilters>({...EMPTY});readonly draftFilters=signal<ComplaintFilters>({...EMPTY});readonly filterOpen=signal(false);readonly page=signal(1);

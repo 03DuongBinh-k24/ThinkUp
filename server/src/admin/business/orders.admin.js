@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import { getMongoDb } from '../../user/db.js';
 import { createAdminRoleMiddleware } from '../auth/admin-rbac.js';
 import { randomUUID } from 'node:crypto';
+import { publishAdminNotificationToRoster } from '../notifications/notifications.admin.js';
 
 const error = (message, status = 400, code = 'ORDER_QUERY_INVALID') => Object.assign(new Error(message), { status, code });
 const orderStatus = value => ({ completed: 'success', paid: 'success', success: 'success', pending: 'pending', failed: 'cancelled', cancelled: 'cancelled', expired: 'cancelled' })[value] || value;
@@ -115,6 +116,12 @@ export async function decideAdminOrder(id, action, payload = {}, req = {}, optio
       await auditOrderAction(db, req, 'ADMIN_ORDER_CONFIRM_AUDIT_FAILED', tx.order_id, { status: tx.status }, { status: updated.status, fulfillmentStatus: updated.fulfillment_status, auditError: true }, reason).catch(() => {});
       throw cause;
     }
+    await publishAdminNotificationToRoster(db, {
+      type: 'order', severity: 'info', title: 'Đơn hàng đã được xác nhận',
+      message: `Đơn hàng ${tx.order_id} đã hoàn tất thanh toán và cấp quyền học.`,
+      href: '/business/orders', eventKey: 'admin.order.confirmed',
+      dedupeKey: `admin.order.confirmed:${String(tx._id)}`,
+    });
     return { success: true, orderId: tx.order_id, status: updated.status, fulfillmentStatus: updated.fulfillment_status, result };
   }
   if (!['pending', 'expired'].includes(tx.status) || !['pending', 'expired'].includes(order.status)) throw error('Chỉ được hủy đơn chưa thanh toán hoặc đã hết hạn.', 409, 'ORDER_STATE_CONFLICT');
@@ -138,6 +145,12 @@ export async function decideAdminOrder(id, action, payload = {}, req = {}, optio
     });
   } finally { await session.endSession(); }
   await auditOrderAction(db, req, 'ADMIN_ORDER_CANCELLED', tx.order_id, { status: tx.status }, { status: 'cancelled' }, reason);
+  await publishAdminNotificationToRoster(db, {
+    type: 'order', severity: 'warning', title: 'Đơn hàng đã bị hủy',
+    message: `Đơn hàng ${tx.order_id} đã bị hủy sau khi rà soát.`,
+    href: '/business/orders', eventKey: 'admin.order.cancelled',
+    dedupeKey: `admin.order.cancelled:${String(tx._id)}`,
+  });
   return { success: true, orderId: tx.order_id, status: 'cancelled', cancelledAt: now.toISOString() };
 }
 export function createAdminOrdersRouter(express, requireAdmin) {

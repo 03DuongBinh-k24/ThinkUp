@@ -22,6 +22,7 @@ export interface DashboardStore {
   readonly logsTotal: Signal<number>;
   readonly loading: Signal<boolean>;
   readonly error: Signal<string>;
+  readonly analyticsError: Signal<string>;
   /** Lỗi riêng của bảng nhật ký (403 với role không phải Super Admin). */
   readonly logsError: Signal<string>;
   load(query?: DashboardQuery): Promise<void>;

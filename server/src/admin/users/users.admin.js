@@ -6,6 +6,8 @@ import { recordAuditLog } from '../auth/auth.admin.js';
 
 const bad = (message, status = 400, code = 'USER_ADMIN_INVALID') => Object.assign(new Error(message), { status, code });
 const asId = value => ObjectId.isValid(value) ? new ObjectId(value) : null;
+const identityKeys = value => [value?._id, value?.user_id, value?.instructor_id, value?.id]
+  .filter(Boolean).map(String);
 const iso = value => value instanceof Date ? value.toISOString() : value ? new Date(value).toISOString() : null;
 const mask = value => typeof value === 'string' && value.length > 3 ? `${'*'.repeat(value.length - 3)}${value.slice(-3)}` : value ?? null;
 const formatVietnamTime = value => {
@@ -31,7 +33,7 @@ function safeText(value, min, max, field) {
 }
 function adminView(row, role) {
   const full = role === 'SA';
-  return { id: String(row._id), studentId: row.student_id || null, name: row.full_name || row.name || '',
+  return { id: String(row._id), studentId: row.student_id || null, lecturerId: row.instructor_id || null, name: row.full_name || row.name || '',
     email: row.email || '', phone: row.phone || '', status: row.status || 'active', role: row.role,
     registeredAt: iso(row.created_at), lockedUntil: iso(row.locked_until), lockLevel: row.lock_level || null,
     lockReason: row.lock_reason || null, taxCode: full ? row.tax_code || null : mask(row.tax_code),
@@ -128,10 +130,11 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
   const filter = filters(query, kind);
   let profileByUser = new Map();
   let applicationByUser = new Map();
+  let lecturerProfiles = [];
   let lecturerIds = [];
   if (kind === 'lecturers') {
     const profileFilter={deleted_at:{$exists:false}};
-    if(query.status) profileFilter.status=query.status;
+    if(query.status) profileFilter.$and=[...(profileFilter.$and||[]),{$or:[{status:query.status},...(query.status==='active'?[{status:{$exists:false}},{status:null}]:[])]}];
     if(query.field) profileFilter.$or=[{field:query.field},{specialty:query.field},{specialization:query.field}];
     if(query.q){const rx={$regex:escapeRegex(String(query.q).slice(0,100)),$options:'i'};profileFilter.$and=[...(profileFilter.$and||[]),{$or:[{title:rx},{field:rx},{specialty:rx},{tax_code:rx},{cccd:rx}]}];}
     if(query.legalStatus==='signed') profileFilter.legal_status='signed';
@@ -147,12 +150,18 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
       db.collection('instructor_profiles').find(profileFilter).toArray(),
       db.collection('instructor_applications').find(applicationFilter).toArray(),
     ]);
-    profileByUser=new Map(profiles.flatMap(profile=>[profile.user_id,profile.instructor_id].filter(Boolean).map(id=>[String(id),profile])));
-    applicationByUser=new Map(applications.flatMap(application=>[application.user_id].filter(Boolean).map(id=>[String(id),application])));
-    lecturerIds = [...new Set([...profiles.flatMap(x=>[x.user_id,x.instructor_id]),...applications.map(x=>x.user_id)].filter(Boolean).map(String))];
+    lecturerProfiles=profiles;
+    profileByUser=new Map(profiles.flatMap(profile=>identityKeys(profile).map(id=>[id,profile])));
+    applicationByUser=new Map(applications.flatMap(application=>identityKeys(application).map(id=>[id,application])));
+    lecturerIds = [...new Set([...profiles.flatMap(identityKeys),...applications.flatMap(identityKeys)])];
     delete filter.status;
     delete filter.role;
-    filter.$and = [...(filter.$and || []), { $or: [{ _id: { $in: lecturerIds.filter(asId).map(asId) } }, { instructor_id: { $in: lecturerIds.map(String) } }] }];
+    // Lecturer records can be linked through any supported user/profile alias.
+    // Keep student-role accounts visible while their lecturer application is reviewed.
+    const userIdentityClauses = ['_id', 'user_id', 'id', 'instructor_id'].map(field => ({
+      [field]: { $in: [...lecturerIds, ...lecturerIds.filter(asId).map(asId)] },
+    }));
+    filter.$and = [...(filter.$and || []), { $or: userIdentityClauses }];
   }
   let rows,total;
   if(kind==='students'&&query.courseCount){
@@ -162,6 +171,25 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
     const matches=[];
     for(const row of all){const count=(await getUserEnrolledCourses(String(row._id),{db})).length;const match=query.courseCount==='none'?count===0:query.courseCount==='1-3'?count>=1&&count<=3:count>3;if(match) matches.push(row);}
     total=matches.length; rows=matches.slice((p-1)*pageSize,p*pageSize);
+  } else if(kind==='lecturers') {
+    rows=await db.collection('users').find(filter,{projection:{password_hash:0,refresh_token:0,security_secret:0}}).sort({created_at:-1,_id:-1}).toArray();
+    const matchedKeys=new Set(rows.flatMap(identityKeys));
+    const orphanProfiles=lecturerProfiles;
+    const missingProfiles=orphanProfiles.filter(profile=>profile.is_public!==false&&!identityKeys(profile).some(id=>matchedKeys.has(id)));
+    const courseCounts=new Map();
+    if(missingProfiles.length){
+      const ids=[...new Set(missingProfiles.map(profile=>String(profile.instructor_id||'')).filter(Boolean))];
+      if(ids.length){
+        const counts=await db.collection('courses').aggregate([
+          {$match:{status:'published',admin_hidden:{$ne:true},deleted_at:null,instructor_id:{$in:ids}}},
+          {$group:{_id:{$toString:'$instructor_id'},count:{$sum:1}}},
+        ]).toArray();
+        for(const entry of counts) courseCounts.set(String(entry._id),Number(entry.count)||0);
+      }
+    }
+    rows.push(...missingProfiles.map(profile=>({_id:profile._id,instructor_id:profile.instructor_id,role:'instructor',full_name:profile.full_name||profile.name||'',status:profile.status||'active',created_at:profile.created_at,_profileOnly:true,_profileCourseCount:courseCounts.get(String(profile.instructor_id||''))||0})));
+    rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)||String(b._id).localeCompare(String(a._id)));
+    total=rows.length; rows=rows.slice((p-1)*pageSize,p*pageSize);
   } else {
     [rows,total]=await Promise.all([
       db.collection('users').find(filter,{projection:{password_hash:0,refresh_token:0,security_secret:0}}).sort({created_at:-1,_id:-1}).skip((p-1)*pageSize).limit(pageSize).toArray(),
@@ -169,24 +197,49 @@ export async function listAdminUsers(kind, query = {}, options = {}) {
     ]);
   }
   let items=rows.map(row => {
-    const profile=profileByUser.get(String(row._id))||profileByUser.get(String(row.instructor_id));
-    const application=applicationByUser.get(String(row._id));
+    const profile=identityKeys(row).map(id=>profileByUser.get(id)).find(Boolean);
+    const application=identityKeys(row).map(id=>applicationByUser.get(id)).find(Boolean);
     const snapshot=application?.profile_snapshot||{};
     const status=application?.status||profile?.status||row.status;
     const legalStatus=application?.legal_status||profile?.legal_status;
     const taxCode=profile?.kyc?.taxCode||profile?.tax_code||row.tax_code;
     const cccd=profile?.kyc?.cccd||profile?.cccd||row.cccd;
     return {...adminView(row,options.role),...(profile||application?{
+      lecturerId: profile?.instructor_id || application?.instructor_id || row.instructor_id || null,
+      name:profile?.full_name||profile?.name||row.full_name||row.name||row.email||'',
+      accountLinked:!row._profileOnly,
       status,legalStatus:legalStatus==='signed'?'signed':'incomplete',specialty:profile?.specialty||profile?.field||snapshot.specialty||snapshot.field||'',
-      title:profile?.title||snapshot.title||'',field:profile?.field||snapshot.field||'',courses:profile?.course_count||0,learners:profile?.total_students||0,revenue:profile?.total_revenue||0,
+      title:profile?.title||snapshot.title||'',field:profile?.field||snapshot.field||'',courses:row._profileCourseCount??profile?.course_count??0,learners:profile?.total_students||0,revenue:profile?.total_revenue||0,
       taxCode:options.role==='SA'?taxCode||null:mask(taxCode),cccd:options.role==='SA'?cccd||null:mask(cccd),profileId:profile?String(profile._id):application.profile_id||null,
     }: {})};
   });
-  if(kind==='students'){
-    const { getUserEnrolledCourses } = await import('../../user/course/course.user.js');
-    items=await Promise.all(rows.map(async row=>{const view=adminView(row,options.role); const [courses,orders]=await Promise.all([
-      getUserEnrolledCourses(String(row._id),{db}), db.collection('payment_transactions').countDocuments({$or:[{user_id:String(row._id)},{user_id:row._id},{userId:String(row._id)}]}),
-    ]); return {...view,courseCount:courses.length,orders};}));
+  if(kind==='students' && rows.length){
+    // Đếm dữ liệu phụ theo batch, tránh 2 truy vấn DB cho từng học viên
+    // và getUserEnrolledCourses vốn quét nhiều collection trên mỗi dòng.
+    const ids=rows.map(row=>String(row._id));
+    const ownerVariants=[...new Set([...ids,...rows.map(row=>row._id)])];
+    const ownerQuery={$or:[{user_id:{$in:ownerVariants}},{userId:{$in:ownerVariants}}]};
+    const [owned,enrolled,progress,orders]=await Promise.all([
+      db.collection('user_courses').find(ownerQuery).project({user_id:1,userId:1,course_id:1,courseId:1}).toArray(),
+      db.collection('user_enrollments').find(ownerQuery).project({user_id:1,userId:1,course_id:1,courseId:1}).toArray(),
+      db.collection('user_course_progress').find(ownerQuery).project({user_id:1,userId:1,course_id:1,courseId:1}).toArray(),
+      db.collection('payment_transactions').aggregate([
+        {$match:ownerQuery},
+        {$project:{owner:{$toString:{$ifNull:['$user_id','$userId']}}}},
+        {$group:{_id:'$owner',count:{$sum:1}}},
+      ]).toArray(),
+    ]);
+    const courseSets=new Map(ids.map(id=>[id,new Set()]));
+    for(const record of [...owned,...enrolled,...progress]){
+      const owner=String(record.user_id??record.userId??'');
+      const course=record.course_id??record.courseId;
+      if(course!=null&&courseSets.has(owner)) courseSets.get(owner).add(String(course));
+    }
+    const orderCounts=new Map(orders.map(row=>[row._id,Number(row.count)||0]));
+    items=rows.map(row=>{
+      const id=String(row._id);
+      return {...adminView(row,options.role),courseCount:courseSets.get(id)?.size||0,orders:orderCounts.get(id)||0};
+    });
   }
   const lockedAdminIds=[...new Set(rows.filter(row=>row.admin_review_lease_until&&+new Date(row.admin_review_lease_until)>Date.now()).map(row=>String(row.admin_review_lease_admin)))];
   const admins=lockedAdminIds.length?await db.collection('admins').find({_id:{$in:lockedAdminIds.map(asId).filter(Boolean)}},{projection:{full_name:1,email:1}}).toArray():[];
@@ -334,14 +387,20 @@ export function createAdminUsersRouter(express, requireAdmin) {
     } catch(e) { next(e); }
   });
   router.get('/lecturers/:id', read, async (req,res,next) => {
-    try { const db=await getMongoDb(), user=await readUser(db,req.params.id), [profile,application]=await Promise.all([
-        db.collection('instructor_profiles').findOne({$or:[{user_id:String(user._id)},{instructor_id:String(user._id)}],deleted_at:{$exists:false}}),
-        db.collection('instructor_applications').findOne({user_id:String(user._id),deleted_at:{$exists:false}},{sort:{created_at:-1}}),
-      ]); if(!profile&&!application) throw bad('Không tìm thấy hồ sơ giảng viên.',404,'LECTURER_PROFILE_NOT_FOUND');
+    try { const db=await getMongoDb(), requestedId=req.params.id;
+      let user=await db.collection('users').findOne({...userLookup(requestedId),deleted_at:{$exists:false}});
+      const objectId=asId(requestedId), profileOnly=user?null:await db.collection('instructor_profiles').findOne({$or:[...(objectId?[{_id:objectId}]:[]),{instructor_id:requestedId}],deleted_at:{$exists:false}});
+      if(!user&&profileOnly) user={_id:profileOnly._id,instructor_id:profileOnly.instructor_id,full_name:profileOnly.full_name||profileOnly.name||'',status:profileOnly.status||'active',role:'instructor',created_at:profileOnly.created_at};
+      if(!user) throw bad('Không tìm thấy hồ sơ giảng viên.',404,'LECTURER_PROFILE_NOT_FOUND');
+      const [linkedProfile,application]=await Promise.all([
+        profileOnly||db.collection('instructor_profiles').findOne({$or:[{user_id:String(user._id)},{instructor_id:String(user._id)}],deleted_at:{$exists:false}}),
+        profileOnly?null:db.collection('instructor_applications').findOne({user_id:String(user._id),deleted_at:{$exists:false}},{sort:{created_at:-1}}),
+      ]); const profile=linkedProfile;
+      if(!profile&&!application) throw bad('Không tìm thấy hồ sơ giảng viên.',404,'LECTURER_PROFILE_NOT_FOUND');
       const full=req.adminRole==='SA', canDownload=['SA','CA'].includes(req.adminRole), snapshot=application?.profile_snapshot||{};
       const publicProfile=profile ? {id:String(profile._id),title:profile.title||profile.headline||'',field:profile.field||profile.specialization||'',stack:profile.stack||[],bio:profile.bio||'',links:profile.links||{portfolio:profile.portfolio,linkedin:profile.linkedin,gsahub:profile.gsahub},documents:(profile.documents||[]).map(doc=>instructorDocumentView(doc,String(user._id),canDownload)),status:application?.status||profile.status||user.status} : {id:application.profile_id||null,title:snapshot.title||'',field:snapshot.field||'',stack:snapshot.stack||[],bio:snapshot.bio||'',links:snapshot.links||{},documents:(application.documents||[]).map(doc=>instructorDocumentView(doc,String(user._id),canDownload)),status:application.status};
       const privateData=full?{kyc:profile?.kyc||null,taxCode:profile?.kyc?.taxCode||profile?.tax_code||user.tax_code||null,cccd:profile?.kyc?.cccd||profile?.cccd||user.cccd||null,address:profile?.kyc?.address||user.address||null,bankAccount:profile?.kyc?.bankAccount||user.bank_account||null}: {taxCode:mask(profile?.kyc?.taxCode||profile?.tax_code||user.tax_code),cccd:mask(profile?.kyc?.cccd||profile?.cccd||user.cccd)};
-      res.json({success:true,user:adminView(user,req.adminRole),profile:publicProfile,application:application?{id:String(application._id),status:application.status,phase:application.phase,legalStatus:application.legal_status||'incomplete',kyc:full?application.kyc||null:undefined,taxVerified:Boolean(application.tax_verified),documentsRequest:application.documents_request||null,submittedAt:iso(application.submitted_at||application.created_at),reviewedAt:iso(application.reviewed_at||null)}:null,privateData});
+      res.json({success:true,user:{...adminView(user,req.adminRole),accountLinked:!profileOnly},profile:publicProfile,application:application?{id:String(application._id),status:application.status,phase:application.phase,legalStatus:application.legal_status||'incomplete',kyc:full?application.kyc||null:undefined,taxVerified:Boolean(application.tax_verified),documentsRequest:application.documents_request||null,submittedAt:iso(application.submitted_at||application.created_at),reviewedAt:iso(application.reviewed_at||null)}:null,privateData});
     } catch(e) { next(e); }
   });
   router.get('/lecturers/:id/documents/:documentId/download', evidenceRead, async (req,res,next) => {
@@ -354,7 +413,7 @@ export function createAdminUsersRouter(express, requireAdmin) {
     } catch(e) { next(e); }
   });
   router.get('/lecturers/:id/courses', read, async (req,res,next) => {
-    try { const db=await getMongoDb(), user=await readUser(db,req.params.id), aliases=[String(user._id),user.instructor_id].filter(Boolean);
+    try { const db=await getMongoDb(), requestedId=req.params.id, user=await db.collection('users').findOne({...userLookup(requestedId),deleted_at:{$exists:false}}), objectId=asId(requestedId), profile=user?null:await db.collection('instructor_profiles').findOne({$or:[...(objectId?[{_id:objectId}]:[]),{instructor_id:requestedId}],deleted_at:{$exists:false}}); if(!user&&!profile) throw bad('Không tìm thấy hồ sơ giảng viên.',404,'LECTURER_PROFILE_NOT_FOUND'); const aliases=[String(user?._id||''),user?.instructor_id,profile?.instructor_id,requestedId].filter(Boolean);
       const rows=await db.collection('courses').find({$or:[{instructor_id:{$in:aliases}},{instructorId:{$in:aliases}}]}).sort({updated_at:-1}).limit(200).toArray();
       res.json({success:true,items:rows.map(c=>({id:String(c._id),name:c.title||c.name||'',status:c.status||'draft',learners:c.total_students||c.students_count||0,revenue:c.total_revenue||0,updatedAt:iso(c.updated_at||c.created_at)}))});
     } catch(e) { next(e); }
@@ -493,9 +552,9 @@ export function createAdminUsersRouter(express, requireAdmin) {
       for(let p=2;p<=first.pagination.pages;p++) items.push(...(await listAdminUsers('students',{...req.query,page:p,pageSize:100},{role:req.adminRole})).items);
       const rows=items.slice(0,10000),headers=['Mã học viên','Họ tên','Email','Số điện thoại','Số khóa học','Ngày đăng ký','Trạng thái'];
       const cell=value=>`"${String(value??'').replace(/[\r\n]+/g,' ').replace(/"/g,'""').replace(/^([=+@-])/,' $1')}"`;
-      const lines=[headers,...rows.map(r=>[r.studentId||r.id,r.name,r.email,r.phone,r.courseCount,r.registeredAt,r.status])].map(row=>row.map(cell).join(','));
+      const lines=[headers,...rows.map(r=>[r.studentId||'',r.name,r.email,r.phone,r.courseCount,r.registeredAt,r.status])].map(row=>row.map(cell).join(','));
       await writeAudit(db,req,'USER_STUDENTS_EXPORT','filtered-set',{metadata:{records:rows.length,filters:{q:req.query.q||null,status:req.query.status||null,courseCount:req.query.courseCount||null,from:req.query.from||null,to:req.query.to||null}}});
-      if (req.query.format === 'json') res.type('application/json; charset=utf-8').attachment('thinkup-students.json').send(JSON.stringify(rows.map(r=>({ id:r.studentId||r.id, name:r.name, email:r.email, phone:r.phone, courseCount:r.courseCount, registeredAt:r.registeredAt, status:r.status }))));
+      if (req.query.format === 'json') res.type('application/json; charset=utf-8').attachment('thinkup-students.json').send(JSON.stringify(rows.map(r=>({ id:r.studentId, name:r.name, email:r.email, phone:r.phone, courseCount:r.courseCount, registeredAt:r.registeredAt, status:r.status }))));
       else if (!req.query.format || req.query.format === 'csv') res.type('text/csv; charset=utf-8').attachment('thinkup-students.csv').send(`\uFEFF${lines.join('\r\n')}`);
     }catch(e){next(e);}
   });
@@ -504,10 +563,10 @@ export function createAdminUsersRouter(express, requireAdmin) {
       for(let p=2;p<=result.pagination.pages;p++) items.push(...(await listAdminUsers('lecturers',{...req.query,page:p,pageSize:100},{role:req.adminRole})).items);
       const headers=['Mã giảng viên','Họ tên','Email','Điện thoại','Lĩnh vực','Số khóa học','Học viên','Doanh thu','Pháp lý','Mã số thuế','Trạng thái'];
       const cell=value=>`"${String(value??'').replace(/[\r\n]+/g,' ').replace(/"/g,'""').replace(/^([=+@-])/,' $1')}"`;
-      const rows=items.slice(0,10000).map(x=>[x.id,x.name,x.email,x.phone,x.field,x.courses,x.learners,x.revenue,x.legalStatus,x.taxCode,x.status]);
+      const rows=items.slice(0,10000).map(x=>[x.lecturerId||'',x.name,x.email,x.phone,x.field,x.courses,x.learners,x.revenue,x.legalStatus,x.taxCode,x.status]);
       const csv=[headers,...rows].map(r=>r.map(cell).join(',')).join('\r\n');
       const db=await getMongoDb(); await writeAudit(db,req,'USER_LECTURERS_EXPORT','filtered-set',{metadata:{records:rows.length,filters:{q:req.query.q||null,status:req.query.status||null,legalStatus:req.query.legalStatus||null,from:req.query.from||null,to:req.query.to||null}}});
-      if (req.query.format === 'json') res.type('application/json; charset=utf-8').attachment('thinkup-lecturers.json').send(JSON.stringify(items.slice(0,10000).map(x=>({ id:x.id, name:x.name, email:x.email, phone:x.phone, field:x.field, courses:x.courses, learners:x.learners, revenue:x.revenue, legalStatus:x.legalStatus, taxCode:x.taxCode, status:x.status }))));
+      if (req.query.format === 'json') res.type('application/json; charset=utf-8').attachment('thinkup-lecturers.json').send(JSON.stringify(items.slice(0,10000).map(x=>({ id:x.lecturerId, name:x.name, email:x.email, phone:x.phone, field:x.field, courses:x.courses, learners:x.learners, revenue:x.revenue, legalStatus:x.legalStatus, taxCode:x.taxCode, status:x.status }))));
       else if (!req.query.format || req.query.format === 'csv') res.type('text/csv; charset=utf-8').attachment('thinkup-lecturers.csv').send(`\uFEFF${csv}`);
     }catch(e){next(e);}
   });

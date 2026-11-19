@@ -10,12 +10,12 @@ import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
 import { CustomSelectComponent, CustomSelectOption } from '../../../shared/components/custom-select/custom-select.component';
 import { FaqItem, FaqStatus, FailedSearch } from '../models/support.models';
-import { SupportDemoService } from '../services/support-demo.service';
+import { SUPPORT_STORE } from '../services/support-demo.service';
 import { SupportPaginationComponent } from '../components/support-pagination/support-pagination.component';
 
 @Component({ selector:'app-support-faq',standalone:true,imports:[FormsModule, SupportPaginationComponent, ColumnFilterComponent, CustomSelectComponent, SelectionBarComponent, BulkSelectionDialogComponent, AdminDialogComponent, LucideBold, LucideBookOpenText, LucideChartNoAxesColumnIncreasing, LucideCircleAlert, LucideCircleHelp, LucideEyeOff, LucideFileText, LucideFolder, LucideItalic, LucideLink, LucideList, LucideListOrdered, LucidePencil, LucidePencilLine, LucidePlus, LucideSave, LucideSearch, LucideSearchX, LucideSend, LucideTag, LucideTrash2, LucideTrendingDown, LucideTriangleAlert, LucideUnderline, LucideX],templateUrl:'./faq.component.html',styleUrls:['../support-page.css','./faq.component.css'] })
 export class FaqComponent {
-  readonly data = inject(SupportDemoService);
+  readonly data = inject(SUPPORT_STORE);
   ngOnInit(): void { this.data.open('faqs'); }
   readonly faqs=this.data.faqs;readonly failed=this.data.failedSearches;readonly categories=FAQ_CATEGORIES;
   readonly categoryOptions = computed<ReadonlyArray<CustomSelectOption>>(() => [

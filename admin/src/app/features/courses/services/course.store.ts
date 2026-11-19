@@ -11,8 +11,12 @@ export abstract class CourseStore {
   abstract readonly workspaces: Signal<readonly ApprovalWorkspace[]>;
   abstract readonly studios: Signal<readonly RoadmapStudio[]>;
   abstract readonly loadError: Signal<boolean>;
+  /** Lỗi tải riêng của trang danh sách lộ trình, độc lập với API khóa học. */
+  abstract readonly roadmapLoadError: Signal<boolean>;
 
   abstract retry(): void;
+  ensureRoadmapStudio(_id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> { return Promise.reject(new Error('Nguồn dữ liệu không hỗ trợ cấu hình lộ trình.')); }
+  createRoadmap(_input: { categoryId: number; name: string; code?: string; description?: string }): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> { return Promise.reject(new Error('Nguồn dữ liệu không hỗ trợ tạo lộ trình.')); }
   abstract getCourseContent(course: Course): Promise<Course>;
   abstract getCourseLearners(course: Course): Promise<Course['learners']>;
   /**
@@ -27,8 +31,8 @@ export abstract class CourseStore {
   abstract requestSupplement(id: string, items: string[], issueType: string, detail: string): Promise<void> | void;
   abstract toggleRoadmapVisibility(id: string): void;
   abstract updateRoadmapNode(roadmapId: string, node: RoadmapNode): void;
-  abstract saveRoadmapDraft(roadmapId: string): void;
-  abstract publishRoadmap(roadmapId: string): void;
+  abstract saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): Promise<void> | void;
+  abstract publishRoadmap(roadmapId: string, studio?: RoadmapStudio): Promise<void> | void;
   abstract saveRoadmapTest(roadmapId: string, test: RoadmapTest): void;
   abstract reset(): void;
 }

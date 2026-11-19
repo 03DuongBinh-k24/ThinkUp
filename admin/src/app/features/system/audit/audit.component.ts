@@ -63,8 +63,7 @@ export class AuditComponent {
   private readonly toast = inject(SystemToastService);
 
   private readonly queryParams = toSignal(this.route.queryParamMap);
-  readonly integrity = computed(() =>
-    this.queryParams()?.get('integrity') === 'broken' ? 'broken' : this.store.auditSummary().integrity);
+  readonly integrity = computed(() => this.store.auditSummary().integrity);
   readonly exportFailure = computed(() => this.queryParams()?.get('exportError') === '1');
   readonly broken = computed(() => this.integrity() === 'broken');
 

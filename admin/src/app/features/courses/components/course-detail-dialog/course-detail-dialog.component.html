@@ -5,7 +5,11 @@
   (closed)="close()"
 >
   <div class="detail-hero">
-    <div class="detail-cover" aria-hidden="true">{{ course().category }}</div>
+    @if (course().thumbnailUrl) {
+      <img class="detail-cover" [src]="course().thumbnailUrl" [alt]="'Ảnh bìa khóa học ' + course().title" (error)="$any($event.target).hidden = true" />
+    } @else {
+      <div class="detail-cover" aria-hidden="true">{{ course().category }}</div>
+    }
     <div class="detail-hero-body">
       <div class="detail-hero-tags">
         <span [class]="'badge ' + statusTone()">{{ statusLabel() }}</span>
@@ -53,6 +57,9 @@
                     <span>{{ chapter.title }}</span>
                     <span class="count">{{ chapter.meta }}</span>
                   </div>
+                  @for (lesson of chapter.lessons ?? []; track lesson.id) {
+                    <div class="lesson-row"><span class="lesson-icon" aria-hidden="true">▤</span><span class="lesson-title">{{ lesson.title }}</span></div>
+                  }
                 </div>
               }
             </div>
@@ -105,10 +112,14 @@
                 <span>{{ chapter.title }}</span>
                 <span class="count">{{ chapter.meta }}</span>
               </div>
-              <div class="lesson-row">
-                <span class="lesson-icon" aria-hidden="true">▤</span>
-                <span class="lesson-title">Nội dung chương được quản lý trong trình soạn khóa học của giảng viên.</span>
-              </div>
+              @if (chapter.description) { <p class="detail-hero-meta">{{ chapter.description }}</p> }
+              @for (lesson of chapter.lessons ?? []; track lesson.id) {
+                <div class="lesson-row">
+                  <span class="lesson-icon" aria-hidden="true">▤</span>
+                  <span class="lesson-title">{{ lesson.title }}</span>
+                  <span class="lesson-title">{{ lesson.type }}@if (lesson.durationMinutes) { · {{ lesson.durationMinutes }} phút }</span>
+                </div>
+              }
             </div>
           }
         </div>

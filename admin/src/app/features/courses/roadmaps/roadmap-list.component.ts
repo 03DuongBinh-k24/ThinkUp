@@ -7,9 +7,11 @@ import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
 import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { formatNumber, paginationRange } from '../course-utils';
 import { Roadmap } from '../models/course.models';
 import { CourseStore } from '../services/course.store';
+import { CourseHttpService } from '../services/course-http.service';
 import { CourseToastComponent, ToastTone } from '../components/course-toast.component';
 
 const PAGE_SIZE = 8;
@@ -24,8 +26,8 @@ const COVERAGE_FILTER_VALUES: ColumnFilterValue[] = [
   { value: 'partial', label: 'Còn thiếu (<100%)' }
 ];
 const TEST_FILTER_VALUES: ColumnFilterValue[] = [
-  { value: 'complete', label: 'Đủ bài test' },
-  { value: 'missing', label: 'Thiếu bài test' }
+  { value: 'complete', label: 'Đủ đề kiểm tra' },
+  { value: 'missing', label: 'Thiếu đề kiểm tra' }
 ];
 const VISIBILITY_FILTER_VALUES: ColumnFilterValue[] = [
   { value: 'visible', label: 'Đang hiển thị' },
@@ -51,7 +53,10 @@ export class RoadmapListComponent {
   private readonly store = inject(CourseStore);
   private readonly router = inject(Router);
 
-  readonly loadError = this.store.loadError;
+  readonly loadError = this.store.roadmapLoadError;
+  readonly loadErrorMessage = this.store instanceof CourseHttpService
+    ? this.store.roadmapLoadMessage
+    : signal('Không tải được danh sách lộ trình. Vui lòng thử lại.').asReadonly();
   readonly roadmaps = this.store.roadmaps;
 
   readonly search = signal('');
@@ -71,6 +76,13 @@ export class RoadmapListComponent {
   readonly toast = signal<{ message: string; tone: ToastTone } | null>(null);
   readonly selection = signal<ReadonlySet<string>>(new Set());
   readonly selectionListOpen = signal(false);
+  readonly createDialogOpen = signal(false);
+  readonly createBusy = signal(false);
+  readonly createName = signal('');
+  readonly createCode = signal('');
+  readonly createDescription = signal('');
+  readonly createCategoryId = signal('');
+  readonly createError = signal('');
   private menuTrigger: HTMLElement | null = null;
 
   readonly totals = computed(() => {
@@ -304,7 +316,9 @@ export class RoadmapListComponent {
   openStudio(item: Roadmap): void {
     this.menuId.set(null);
     this.menuTrigger = null;
-    void this.router.navigate(['/courses/roadmaps', item.id, 'studio']);
+    void this.store.ensureRoadmapStudio(item.id).then(({ id, roadmap, studio }) => {
+      void this.router.navigate(['/courses/roadmaps', id, 'studio'], { state: { roadmap, studio } });
+    }).catch(error => this.notify(apiErrorMessage(error, 'Không tải được dữ liệu cấu hình lộ trình. Vui lòng thử lại.'), 'error'));
   }
 
   toggleMenu(item: Roadmap, event: MouseEvent): void {
@@ -321,7 +335,27 @@ export class RoadmapListComponent {
   }
 
   createRoadmap(): void {
-    this.notify('Mẫu tạo lộ trình mới sẽ mở khi backend cung cấp API.', 'info');
+    this.createName.set(''); this.createCode.set(''); this.createDescription.set('');
+    this.createCategoryId.set(''); this.createError.set(''); this.createDialogOpen.set(true);
+  }
+
+  closeCreateDialog(): void {
+    if (!this.createBusy()) this.createDialogOpen.set(false);
+  }
+
+  async submitCreateRoadmap(): Promise<void> {
+    const categoryId = Number(this.createCategoryId());
+    const name = this.createName().trim();
+    if (!Number.isSafeInteger(categoryId) || categoryId < 1) { this.createError.set('Vui lòng chọn nhóm ngành.'); return; }
+    if (!name) { this.createError.set('Vui lòng nhập tên lộ trình.'); return; }
+    this.createBusy.set(true); this.createError.set('');
+    try {
+      const result = await this.store.createRoadmap({ categoryId, name, code: this.createCode().trim(), description: this.createDescription().trim() });
+      this.createDialogOpen.set(false);
+      await this.router.navigate(['/courses/roadmaps', result.id, 'studio'], { state: { roadmap: result.roadmap, studio: result.studio } });
+    } catch (error) {
+      this.createError.set(apiErrorMessage(error, 'Không tạo được bản nháp lộ trình. Vui lòng thử lại.'));
+    } finally { this.createBusy.set(false); }
   }
 
   retryLoad(): void {
@@ -354,7 +388,7 @@ export class RoadmapListComponent {
   }
 
   testLabel(item: Roadmap): string {
-    return item.missingTests === 0 ? 'Đủ bài test' : `Thiếu ${item.missingTests} bài test`;
+    return item.missingTests === 0 ? 'Đủ đề kiểm tra' : `Thiếu đề ở ${item.missingTests} giai đoạn`;
   }
 
   @HostListener('document:click')

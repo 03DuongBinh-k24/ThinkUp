@@ -205,7 +205,7 @@ export class StudentsComponent {
       new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
 
     const items = this.students().filter((item) => {
-      const haystack = [item.id, item.name, item.email, item.phone].join(' ').toLocaleLowerCase('vi-VN');
+      const haystack = [item.studentCode, item.name, item.email, item.phone].join(' ').toLocaleLowerCase('vi-VN');
       const courseOk = !courseCount
         || (courseCount === 'none' && item.courseCount === 0)
         || (courseCount === '1-3' && item.courseCount >= 1 && item.courseCount <= 3)
