@@ -28,6 +28,37 @@ interface LandingTool {
   wide?: boolean;
 }
 
+interface LandingRoomSlide {
+  id: string;
+  label: string;
+  image: string;
+  alt: string;
+}
+
+/** Ảnh xem trước phòng học ảo, render trực tiếp từ 3 bản thiết kế Figma. */
+const ROOM_SLIDES: LandingRoomSlide[] = [
+  {
+    id: 'lobby',
+    label: 'Sảnh phòng học ảo',
+    image: '/assets/study-room/studyroom-lobby.png',
+    alt: 'Sảnh phòng học ảo ThinkUp với phòng học chung, bộ lọc và danh sách phòng đang mở',
+  },
+  {
+    id: 'interactive',
+    label: 'Không gian tương tác',
+    image: '/assets/study-room/studyroom-room.png',
+    alt: 'Không gian phòng học tương tác với avatar bạn học, khung chat và thanh công cụ',
+  },
+  {
+    id: 'in-room',
+    label: 'Trong phòng học',
+    image: '/assets/study-room/studyroom-inroom.png',
+    alt: 'Bên trong phòng học ảo với bạn học, đồng hồ tập trung và thanh công cụ',
+  },
+];
+
+const ROOM_AUTOPLAY_MS = 6500;
+
 const TOOL_CARDS: LandingTool[] = [
   {
     label: 'Video bài giảng',
@@ -100,6 +131,22 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly popularCourses = signal<Course[]>([]);
   readonly openFaq = signal<number | null>(null);
 
+  readonly roomSlides = ROOM_SLIDES;
+  readonly activeRoomSlide = signal(0);
+  /** Vị trí từng slide trong coverflow: is-active | is-prev | is-next. */
+  readonly roomSlideState = computed(() => {
+    const total = this.roomSlides.length;
+    const active = this.activeRoomSlide();
+    return this.roomSlides.map((_, index) => {
+      const offset = (index - active + total) % total;
+      if (offset === 0) return 'is-active';
+      return offset === 1 ? 'is-next' : 'is-prev';
+    });
+  });
+
+  private roomAutoPlayId: ReturnType<typeof setInterval> | null = null;
+  private roomAutoPlayPaused = false;
+
   readonly popularCards = computed<CourseCardView[]>(() =>
     this.popularCourses().slice(0, 4).map((course, index) => toCourseCardView(course, index))
   );
@@ -120,6 +167,8 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
    * Content stays visible without JS, IntersectionObserver, or when motion is reduced.
    */
   ngAfterViewInit(): void {
+    this.startRoomAutoPlay();
+
     if (!isPlatformBrowser(this.platformId) ||
         !('IntersectionObserver' in window) ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -150,7 +199,46 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopRoomAutoPlay();
     this.revealObserver?.disconnect();
+  }
+
+  nextRoomSlide(): void {
+    this.goToRoomSlide(this.activeRoomSlide() + 1);
+  }
+
+  prevRoomSlide(): void {
+    this.goToRoomSlide(this.activeRoomSlide() - 1);
+  }
+
+  goToRoomSlide(index: number): void {
+    const total = this.roomSlides.length;
+    this.activeRoomSlide.set(((index % total) + total) % total);
+  }
+
+  /** Tạm dừng tự chuyển ảnh khi người dùng đang hover hoặc focus vào carousel. */
+  pauseRoomAutoPlay(): void {
+    this.roomAutoPlayPaused = true;
+  }
+
+  resumeRoomAutoPlay(): void {
+    this.roomAutoPlayPaused = false;
+  }
+
+  private startRoomAutoPlay(): void {
+    if (!isPlatformBrowser(this.platformId) || this.roomAutoPlayId !== null) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    this.roomAutoPlayId = setInterval(() => {
+      if (this.roomAutoPlayPaused || document.hidden) return;
+      this.goToRoomSlide(this.activeRoomSlide() + 1);
+    }, ROOM_AUTOPLAY_MS);
+  }
+
+  private stopRoomAutoPlay(): void {
+    if (this.roomAutoPlayId === null) return;
+    clearInterval(this.roomAutoPlayId);
+    this.roomAutoPlayId = null;
   }
 
   toggleFaq(index: number): void {
