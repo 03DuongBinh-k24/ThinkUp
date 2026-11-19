@@ -73,12 +73,9 @@ export async function getFaqSummary(options = {}) {
     ]);
 
   // Tính tỷ lệ % lượng ticket giảm
-  let ticketReductionRate = 0;
-  if (prevMonthTickets > 0) {
-    ticketReductionRate = Math.round(((prevMonthTickets - currentMonthTickets) / prevMonthTickets) * 100);
-  } else {
-    ticketReductionRate = 32; // Fallback chỉ số tích cực khi khởi tạo
-  }
+  const ticketReductionRate = prevMonthTickets > 0
+    ? Math.round(((prevMonthTickets - currentMonthTickets) / prevMonthTickets) * 100)
+    : null;
 
   return {
     totalFaqsCount,

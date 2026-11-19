@@ -134,12 +134,7 @@ function pickAllowedSections(updates = {}) {
 /** Đọc duy nhất Cài đặt chung và Tham số hệ thống. */
 export async function getSystemSettings(db) {
   const collection = db.collection(SETTINGS_COLLECTION);
-  let doc = await collection.findOne({ _id: CONFIG_DOC_ID });
-
-  if (!doc) {
-    await collection.insertOne({ ...DEFAULT_SYSTEM_SETTINGS, created_at: new Date() });
-    doc = DEFAULT_SYSTEM_SETTINGS;
-  }
+  const doc = await collection.findOne({ _id: CONFIG_DOC_ID }) || DEFAULT_SYSTEM_SETTINGS;
 
   return {
     general: { ...DEFAULT_SYSTEM_SETTINGS.general, ...(doc.general || {}) },
@@ -157,7 +152,8 @@ export async function updateSystemSettings(db, {
   await verifySuperAdminOtp(db, saActor.admin_id, saOtp);
 
   const collection = db.collection(SETTINGS_COLLECTION);
-  const currentDoc = await collection.findOne({ _id: CONFIG_DOC_ID }) || DEFAULT_SYSTEM_SETTINGS;
+  const existing = await collection.findOne({ _id: CONFIG_DOC_ID });
+  const currentDoc = existing || DEFAULT_SYSTEM_SETTINGS;
   if (!updates || typeof updates !== 'object' || Array.isArray(updates)
     || Object.keys(updates).some(key => !ALLOWED_SECTIONS.includes(key))) {
     throw settingsError('Payload cấu hình không hợp lệ.');
@@ -185,11 +181,24 @@ export async function updateSystemSettings(db, {
   updateFields.general = merged.general;
   updateFields.parameters = merged.parameters;
 
-  await collection.updateOne(
-    { _id: CONFIG_DOC_ID },
-    { $set: updateFields },
-    { upsert: true }
-  );
+  const filter = { _id: CONFIG_DOC_ID };
+  for (const section of ALLOWED_SECTIONS) {
+    filter[section] = existing?.[section] ?? { $exists: false };
+  }
+  let saved;
+  try {
+    saved = await collection.findOneAndUpdate(filter,
+      { $set: updateFields, $setOnInsert: { created_at: new Date() } },
+      { upsert: !existing, returnDocument: 'after', projection: { general: 1, parameters: 1 } }
+    );
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+  }
+  if (!saved) {
+    throw Object.assign(new Error('Cấu hình đã thay đổi. Vui lòng tải lại trước khi lưu.'), {
+      status: 409, code: 'SETTINGS_CONFLICT',
+    });
+  }
 
   await createAuditRecord(db, {
     actor: saActor,
@@ -214,6 +223,7 @@ export async function updateSystemSettings(db, {
   return {
     success: true,
     message: 'Đã lưu cấu hình thành công.',
+    settings: { general: saved.general, parameters: saved.parameters },
   };
 }
 

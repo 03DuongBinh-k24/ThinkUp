@@ -17,8 +17,7 @@
       </span>
       <span>
         <span class="kpi-label">Tổng khóa học</span>
-        <strong class="kpi-value">{{ number(totals.total) }}</strong>
-        <span class="kpi-foot">+12,8% so với kỳ trước</span>
+        <strong class="kpi-value">{{ number(totals().total) }}</strong>
       </span>
     </button>
     <button class="kpi" type="button" [class.is-selected]="status() === 'published'" (click)="setStatus('published')" aria-label="Lọc khóa học đang xuất bản">
@@ -27,8 +26,7 @@
       </span>
       <span>
         <span class="kpi-label">Đang xuất bản</span>
-        <strong class="kpi-value">{{ number(totals.published) }}</strong>
-        <span class="kpi-foot">78,5% tổng số</span>
+        <strong class="kpi-value">{{ number(totals().published) }}</strong>
       </span>
     </button>
     <button class="kpi" type="button" [class.is-selected]="status() === 'pending'" (click)="setStatus('pending')" aria-label="Lọc khóa học chờ duyệt">
@@ -37,7 +35,7 @@
       </span>
       <span>
         <span class="kpi-label">Chờ duyệt</span>
-        <strong class="kpi-value">{{ number(totals.pending) }}</strong>
+        <strong class="kpi-value">{{ number(totals().pending) }}</strong>
         <span class="kpi-foot">Hồ sơ chờ kiểm định</span>
       </span>
     </button>
@@ -47,8 +45,7 @@
       </span>
       <span>
         <span class="kpi-label">Đã ẩn / lưu trữ</span>
-        <strong class="kpi-value">{{ number(totals.archived) }}</strong>
-        <span class="kpi-foot">18,6% tổng số</span>
+        <strong class="kpi-value">{{ number(totals().archived) }}</strong>
       </span>
     </button>
   </section>

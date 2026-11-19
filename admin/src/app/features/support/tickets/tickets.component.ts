@@ -183,7 +183,7 @@ export class TicketsComponent {
   toggleSelectAll(): void { const next = new Set(this.selection()); if (this.allVisibleSelected()) this.visible().forEach(ticket => next.delete(ticket.id)); else this.visible().forEach(ticket => next.add(ticket.id)); this.selection.set(next); }
   clearSelection(): void { this.selection.set(new Set()); }
   setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
-  runSelectionAction(key: string, ids?: readonly string[]): void {
+  async runSelectionAction(key: string, ids?: readonly string[]): Promise<void> {
     this.selectionListOpen.set(false);
     const targets = ids ?? this.selectedIds();
     if (!targets.length) return;
@@ -196,7 +196,13 @@ export class TicketsComponent {
     } else if (key === 'reopen') {
       const closed = this.tickets().filter(ticket => targets.includes(ticket.id) && ticket.status === 'closed');
       if (!closed.length) { this.notify('Các ticket đã chọn đều chưa đóng.'); return; }
-      closed.forEach(ticket => this.data.reopenTicket(ticket.id));
+      const results = await Promise.allSettled(closed.map(async ticket => this.data.reopenTicket(ticket.id)));
+      const failed = closed.filter((_, index) => results[index].status === 'rejected');
+      if (failed.length) {
+        this.setSelectionIds(failed.map(ticket => ticket.id));
+        this.notify(`Đã mở lại ${closed.length - failed.length}/${closed.length} ticket. Vui lòng kiểm tra các ticket còn được chọn.`);
+        return;
+      }
       this.clearSelection();
       this.notify(`Đã mở lại ${closed.length} ticket.`);
     }

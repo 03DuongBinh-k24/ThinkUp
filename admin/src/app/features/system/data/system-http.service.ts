@@ -114,9 +114,18 @@ export class SystemHttpService implements SystemStore {
   resetTwoFactor(id: string, reason: string, otp: string): Promise<RoleChangeResult> { return this.fire('/security/reset-2fa', { adminId: id, reason, saOtp: otp }); }
   async updateSettings(next: SystemSettings, otp: string): Promise<RoleChangeResult> {
     const updates = mapSettingsToApi(next, this.settings());
-    const result = await this.send(this.http.put(`${this.base}/settings`, { updates, saOtp: otp }));
-    if (result.ok) this.settingsState.set(structuredClone(next));
-    return result;
+    try {
+      const response = await firstValueFrom(this.http.put<{ success: boolean; settings?: ApiSettings }>(
+        `${this.base}/settings`, { updates, saOtp: otp }
+      ));
+      if (!response.success) throw new Error('Máy chủ chưa xác nhận lưu cấu hình.');
+      const saved = response.settings ?? await firstValueFrom(this.http.get<ApiSettings>(`${this.base}/settings`));
+      if (!saved.parameters) throw new Error('Thiếu tham số cấu hình sau khi lưu.');
+      this.settingsState.set(mapSettings(saved));
+      return { ok: true, message: 'Đã lưu thay đổi.' };
+    } catch (error) {
+      return { ok: false, message: apiErrorMessage(error) };
+    }
   }
   setMaintenance(enabled: boolean): void { this.settingsState.update(value => ({ ...value, maintenance: { ...value.maintenance, enabled } })); }
   updateMomoConfig(config: MomoGatewayConfig): void { /* TODO(api-contract): backend chưa có endpoint cấu hình gateway trong handoff. */ }
@@ -196,9 +205,9 @@ function toAudit(row: Raw): AuditLog {
     targetId: value(target, 'id'),
     targetName: value(target, 'name'),
     targetMeta: value(target, 'meta'),
-    ip: value(client, 'ip'),
+    ip: value(client, 'ip') || value(row, 'ip'),
     location: value(client, 'location'),
-    device: value(client, 'device'),
+    device: value(client, 'device') || value(row, 'user_agent'),
     risk: toRisk(value(row, 'risk_level', 'risk')),
     sessionId: value(client, 'session_id'),
     basis: value(basis, 'reason'),

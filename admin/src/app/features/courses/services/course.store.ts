@@ -13,6 +13,8 @@ export abstract class CourseStore {
   abstract readonly loadError: Signal<boolean>;
 
   abstract retry(): void;
+  abstract getCourseContent(course: Course): Promise<Course>;
+  abstract getCourseLearners(course: Course): Promise<Course['learners']>;
   /**
    * Báo cáo tài chính tích lũy của một khóa học (Giảng viên nhận / Sàn giữ lại / Doanh thu / Voucher).
    * Trả `null` khi chưa đủ điều kiện (khóa chưa duyệt) hoặc không có dữ liệu để đối soát.

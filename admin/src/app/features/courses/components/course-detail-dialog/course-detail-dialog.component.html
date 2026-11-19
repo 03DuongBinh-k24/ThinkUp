@@ -35,7 +35,10 @@
     }
   </div>
 
-  @switch (tab()) {
+  @if ((tab() === 'overview' || tab() === 'content') && !detail()) {
+    @if (detailError()) { <p role="alert">{{ detailError() }}</p> }
+    @else { <p role="status">Đang tải nội dung khóa học…</p> }
+  } @else { @switch (tab()) {
     @case ('overview') {
       <div class="detail-columns" style="margin-top: 16px">
         <div class="detail-main">
@@ -115,7 +118,9 @@
     @case ('learners') {
       <section class="section-card" style="margin-top: 16px">
         <h3>Học viên</h3>
-        @if (learners().length) {
+        @if (learnersError()) { <p role="alert">{{ learnersError() }}</p> }
+        @else if (learners() === null) { <p role="status">Đang tải danh sách học viên…</p> }
+        @else if (learners()?.length) {
           <div class="table-scroll">
             <table>
               <thead>
@@ -127,7 +132,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (learner of learners(); track learner.email) {
+                @for (learner of learners(); track learner) {
                   <tr>
                     <td>
                       <span class="cell-title">{{ learner.name }}</span>
@@ -191,6 +196,7 @@
     }
   }
 
+  }
   <p class="detail-hero-meta" style="margin: 16px 0 0">
     Chế độ chỉ xem · Các tab hiển thị nội dung, học viên và doanh thu
   </p>

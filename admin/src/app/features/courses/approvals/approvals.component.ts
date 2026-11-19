@@ -8,7 +8,7 @@ import { CustomSelectComponent, CustomSelectOption } from '../../../shared/compo
 import { ExportMenuComponent } from '../../../shared/components/export-menu/export-menu.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
-import { downloadTable } from '../../../shared/utils/export-formats';
+import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
 import { CourseToastComponent, ToastTone } from '../components/course-toast.component';
 import { CourseHistoryDialogComponent } from '../components/course-history-dialog/course-history-dialog.component';
 import { ApprovalItem, ApprovalStatus } from '../models/course.models';
@@ -17,7 +17,6 @@ import {
   APPROVAL_SLA_LABELS, APPROVAL_SLA_TONE, countChars, formatCurrency, formatTime, formatDate, paginationRange
 } from '../course-utils';
 
-const QUEUE_TOTAL = 284;
 const PAGE_SIZE = 41;
 
 type QueueRange = '' | '7' | '30' | '90';
@@ -56,6 +55,14 @@ export class CourseApprovalsComponent {
 
   readonly loadError = this.store.loadError;
   readonly approvals = this.store.approvals;
+  readonly summary = computed(() => {
+    const rows = this.approvals();
+    return {
+      remaining: rows.filter(item => item.slaStatus === 'remaining').length,
+      waiting: rows.filter(item => item.slaStatus === 'waiting').length,
+      approved: rows.filter(item => item.slaStatus === 'approved').length
+    };
+  });
   readonly search = signal('');
   readonly category = signal('');
   readonly level = signal('');
@@ -163,7 +170,7 @@ export class CourseApprovalsComponent {
     || this.columnFilters.course().length || this.columnFilters.instructor().length
     || this.columnFilters.component().length || this.columnFilters.status().length
   ));
-  readonly total = computed(() => this.hasFilters() ? this.filtered().length : QUEUE_TOTAL);
+  readonly total = computed(() => this.filtered().length);
   readonly pages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
   readonly visible = computed(() => this.filtered().slice((this.page() - 1) * PAGE_SIZE, this.page() * PAGE_SIZE));
   readonly pagination = computed(() => paginationRange(this.page(), this.pages()));
@@ -266,7 +273,7 @@ export class CourseApprovalsComponent {
     this.notify(`Đã từ chối ${ids.length} yêu cầu duyệt và gửi lý do tới giảng viên.`, 'success');
   }
 
-  private exportSelection(ids: readonly string[]): void {
+  private exportSelection(ids: readonly string[], format: ExportFormat = 'xlsx', filename = 'yeu-cau-duyet-da-chon'): void {
     const chosen = new Set(ids);
     const rows: (string | number)[][] = [
       ['Mã yêu cầu', 'Mã khóa học', 'Tên khóa học', 'Giảng viên', 'Cấp độ', 'Giá đề xuất', 'Thời gian nộp', 'Trạng thái SLA'],
@@ -275,9 +282,9 @@ export class CourseApprovalsComponent {
         item.suggestedPrice, formatDate(item.submittedAt), APPROVAL_SLA_LABELS[item.slaStatus]
       ])
     ];
-    this.notify(`Đang tạo tệp XLSX cho ${ids.length} yêu cầu duyệt đã chọn.`, 'info');
-    void downloadTable('xlsx', 'yeu-cau-duyet-da-chon', rows)
-      .then(() => this.notify(`Đã xuất ${ids.length} yêu cầu duyệt đã chọn ra tệp XLSX.`, 'success'))
+    this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${ids.length} yêu cầu duyệt đã chọn.`, 'info');
+    void downloadTable(format, filename, rows)
+      .then(() => this.notify(`Đã xuất ${ids.length} yêu cầu duyệt đã chọn ra tệp ${format.toUpperCase()}.`, 'success'))
       .catch(() => this.notify('Không thể tạo tệp xuất. Vui lòng thử lại.', 'error'));
   }
 
@@ -355,9 +362,8 @@ export class CourseApprovalsComponent {
     this.store.retry();
   }
 
-  exportList(format: string): void {
-    this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${this.total()} yêu cầu duyệt.`, 'info');
-    setTimeout(() => this.notify(`Đã xuất ${this.total()} yêu cầu duyệt ra tệp ${format.toUpperCase()}.`, 'success'), 900);
+  exportList(format: ExportFormat): void {
+    this.exportSelection(this.filtered().map(item => item.id), format, 'yeu-cau-duyet');
   }
 
   notify(message: string, tone: ToastTone): void {

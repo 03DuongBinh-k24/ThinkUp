@@ -27,6 +27,9 @@ export class CourseDemoService extends CourseStore {
     this.errorState.set(false);
   }
 
+  async getCourseContent(course: Course): Promise<Course> { return course; }
+  async getCourseLearners(course: Course): Promise<Course['learners']> { return course.learners; }
+
   getCourseFinance(id: string): Promise<CourseFinance | null> {
     const finance = this.courseState().find(item => item.id === id)?.finance;
     return Promise.resolve(finance ? { ...finance } : null);

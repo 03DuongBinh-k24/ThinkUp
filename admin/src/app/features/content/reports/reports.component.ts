@@ -16,6 +16,7 @@ import {
 } from '../content-utils';
 import { ContentReport, ReportSeverity, ReportStatus, ReportType } from '../models/content.models';
 import { ContentStore } from '../services/content.store';
+import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
 
 type ReportColumn = 'type' | 'severity' | 'reason' | 'reportedBy' | 'created' | 'slaState' | 'status' | 'assignee';
 
@@ -471,9 +472,18 @@ export class ContentReportsComponent {
     this.store.retry();
   }
 
-  exportList(format: string): void {
+  exportList(format: ExportFormat): void {
     this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${this.filtered().length} báo cáo.`, 'info');
-    setTimeout(() => this.notify(`Đã xuất ${this.filtered().length} báo cáo ra tệp ${format.toUpperCase()}.`, 'success'), 900);
+    const rows: (string | number)[][] = [
+      ['Mã', 'Nội dung bị báo cáo', 'Người báo cáo', 'Mức độ', 'Trạng thái', 'Thời gian'],
+      ...this.filtered().map(item => [
+        item.code, item.targetTitle, item.reportedBy, SEVERITY_LABELS[item.severity],
+        REPORT_STATUS_LABELS[item.status], item.createdAt
+      ])
+    ];
+    void downloadTable(format, 'thinkup-bao-cao-vi-pham', rows)
+      .then(() => this.notify(`Đã xuất ${rows.length - 1} báo cáo ra tệp ${format.toUpperCase()}.`, 'success'))
+      .catch(() => this.notify('Không thể tạo tệp xuất. Vui lòng thử lại.', 'error'));
   }
 
   notify(message: string, tone: ToastTone): void {

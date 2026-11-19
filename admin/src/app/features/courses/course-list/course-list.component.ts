@@ -6,7 +6,8 @@ import { ExportMenuComponent } from '../../../shared/components/export-menu/expo
 import { BulkSelectionDialogComponent, BulkSelectionItem } from '../../../shared/components/bulk-selection-dialog/bulk-selection-dialog.component';
 import { SearchFieldComponent } from '../../../shared/components/search-field/search-field.component';
 import { SelectionAction, SelectionBarComponent } from '../../../shared/components/selection-bar/selection-bar.component';
-import { downloadTable } from '../../../shared/utils/export-formats';
+import { downloadTable, ExportFormat } from '../../../shared/utils/export-formats';
+import { apiErrorMessage } from '../../../shared/utils/api-error';
 import { formatCurrency, formatDate, formatNumber, formatTime, paginationRange } from '../course-utils';
 import { Course, CourseLevel, CourseStatus } from '../models/course.models';
 import { CourseStore } from '../services/course.store';
@@ -14,7 +15,6 @@ import { CourseArchiveDialogComponent, ArchivePayload } from '../components/cour
 import { CourseDetailDialogComponent } from '../components/course-detail-dialog/course-detail-dialog.component';
 import { CourseToastComponent, ToastTone } from '../components/course-toast.component';
 
-const PLATFORM_TOTAL = 1248;
 
 const CATEGORIES = [
   'Frontend Developer', 'Backend Developer', 'Fullstack Developer', 'Mobile Developer',
@@ -33,6 +33,7 @@ const LEVEL_FILTER_VALUES: ColumnFilterValue[] = [
   { value: 'Nâng cao', label: 'Nâng cao' }
 ];
 const STATUS_FILTER_VALUES: ColumnFilterValue[] = [
+  { value: 'unpublished', label: 'Chưa xuất bản' },
   { value: 'published', label: 'Đang xuất bản' },
   { value: 'pending', label: 'Chờ duyệt' },
   { value: 'hidden', label: 'Tạm ẩn' },
@@ -86,7 +87,15 @@ export class CourseListComponent {
   readonly selection = signal<ReadonlySet<string>>(new Set());
   readonly selectionListOpen = signal(false);
 
-  readonly totals = { total: PLATFORM_TOTAL, published: 980, pending: 36, archived: 232 };
+  readonly totals = computed(() => {
+    const courses = this.courses();
+    return {
+      total: courses.length,
+      published: courses.filter(item => item.status === 'published').length,
+      pending: courses.filter(item => item.status === 'pending').length,
+      archived: courses.filter(item => item.status === 'archived' || item.status === 'hidden').length
+    };
+  });
 
   readonly categoryOptions: CustomSelectOption[] = [
     { value: '', label: 'Tất cả danh mục' },
@@ -161,7 +170,7 @@ export class CourseListComponent {
     || this.columnFilters.title().length || this.columnFilters.category().length
     || this.columnFilters.instructor().length || this.columnFilters.status().length
   ));
-  readonly resultTotal = computed(() => this.hasFilters() ? this.filtered().length : PLATFORM_TOTAL);
+  readonly resultTotal = computed(() => this.filtered().length);
   readonly rangeLabel = computed(() => {
     const total = this.resultTotal();
     const shown = this.visible().length;
@@ -209,18 +218,24 @@ export class CourseListComponent {
 
   setSelectionIds(ids: string[]): void { this.selection.set(new Set(ids)); }
 
-  runSelectionAction(key: string, ids?: readonly string[]): void {
+  async runSelectionAction(key: string, ids?: readonly string[]): Promise<void> {
     this.selectionListOpen.set(false);
     const targetIds = ids ?? this.selectedIds();
     if (!targetIds.length) return;
     if (key === 'export') { this.exportSelection(targetIds); return; }
     const status: CourseStatus = key === 'hide' ? 'hidden' : 'published';
-    targetIds.forEach(id => this.store.setCourseStatus(id, status));
+    const results = await Promise.allSettled(targetIds.map(async id => this.store.setCourseStatus(id, status)));
+    const failed = targetIds.filter((_, index) => results[index].status === 'rejected');
+    if (failed.length) {
+      this.setSelectionIds(failed);
+      this.notify(`Đã cập nhật ${targetIds.length - failed.length}/${targetIds.length} khóa học. Các khóa học gặp lỗi vẫn được chọn.`, 'error');
+      return;
+    }
     this.clearSelection();
     this.notify(key === 'hide' ? `Đã ẩn ${targetIds.length} khóa học.` : `Đã hiển thị ${targetIds.length} khóa học.`, 'success');
   }
 
-  private exportSelection(ids: readonly string[]): void {
+  private exportSelection(ids: readonly string[], format: ExportFormat = 'xlsx', filename = 'khoa-hoc-da-chon'): void {
     const chosen = new Set(ids);
     const rows: (string | number)[][] = [
       ['Mã khóa học', 'Tên khóa học', 'Giảng viên', 'Danh mục', 'Cấp độ', 'Trạng thái', 'Giá bán', 'Học viên'],
@@ -229,9 +244,9 @@ export class CourseListComponent {
         this.statusText(item.status), item.price, item.students ?? 0
       ])
     ];
-    this.notify(`Đang tạo tệp XLSX cho ${ids.length} khóa học đã chọn.`, 'info');
-    void downloadTable('xlsx', 'khoa-hoc-da-chon', rows)
-      .then(() => this.notify(`Đã xuất ${ids.length} khóa học đã chọn ra tệp XLSX.`, 'success'))
+    this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${ids.length} khóa học đã chọn.`, 'info');
+    void downloadTable(format, filename, rows)
+      .then(() => this.notify(`Đã xuất ${ids.length} khóa học đã chọn ra tệp ${format.toUpperCase()}.`, 'success'))
       .catch(() => this.notify('Không thể tạo tệp xuất. Vui lòng thử lại.', 'error'));
   }
 
@@ -361,10 +376,15 @@ export class CourseListComponent {
     this.archiveId.set(null);
   }
 
-  confirmArchive(payload: ArchivePayload): void {
+  async confirmArchive(payload: ArchivePayload): Promise<void> {
     const target = this.archiveTarget();
     if (!target) return;
-    this.store.archiveCourse(target.id, payload.reason, payload.explanation);
+    try {
+      await this.store.archiveCourse(target.id, payload.reason, payload.explanation);
+    } catch (error) {
+      this.notify(apiErrorMessage(error), 'error');
+      return;
+    }
     this.archiveId.set(null);
     this.detailId.set(null);
     this.notify(`Đã lưu trữ khóa học ${target.id}.`, 'success');
@@ -382,9 +402,8 @@ export class CourseListComponent {
     this.store.retry();
   }
 
-  exportList(format: string): void {
-    this.notify(`Đang tạo tệp ${format.toUpperCase()} cho ${this.resultTotal()} khóa học.`, 'info');
-    setTimeout(() => this.notify(`Đã xuất ${this.resultTotal()} khóa học ra tệp ${format.toUpperCase()}.`, 'success'), 900);
+  exportList(format: ExportFormat): void {
+    this.exportSelection(this.filtered().map(item => item.id), format, 'khoa-hoc');
   }
 
   notify(message: string, tone: ToastTone): void {
@@ -396,6 +415,7 @@ export class CourseListComponent {
     return status === 'published' ? 'Đang xuất bản'
       : status === 'pending' ? 'Chờ duyệt'
       : status === 'hidden' ? 'Tạm ẩn'
+      : status === 'unpublished' ? 'Chưa xuất bản'
       : 'Đã lưu trữ';
   }
 

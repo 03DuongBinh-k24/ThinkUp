@@ -1,6 +1,7 @@
 import { ApprovalStatus, CourseLevel, CourseStatus, LessonKind, RoadmapNodeType } from './models/course.models';
 
 export const COURSE_STATUS_LABELS: Record<CourseStatus, string> = {
+  unpublished: 'Chưa xuất bản',
   published: 'Đang xuất bản',
   pending: 'Chờ duyệt',
   hidden: 'Tạm ẩn',
@@ -8,6 +9,7 @@ export const COURSE_STATUS_LABELS: Record<CourseStatus, string> = {
 };
 
 export const COURSE_STATUS_TONE: Record<CourseStatus, string> = {
+  unpublished: 'neutral',
   published: 'success',
   pending: 'pending',
   hidden: 'warning',

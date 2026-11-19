@@ -8,13 +8,12 @@ import { ContentToastComponent, ToastTone } from '../components/content-toast.co
 import { formatDateTime, POST_STATUS_LABELS } from '../content-utils';
 import { ContentCategory, ContentPost, PostStatus } from '../models/content.models';
 import { ContentStore } from '../services/content.store';
-import { MOCK_COURSES } from '../../../core/data/mock/course.mock';
+import { AdminAuthService } from '../../../core/services/admin-auth.service';
 
 const CATEGORIES: ContentCategory[] = [
   'Lập trình cơ bản', 'Web Development', 'Backend', 'DevOps', 'Thuật toán', 'Kinh nghiệm', 'Tài nguyên'
 ];
 
-const LECTURER_NAMES: readonly string[] = [...new Set(MOCK_COURSES.map(course => course.instructor))];
 
 @Component({
   selector: 'app-content-post-editor',
@@ -44,7 +43,8 @@ export class ContentPostEditorComponent {
   readonly excerpt = signal('');
   readonly bodyText = signal('');
   readonly category = signal<ContentCategory>('Lập trình cơ bản');
-  readonly author = signal(LECTURER_NAMES[0]);
+  private readonly auth = inject(AdminAuthService);
+  readonly author = signal(this.auth.currentUser()?.fullName ?? '');
   readonly tagsInput = signal('');
   readonly status = signal<PostStatus>('draft');
   readonly thumbnail = signal('/assets/content/posts/thumb-frontend.svg');
@@ -63,11 +63,12 @@ export class ContentPostEditorComponent {
   readonly categoryOptions: CustomSelectOption[] = CATEGORIES.map(item => ({ value: item, label: item }));
   readonly authorOptions = computed<CustomSelectOption[]>(() => {
     const current = this.author();
-    const names = LECTURER_NAMES.includes(current) ? LECTURER_NAMES : [...LECTURER_NAMES, current];
+    const names = [...new Set([current, this.auth.currentUser()?.fullName ?? '', ...this.store.posts().map(post => post.author)].filter(Boolean))];
     return names.map(name => ({ value: name, label: name }));
   });
   readonly authorRole = computed<ContentPost['authorRole']>(() =>
-    LECTURER_NAMES.includes(this.author()) ? 'Giảng viên' : (this.editing()?.authorRole ?? 'Giảng viên'));
+    this.author() === this.auth.currentUser()?.fullName ? 'Admin' :
+      this.store.posts().find(post => post.author === this.author())?.authorRole ?? 'Tác giả');
   readonly statusOptions: CustomSelectOption[] = [
     { value: 'draft', label: 'Bản nháp' },
     { value: 'pending', label: 'Gửi duyệt' },
