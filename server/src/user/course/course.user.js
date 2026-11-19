@@ -81,7 +81,7 @@ export function generateCourseSeoMetadata(courseDoc = {}, options = {}) {
   const keywords = (Array.isArray(keywordsValue) ? keywordsValue : String(keywordsValue || '').split(',')).map(value => String(value).trim()).filter(Boolean).slice(0, 5);
   const slug = String(courseDoc.slug || courseDoc.course_id || courseDoc._id || '').trim();
   const siteUrl = String(options.clientUrl || process.env.CLIENT_URL || 'https://thinkup.vn').split(',')[0].trim().replace(/\/+$/, '');
-  const canonicalUrl = `${siteUrl}/courses/${encodeURIComponent(slug)}`;
+  const canonicalUrl = `${siteUrl}/main/courses/${encodeURIComponent(slug)}`;
   const image = String(courseDoc.thumbnail_url || courseDoc.cover_image || courseDoc.thumbnail || '').trim();
   const robots = courseDoc.status === 'published' && courseDoc.admin_hidden !== true ? 'index, follow' : 'noindex, nofollow';
   const openGraph = { title, description, image, url: canonicalUrl, type: 'product' };
@@ -199,7 +199,7 @@ export async function getCourseCards({
   const courseFilter = {
     status: 'published', // Chuẩn bảo mật: Chỉ hiển thị các khóa học đã được duyệt mở bán
     admin_hidden: { $ne: true },
-    deleted_at: { $exists: false },
+    deleted_at: null,
   };
 
   // Lọc theo danh mục
@@ -242,11 +242,11 @@ export async function getCourseCards({
   const pageSize = isGetAll ? 0 : Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
   const skipCount = isGetAll ? 0 : (pageNum - 1) * pageSize;
   const numericExpr = value => ({ $convert: { input: value, to: 'double', onError: 0, onNull: 0 } });
-  const effectivePriceExpr = { $ifNull: ['$price', { $ifNull: ['$sale_price', '$original_price'] }] };
+  const effectivePriceExpr = { $ifNull: ['$sale_price', { $ifNull: ['$price', '$original_price'] }] };
   const pipeline = [
     { $match: courseFilter },
     { $addFields: {
-      _catalogPrice: numericExpr(effectivePriceExpr),
+      _catalogPrice: { $max: [0, numericExpr(effectivePriceExpr)] },
       _catalogRating: { $cond: [{ $gt: [numericExpr('$total_reviews'), 0] }, numericExpr('$rating'), 0] },
       _catalogStudents: numericExpr({ $ifNull: ['$total_students', '$students_count'] }),
       _catalogSortDate: { $ifNull: ['$created_at', '$updated_at'] },
@@ -272,9 +272,11 @@ export async function getCourseCards({
     _catalogSortTimestamp: { $convert: { input: '$_catalogSortDate', to: 'date', onError: new Date(0), onNull: new Date(0) } },
     _catalogId: { $toString: { $ifNull: ['$course_id', '$_id'] } },
   } }];
+  const recommendationById = new Map();
   if (sort === 'recommended') {
     const { getCatalogRanking } = await import('./rcm_course.js');
     const { ranked } = await getCatalogRanking({ userId, guestCartIds, dbInstance: db });
+    ranked.forEach(item => recommendationById.set(String(item.course_id), item));
     const ids = ranked.map(item => String(item.course_id));
     coursePipeline.push({ $addFields: { _catalogRecommendation: { $let: {
       vars: { index: { $indexOfArray: [ids, '$_catalogId'] } },
@@ -456,8 +458,8 @@ export async function getCourseCards({
     const inst = instructorMap.get(String(doc.instructor_id)) || null;
 
     // Giá niêm yết ban đầu & Giá bán thực tế
-    const rawOriginalPrice = parseFloat(doc.original_price ?? doc.price ?? 0) || 0;
-    const rawSalePrice = parseFloat(doc.price ?? doc.original_price ?? 0) || 0;
+    const rawOriginalPrice = Math.max(0, Number(doc.original_price ?? doc.price ?? doc.sale_price ?? 0) || 0);
+    const rawSalePrice = Math.max(0, Number(doc.sale_price ?? doc.price ?? doc.original_price ?? 0) || 0);
     const { discountAmount, discountPercent } = calculateDiscount(rawOriginalPrice, rawSalePrice);
     const isFree = rawSalePrice === 0;
 
@@ -670,7 +672,7 @@ export async function getCourseDetailLanding(courseIdentifier, userId = null, db
 
   const courseDoc = await db.collection(COLLECTION_COURSES).findOne({
     $or: conds,
-    deleted_at: { $exists: false },
+    deleted_at: null,
   });
 
   if (!courseDoc) {
@@ -1524,7 +1526,7 @@ export async function getUserEnrolledCourses(userId, options = {}) {
   const objectIds = courseIdArr.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
 
   const coursesDocs = await db.collection(COLLECTION_COURSES).find({
-    deleted_at: { $exists: false },
+    deleted_at: null,
     $or: [
       { _id: { $in: objectIds } },
       { course_id: { $in: courseIdArr } },
@@ -1641,7 +1643,7 @@ export async function getInstructorProfileDetail(instructorIdOrSlug, currentUser
 
   // 1. Tìm thông tin trong instructor_profiles
   let instDoc = await db.collection(COLLECTION_INSTRUCTORS).findOne({
-    deleted_at: { $exists: false },
+    deleted_at: null,
     is_public: { $ne: false },
     $or: [
       { instructor_id: cleanId },
@@ -1655,7 +1657,7 @@ export async function getInstructorProfileDetail(instructorIdOrSlug, currentUser
   // Nếu không có trong instructor_profiles, thử tìm trong users có vai trò instructor
   if (!instDoc) {
     const userDoc = await db.collection(COLLECTION_USERS).findOne({
-      deleted_at: { $exists: false },
+      deleted_at: null,
       role: 'instructor', status: 'active', is_active: { $ne: false }, email_verified: true,
       $or: [
         { _id: ObjectId.isValid(cleanId) ? new ObjectId(cleanId) : null },
@@ -1780,7 +1782,7 @@ export async function getLessonStream(courseId, lessonId, userId = null, options
   const db = options.db || await getMongoDb();
   const id = courseId.trim();
   const course = await db.collection(COLLECTION_COURSES).findOne({
-    deleted_at: { $exists: false },
+    deleted_at: null,
     $or: [{ course_id: id }, { slug: id },
       ...(ObjectId.isValid(id) ? [{ _id: new ObjectId(id) }] : [])],
   });
