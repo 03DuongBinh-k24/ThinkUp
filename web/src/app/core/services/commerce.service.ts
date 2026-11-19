@@ -64,6 +64,11 @@ export class CommerceService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
   private readonly auth = inject(AuthService);
+  private readonly accountKey = computed(() => {
+    if (!this.auth.isAuthenticated()) return null;
+    return this.auth.currentUser()?.id || null;
+  });
+  private cartOwner: string | null = null;
 
   private readonly guardAccount = <T>(source: Observable<T>): Observable<T> => defer(() => {
     const token = this.auth.getToken();
@@ -74,12 +79,17 @@ export class CommerceService {
   });
 
   clearAccountCart(): void {
+    this.cartOwner = this.accountKey();
     this._cartItems.set([]);
     this._checkoutIds.set([]);
     this._checkoutVoucher.set(null);
   }
 
   mergeGuestCart(): Observable<CartItem[]> {
+    if (!this.auth.isAuthenticated()) {
+      this.clearAccountCart();
+      return of([]);
+    }
     const ids = this.readGuestCourseIds();
     if (!ids.length) return this.refreshCart();
     return this.http.post<{ success: boolean; data: CartView }>(`${this.apiUrl}/user/cart/merge`,
@@ -121,6 +131,19 @@ export class CommerceService {
    * khi người dùng bỏ tick (yêu cầu TC-04: cập nhật tức thời).
    */
   loadCartView(params: { selectedIds?: string[]; voucherCode?: string } = {}): Observable<CartItem[]> {
+    if (!this.auth.isAuthenticated()) {
+      this._cartItems.set([]);
+      this._checkoutIds.set([]);
+      this._checkoutVoucher.set(null);
+      return of([]);
+    }
+    const owner = this.accountKey();
+    if (owner !== this.cartOwner) {
+      this.cartOwner = owner;
+      this._cartItems.set([]);
+      this._checkoutIds.set([]);
+      this._checkoutVoucher.set(null);
+    }
     if (!this._checkoutIds().length) {
       try {
         const ids = JSON.parse(sessionStorage.getItem(`thinkup_checkout_${this.auth.currentUser()?.id || 'guest'}`) || '[]');
@@ -139,10 +162,6 @@ export class CommerceService {
     }
     if (params.voucherCode) {
       search.push(`voucherCode=${encodeURIComponent(params.voucherCode)}`);
-    }
-    const guestCourseIds = this.readGuestCourseIds();
-    if (guestCourseIds.length > 0) {
-      search.push(`guestCourseIds=${encodeURIComponent(guestCourseIds.join(','))}`);
     }
     if (search.length) query = `?${search.join('&')}`;
 
@@ -178,6 +197,9 @@ export class CommerceService {
   }
 
   addToCart(courseId: string): Observable<{ success: boolean; data: CartItem[]; added: boolean }> {
+    if (!this.auth.isAuthenticated()) {
+      return throwError(() => new Error('Vui lòng đăng nhập để thêm khóa học vào giỏ hàng.'));
+    }
     if (cartDemoAdapter) {
       const course = cartDemoAdapter.find(courseId);
       if (!course) return throwError(() => new Error('Khóa học không có trong bản demo.'));
@@ -188,15 +210,13 @@ export class CommerceService {
       this._cartItems.set(data);
       return of({ success: true, data, added });
     }
-    if (!this.auth.isAuthenticated()) {
-      return throwError(() => new Error('Vui lòng đăng nhập để thêm khóa học vào giỏ hàng.'));
-    }
     return this.http.post<{ success: boolean; data: CartView }>(
       `${this.apiUrl}/user/cart`, { courseId }, { withCredentials: true }
     ).pipe(this.guardAccount,
       map(res => {
         if (!res.success) throw new Error('Không thêm được khóa học vào giỏ hàng.');
         const data = this.applyCartPayload(res.data);
+        this.cartOwner = this.accountKey();
         if (!data.some(item => item.id === courseId)) throw new Error('Giỏ hàng chưa có khóa học này.');
         return { success: true, data, added: true };
       })
@@ -204,19 +224,23 @@ export class CommerceService {
   }
 
   removeFromCart(courseId: string): Observable<{ success: boolean; data: CartItem[] }> {
+    if (!this.auth.isAuthenticated()) {
+      return throwError(() => new Error('Vui lòng đăng nhập để cập nhật giỏ hàng.'));
+    }
     if (cartDemoAdapter) {
       const data = cartDemoAdapter.read().filter(item => item.id !== courseId);
       cartDemoAdapter.write(data);
       this._cartItems.set(data);
       return of({ success: true, data });
     }
-    if (!this.auth.isAuthenticated()) {
-      return throwError(() => new Error('Vui lòng đăng nhập để cập nhật giỏ hàng.'));
-    }
     return this.http.delete<{ success: boolean; data: unknown }>(
       `${this.apiUrl}/user/cart`, { body: { courseId }, withCredentials: true }
     ).pipe(this.guardAccount,
-      map(res => ({ success: res.success, data: this.applyCartPayload(res.data) }))
+      map(res => {
+        const data = this.applyCartPayload(res.data);
+        this.cartOwner = this.accountKey();
+        return { success: res.success, data };
+      })
     );
   }
 

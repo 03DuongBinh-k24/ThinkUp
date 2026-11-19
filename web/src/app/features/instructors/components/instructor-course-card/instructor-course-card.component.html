@@ -17,10 +17,8 @@
     <button
       type="button"
       class="icard__fav"
-      [disabled]="!isLoggedIn()"
+      [disabled]="savingWishlist"
       [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
-      [class.opacity-50]="!isLoggedIn()"
-      [class.cursor-not-allowed]="!isLoggedIn()"
       [class.icard__fav--active]="isWishlisted()"
       [attr.aria-label]="isWishlisted() ? 'Bỏ khỏi khóa học yêu thích' : 'Thêm vào khóa học yêu thích'"
       (click)="$event.stopPropagation(); toggleWishlist()"
@@ -113,10 +111,10 @@
       <button
         type="button"
         class="icard__action"
-        [disabled]="!isLoggedIn()"
+        [disabled]="savingCart || (isLoggedIn() && isInCart())"
         [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng giỏ hàng'"
-        [class.opacity-50]="!isLoggedIn()"
-        [class.cursor-not-allowed]="!isLoggedIn()"
+        [class.opacity-50]="savingCart || (isLoggedIn() && isInCart())"
+        [class.cursor-not-allowed]="savingCart || (isLoggedIn() && isInCart())"
         [class.icard__action--active]="isInCart()"
         [attr.aria-label]="isInCart() ? 'Đã có trong giỏ hàng' : 'Thêm vào giỏ hàng'"
         (click)="$event.stopPropagation(); addToCart()"
@@ -141,6 +139,12 @@
     </div>
   </div>
 </article>
+
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="'/main/courses/' + course.id"
+  (closed)="authModalOpen.set(false)"
+/>
 
 
 
