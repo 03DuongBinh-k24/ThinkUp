@@ -118,6 +118,15 @@ export interface PaymentSession {
   requestedPaymentMethod?: PaymentMethodId;
   invoiceCode?: string | null;
   paymentContent?: string;
+  orderSummary?: PaymentOrderSummary | null;
+}
+
+export interface PaymentOrderSummary {
+  courses: { id: string; title: string; price: number; originalPrice: number; thumbnail?: string }[];
+  saleSubtotal: number;
+  voucherCode: string;
+  voucherDiscount: number;
+  total: number;
 }
 
 export interface PaymentReceipt {
@@ -162,6 +171,10 @@ export interface PaymentStatus {
   paidAt: string | null;
   expiresAt: string;
   remainingSeconds: number;
+  paymentMethod?: string;
+  isSimulated?: boolean;
+  requestedPaymentMethod?: PaymentMethodId;
+  orderSummary?: PaymentOrderSummary | null;
 }
 
 export interface PaymentPreferences {

@@ -12,6 +12,7 @@ import {
   BankDisplay,
   CheckoutVoucher,
   PaymentMethodId,
+  PaymentOrderSummary,
   PaymentSession,
   PaymentStatus,
   PaymentStatusValue,
@@ -214,6 +215,7 @@ export class CheckoutComponent implements OnInit {
   dialogMessage = signal('');
   lastMethodLabel = signal('');
   purchasedCourses = signal<CartItem[]>([]);
+  paidOrderSummary = signal<PaymentOrderSummary | null>(null);
   paidOrderId = signal('');
   paidVoucher = signal<CheckoutVoucher | null>(null);
   paidAmount = signal(0);
@@ -249,10 +251,12 @@ export class CheckoutComponent implements OnInit {
 
   readonly summaryCourses = computed(() => this.dialog() === 'success' ? this.purchasedCourses() : this.courses());
   readonly summaryCourseCount = computed(() => this.summaryCourses().length);
-  readonly summarySaleSubtotal = computed(() => this.summaryCourses().reduce((sum, course) => sum + (course.salePrice || 0), 0));
+  readonly summarySaleSubtotal = computed(() => this.dialog() === 'success' && this.paidOrderSummary()
+    ? this.paidOrderSummary()!.saleSubtotal
+    : this.summaryCourses().reduce((sum, course) => sum + (course.salePrice || 0), 0));
   readonly summaryVoucher = computed(() => this.dialog() === 'success' ? this.paidVoucher() : this.voucher());
   readonly summaryVoucherDiscount = computed(() => this.dialog() === 'success'
-    ? Math.max(0, this.summarySaleSubtotal() - this.paidAmount())
+    ? this.paidOrderSummary()?.voucherDiscount ?? Math.max(0, this.summarySaleSubtotal() - this.paidAmount())
     : this.voucherDiscount());
   readonly summaryTotal = computed(() => this.dialog() === 'success' ? this.paidAmount() : this.total());
 
@@ -668,14 +672,34 @@ export class CheckoutComponent implements OnInit {
 
   private completePayment(status: PaymentStatus): void {
     if (this.dialog() === 'success' && this.paidTransactionId() === status.transactionId) return;
-    const purchased = [...this.courses()];
+    const orderSummary = status.orderSummary || this.session()?.orderSummary || null;
+    const currentCourses = new Map(this.courses().map(course => [course.id, course]));
+    const purchased = orderSummary?.courses.length
+      ? orderSummary.courses.map(course => {
+        const cartCourse = currentCourses.get(course.id);
+        return {
+          ...(cartCourse || {} as CartItem),
+          id: course.id,
+          courseId: course.id,
+          title: course.title,
+          displayTitle: course.title,
+          instructor: cartCourse?.instructor || 'Giảng viên ThinkUp',
+          originalPrice: course.originalPrice,
+          salePrice: course.price,
+          thumbnailUrl: course.thumbnail || cartCourse?.thumbnailUrl || '',
+        } as CartItem;
+      })
+      : [...this.courses()];
     const amount = status.amount;
     const orderId = status.orderId || this.session()?.orderId || this.paidOrderId();
 
     this.stopTimers();
     this.commerce.resetPaymentAttempt(status.transactionId);
     this.purchasedCourses.set(purchased);
-    this.paidVoucher.set(this.voucher());
+    this.paidOrderSummary.set(orderSummary);
+    this.paidVoucher.set(orderSummary?.voucherCode
+      ? { code: orderSummary.voucherCode, discount: orderSummary.voucherDiscount }
+      : this.voucher());
     this.paidAmount.set(amount);
     this.paidOrderId.set(orderId);
     this.paidTransactionId.set(status.transactionId);

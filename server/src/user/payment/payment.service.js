@@ -73,8 +73,25 @@ async function allocateInvoiceCode(db) {
 }
 async function finishInternalPayment(tx, options) {
   const db=options.db || await getMongoDb();
-  if((tx.is_simulated || tx.payment_method==='free')&&tx.status==='paid') await completePaidOrder(tx.transaction_id,options);
+  if((tx.is_simulated || tx.is_free || tx.payment_method==='free')&&tx.status==='paid') await completePaidOrder(tx.transaction_id,options);
   return sessionView(await db.collection(COLLECTION_TRANSACTIONS).findOne({_id:tx._id}));
+}
+export function paymentOrderSummary(tx) {
+  try {
+    const summary = typeof tx.order_summary === 'string' ? JSON.parse(tx.order_summary) : tx.order_summary;
+    if (!Array.isArray(summary?.courses)) return null;
+    return {
+      courses: summary.courses.map(course => ({
+        id: String(course.id), title: String(course.title || 'Khóa học ThinkUp'),
+        price: paymentMoney(course.price), originalPrice: paymentMoney(course.original_price ?? course.price),
+        thumbnail: course.thumbnail || '',
+      })),
+      saleSubtotal: paymentMoney(summary.sale_subtotal),
+      voucherCode: String(summary.voucher_code || ''),
+      voucherDiscount: paymentMoney(summary.voucher_discount || 0),
+      total: paymentMoney(tx.amount),
+    };
+  } catch { return null; }
 }
 export function paymentError(message, status = 400, code = 'PAYMENT_INVALID') {
   return Object.assign(new Error(message), { status, code });
@@ -120,12 +137,14 @@ function paymentLookupQr(transactionId) {
   return { paymentDetailsUrl: value, paymentQrPayload: value };
 }
 function sessionView(tx) {
-  const bankInfo = tx.payment_method === 'sepay' ? bankConfiguration() : null;
+  const bankInfo = tx.payment_method === 'sepay' && !tx.is_simulated ? bankConfiguration() : null;
+  const selectedMethod = tx.payment_method === 'simulation' ? tx.requested_payment_method || 'simulation' : tx.payment_method;
   return { orderId:tx.order_id, transactionId:tx.transaction_id, amount:tx.amount, currency:tx.currency,
     status:tx.status, fulfillmentStatus:tx.fulfillment_status, expiresAt:tx.expires_at,
     ...paymentLookupQr(tx.transaction_id),
     expiresInSeconds:Math.max(0,Math.floor((new Date(tx.expires_at)-Date.now())/1000)),
-    paymentMethod:tx.payment_method, paymentUrl:tx.payment_url || '', transferContent:tx.transfer_content,
+    paymentMethod:selectedMethod, paymentUrl:tx.payment_url || '', transferContent:tx.transfer_content,
+    orderSummary:paymentOrderSummary(tx),
     ...(tx.is_simulated ? {executionMode:'simulation',isSimulated:true,requestedPaymentMethod:tx.requested_payment_method,
       invoiceCode:tx.invoice_code || null,paymentContent:tx.payment_content} : {}),
     ...(bankInfo ? {bankInfo,qrCodeUrl:`https://qr.sepay.vn/img?acc=${encodeURIComponent(bankInfo.accountNo)}&bank=${encodeURIComponent(bankInfo.bankId)}&amount=${tx.amount}&des=${encodeURIComponent(tx.transfer_content)}&template=compact`} : {}) };
@@ -223,13 +242,14 @@ export async function createPaymentSession(params = {}, options = {}) {
       const saleSubtotal=paymentMoney(courses.reduce((sum,c)=>sum+c.price,0));
       const voucher=await quoteVoucher(db,voucherCode.trim().toUpperCase(),saleSubtotal,userId,session,courses);
       const amount=paymentMoney(saleSubtotal-voucher.discount);
-      const method=simulation?'simulation':amount===0?'free':gateway;
-      if(!simulation)requireGatewayConfiguration(method);
+      const method=gateway;
+      if(!simulation&&amount>0)requireGatewayConfiguration(method);
       const now=new Date(), expires=new Date(now.getTime()+await configuredPaymentExpiryMs(db));
       const summary={courses,subtotal:courses.reduce((sum,c)=>sum+c.original_price,0),sale_subtotal:saleSubtotal,voucher_code:voucherCode.trim().toUpperCase(),voucher_discount:voucher.discount,voucher_sponsor:voucher.sponsor||null,voucher_instructor_id:voucher.instructorId||null,voucher_eligible_course_ids:voucher.eligibleCourseIds||[],voucher_allocations:voucher.allocations||[],total:amount};
       const transaction={_id,transaction_id:transactionId,order_id:orderId,user_id:userId,payment_method:method,amount,currency:'VND',
         status:simulation||amount===0?'paid':'pending',fulfillment_status:'pending',request_hash:requestHash,
         transfer_content:`THINKUP ${transactionId}`,created_at:now,expires_at:expires,paid_at:simulation||amount===0?now:null,
+        ...(amount===0&&!simulation?{is_free:true}:{}),
         ...(simulation?{execution_mode:'simulation',is_simulated:true,requested_payment_method:gateway,
           payment_content:`Thanh toán mô phỏng đơn hàng ${orderId} (${transactionId})`,
           sandbox_code:`SIM-${randomUUID()}`,actual_paid_amount:amount}:{}),
@@ -269,7 +289,7 @@ export async function retryPaymentSession({userId,orderId,idempotencyKey,payment
     const next={...previous,_id,transaction_id:ids.transactionId,payment_method:gateway,request_hash:requestHash,
       status:'pending',payment_url:'',gateway_session_id:null,transfer_content:`THINKUP ${ids.transactionId}`,created_at:new Date()};
     if(simulation)Object.assign(next,{
-      payment_method:'simulation',status:'paid',paid_at:new Date(),execution_mode:'simulation',is_simulated:true,
+      status:'paid',paid_at:new Date(),execution_mode:'simulation',is_simulated:true,
       requested_payment_method:gateway,actual_paid_amount:previous.amount,sandbox_code:`SIM-${randomUUID()}`,
       payment_content:`Thanh toán mô phỏng đơn hàng ${orderId} (${ids.transactionId})`,
       email_status:simulationEmailEnabled(options)?'pending':'suppressed',

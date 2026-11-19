@@ -355,7 +355,9 @@ export async function getTransactionBillingDetail(userId, id, options = {}) {
     : 'Chưa phát hành';
 
   // Thông tin ngân hàng & phương thức thanh toán
-  const paymentMethod = txDoc.payment_method || 'Chuyển khoản trực tiếp';
+  const paymentMethod = txDoc.payment_method === 'simulation'
+    ? txDoc.requested_payment_method || 'simulation'
+    : txDoc.payment_method || 'Chuyển khoản trực tiếp';
   const bankName = resolveBankName(paymentMethod, txDoc.bank_name || txDoc.bank);
   const bankAccountNumber = txDoc.account_number || DEFAULT_BANK_INFO.accountNumber;
   const bankAccountName = txDoc.account_name || DEFAULT_BANK_INFO.accountName;
@@ -380,6 +382,7 @@ export async function getTransactionBillingDetail(userId, id, options = {}) {
     // Phương thức & Nội dung
     payment_method: paymentMethod,
     paymentMethod,
+    is_simulated: Boolean(txDoc.is_simulated || txDoc.execution_mode === 'simulation'),
     payment_content: paymentContent,
     paymentContent,
 
