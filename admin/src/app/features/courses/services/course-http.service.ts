@@ -126,7 +126,7 @@ export class CourseHttpService extends CourseDemoService {
         };
         const firstNodeId = phases.flatMap(phase => phase.nodes)[0]?.id;
         const studio: RoadmapStudio = {
-          roadmapId: draftId, phases: stages, selectedNodeId: firstNodeId ?? '',
+          roadmapId: draftId, phases, selectedNodeId: firstNodeId ?? '',
           suggestions: [], threshold: num(roadmap, 'threshold') || 70, test
         };
         const updatedRoadmap = toRoadmap({ ...roadmap, versionId: draftId });

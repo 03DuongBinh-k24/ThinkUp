@@ -200,6 +200,34 @@ export class RoadmapStudioComponent {
     if (this.editingTag() === tag) this.editingTag.set(null);
   }
 
+  renamePhase(phase: RoadmapPhase, value: string): void {
+    const name = value.trim();
+    const studio = this.studio();
+    if (!studio || !name || name === phase.name) return;
+    const stage = `${phase.no} · ${name}`;
+    const oldLabel = `${phase.no} · ${phase.name}`;
+    this.localStudio.set({
+      ...studio,
+      phases: studio.phases.map(item =>
+        item.id === phase.id ? { ...item, name, test: item.test && { ...item.test, stage } } : item
+      )
+    });
+    if (this.testDraft()?.stage === oldLabel) this.patchTest({ stage });
+  }
+
+  commitTest(): void {
+    const studio = this.studio();
+    const test = this.testDraft();
+    if (!studio || !test?.stage) return;
+    const hasTest = !!test.name.trim() || test.questions.length > 0;
+    const phases = studio.phases.map(phase =>
+      `${phase.no} · ${phase.name}` === test.stage || test.stage.endsWith(phase.name)
+        ? { ...phase, test: hasTest ? clone(test) : undefined }
+        : phase
+    );
+    this.localStudio.set({ ...studio, phases, test: clone(test) });
+  }
+
   addPhase(): void {
     const studio = this.studio();
     if (!studio) return;
