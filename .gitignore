@@ -54,12 +54,9 @@ next-env.d.ts
 scripts/
 server/scripts/
 
-# Roadmap contract and data preparation maintained with the feature
-!server/api_user_2.md
-!server/scripts/
-server/scripts/*
-!server/scripts/upload-instructor-signatures.mjs
-!server/scripts/prepare_roadmap_data.js
-!server/scripts/seed_all_stage_questions.js
-!server/scripts/check_roadmaps.js
-!server/scripts/verify-admin-cleanup-contracts.mjs
+# Server-only scratch and generated materials
+/server/docs/
+/server/postman/
+/server/recheck/
+/server/scripts/
+/server/api_user_2.md
