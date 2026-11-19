@@ -17,6 +17,9 @@ export class LandingHeaderComponent {
   readonly cartCount = this.commerce.cartCount;
   readonly menuOpen = signal(false);
   readonly cartClick = output<void>();
+  get isLoggedIn(): boolean {
+    return this.auth.isAuthenticated();
+  }
 
   readonly navItems = [
     { label: 'Trang chủ', href: '/main' },
@@ -30,6 +33,7 @@ export class LandingHeaderComponent {
   onCartClick(event: Event): void {
     if (!this.auth.isAuthenticated()) {
       event.preventDefault();
+      event.stopPropagation();
       this.cartClick.emit();
     }
   }

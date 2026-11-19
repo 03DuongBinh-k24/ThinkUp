@@ -7,10 +7,7 @@
     <button
       type="button"
       class="course-cover__fav"
-      [disabled]="!isLoggedIn()"
       [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
-      [class.opacity-50]="!isLoggedIn()"
-      [class.cursor-not-allowed]="!isLoggedIn()"
       [class.is-active]="isFavorite()"
       [attr.aria-label]="isFavorite() ? 'Bỏ khóa học khỏi yêu thích' : 'Thêm khóa học vào yêu thích'"
       (click)="toggleFavorite($event)"

@@ -481,7 +481,7 @@ export async function getRandomAvailablePublicRoom() {
  */
 export async function getStudyRoomCards(options = {}) {
   // Tự động dọn dẹp các phòng học đã không còn ai quá 1 tiếng
-  await cleanupExpiredEmptyRooms().catch(() => {});
+  await cleanupExpiredEmptyRooms().catch(() => { });
 
   const {
     search = '',
@@ -629,7 +629,7 @@ export async function searchAndJoinRoom(codeOrLink, inputPassword = '', userId) 
   if (room.emptySince && (Date.now() - new Date(room.emptySince).getTime()) >= ROOM_IDLE_TIMEOUT_MS) {
     await roomsColl.deleteOne({ _id: room._id });
     const msgsColl = db.collection(COLLECTION_STUDY_ROOM_MESSAGES);
-    await msgsColl.deleteMany({ roomId: room.roomId }).catch(() => {});
+    await msgsColl.deleteMany({ roomId: room.roomId }).catch(() => { });
     const error = new Error('Phòng học này đã bị xóa do không có bất kỳ ai hoạt động trong hơn 1 tiếng.');
     error.status = 410;
     error.code = 'ROOM_EXPIRED_AND_DELETED';
@@ -787,6 +787,7 @@ export async function searchStudyRoomsByNameAndTopic({ name = '', topic = '', in
  * @param {boolean} [params.includePrivate=true] - Có hiển thị phòng riêng tư không
  */
 export async function filterStudyRoomsByTagOrStatus({ tag = '', status = '', includePrivate = true } = {}) {
+  await cleanupExpiredEmptyRooms().catch(() => { });
   const db = await getMongoDb();
   await pruneStaleRoomParticipants(db);
   const roomsColl = db.collection(COLLECTION_STUDY_ROOMS);
@@ -1514,29 +1515,33 @@ export async function generateLiveKitToken({ roomId, userId, userName = 'Học v
   const updateResult = await roomsColl.updateOne(
     { _id: room._id, ...capacityCondition },
     [
-      { $set: {
-        participants: {
-          $let: {
-            vars: { current: { $ifNull: ['$participants', []] } },
-            in: {
-              $let: {
-                vars: { existing: { $first: { $filter: { input: '$$current', as: 'participant', cond: { $eq: ['$$participant.userId', String(userId)] } } } } },
-                in: {
-                  $concatArrays: [
-                    { $filter: { input: '$$current', as: 'participant', cond: { $ne: ['$$participant.userId', String(userId)] } } },
-                    [{ $mergeObjects: [participantDoc, { joinedAt: { $ifNull: ['$$existing.joinedAt', now] }, position: { $ifNull: ['$$existing.position', position] } }] }]
-                  ]
+      {
+        $set: {
+          participants: {
+            $let: {
+              vars: { current: { $ifNull: ['$participants', []] } },
+              in: {
+                $let: {
+                  vars: { existing: { $first: { $filter: { input: '$$current', as: 'participant', cond: { $eq: ['$$participant.userId', String(userId)] } } } } },
+                  in: {
+                    $concatArrays: [
+                      { $filter: { input: '$$current', as: 'participant', cond: { $ne: ['$$participant.userId', String(userId)] } } },
+                      [{ $mergeObjects: [participantDoc, { joinedAt: { $ifNull: ['$$existing.joinedAt', now] }, position: { $ifNull: ['$$existing.position', position] } }] }]
+                    ]
+                  }
                 }
               }
             }
           }
         }
-      } },
-      { $set: {
-        currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
-        updatedAt: now,
-        emptySince: null
-      } }
+      },
+      {
+        $set: {
+          currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
+          updatedAt: now,
+          emptySince: null
+        }
+      }
     ]
   );
   if (!updateResult.matchedCount) {
@@ -1569,10 +1574,10 @@ export async function generateLiveKitToken({ roomId, userId, userName = 'Học v
   const canPublishSources = isOwnerOrMod
     ? [TrackSource.MICROPHONE, TrackSource.CAMERA, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO]
     : [
-        ...(roomPermissions.voiceEnabled ? [TrackSource.MICROPHONE] : []),
-        ...(roomPermissions.cameraEnabled ? [TrackSource.CAMERA] : []),
-        ...(roomPermissions.participantShareScreen ? [TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO] : [])
-      ];
+      ...(roomPermissions.voiceEnabled ? [TrackSource.MICROPHONE] : []),
+      ...(roomPermissions.cameraEnabled ? [TrackSource.CAMERA] : []),
+      ...(roomPermissions.participantShareScreen ? [TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO] : [])
+    ];
   at.addGrant({
     roomJoin: true,
     room: room.roomId,
@@ -1996,7 +2001,8 @@ export async function leaveStudyRoom(roomId, userId) {
   const departingOwner = String(room.creatorId) === String(userId);
   const leavePipeline = departingOwner
     ? [
-        { $set: {
+      {
+        $set: {
           _leavingParticipants: {
             $filter: {
               input: { $ifNull: ['$participants', []] },
@@ -2004,16 +2010,20 @@ export async function leaveStudyRoom(roomId, userId) {
               cond: { $ne: ['$$participant.userId', String(userId)] }
             }
           }
-        } },
-        { $set: {
+        }
+      },
+      {
+        $set: {
           _leavingSuccessor: {
             $ifNull: [
               { $first: { $filter: { input: '$_leavingParticipants', as: 'participant', cond: { $eq: ['$$participant.role', 'moderator'] } } } },
               { $first: '$_leavingParticipants' }
             ]
           }
-        } },
-        { $set: {
+        }
+      },
+      {
+        $set: {
           participants: {
             $map: {
               input: '$_leavingParticipants',
@@ -2033,10 +2043,12 @@ export async function leaveStudyRoom(roomId, userId) {
           updatedAt: now,
           _leavingParticipants: '$$REMOVE',
           _leavingSuccessor: '$$REMOVE'
-        } }
-      ]
+        }
+      }
+    ]
     : [
-        { $set: {
+      {
+        $set: {
           participants: {
             $filter: {
               input: { $ifNull: ['$participants', []] },
@@ -2044,13 +2056,16 @@ export async function leaveStudyRoom(roomId, userId) {
               cond: { $ne: ['$$participant.userId', String(userId)] }
             }
           }
-        } },
-        { $set: {
+        }
+      },
+      {
+        $set: {
           currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
           emptySince: { $cond: [{ $eq: [{ $size: '$participants' }, 0] }, now, null] },
           updatedAt: now
-        } }
-      ];
+        }
+      }
+    ];
   const leaveFilter = departingOwner
     ? { _id: room._id, creatorId: String(userId) }
     : { _id: room._id, 'participants.userId': String(userId) };
@@ -2109,24 +2124,30 @@ export async function kickRoomParticipant(roomId, actorId, targetUserId, options
   const actorCondition = isOwner
     ? { creatorId: actor, 'participants.userId': actor }
     : { participants: { $elemMatch: { userId: actor, role: 'moderator' } } };
-  const result = await roomsColl.updateOne({ $and: [
-    { _id: room._id, 'participants.userId': target },
-    actorCondition,
-  ] }, [
-    { $set: {
-      participants: {
-        $filter: {
-          input: { $ifNull: ['$participants', []] },
-          as: 'participant',
-          cond: { $ne: ['$$participant.userId', target] },
+  const result = await roomsColl.updateOne({
+    $and: [
+      { _id: room._id, 'participants.userId': target },
+      actorCondition,
+    ]
+  }, [
+    {
+      $set: {
+        participants: {
+          $filter: {
+            input: { $ifNull: ['$participants', []] },
+            as: 'participant',
+            cond: { $ne: ['$$participant.userId', target] },
+          },
         },
-      },
-    } },
-    { $set: {
-      currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
-      emptySince: { $cond: [{ $eq: [{ $size: '$participants' }, 0] }, now, null] },
-      updatedAt: now,
-    } },
+      }
+    },
+    {
+      $set: {
+        currentUsers: { $size: { $setUnion: [{ $map: { input: '$participants', as: 'participant', in: '$$participant.userId' } }, []] } },
+        emptySince: { $cond: [{ $eq: [{ $size: '$participants' }, 0] }, now, null] },
+        updatedAt: now,
+      }
+    },
   ]);
   if (!result.matchedCount) {
     throw createStudyRoomError('Thành viên hoặc quyền phòng vừa thay đổi. Vui lòng tải lại phòng.', 409, 'ROOM_KICK_CONFLICT');
@@ -2242,7 +2263,7 @@ export async function getRoomSessionMessages(roomId, userId, options = {}) {
 
   // Tìm thông tin tham gia của người này trong phòng để xác định mốc `joinedAt`
   const participant = (room.participants || []).find(p => String(p.userId) === String(userId));
-  
+
   // Mốc thời gian bắt đầu được xem tin nhắn:
   // Nếu người dùng đang có mặt trong participants -> lấy đúng mốc joinedAt của họ
   // Nếu là chủ phòng nhưng chưa có record trong participants -> lấy createdAt của phòng
@@ -2300,6 +2321,7 @@ export async function cleanupExpiredEmptyRooms(maxIdleMs = ROOM_IDLE_TIMEOUT_MS)
   // 1) emptySince có giá trị và nhỏ hơn ngưỡng hết hạn (quá 1 tiếng)
   // 2) hoặc currentUsers <= 0 và updatedAt / createdAt cũ hơn 1 tiếng
   const query = {
+    isPermanent: { $ne: true },
     $or: [
       {
         emptySince: { $ne: null, $lte: expirationThreshold }
@@ -2324,7 +2346,7 @@ export async function cleanupExpiredEmptyRooms(maxIdleMs = ROOM_IDLE_TIMEOUT_MS)
   const deleteResult = await roomsColl.deleteMany({ _id: { $in: expiredIds } });
 
   // Xóa tin nhắn chat của các phòng đã xóa
-  await msgsColl.deleteMany({ roomId: { $in: expiredRoomCodes } }).catch(() => {});
+  await msgsColl.deleteMany({ roomId: { $in: expiredRoomCodes } }).catch(() => { });
 
   return {
     deletedCount: deleteResult.deletedCount || 0,

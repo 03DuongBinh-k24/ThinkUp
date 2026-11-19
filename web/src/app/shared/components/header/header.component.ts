@@ -6,11 +6,12 @@ import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AccountMenuComponent } from './account-menu/account-menu.component';
 import { NotificationPopoverComponent } from './notification-popover/notification-popover.component';
+import { AuthRequiredModalComponent } from '../auth-required-modal/auth-required-modal.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, AccountMenuComponent, NotificationPopoverComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, AccountMenuComponent, NotificationPopoverComponent, AuthRequiredModalComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.css',
   host: { '[class.liquid-glass]': "appearance() === 'liquid-glass'" },
@@ -25,6 +26,7 @@ export class HeaderComponent {
 
   readonly cartCount = this.commerceService.cartCount;
   isMobileMenuOpen = signal(false);
+  readonly authModalOpen = signal(false);
 
   isLoggedIn = computed(() => this.audience() === 'member' && this.authService.isAuthenticated());
   userName = computed(() => this.authService.currentUser()?.full_name || 'Học viên');
@@ -57,5 +59,13 @@ export class HeaderComponent {
       next: () => this.router.navigate(['/main']),
       error: () => this.router.navigate(['/main'])
     });
+  }
+
+  onCartClick(event: Event): void {
+    if (this.isLoggedIn()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.router.navigateByUrl(this.router.url, { skipLocationChange: true });
+    this.authModalOpen.set(true);
   }
 }

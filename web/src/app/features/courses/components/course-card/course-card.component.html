@@ -19,10 +19,7 @@
 
     <button
       type="button"
-      [disabled]="!isLoggedIn()"
       [attr.title]="isLoggedIn() ? null : 'Đăng nhập để sử dụng danh sách yêu thích'"
-      [class.opacity-50]="!isLoggedIn()"
-      [class.cursor-not-allowed]="!isLoggedIn()"
       (click)="$event.stopPropagation(); toggleWishlist()"
       class="absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-[#90A1B9] transition-all hover:scale-105 hover:text-[#FB2C36] active:scale-95"
       [attr.aria-label]="isWishlisted() ? 'Bỏ khỏi khóa học yêu thích' : 'Thêm vào khóa học yêu thích'"
@@ -157,13 +154,13 @@
         <button
           type="button"
           (click)="$event.stopPropagation(); addToCart()"
-          [disabled]="!isLoggedIn() || isPurchased() || addingCart()"
+          [disabled]="isPurchased() || addingCart()"
           [attr.aria-busy]="addingCart()"
           [attr.title]="!isLoggedIn() ? 'Đăng nhập để sử dụng giỏ hàng' : isPurchased() ? 'Khóa học đã mua' : addingCart() ? 'Đang cập nhật giỏ hàng...' : isInCart() ? 'Xóa khỏi giỏ hàng' : 'Thêm vào giỏ hàng'"
           [class.animate-pulse]="addingCart()"
           (keydown.enter)="$event.stopPropagation()"
           class="grid h-7 w-7 place-items-center rounded-[4px] border border-[#E2E8F0] transition-colors"
-          [ngClass]="!isLoggedIn() || isPurchased() ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' : isInCart() ? 'bg-[#2B7FFF] text-white hover:bg-[#1C66DF]' : 'bg-white text-[#2B7FFF] hover:bg-[#EFF6FF]'"
+          [ngClass]="isPurchased() ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' : !isLoggedIn() ? 'bg-white text-[#2B7FFF] hover:bg-[#EFF6FF]' : isInCart() ? 'bg-[#2B7FFF] text-white hover:bg-[#1C66DF]' : 'bg-white text-[#2B7FFF] hover:bg-[#EFF6FF]'"
           [attr.aria-label]="!isLoggedIn() ? 'Đăng nhập để sử dụng giỏ hàng' : isPurchased() ? 'Khóa học đã mua' : isInCart() ? 'Xóa khỏi giỏ hàng' : 'Thêm vào giỏ hàng'"
         >
           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.17" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

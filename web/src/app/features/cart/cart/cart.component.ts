@@ -110,6 +110,12 @@ export class CartComponent implements OnInit {
   ngOnInit(): void {
     this.restoreVoucher();
 
+    if (!this.auth.isAuthenticated()) {
+      this.commerce.clearAccountCart();
+      this.loading.set(false);
+      return;
+    }
+
     this.commerce
       .getCart()
       .pipe(takeUntilDestroyed(this.destroyRef))
