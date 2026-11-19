@@ -1,11 +1,12 @@
 /* Platform settings follows the shared admin typography and Support page spacing. */
 .configuration-page { min-width: 0; padding: 34px 36px 136px; background: #f5f8fc; }
+.configuration-page { padding-block: 24px 112px; }
 .page-heading { align-items: flex-start; margin-bottom: 24px; }
 .page-heading h1 { margin: 2px 0 8px; font: var(--admin-text-page-title); }
 .page-heading p { color: #64748b; font: var(--admin-text-body-compact); }
-.configuration-form { display: grid; gap: 28px; min-width: 0; }
+.configuration-form { display: grid; gap: 20px; min-width: 0; }
 .configuration-group { min-width: 0; scroll-margin-top: 20px; }
-.configuration-group-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.configuration-group-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .configuration-group-heading > div { min-width: 0; }
 .configuration-group-heading h2 { margin: 0 0 4px; color: #102648; font: var(--admin-text-panel-title); overflow-wrap: anywhere; }
 .configuration-group-heading p { margin: 0; color: #64748b; font: var(--admin-text-caption); }
@@ -15,16 +16,16 @@
 .configuration-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .configuration-blocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 16px; min-width: 0; }
 .configuration-blocks--stacked { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
-.configuration-stack { display: grid; align-content: start; gap: 16px; min-width: 0; }
+.configuration-stack { display: grid; align-content: start; gap: 12px; min-width: 0; }
 .configuration-blocks--stacked > .configuration-stack:last-child { display: flex; flex-direction: column; }
 .configuration-blocks--stacked > .configuration-stack:last-child > .parameter-block { flex: 1; }
 .configuration-blocks--education { align-items: stretch; }
 .configuration-blocks--education > .configuration-stack { display: flex; flex-direction: column; }
 .configuration-blocks--education .parameter-block { flex: 1; }
 .configuration-blocks--education .parameter-fields { margin-top: auto; }
-.parameter-block { display: flex; flex-direction: column; min-width: 0; padding: 20px; border: 1px solid #dce6f1; border-radius: 12px; background: #fff; box-shadow: 0 4px 14px #17376405; }
+.parameter-block { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid #dce6f1; border-radius: 10px; background: #fff; box-shadow: 0 4px 14px #17376405; }
 .parameter-block h3 { margin: 0 0 8px; color: #102648; font: var(--admin-text-card-title); overflow-wrap: anywhere; }
-.parameter-description { margin: 0 0 18px; color: #64748b; font: var(--admin-text-caption); line-height: 1.6; }
+.parameter-description { margin: 0 0 12px; color: #64748b; font: var(--admin-text-caption); line-height: 1.5; }
 .parameter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 12px 14px; margin-top: 0; min-width: 0; }
 .parameter-fields.single-field { grid-template-columns: minmax(0, 1fr); max-width: 420px; width: 100%; }
 .parameter-field { display: grid; align-content: end; gap: 6px; min-width: 0; }

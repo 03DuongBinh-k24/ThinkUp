@@ -4,9 +4,9 @@ export interface ActionItem { title: string; description: string; count: number;
 export interface AuditLog { time: string; account: string; role: string; action: string; ip: string; id?: string; actor?: string; actionCode?: string; device?: string; entity?: string; previous?: string; current?: string; }
 
 export const DASHBOARD_METRICS: DashboardMetric[] = [
-  { title: 'Tổng người dùng', value: '120.540', unit: 'người', trend: '+38,2%', theme: 'users' },
+  { title: 'Tổng người dùng', value: '120.540', unit: 'người', trend: '+38,2%', detail: ['Đang hoạt động: 98.240', 'Mới trong tháng: 4.860'], theme: 'users' },
   { title: 'Khóa học', value: '215', unit: 'khóa học', trend: '+12%', detail: ['Đã xuất bản: 180', 'Chờ duyệt: 25', 'Bị ẩn: 10'], theme: 'courses' },
-  { title: 'Doanh thu', value: '2.48', unit: 'tỷ VNĐ', trend: '+24,1%', theme: 'revenue' },
+  { title: 'Doanh thu', value: '2.48', unit: 'tỷ VNĐ', trend: '+24,1%', detail: ['Đã thanh toán: 2,31 tỷ', 'Chờ đối soát: 170 triệu'], theme: 'revenue' },
   { title: 'Phòng học ảo', value: '18', unit: 'phòng đang diễn ra', detail: ['Trực tuyến: 258'], theme: 'rooms' }
 ];
 
