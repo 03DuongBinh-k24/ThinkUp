@@ -215,6 +215,7 @@ export class CheckoutComponent implements OnInit {
   lastMethodLabel = signal('');
   purchasedCourses = signal<CartItem[]>([]);
   paidOrderId = signal('');
+  paidVoucher = signal<CheckoutVoucher | null>(null);
   paidAmount = signal(0);
   readonly isSimulated = signal(false);
   readonly paidTransactionId = signal('');
@@ -222,6 +223,7 @@ export class CheckoutComponent implements OnInit {
   readonly paidInvoiceCode = signal('');
   readonly paidPaymentContent = signal('');
   readonly receiptError = signal('');
+  private instructorAvatarErrors = signal<Set<string>>(new Set());
 
   private countdownSub?: Subscription;
   private pollSub?: Subscription;
@@ -245,6 +247,15 @@ export class CheckoutComponent implements OnInit {
 
   readonly courseCount = computed(() => this.courses().length);
 
+  readonly summaryCourses = computed(() => this.dialog() === 'success' ? this.purchasedCourses() : this.courses());
+  readonly summaryCourseCount = computed(() => this.summaryCourses().length);
+  readonly summarySaleSubtotal = computed(() => this.summaryCourses().reduce((sum, course) => sum + (course.salePrice || 0), 0));
+  readonly summaryVoucher = computed(() => this.dialog() === 'success' ? this.paidVoucher() : this.voucher());
+  readonly summaryVoucherDiscount = computed(() => this.dialog() === 'success'
+    ? Math.max(0, this.summarySaleSubtotal() - this.paidAmount())
+    : this.voucherDiscount());
+  readonly summaryTotal = computed(() => this.dialog() === 'success' ? this.paidAmount() : this.total());
+
   readonly saleSubtotal = computed(() =>
     this.courses().reduce((sum, course) => sum + (course.salePrice || 0), 0),
   );
@@ -254,7 +265,7 @@ export class CheckoutComponent implements OnInit {
   readonly total = computed(() => Math.max(0, this.saleSubtotal() - this.voucherDiscount()));
 
   readonly summaryVoucherLabel = computed(() => {
-    const code = this.voucher()?.code;
+    const code = this.summaryVoucher()?.code;
     return code ? `Mã giảm giá (${code})` : 'Mã giảm giá';
   });
 
@@ -656,6 +667,7 @@ export class CheckoutComponent implements OnInit {
   }
 
   private completePayment(status: PaymentStatus): void {
+    if (this.dialog() === 'success' && this.paidTransactionId() === status.transactionId) return;
     const purchased = [...this.courses()];
     const amount = status.amount;
     const orderId = status.orderId || this.session()?.orderId || this.paidOrderId();
@@ -663,6 +675,7 @@ export class CheckoutComponent implements OnInit {
     this.stopTimers();
     this.commerce.resetPaymentAttempt(status.transactionId);
     this.purchasedCourses.set(purchased);
+    this.paidVoucher.set(this.voucher());
     this.paidAmount.set(amount);
     this.paidOrderId.set(orderId);
     this.paidTransactionId.set(status.transactionId);
@@ -793,6 +806,18 @@ export class CheckoutComponent implements OnInit {
 
   hasThumb(item: CartItem): boolean {
     return !!item.thumbnailUrl && !this.thumbErrors().has(item.id);
+  }
+
+  hasInstructorAvatar(item: CartItem): boolean {
+    return !!item.instructorProfile?.avatar && !this.instructorAvatarErrors().has(item.id);
+  }
+
+  onInstructorAvatarError(item: CartItem): void {
+    this.instructorAvatarErrors.update(errors => {
+      const next = new Set(errors);
+      next.add(item.id);
+      return next;
+    });
   }
 
   onThumbError(item: CartItem): void {

@@ -579,17 +579,17 @@
         <div class="pay-card pay-summary checkout-summary">
           <div class="checkout-summary__head">
             <h2 class="checkout-summary__title">Tóm tắt đơn hàng</h2>
-            <p class="checkout-summary__count">{{ courseCount() }} khóa học</p>
+            <p class="checkout-summary__count">{{ summaryCourseCount() }} khóa học</p>
           </div>
 
-          @if (courseCount() === 0) {
+          @if (summaryCourseCount() === 0) {
             <div class="checkout-summary__empty">
               <p>Chưa có khóa học nào được chọn.</p>
               <a routerLink="/main/cart" class="checkout-summary__back">Quay lại giỏ hàng</a>
             </div>
           } @else {
             <ul class="checkout-summary__courses">
-              @for (course of courses(); track course.id) {
+              @for (course of summaryCourses(); track course.id) {
                 @let art = summaryArt(course);
                 <li class="checkout-summary__course">
                   <span class="checkout-summary__thumb" [style.background]="art.gradient">
@@ -609,10 +609,20 @@
                   <span class="checkout-summary__info">
                     <span class="checkout-summary__course-title">{{ course.displayTitle || course.title }}</span>
                     <span class="checkout-summary__instructor">
-                      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                        <circle cx="10" cy="6.6" r="3" stroke="currentColor" stroke-width="1.4" />
-                        <path d="M4.3 16.4c.5-2.5 2.8-4.1 5.7-4.1s5.2 1.6 5.7 4.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                      </svg>
+                      @if (hasInstructorAvatar(course)) {
+                        <img
+                          class="checkout-summary__instructor-avatar"
+                          [src]="course.instructorProfile?.avatar"
+                          [alt]="course.instructor"
+                          loading="lazy"
+                          (error)="onInstructorAvatarError(course)"
+                        />
+                      } @else {
+                        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                          <circle cx="10" cy="6.6" r="3" stroke="currentColor" stroke-width="1.4" />
+                          <path d="M4.3 16.4c.5-2.5 2.8-4.1 5.7-4.1s5.2 1.6 5.7 4.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                        </svg>
+                      }
                       <span [appInstructorTrigger]="course.instructor">{{ course.instructor }}</span>
                     </span>
                     <span class="checkout-summary__price">
@@ -629,13 +639,13 @@
             <div class="checkout-summary__rows">
               <div class="checkout-summary__row">
                 <span>Tạm tính</span>
-                <strong>{{ formatPrice(saleSubtotal()) }}</strong>
+                <strong>{{ formatPrice(summarySaleSubtotal()) }}</strong>
               </div>
 
-              @if (voucher()) {
+              @if (summaryVoucherDiscount() > 0) {
                 <div class="checkout-summary__row">
                   <span>{{ summaryVoucherLabel() }}</span>
-                  <strong class="is-sale">-{{ formatPrice(voucherDiscount()) }}</strong>
+                  <strong class="is-sale">-{{ formatPrice(summaryVoucherDiscount()) }}</strong>
                 </div>
               }
             </div>
@@ -643,7 +653,7 @@
             <div class="checkout-summary__total">
               <div class="checkout-summary__total-row">
                 <span>Tổng thanh toán</span>
-                <strong>{{ formatPrice(total()) }}</strong>
+                <strong>{{ formatPrice(summaryTotal()) }}</strong>
               </div>
               <span class="checkout-summary__vat">(Đã bao gồm VAT nếu có)</span>
             </div>
