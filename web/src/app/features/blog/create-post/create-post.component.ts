@@ -19,15 +19,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 export class CreatePostComponent {
   private readonly blog=inject(BlogService);private readonly auth=inject(AuthService);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly destroyRef=inject(DestroyRef);
   post:BlogDraft=structuredClone(EMPTY_BLOG_DRAFT);
-  categories=[...EDITOR_CATEGORIES]; coverImage:File|string|null=null;
+  categories=[...EDITOR_CATEGORIES]; coverImage:File|string|null=null; contentImages:string[]=[];
   readonly errors=signal<Partial<Record<keyof BlogDraft|'coverImage',string>>>({});readonly submitting=signal(false);readonly loading=signal(false);readonly previewOpen=signal(false);readonly message=signal('');readonly authModal=signal(!this.auth.isAuthenticated());readonly editId=signal('');
   readonly previewHeadings=signal<{id:string;text:string;level:number}[]>([]);
   readonly previewContent=signal('');
   private activeId='';
   get isPublished():boolean{return this.post.status==='published'||this.post.status==='updated';}
-  constructor(){this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params=>{this.editId.set(params.get('postId')||'');this.activeId=this.editId();this.post=structuredClone(EMPTY_BLOG_DRAFT);this.coverImage=null;this.loadPost();});}
+  constructor(){this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params=>{this.editId.set(params.get('postId')||'');this.activeId=this.editId();this.post=structuredClone(EMPTY_BLOG_DRAFT);this.coverImage=null;this.contentImages=[];this.loadPost();});}
   private loadPost():void{const owner=this.blog.currentAuthor();if(!owner||!this.auth.isAuthenticated())return;this.loading.set(true);this.blog.list({ownerEmail:owner.email,page:1,limit:50}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({next:result=>{const saved=this.editId()?result.posts.find(item=>item.id===this.editId()):result.posts.find(item=>item.status==='draft');if(saved)this.applyPost(saved);else if(this.editId()){this.message.set('Không tìm thấy bài viết thuộc tài khoản này.');void this.router.navigateByUrl('/main/blog/manage');}this.loading.set(false);},error:()=>{this.loading.set(false);this.message.set('Không thể tải bài viết. Vui lòng thử lại.');}});}
-  private applyPost(saved:BlogPost):void{this.activeId=saved.id;const categories=saved.categories?.length?saved.categories:saved.category?[saved.category]:[];this.post={...structuredClone(EMPTY_BLOG_DRAFT),...saved,summary:saved.description,categories,status:saved.status||'draft'};this.coverImage=saved.coverImage||null;this.categories=[...new Set([...EDITOR_CATEGORIES,...categories])];}
+  private applyPost(saved:BlogPost):void{this.activeId=saved.id;const categories=saved.categories?.length?saved.categories:saved.category?[saved.category]:[];this.post={...structuredClone(EMPTY_BLOG_DRAFT),...saved,summary:saved.description,categories,status:saved.status||'draft'};this.coverImage=saved.coverImage||null;this.contentImages=saved.contentImages||[];this.categories=[...new Set([...EDITOR_CATEGORIES,...categories])];}
   updateTitle(title:string):void{this.post.title=title;this.post.slug=createBlogSlug(title);this.errors.update(errors=>({...errors,title:''}));}
   updateSlug(slug:string):void{this.post.slug=createBlogSlug(slug);}
   toggleCategory(category:string):void{this.post.categories=this.post.categories.includes(category)?this.post.categories.filter(item=>item!==category):[...this.post.categories,category];this.errors.update(errors=>({...errors,categories:''}));}
@@ -47,7 +47,7 @@ export class CreatePostComponent {
     }
     this.errors.set(errors);if(Object.keys(errors).length){this.message.set('Vui lòng hoàn thành các trường bắt buộc.');window.scrollTo({top:0,behavior:'smooth'});return;}
     this.submitting.set(true);this.message.set('');
-    try{const cover=this.coverImage instanceof File?await firstValueFrom(this.blog.upload(this.coverImage)):this.coverImage||'/assets/blog/article-1.jpg';const status=this.isPublished?'updated':publish?'published':'draft';const categories=[...this.post.categories];const result=await firstValueFrom(this.blog.save({...this.post,categories,category:categories[0]||'',id:this.activeId||undefined,title:this.post.title.trim()||'Bài viết chưa có tiêu đề',content:prepareBlogHtml(this.post.content),ownerEmail:owner.email,author:owner.name,status,coverImage:cover,contentImages:[]}));this.activeId=result.id;await this.router.navigateByUrl('/main/blog/manage');}
+    try{const cover=this.coverImage instanceof File?await firstValueFrom(this.blog.upload(this.coverImage)):this.coverImage||'/assets/blog/article-1.jpg';const status=this.isPublished?'updated':publish?'published':'draft';const categories=[...this.post.categories];const result=await firstValueFrom(this.blog.save({...this.post,categories,category:categories[0]||'',id:this.activeId||undefined,title:this.post.title.trim()||'Bài viết chưa có tiêu đề',content:prepareBlogHtml(this.post.content),ownerEmail:owner.email,author:owner.name,status,coverImage:cover,contentImages:this.contentImages}));this.activeId=result.id;await this.router.navigateByUrl('/main/blog/manage');}
     catch(error){
       if(error instanceof HttpErrorResponse){
       const response=error.error as { message?:string; field?:keyof BlogDraft|'coverImage' }|null;

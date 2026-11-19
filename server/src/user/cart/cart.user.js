@@ -308,8 +308,8 @@ export async function getCartDetails({
     const inst = instructorMap.get(String(doc.instructor_id)) || null;
 
     // Giá bán thực tế & Giá niêm yết ban đầu
-    const originalPrice = parseFloat(doc.original_price ?? doc.price ?? 0) || 0;
-    const salePrice = parseFloat(doc.price ?? doc.original_price ?? 0) || 0;
+    const originalPrice = Math.max(0, Number(doc.original_price ?? doc.price ?? doc.sale_price ?? 0) || 0);
+    const salePrice = Math.max(0, Number(doc.sale_price ?? doc.price ?? doc.original_price ?? 0) || 0);
     const discountAmount = Math.max(0, originalPrice - salePrice);
 
     const isInWishlist = wishlistSet.has(cId) || wishlistSet.has(String(doc._id)) || wishlistSet.has(rawId);

@@ -215,9 +215,9 @@ export async function createPaymentSession(params = {}, options = {}) {
         const allIds=[canonical,String(course._id)];
         const filter={$or:[{user_id:userId,course_id:{$in:allIds}},{userId,courseId:{$in:allIds}}]};
         for(const name of ['user_courses','user_enrollments'])if(await db.collection(name).findOne(filter,{session}))throw paymentError('Bạn đã sở hữu khóa học này.',409,'COURSE_ALREADY_OWNED');
-        const price=paymentMoney(course.price ?? course.original_price);
+        const price=paymentMoney(course.sale_price ?? course.price ?? course.original_price);
         courses.push({id:canonical,aliases:allIds,instructor_id:course.instructor_id || null,rating:course.rating ?? course.average_rating ?? null,title:String(course.title || 'Khóa học ThinkUp'),price,
-          original_price:paymentMoney(course.original_price ?? price),thumbnail:course.thumbnail_url || ''});
+          original_price:paymentMoney(course.original_price ?? course.price ?? course.sale_price),thumbnail:course.thumbnail_url || ''});
       }
       const saleSubtotal=paymentMoney(courses.reduce((sum,c)=>sum+c.price,0));
       const voucher=await quoteVoucher(db,voucherCode.trim().toUpperCase(),saleSubtotal,userId,session,courses);
