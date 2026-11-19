@@ -24,6 +24,7 @@ import { ChatPanelComponent, RoomChatMessage } from '../components/chat-panel/ch
 import { ParticipantPopoverComponent } from '../components/participant-popover/participant-popover.component';
 import { ParticipantReportDialogComponent, ParticipantReportSubmission } from '../components/participant-report-dialog/participant-report-dialog.component';
 import { ThinkUpCornerComponent, ThinkUpCornerDismissReason } from '../components/thinkup-corner/thinkup-corner.component';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 interface FloatingReaction { id: string; emoji: string; x: number; y: number; }
 interface MiniMapRect { x: number; y: number; width: number; height: number; kind: 'item' | 'member' | 'timer' | 'viewport'; }
@@ -34,7 +35,7 @@ interface ScreenLayout { active: boolean; x: number; y: number; width: number; h
   selector: 'app-study-room-view',
   standalone: true,
   providers: studyRoomMediaProviders,
-  imports: [CommonModule, FormsModule, CanvasImageDialogComponent, RoomInviteDialogComponent, RemoveParticipantDialogComponent, AddToCanvasMenuComponent, CanvasItemComponent, LofiPlayerComponent, RoomControlPanelComponent, ReactionPickerComponent, ChatPanelComponent, ParticipantPopoverComponent, ParticipantReportDialogComponent, ThinkUpCornerComponent, LucideCheck, LucideChevronDown, LucideClock, LucideX, LucideBedDouble, LucideBell, LucideCoffee, LucideLayers, LucidePause, LucidePlay, LucideTarget, LucideCopy, LucidePanelRight, LucidePlus, LucideMinus, LucideLocateFixed, LucideMic, LucideMicOff, LucideVideo, LucideVideoOff, LucideScreenShare, LucideHand, LucideSmile, LucideMessageCircle, LucideSettings, LucideLogOut, LucideHeadphones, LucideRotateCcw, LucideCrown, LucideShieldCheck, LucideUserRound, LucideUserPlus, LucideAudioLines],
+  imports: [CommonModule, FormsModule, CanvasImageDialogComponent, RoomInviteDialogComponent, RemoveParticipantDialogComponent, AddToCanvasMenuComponent, CanvasItemComponent, LofiPlayerComponent, RoomControlPanelComponent, ReactionPickerComponent, ChatPanelComponent, ParticipantPopoverComponent, ParticipantReportDialogComponent, ThinkUpCornerComponent, AuthRequiredModalComponent, LucideCheck, LucideChevronDown, LucideClock, LucideX, LucideBedDouble, LucideBell, LucideCoffee, LucideLayers, LucidePause, LucidePlay, LucideTarget, LucideCopy, LucidePanelRight, LucidePlus, LucideMinus, LucideLocateFixed, LucideMic, LucideMicOff, LucideVideo, LucideVideoOff, LucideScreenShare, LucideHand, LucideSmile, LucideMessageCircle, LucideSettings, LucideLogOut, LucideHeadphones, LucideRotateCcw, LucideCrown, LucideShieldCheck, LucideUserRound, LucideUserPlus, LucideAudioLines],
   templateUrl: './study-room-view.component.html',
   styleUrls: ['../components/room-glass.css', './study-room-view.component.css', './study-room-selection-lock.css']
 })
@@ -130,6 +131,7 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
   readonly canvasItems = signal<CanvasItem[]>([]);
   readonly selectedItemId = signal<string | null>(null);
   readonly dragMode = signal(false);
+  readonly authModalOpen = signal(false);
   readonly selectedParticipantId = signal<string | null>(null);
   readonly reportTarget = signal<RoomParticipant | null>(null);
   readonly thinkUpCornerVisible = signal(true);
@@ -355,7 +357,10 @@ export class StudyRoomViewComponent implements OnInit, OnDestroy {
 
   private connectRoom(id: string, transition: number): void {
     const user = this.auth.currentUser();
-    if (!user) { this.sessionError.set('Vui lòng đăng nhập để vào phòng học.'); return; }
+    if (!user) {
+      this.authModalOpen.set(true);
+      return;
+    }
     this.studyRoomService.connection(id, user.id, user.full_name).subscribe({
       next: async connection => {
         if (!this.isCurrentRoomTransition(id, transition)) { this.cleanupStaleConnection(id, user.id); return; }

@@ -17,11 +17,12 @@ import {
 import { InstructorTriggerDirective } from '../../../shared/directives/instructor-trigger.directive';
 import { Meta, Title } from '@angular/platform-browser';
 import { AuthService } from '../../../core/services/auth.service';
+import { AuthRequiredModalComponent } from '../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 @Component({
   selector: 'app-course-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, InstructorTriggerDirective],
+  imports: [CommonModule, RouterLink, FormsModule, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './course-detail.component.html',
   styleUrl: './course-detail.component.css'
 })
@@ -37,6 +38,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   private loadVersion = 0;
   private changingWishlist = false;
   addingCart = false;
+  readonly authModalOpen = signal(false);
 
   courseId = signal<string>('');
   course = signal<Course | null>(null);
@@ -365,18 +367,32 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   handleAddToCart(): void {
     const c = this.course();
-    if (!this.isLoggedIn() || !c || this.addingCart || !this.cartVerified() || this.isInCart()) return;
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
+    if (!c || this.addingCart || !this.cartVerified() || this.isInCart()) return;
     this.addingCart = true;
 
     this.commerceService.addToCart(c.id).pipe(finalize(() => this.addingCart = false)).subscribe({
       next: () => {
         this.showToast('Khóa học đã được thêm vào giỏ hàng!');
-      }, error: () => this.showToast('Không thêm được khóa học vào giỏ hàng.')
+      }, error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.showToast('Không thêm được khóa học vào giỏ hàng.');
+        }
+      }
     });
   }
 
   handleBuyNow(): void {
     const c = this.course();
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     if (!c || this.addingCart || !this.cartVerified()) return;
     if (this.isInCart()) {
       void this.router.navigate(['/main/checkout']);
@@ -387,13 +403,23 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     this.commerceService.addToCart(c.id).pipe(finalize(() => this.addingCart = false)).subscribe({
       next: () => {
         this.router.navigate(['/main/checkout']);
-      }, error: () => this.showToast('Không thêm được khóa học vào giỏ hàng.')
+      }, error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.showToast('Không thêm được khóa học vào giỏ hàng.');
+        }
+      }
     });
   }
 
   handleToggleWishlist(): void {
     const c = this.course();
-    if (!this.isLoggedIn() || !c || this.changingWishlist) return;
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
+    if (!c || this.changingWishlist) return;
     this.changingWishlist = true;
 
     this.favoritesService.toggleFavorite(c).pipe(finalize(() => this.changingWishlist = false)).subscribe({
@@ -403,7 +429,13 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
           ? 'Đã lưu khóa học vào danh sách yêu thích!'
           : 'Đã xóa khỏi danh sách yêu thích!';
         this.showToast(msg);
-      }, error: () => this.showToast('Không cập nhật được yêu thích.')
+      }, error: (error) => {
+        if (error?.status === 401) {
+          this.authModalOpen.set(true);
+        } else {
+          this.showToast('Không cập nhật được yêu thích.');
+        }
+      }
     });
   }
 

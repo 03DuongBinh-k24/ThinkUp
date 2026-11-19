@@ -226,4 +226,10 @@
       }
     </div>
   </dialog>
+
+  <app-auth-required-modal
+    [open]="authModalOpen()"
+    [returnUrl]="'/learning/study-room/' + (roomId() || '')"
+    (closed)="backToLobby()"
+  />
 </main>

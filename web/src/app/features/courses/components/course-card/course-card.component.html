@@ -189,4 +189,9 @@
   </div>
 </article>
 
+<app-auth-required-modal
+  [open]="authModalOpen()"
+  [returnUrl]="'/main/courses/' + course.id"
+  (closed)="authModalOpen.set(false)"
+/>
 

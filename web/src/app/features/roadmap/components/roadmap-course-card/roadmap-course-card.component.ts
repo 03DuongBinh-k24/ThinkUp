@@ -7,11 +7,12 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { FavoritesService } from '../../../../core/services/favorites.service';
 import { InstructorTriggerDirective } from '../../../../shared/directives/instructor-trigger.directive';
 import { AuthService } from '../../../../core/services/auth.service';
+import { AuthRequiredModalComponent } from '../../../../shared/components/auth-required-modal/auth-required-modal.component';
 
 @Component({
   selector: 'app-roadmap-course-card',
   standalone: true,
-  imports: [DecimalPipe, RouterLink, LucideHeart, LucideShoppingCart, LucideStar, LucideUserRound, InstructorTriggerDirective],
+  imports: [DecimalPipe, RouterLink, LucideHeart, LucideShoppingCart, LucideStar, LucideUserRound, InstructorTriggerDirective, AuthRequiredModalComponent],
   templateUrl: './roadmap-course-card.component.html',
   styleUrls: ['../../styles/roadmap-ui.css', './roadmap-course-card.component.css']
 })
@@ -22,6 +23,7 @@ export class RoadmapCourseCardComponent {
 
   readonly course = input.required<Course>();
   readonly addToCart = output<string>();
+  readonly authModalOpen = signal(false);
 
   readonly coverTitle = computed(() => this.course().title.split(' - ')[0]);
   readonly failedThumbnail = signal<string | undefined>(undefined);
@@ -39,9 +41,12 @@ export class RoadmapCourseCardComponent {
   }
 
   toggleFavorite(event: Event): void {
-    if (!this.isLoggedIn()) return;
     event.preventDefault();
     event.stopPropagation();
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
 
     this.favoritesService.toggleFavorite(this.course()).subscribe((result) => {
       this.toastService.showToast({
@@ -52,9 +57,12 @@ export class RoadmapCourseCardComponent {
   }
 
   onAddToCart(event: Event): void {
-    if (!this.isLoggedIn()) return;
     event.preventDefault();
     event.stopPropagation();
+    if (!this.isLoggedIn()) {
+      this.authModalOpen.set(true);
+      return;
+    }
     this.addToCart.emit(this.course().id);
   }
 }

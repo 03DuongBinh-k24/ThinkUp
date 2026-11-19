@@ -237,6 +237,7 @@
               </div>
               <a
                 routerLink="/learning/study-room"
+                (click)="onEnterStudyRoom($event)"
                 class="inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#006AB5] px-6 py-3 font-['Inter'] text-[15px] font-semibold text-white hover:bg-[#00528C]"
               >
                 Vào phòng học ảo →
@@ -467,4 +468,10 @@
         </section>
       </main>
     </div>
+
+    <app-auth-required-modal
+      [open]="authModalOpen()"
+      [returnUrl]="authReturnUrl()"
+      (closed)="authModalOpen.set(false)"
+    />
 
