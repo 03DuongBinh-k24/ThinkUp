@@ -80,6 +80,18 @@ export async function getVoucher(code, options = {}) {
   if (!found.length) throw bad('Không tìm thấy voucher.', 404, 'VOUCHER_NOT_FOUND');
   return { success: true, items: found };
 }
+export async function listVoucherAuditLogs(code, query = {}, options = {}) {
+  const normalized = normalizeVoucherCode(code);
+  const page = Number(query.page || 1), pageSize = Number(query.pageSize || 20);
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw bad('Phân trang không hợp lệ.');
+  const db = options.db || await getMongoDb();
+  const filter = { 'details.entity.type': 'voucher', 'details.entity.id': normalized };
+  const [items, total] = await Promise.all([
+    db.collection('admin_audit_logs').find(filter).sort({ created_at: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
+    db.collection('admin_audit_logs').countDocuments(filter),
+  ]);
+  return { success: true, items, total, page, pageSize, pages: Math.ceil(total / pageSize) || 1 };
+}
 async function validateCreate(db, body, existingId = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('Nội dung voucher không hợp lệ.');
   const code = normalizeVoucherCode(body.code);
@@ -189,6 +201,7 @@ export function createAdminVouchersRouter(express, requireAdmin, options = {}) {
   const run = fn => async (req, res, next) => { try { res.json(await fn(req)); } catch (e) { next(e); } };
   router.get('/summary', run(() => voucherSummary(options)));
   router.get('/export', async (req, res, next) => { try { const file = await exportVouchers(req.query, options); res.type(file.type).attachment(file.filename).send(file.body); } catch (e) { next(e); } });
+  router.get('/:code/audit-logs', run(req => listVoucherAuditLogs(req.params.code, req.query, options)));
   router.get('/', run(req => listVouchers(req.query, options)));
   router.get('/:code', run(req => getVoucher(req.params.code, options)));
   router.post('/', run(req => createVoucher(req.body, { ...options, adminId: req.adminId })));
