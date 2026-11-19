@@ -202,8 +202,8 @@
             }
             <div class="field">
               <label for="resolution-note">Nội dung kết luận <b>*</b></label>
-              <textarea id="resolution-note" required [attr.aria-invalid]="noteError() ? true : null" aria-describedby="resolution-note-help" [value]="resolutionNote()" maxlength="600" placeholder="Nêu căn cứ và quyết định xử lý..." (input)="resolutionNote.set($any($event.target).value)"></textarea>
-              <span id="resolution-note-help" class="hint">{{ resolutionNote().length }}/600 ký tự · Tối thiểu 20 ký tự.</span>
+              <textarea id="resolution-note" required [attr.aria-invalid]="noteError() ? true : null" aria-describedby="resolution-note-help" [value]="resolutionNote()" maxlength="500" placeholder="Nêu căn cứ và quyết định xử lý..." (input)="resolutionNote.set($any($event.target).value)"></textarea>
+              <span id="resolution-note-help" class="hint">{{ resolutionNote().length }}/500 ký tự · Tối thiểu 20 ký tự.</span>
               @if (noteError()) { <span class="error" role="alert">{{ noteError() }}</span> }
             </div>
             @if (item.resolutionNote) { <div class="report-saved-resolution"><span class="report-case-caption">Kết luận đã lưu</span><p>{{ item.resolutionNote }}</p></div> }
@@ -246,7 +246,7 @@
     </div>
     <div dialogFooter class="report-case-footer">
       <div class="report-case-footer-actions">
-        <button class="button primary" [class.report-sanction-button]="resolutionDecision() === 'resolved'" type="button" (click)="resolve(item, resolutionDecision())">{{ resolutionDecision() === 'resolved' ? 'Áp dụng chế tài' : 'Bác bỏ báo cáo' }}</button>
+        <button class="button primary" [class.report-sanction-button]="resolutionDecision() === 'resolved'" type="button" [disabled]="writing()" (click)="resolve(item, resolutionDecision())">{{ resolutionDecision() === 'resolved' ? 'Áp dụng chế tài' : 'Bác bỏ báo cáo' }}</button>
       </div>
     </div>
   </app-admin-dialog>

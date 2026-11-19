@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseLevel, CourseStatus, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest } from '../models/course.models';
+import { ApprovalItem, ApprovalWorkspace, Course, CourseFinance, CourseLevel, CourseStatus, CourseSuggestion, Roadmap, RoadmapNode, RoadmapStudio, RoadmapTest } from '../models/course.models';
 import { CourseDemoService } from './course-demo.service';
 import { APPROVAL_SLA_LABELS } from '../course-utils';
 import { formatCurrency } from '../course-utils';
@@ -37,7 +37,6 @@ export class CourseHttpService extends CourseDemoService {
   override readonly workspaces = signal<ApprovalWorkspace[]>([]);
   override readonly studios = signal<RoadmapStudio[]>([]);
   private readonly studioRequests = new Map<string, Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }>>();
-  private readonly persistedStageTests = new Map<string, Map<string, Record<string, unknown>>>();
   private readonly loadErrorState = signal(false);
   override readonly loadError = this.loadErrorState.asReadonly();
   private readonly roadmapLoadErrorState = signal(false);
@@ -52,9 +51,7 @@ export class CourseHttpService extends CourseDemoService {
     const response = await firstValueFrom(this.http.post<{ roadmap: Record<string, unknown> }>(`${this.base}/admin/roadmaps`, input));
     const id = text(response.roadmap, 'versionId', 'id');
     if (!id) throw new Error('API không trả về mã bản nháp lộ trình.');
-    const result = await this.ensureRoadmapStudio(id);
-    this.roadmaps.update(items => items.some(item => item.id === result.id) ? items : [result.roadmap, ...items]);
-    return result;
+    return this.ensureRoadmapStudio(id);
   }
 
   override ensureRoadmapStudio(id: string): Promise<{ id: string; roadmap: Roadmap; studio: RoadmapStudio }> {
@@ -66,7 +63,7 @@ export class CourseHttpService extends CourseDemoService {
     const pending = this.studioRequests.get(id);
     if (pending) return pending;
     const request = firstValueFrom(this.http.get<{ roadmap: Record<string, unknown> }>(`${this.base}/admin/roadmaps/${encodeURIComponent(id)}`))
-      .then(async ({ roadmap }) => {
+      .then(({ roadmap }) => {
         const phasesRaw = Array.isArray(roadmap['stages']) ? roadmap['stages'] as Array<Record<string, unknown>> : [];
         const draftId = text(roadmap, 'versionId', 'id') || id;
         const parsePhaseTest = (rawPhaseTest: Record<string, unknown> | null | undefined, stageName: string): RoadmapTest | null => {
@@ -128,27 +125,28 @@ export class CourseHttpService extends CourseDemoService {
           questions: []
         };
         const firstNodeId = phases.flatMap(phase => phase.nodes)[0]?.id;
-        const suggestions = firstNodeId ? ((await firstValueFrom(this.http.get<{ courses?: Array<Record<string, unknown>> }>(`${this.base}/admin/roadmaps/${encodeURIComponent(draftId)}/nodes/${encodeURIComponent(firstNodeId)}/suggestions`)).catch(() => ({ courses: [] }))).courses ?? []) : [];
         const studio: RoadmapStudio = {
-          roadmapId: draftId, phases, selectedNodeId: phases.flatMap(phase => phase.nodes)[0]?.id ?? '',
-          suggestions: suggestions.map(course => ({ id: text(course, 'course_id', 'id'), title: text(course, 'title'), level: toLevel(text(course, 'level')), match: num(course, 's_match', 'match') })), threshold: num(roadmap, 'threshold') || 70, test
+          roadmapId: draftId, phases: stages, selectedNodeId: firstNodeId ?? '',
+          suggestions: [], threshold: num(roadmap, 'threshold') || 70, test
         };
-        this.persistedStageTests.set(draftId, new Map(phasesRaw.flatMap((phase, index) => phase['test'] ? [[text(phase, 'stage_id', 'id') || `phase-${index + 1}`, phase['test'] as Record<string, unknown>]] : [])));
-        const updatedRoadmap: Roadmap = {
-          ...toRoadmap({ ...roadmap, versionId: draftId }),
-          learners: num(roadmap, 'learnerCount'),
-          completion: roadmap['completionRate'] == null ? null : num(roadmap, 'completionRate'),
-          testPassed: roadmap['testPassed'] == null ? null : num(roadmap, 'testPassed'),
-          testTotal: num(roadmap, 'testTotal')
-        };
-        this.roadmaps.update(items => items.map(item => item.id === id ? updatedRoadmap : item));
-        this.studios.update(items => [...items.filter(item => item.roadmapId !== id && item.roadmapId !== draftId), { ...studio, roadmapId: draftId }]);
-        const savedStudio = { ...studio, roadmapId: draftId };
-        return { id: draftId, roadmap: updatedRoadmap, studio: savedStudio };
+        const updatedRoadmap = toRoadmap({ ...roadmap, versionId: draftId });
+        this.roadmaps.update(items => items.some(item => item.id === draftId)
+          ? items : [updatedRoadmap, ...items.filter(item => item.id !== id)]);
+        this.studios.update(items => [...items.filter(item => item.roadmapId !== draftId), studio]);
+        return { id: draftId, roadmap: updatedRoadmap, studio };
       })
       .finally(() => this.studioRequests.delete(id));
     this.studioRequests.set(id, request);
     return request;
+  }
+
+  override async getRoadmapNodeSuggestions(roadmapId: string, nodeId: string): Promise<CourseSuggestion[]> {
+    const url = `${this.base}/admin/roadmaps/${encodeURIComponent(roadmapId)}/nodes/${encodeURIComponent(nodeId)}/suggestions`;
+    const { courses = [] } = await firstValueFrom(this.http.get<{ courses?: Array<Record<string, unknown>> }>(url));
+    return courses.map(course => ({
+      id: text(course, 'course_id', 'id'), title: text(course, 'title'),
+      level: toLevel(text(course, 'level')), match: num(course, 's_match', 'match')
+    }));
   }
 
   override async getCourseContent(course: Course): Promise<Course> {
@@ -283,7 +281,7 @@ export class CourseHttpService extends CourseDemoService {
       { ...body, expectedRevision: revision }));
     await this.load();
   }
-  override toggleRoadmapVisibility(id: string): void {
+  override async toggleRoadmapVisibility(id: string): Promise<void> {
     const item = this.roadmaps().find(roadmap => roadmap.id === id);
     if (!item) return;
     const action = item.hidden ? 'unhide' : 'hide';
@@ -292,8 +290,11 @@ export class CourseHttpService extends CourseDemoService {
   override updateRoadmapNode(_roadmapId: string, _node: RoadmapNode): void { /* Studio saves the complete draft atomically. */ }
   override saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): Promise<void> { return this.saveStudio(roadmapId, studio); }
   override async publishRoadmap(roadmapId: string, studio?: RoadmapStudio): Promise<void> {
+    const id = studio ? roadmapId : (await this.ensureRoadmapStudio(roadmapId)).id;
     if (studio) await this.saveStudio(roadmapId, studio);
-    await this.post(`/admin/roadmaps/${encodeURIComponent(roadmapId)}/publish`, {});
+    await firstValueFrom(this.http.post(`${this.base}/admin/roadmaps/${encodeURIComponent(id)}/publish`, {}));
+    this.studios.update(items => items.filter(item => item.roadmapId !== id));
+    await this.load();
   }
   override saveRoadmapTest(_roadmapId: string, _test: RoadmapTest): void { /* Studio saves the complete draft atomically. */ }
   private async saveStudio(roadmapId: string, currentStudio?: RoadmapStudio): Promise<void> {
@@ -311,9 +312,8 @@ export class CourseHttpService extends CourseDemoService {
     });
     await this.patch(`/admin/roadmaps/${encodeURIComponent(roadmapId)}`, { name: this.roadmaps().find(item => item.id === roadmapId)?.name, threshold: studio.threshold, stages });
   }
-  private serializeNode(node: RoadmapNode): Record<string, unknown> { return { id: node.id, name: node.name, type: node.type, level: node.level, industry: node.industry, description: node.description, outcomes: node.outcomes, tags: node.tags, courses: (node.courses ?? []).map(course => ({ course_id: course.id })) }; }
-  private serializeTest(studioTest: RoadmapTest): Record<string, unknown> { return { name: studioTest.name, duration_minutes: studioTest.duration, pass_score: studioTest.passScore, questions: studioTest.questions.map(question => ({ id: question.id, node_id: question.nodeId, skill_tag: question.skillTag, prompt: question.prompt || question.title, language: question.language, code: question.code, answers: question.answers.map(answer => ({ key: answer.letter, text: answer.text, correct: answer.correct })) })) }; }
-  private testForStage(studio: RoadmapStudio, phase: RoadmapStudio['phases'][number]): Record<string, unknown> | null { return studio.test.stage.endsWith(phase.name) ? this.serializeTest(studio.test) : null; }
+  private serializeNode(node: RoadmapNode): Record<string, unknown> { return { id: node.id, name: node.name, type: node.type, icon: node.icon, level: node.level, industry: node.industry, description: node.description, outcomes: node.outcomes, tags: node.tags, courses: (node.courses ?? []).map(course => ({ course_id: course.id })) }; }
+  private serializeTest(studioTest: RoadmapTest): Record<string, unknown> { return { name: studioTest.name, duration_minutes: studioTest.duration, pass_score: studioTest.passScore, questions: studioTest.questions.map(question => ({ id: question.id, node_id: question.nodeId, skill_tag: question.skillTag, prompt: question.prompt, language: question.language, code: question.code, explanation: question.hint, answers: question.answers.map(answer => ({ key: answer.letter, text: answer.text, correct: answer.correct })) })) }; }
   private post(path: string, body: unknown): Promise<unknown> { return firstValueFrom(this.http.post(`${this.base}${path}`, body)).then(result => { void this.load(); return result; }); }
   private patch(path: string, body: unknown): Promise<unknown> { return firstValueFrom(this.http.patch(`${this.base}${path}`, body)).then(result => { void this.load(); return result; }); }
 }
@@ -391,10 +391,44 @@ function toApproval(row: Record<string, unknown>): ApprovalItem {
     action: 'inspect'
   };
 }
+function toRoadmapTest(raw: Record<string, unknown>, stage: string): RoadmapTest {
+  const questions = Array.isArray(raw['questions']) ? raw['questions'] as Record<string, unknown>[] : [];
+  return {
+    name: text(raw, 'name', 'title'),
+    duration: num(raw, 'duration_minutes', 'duration'),
+    passScore: num(raw, 'pass_score', 'passScore'),
+    stage,
+    questions: questions.map((question, index) => {
+      const rawAnswers = question['answers'] ?? question['options'];
+      const answers = Array.isArray(rawAnswers) ? rawAnswers as Record<string, unknown>[] : [];
+      const correctOption = text(question, 'correct_option', 'correctOption').toUpperCase();
+      const hint = text(question, 'hint', 'explanation');
+      return {
+        id: text(question, 'question_id', 'id') || `question-${index + 1}`,
+        nodeId: text(question, 'node_id', 'nodeId'),
+        skillTag: text(question, 'skill_tag', 'skillTag'),
+        index: index + 1,
+        title: text(question, 'title', 'question_text', 'prompt') || `Câu hỏi ${index + 1}`,
+        meta: text(question, 'meta') || '4 phương án · 1 đáp án đúng',
+        prompt: text(question, 'prompt', 'question_text', 'question'),
+        language: text(question, 'language'),
+        code: text(question, 'code'),
+        hint,
+        hintSaved: !!hint,
+        answers: answers.map((answer, answerIndex) => {
+          const letter = text(answer, 'letter', 'key').toUpperCase() || String.fromCharCode(65 + answerIndex);
+          return { letter, text: text(answer, 'text'), correct: answer['correct'] === true || correctOption === letter };
+        })
+      };
+    })
+  };
+}
+
 function toRoadmap(row: Record<string, unknown>): Roadmap {
   const coverage = num(row, 'coverage');
-  const stages = Array.isArray(row['stageDetails']) ? row['stageDetails'] as Array<Record<string, unknown>> : [];
-    const learnerCount = num(row, 'learnerCount', 'learners');
+  const rawStages = row['stageDetails'] ?? row['stages'];
+  const stages = Array.isArray(rawStages) ? rawStages as Array<Record<string, unknown>> : [];
+  const learnerCount = num(row, 'learnerCount', 'learners');
   const completed = num(row, 'completedLearnerCount', 'completedCount', 'completedLearners');
   return {
     // Bảng lộ trình dùng `versionId` làm khóa, không phải `id`.

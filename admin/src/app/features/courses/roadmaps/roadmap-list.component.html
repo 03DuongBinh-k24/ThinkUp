@@ -149,7 +149,7 @@
                 <td class="nowrap">{{ item.coverage }}% · TB {{ decimal(item.coverageAvg) }}</td>
                 <td class="nowrap">{{ item.testPassed === null ? '—' : item.testPassed + '/' + item.testTotal }}</td>
                 <td class="roadmap-test-status">
-                  <span [class]="'badge roadmap-test-badge ' + (item.missingTests === 0 ? 'success' : 'warning')">{{ testLabel(item) }}</span>
+                  <span [class]="'badge roadmap-test-badge ' + (hasCompleteTests(item) ? 'success' : 'warning')">{{ testLabel(item) }}</span>
                 </td>
                 <td>
                   <div class="row-menu">

@@ -127,7 +127,7 @@ export class CourseDemoService extends CourseStore {
     this.log(id, 'Yêu cầu bổ sung', `${issueType} · ${items.join(', ')} · ${detail}`);
   }
 
-  toggleRoadmapVisibility(id: string): void {
+  toggleRoadmapVisibility(id: string): Promise<void> | void {
     this.roadmapState.update(items => items.map(item => item.id === id ? { ...item, hidden: !item.hidden } : item));
   }
 
@@ -143,11 +143,19 @@ export class CourseDemoService extends CourseStore {
       : studio));
   }
 
-  saveRoadmapDraft(roadmapId: string): void {
+  saveRoadmapDraft(roadmapId: string, studio?: RoadmapStudio): void {
+    if (studio) {
+      this.studioState.update(items => items.map(item => item.roadmapId === roadmapId ? clone(studio) : item));
+      this.roadmapState.update(items => items.map(item => item.id !== roadmapId ? item : {
+        ...item, stages: studio.phases.length, nodes: studio.phases.flatMap(phase => phase.nodes).length,
+        missingTests: studio.phases.filter(phase => !phase.test).length
+      }));
+    }
     this.log(roadmapId, 'Lưu bản nháp', 'Cấu hình lộ trình và node đã được lưu nháp.');
   }
 
-  publishRoadmap(roadmapId: string): void {
+  publishRoadmap(roadmapId: string, studio?: RoadmapStudio): void {
+    if (studio) this.saveRoadmapDraft(roadmapId, studio);
     this.roadmapState.update(items => items.map(item => item.id === roadmapId ? { ...item, hidden: false } : item));
     this.log(roadmapId, 'Xuất bản lộ trình', 'Lộ trình được phát hành cho học viên.');
   }

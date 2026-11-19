@@ -218,8 +218,8 @@
                 @if (item.status === 'hidden') {
                   <div class="alert warning">Đánh giá đang tạm ẩn nên phản hồi bị khóa. Hiện lại đánh giá trước khi phản hồi công khai.</div>
                 } @else {
-                  <textarea id="review-reply" [value]="replyText()" maxlength="600" placeholder="Cảm ơn bạn đã chia sẻ..." (input)="replyText.set($any($event.target).value)"></textarea>
-                  @if (!replyError()) { <span class="hint">{{ replyText().length }}/600 ký tự · tối thiểu 20 ký tự</span> }
+                  <textarea id="review-reply" [value]="replyText()" maxlength="500" placeholder="Cảm ơn bạn đã chia sẻ..." (input)="replyText.set($any($event.target).value)"></textarea>
+                  @if (!replyError()) { <span class="hint">{{ replyText().length }}/500 ký tự · tối thiểu 20 ký tự</span> }
                   @if (replyError()) { <span class="error" role="alert">{{ replyError() }}</span> }
                 }
               </div>
@@ -243,7 +243,7 @@
             <div class="section-card">
               <h3>Thao tác</h3>
               <div style="display:grid;gap:8px">
-                @if (item.status !== 'approved') { <button class="button primary" type="button" (click)="changeStatus(item, 'approved')">Duyệt đánh giá</button> }
+                @if (item.status !== 'hidden' && canApprove(item)) { <button class="button primary" type="button" (click)="changeStatus(item, 'approved')">Duyệt đánh giá</button> }
                 @if (item.status !== 'rejected') { <button class="button" type="button" (click)="changeStatus(item, 'rejected')">Từ chối</button> }
                 @if (item.status !== 'hidden') { <button class="button" type="button" (click)="changeStatus(item, 'hidden')">Ẩn đánh giá</button> }
                 @if (item.status === 'hidden') { <button class="button" type="button" (click)="changeStatus(item, 'approved')">Hiện lại đánh giá</button> }
